@@ -6,8 +6,19 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, CheckCircle, Clock, Users } from 'lucide-react';
+import { Plus, CheckCircle, Clock, Users, Edit, Trash2 } from 'lucide-react';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
+import { EditTaskDialog } from '@/components/EditTaskDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface Profile {
   id: string;
@@ -40,6 +51,8 @@ const Dashboard = () => {
   const [familyMembers, setFamilyMembers] = useState<Profile[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [deletingTask, setDeletingTask] = useState<Task | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -104,6 +117,80 @@ const Dashboard = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const completeTask = async (task: Task) => {
+    if (!profile) return;
+    
+    try {
+      const { error } = await supabase
+        .from('task_completions')
+        .insert({
+          task_id: task.id,
+          completed_by: profile.id,
+          points_earned: task.points
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // Update user's total points
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          total_points: profile.total_points + task.points
+        })
+        .eq('id', profile.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      toast({
+        title: 'Task Completed!',
+        description: `You earned ${task.points} points!`,
+      });
+
+      fetchUserData();
+    } catch (error) {
+      console.error('Error completing task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to complete task',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const deleteTask = async () => {
+    if (!deletingTask) return;
+
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', deletingTask.id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Task Deleted',
+        description: 'Task has been removed successfully',
+      });
+
+      setDeletingTask(null);
+      fetchUserData();
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete task',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -218,8 +305,19 @@ const Dashboard = () => {
               ) : (
                 <div className="space-y-3">
                   {tasks.map((task) => (
-                    <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
+                    <div key={task.id} className="group relative flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                      {/* Complete button at front */}
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => completeTask(task)}
+                        className="shrink-0"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                      </Button>
+                      
+                      {/* Task details */}
+                      <div className="flex-1 min-w-0">
                         <h3 className="font-medium">{task.title}</h3>
                         {task.description && (
                           <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
@@ -236,9 +334,26 @@ const Dashboard = () => {
                           )}
                         </div>
                       </div>
-                      <Button size="sm" variant="outline">
-                        <CheckCircle className="h-4 w-4" />
-                      </Button>
+
+                      {/* Hover actions for parents */}
+                      {profile.role === 'parent' && (
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setEditingTask(task)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setDeletingTask(task)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -248,6 +363,35 @@ const Dashboard = () => {
 
         </div>
       </div>
+
+      {/* Edit Task Dialog */}
+      {editingTask && (
+        <EditTaskDialog
+          task={editingTask}
+          familyMembers={familyMembers}
+          open={!!editingTask}
+          onOpenChange={(open) => !open && setEditingTask(null)}
+          onTaskUpdated={fetchUserData}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingTask} onOpenChange={(open) => !open && setDeletingTask(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Task</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deletingTask?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteTask} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete Task
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

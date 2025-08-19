@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Plus } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,16 +20,26 @@ interface Profile {
   role: 'parent' | 'child';
 }
 
-interface AddTaskDialogProps {
-  familyMembers: Profile[];
-  familyId: string;
-  profileId: string;
-  onTaskCreated: () => void;
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  points: number;
+  is_repeating: boolean;
+  due_date?: string;
+  assigned_to?: string;
 }
 
-export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreated }: AddTaskDialogProps) => {
+interface EditTaskDialogProps {
+  task: Task;
+  familyMembers: Profile[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onTaskUpdated: () => void;
+}
+
+export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTaskUpdated }: EditTaskDialogProps) => {
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -39,6 +49,19 @@ export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreate
     due_date: null as Date | null,
     is_repeating: false
   });
+
+  useEffect(() => {
+    if (task) {
+      setFormData({
+        title: task.title,
+        description: task.description || '',
+        points: task.points,
+        assigned_to: task.assigned_to || 'unassigned',
+        due_date: task.due_date ? new Date(task.due_date) : null,
+        is_repeating: task.is_repeating
+      });
+    }
+  }, [task]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,13 +84,12 @@ export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreate
         assigned_to: formData.assigned_to === 'unassigned' ? null : formData.assigned_to,
         due_date: formData.due_date?.toISOString() || null,
         is_repeating: formData.is_repeating,
-        family_id: familyId,
-        created_by: profileId
       };
 
       const { error } = await supabase
         .from('tasks')
-        .insert(taskData);
+        .update(taskData)
+        .eq('id', task.id);
 
       if (error) {
         throw error;
@@ -75,26 +97,16 @@ export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreate
 
       toast({
         title: 'Success',
-        description: 'Task created successfully!',
+        description: 'Task updated successfully!',
       });
 
-      // Reset form
-      setFormData({
-        title: '',
-        description: '',
-        points: 10,
-        assigned_to: 'unassigned',
-        due_date: null,
-        is_repeating: false
-      });
-
-      setOpen(false);
-      onTaskCreated();
+      onOpenChange(false);
+      onTaskUpdated();
     } catch (error) {
-      console.error('Error creating task:', error);
+      console.error('Error updating task:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create task',
+        description: 'Failed to update task',
         variant: 'destructive'
       });
     } finally {
@@ -103,18 +115,12 @@ export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreate
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Task
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Task</DialogTitle>
+          <DialogTitle>Edit Task</DialogTitle>
           <DialogDescription>
-            Add a new chore or activity for your family
+            Update the task details
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -195,7 +201,6 @@ export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreate
                   selected={formData.due_date}
                   onSelect={(date) => setFormData({ ...formData, due_date: date || null })}
                   initialFocus
-                  className="p-3 pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
@@ -210,55 +215,12 @@ export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreate
             <Label htmlFor="repeating">Repeating task</Label>
           </div>
 
-          {/* Recurring options - shown when is_repeating is true */}
-          {formData.is_repeating && (
-            <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
-              <h4 className="font-medium text-sm">Recurring Options</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="frequency">Frequency</Label>
-                  <Select defaultValue="daily">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="interval">Every</Label>
-                  <Input
-                    id="interval"
-                    type="number"
-                    min="1"
-                    max="30"
-                    defaultValue="1"
-                    placeholder="1"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Days of Week (for weekly tasks)</Label>
-                <div className="flex flex-wrap gap-2">
-                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
-                    <Button key={day} type="button" variant="outline" size="sm" className="text-xs">
-                      {day}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
           <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Task'}
+              {loading ? 'Updating...' : 'Update Task'}
             </Button>
           </div>
         </form>
