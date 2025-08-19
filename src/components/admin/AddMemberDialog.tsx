@@ -42,19 +42,32 @@ export const AddMemberDialog = ({ isOpen, onOpenChange, familyId, onMemberAdded 
 
     setLoading(true);
     try {
+      const insertData: any = {
+        family_id: familyId,
+        display_name: formData.display_name.trim(),
+        role: formData.role,
+        color: formData.color,
+        can_add_for_self: formData.can_add_for_self,
+        can_add_for_siblings: formData.can_add_for_siblings,
+        can_add_for_parents: formData.can_add_for_parents,
+        status: 'active'
+      };
+      
+      // Only add user_id for parents (children will have null user_id)
+      if (formData.role === 'parent') {
+        // For now, parents need to be created through auth signup
+        // This would require implementing a proper parent invitation system
+        toast({
+          title: 'Not Supported',
+          description: 'Parent accounts must be created through the authentication system. Only child accounts can be added here.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('profiles')
-        .insert({
-          family_id: familyId,
-          display_name: formData.display_name.trim(),
-          role: formData.role,
-          color: formData.color,
-          can_add_for_self: formData.can_add_for_self,
-          can_add_for_siblings: formData.can_add_for_siblings,
-          can_add_for_parents: formData.can_add_for_parents,
-          user_id: crypto.randomUUID(), // Temporary user_id for child members
-          status: 'active'
-        });
+        .insert(insertData);
 
       if (error) throw error;
 
@@ -119,8 +132,8 @@ export const AddMemberDialog = ({ isOpen, onOpenChange, familyId, onMemberAdded 
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="parent">Parent</SelectItem>
                   <SelectItem value="child">Child</SelectItem>
+                  <SelectItem value="parent" disabled>Parent (use auth signup)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
