@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
+import { getMemberColorClasses } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -94,7 +96,7 @@ const ColumnBasedDashboard = () => {
           recurring_days_of_week,
           recurring_end_date,
           series_id,
-          assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role),
+          assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
           assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
           task_completions(id, completed_at, completed_by)
         `)
@@ -426,31 +428,36 @@ const ColumnBasedDashboard = () => {
                   );
 
                   return (
-                    <Card key={member.id} className="flex-shrink-0 w-80 h-fit border-primary/20">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarFallback 
-                              className="text-primary-foreground font-semibold bg-primary"
-                            >
-                              {getInitials(member.display_name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <CardTitle className="text-lg">{member.display_name}</CardTitle>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Badge variant={member.role === 'parent' ? 'default' : 'secondary'} className="text-xs">
-                                {member.role}
-                              </Badge>
-                              <span>{member.total_points} pts</span>
-                            </div>
+                  <Card key={member.id} className={cn(
+                    "flex-shrink-0 w-80 h-fit border-2",
+                    getMemberColorClasses(member.color).border,
+                    getMemberColorClasses(member.color).bgSoft
+                  )}>
+                    <CardHeader className={cn(
+                      "pb-3 border-b",
+                      getMemberColorClasses(member.color).border
+                    )}>
+                      <div className="flex items-center gap-3">
+                        <UserAvatar
+                          name={member.display_name}
+                          color={member.color}
+                          size="lg"
+                        />
+                        <div>
+                          <CardTitle className="text-lg">{member.display_name}</CardTitle>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Badge variant={member.role === 'parent' ? 'default' : 'secondary'} className="text-xs">
+                              {member.role}
+                            </Badge>
+                            <span>{member.total_points} pts</span>
                           </div>
                         </div>
-                        <div className="flex justify-between text-sm text-muted-foreground">
-                          <span>{pendingTasks.length} pending</span>
-                          <span>{completedTasks.length} completed</span>
-                        </div>
-                      </CardHeader>
+                      </div>
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>{pendingTasks.length} pending</span>
+                        <span>{completedTasks.length} completed</span>
+                      </div>
+                    </CardHeader>
                       <CardContent className="space-y-3">
                         <div className="space-y-3 mb-4">
                           {memberTasks.length === 0 ? (
@@ -479,8 +486,16 @@ const ColumnBasedDashboard = () => {
                         {profile.role === 'parent' && (
                           <Button 
                             variant="outline" 
-                            className="w-full border-dashed border-primary/40 text-primary hover:border-primary hover:text-primary"
+                            className={cn(
+                              "w-full border-dashed hover:text-white transition-colors",
+                              getMemberColorClasses(member.color).border,
+                              getMemberColorClasses(member.color).text,
+                              `hover:${getMemberColorClasses(member.color).accent.replace('bg-', '')}`
+                            )}
                             onClick={() => handleAddTaskForMember(member.id)}
+                            style={{
+                              '--hover-bg': getMemberColorClasses(member.color).accent.replace('bg-', ''),
+                            } as React.CSSProperties}
                           >
                             <Plus className="h-4 w-4 mr-2" />
                             Add Task for {member.display_name}

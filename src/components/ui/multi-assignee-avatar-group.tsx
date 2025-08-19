@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { cn } from '@/lib/utils';
 
 interface MultiAssigneeAvatarGroupProps {
@@ -31,9 +31,11 @@ export function MultiAssigneeAvatarGroup({
 
   if (assignees.length === 0) {
     return (
-      <Avatar className={cn(sizeClasses[size], className)}>
-        <AvatarFallback className="text-xs bg-muted">?</AvatarFallback>
-      </Avatar>
+      <UserAvatar 
+        name="?" 
+        size={size} 
+        className={cn(className, "bg-muted text-muted-foreground")} 
+      />
     );
   }
 
@@ -43,33 +45,35 @@ export function MultiAssigneeAvatarGroup({
   if (assignees.length === 1) {
     const assignee = assignees[0];
     return (
-      <Avatar className={cn(sizeClasses[size], className)} title={assignee.display_name}>
-        <AvatarFallback className="text-xs">
-          {getInitials(assignee.display_name)}
-        </AvatarFallback>
-      </Avatar>
+      <UserAvatar 
+        name={assignee.display_name}
+        color={assignee.color}
+        size={size}
+        className={className}
+        title={assignee.display_name}
+      />
     );
   }
 
   return (
     <div className={cn("flex -space-x-1", className)}>
       {displayedAssignees.map((assignee) => (
-        <Avatar 
-          key={assignee.id} 
-          className={cn(sizeClasses[size], "border-2 border-background")}
+        <UserAvatar
+          key={assignee.id}
+          name={assignee.display_name}
+          color={assignee.color}
+          size={size}
+          className="border-2 border-background"
           title={assignee.display_name}
-        >
-          <AvatarFallback className="text-xs">
-            {getInitials(assignee.display_name)}
-          </AvatarFallback>
-        </Avatar>
+        />
       ))}
       {remainingCount > 0 && (
-        <Avatar className={cn(sizeClasses[size], "border-2 border-background")}>
-          <AvatarFallback className="text-xs bg-muted" title={`+${remainingCount} more`}>
-            +{remainingCount}
-          </AvatarFallback>
-        </Avatar>
+        <UserAvatar
+          name={`+${remainingCount}`}
+          size={size}
+          className="border-2 border-background bg-muted text-muted-foreground"
+          title={`+${remainingCount} more`}
+        />
       )}
     </div>
   );

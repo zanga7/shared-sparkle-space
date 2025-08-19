@@ -17,6 +17,7 @@ export interface Task {
     id: string;
     display_name: string;
     role: 'parent' | 'child';
+    color: string;
   };
   assignees?: Array<{
     id: string;
@@ -44,6 +45,7 @@ export interface Profile {
   total_points: number;
   avatar_url?: string;
   family_id: string;
+  color: string;
 }
 
 export interface TaskSeries {

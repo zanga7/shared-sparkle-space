@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Task } from '@/types/task';
 import { cn } from '@/lib/utils';
@@ -47,11 +47,11 @@ export function TaskAssigneesDisplay({
         className={cn("flex items-center gap-2 cursor-pointer hover:bg-muted rounded p-1 -m-1", className)}
         onClick={onClick}
       >
-        <Avatar className="h-6 w-6">
-          <AvatarFallback className="text-xs">
-            {getInitials(assignees[0].display_name)}
-          </AvatarFallback>
-        </Avatar>
+        <UserAvatar
+          name={assignees[0].display_name}
+          color={assignees[0].color}
+          size="sm"
+        />
         <span className="text-sm">{assignees[0].display_name}</span>
       </div>
     );
@@ -64,22 +64,22 @@ export function TaskAssigneesDisplay({
     >
       <div className="flex -space-x-1">
         {displayedAssignees.map((assignee) => (
-          <Avatar 
-            key={assignee.id} 
-            className="h-6 w-6 border-2 border-background"
+          <UserAvatar
+            key={assignee.id}
+            name={assignee.display_name}
+            color={assignee.color}
+            size="sm"
+            className="border-2 border-background"
             title={assignee.display_name}
-          >
-            <AvatarFallback className="text-xs">
-              {getInitials(assignee.display_name)}
-            </AvatarFallback>
-          </Avatar>
+          />
         ))}
         {remainingCount > 0 && (
-          <Avatar className="h-6 w-6 border-2 border-background">
-            <AvatarFallback className="text-xs bg-muted">
-              +{remainingCount}
-            </AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            name={`+${remainingCount}`}
+            size="sm"
+            className="border-2 border-background bg-muted text-muted-foreground"
+            title={`+${remainingCount} more`}
+          />
         )}
       </div>
       {showNames && assignees.length > 1 && (
