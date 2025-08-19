@@ -172,6 +172,58 @@ const Dashboard = () => {
     }
   };
 
+  const uncompleteTask = async (task: Task) => {
+    if (!profile || !task.task_completions || task.task_completions.length === 0) return;
+    
+    try {
+      // Remove the task completion record
+      const { error } = await supabase
+        .from('task_completions')
+        .delete()
+        .eq('task_id', task.id)
+        .eq('completed_by', profile.id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Subtract points from user's total
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          total_points: profile.total_points - task.points
+        })
+        .eq('id', profile.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      toast({
+        title: 'Task Uncompleted',
+        description: `${task.points} points removed`,
+      });
+
+      fetchUserData();
+    } catch (error) {
+      console.error('Error uncompleting task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to uncomplete task',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleTaskToggle = (task: Task) => {
+    const isCompleted = task.task_completions && task.task_completions.length > 0;
+    if (isCompleted) {
+      uncompleteTask(task);
+    } else {
+      completeTask(task);
+    }
+  };
+
   const deleteTask = async () => {
     if (!deletingTask) return;
 
@@ -329,11 +381,13 @@ const Dashboard = () => {
                         <Button 
                           size="sm" 
                           variant={isCompleted ? "default" : "outline"}
-                          onClick={() => completeTask(task)}
-                          className="shrink-0"
-                          disabled={isCompleted}
+                          onClick={() => handleTaskToggle(task)}
+                          className={cn(
+                            "shrink-0",
+                            isCompleted && "bg-green-500 hover:bg-green-600"
+                          )}
                         >
-                          <CheckCircle className={cn("h-4 w-4", isCompleted && "text-green-500")} />
+                          <CheckCircle className="h-4 w-4" />
                         </Button>
                         
                         {/* Task details */}
