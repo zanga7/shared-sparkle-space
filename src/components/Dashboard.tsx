@@ -7,6 +7,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, CheckCircle, Clock, Users, Edit, Trash2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
 import { EditTaskDialog } from '@/components/EditTaskDialog';
 import {
@@ -42,6 +44,11 @@ interface Task {
     display_name: string;
     role: 'parent' | 'child';
   };
+  task_completions?: Array<{
+    id: string;
+    completed_at: string;
+    completed_by: string;
+  }>;
 }
 
 const Dashboard = () => {
@@ -88,7 +95,7 @@ const Dashboard = () => {
         setFamilyMembers(membersData || []);
       }
 
-      // Fetch family tasks
+      // Fetch family tasks with completion status
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .select(`
@@ -99,7 +106,8 @@ const Dashboard = () => {
           is_repeating,
           due_date,
           assigned_to,
-          assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role)
+          assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role),
+          task_completions(id, completed_at, completed_by)
         `)
         .eq('family_id', profileData.family_id);
 
@@ -303,59 +311,82 @@ const Dashboard = () => {
                   <p>No tasks yet. {profile.role === 'parent' ? 'Create your first task!' : 'Ask a parent to create some tasks.'}</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {tasks.map((task) => (
-                    <div key={task.id} className="group relative flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                      {/* Complete button at front */}
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => completeTask(task)}
-                        className="shrink-0"
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                      </Button>
-                      
-                      {/* Task details */}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium">{task.title}</h3>
-                        {task.description && (
-                          <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
+                <div className="space-y-2">
+                  {tasks.map((task) => {
+                    const isCompleted = task.task_completions && task.task_completions.length > 0;
+                    const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !isCompleted;
+                    
+                    return (
+                      <div 
+                        key={task.id} 
+                        className={cn(
+                          "group relative flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors",
+                          isCompleted && "opacity-60 bg-muted/30",
+                          isOverdue && "border-destructive/50"
                         )}
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="outline">{task.points} points</Badge>
-                          {task.assigned_profile && (
-                            <Badge variant="secondary">
-                              Assigned to {task.assigned_profile.display_name}
-                            </Badge>
+                      >
+                        {/* Complete button at front */}
+                        <Button 
+                          size="sm" 
+                          variant={isCompleted ? "default" : "outline"}
+                          onClick={() => completeTask(task)}
+                          className="shrink-0"
+                          disabled={isCompleted}
+                        >
+                          <CheckCircle className={cn("h-4 w-4", isCompleted && "text-green-500")} />
+                        </Button>
+                        
+                        {/* Task details */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className={cn("font-medium", isCompleted && "line-through")}>
+                            {task.title}
+                          </h3>
+                          {task.description && (
+                            <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
                           )}
-                          {task.is_repeating && (
-                            <Badge variant="outline">Repeating</Badge>
-                          )}
+                          <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            <Badge variant="outline" className="text-xs">{task.points} pts</Badge>
+                            {task.assigned_profile && (
+                              <Badge variant="secondary" className="text-xs">
+                                {task.assigned_profile.display_name}
+                              </Badge>
+                            )}
+                            {task.is_repeating && (
+                              <Badge variant="outline" className="text-xs">Repeating</Badge>
+                            )}
+                            {task.due_date && (
+                              <Badge variant={isOverdue ? "destructive" : "outline"} className="text-xs">
+                                Due {format(new Date(task.due_date), "MMM d")}
+                              </Badge>
+                            )}
+                            {isCompleted && (
+                              <Badge variant="default" className="text-xs bg-green-500">Completed</Badge>
+                            )}
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Hover actions for parents */}
-                      {profile.role === 'parent' && (
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 shrink-0">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setEditingTask(task)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setDeletingTask(task)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        {/* Hover actions for parents */}
+                        {profile.role === 'parent' && !isCompleted && (
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setEditingTask(task)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setDeletingTask(task)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

@@ -215,6 +215,49 @@ export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTask
             <Label htmlFor="repeating">Repeating task</Label>
           </div>
 
+          {/* Recurring options - shown when is_repeating is true */}
+          {formData.is_repeating && (
+            <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+              <h4 className="font-medium text-sm">Recurring Options</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="frequency">Frequency</Label>
+                  <Select defaultValue="daily">
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="interval">Every</Label>
+                  <Input
+                    id="interval"
+                    type="number"
+                    min="1"
+                    max="30"
+                    defaultValue="1"
+                    placeholder="1"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Days of Week (for weekly tasks)</Label>
+                <div className="flex flex-wrap gap-2">
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+                    <Button key={day} type="button" variant="outline" size="sm" className="text-xs">
+                      {day}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
