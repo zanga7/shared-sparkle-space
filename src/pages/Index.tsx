@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import Dashboard from '@/components/Dashboard';
+import ColumnBasedDashboard from '@/components/ColumnBasedDashboard';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -27,7 +27,7 @@ const Index = () => {
     return null; // Will redirect to auth
   }
 
-  return <Dashboard />;
+  return <ColumnBasedDashboard />;
 };
 
 export default Index;
