@@ -176,18 +176,19 @@ const Dashboard = () => {
     if (!profile || !task.task_completions || task.task_completions.length === 0) return;
     
     try {
-      console.log('Uncompleting task:', task.id, 'for user:', profile.id);
-      console.log('Current task completions:', task.task_completions);
+      // Find the completion record by the current user
+      const userCompletion = task.task_completions.find(completion => completion.completed_by === profile.id);
       
-      // Remove the task completion record
-      const { error, data } = await supabase
+      if (!userCompletion) {
+        console.log('No completion found for current user');
+        return;
+      }
+
+      // Remove the specific task completion record
+      const { error } = await supabase
         .from('task_completions')
         .delete()
-        .eq('task_id', task.id)
-        .eq('completed_by', profile.id)
-        .select();
-
-      console.log('Delete result:', { error, data });
+        .eq('id', userCompletion.id);
 
       if (error) {
         throw error;
@@ -210,8 +211,8 @@ const Dashboard = () => {
         description: `${task.points} points removed`,
       });
 
-      // Force refresh the data
-      await fetchUserData();
+      // Refresh the data
+      fetchUserData();
     } catch (error) {
       console.error('Error uncompleting task:', error);
       toast({
