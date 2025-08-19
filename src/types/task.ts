@@ -5,7 +5,7 @@ export interface Task {
   description: string | null;
   points: number;
   due_date: string | null;
-  assigned_to: string | null;
+  assigned_to: string | null; // Keep for backward compatibility
   created_by: string;
   is_repeating: boolean;
   recurring_frequency: string | null;
@@ -18,6 +18,18 @@ export interface Task {
     display_name: string;
     role: 'parent' | 'child';
   };
+  assignees?: Array<{
+    id: string;
+    profile_id: string;
+    assigned_at: string;
+    assigned_by: string;
+    profile: {
+      id: string;
+      display_name: string;
+      role: 'parent' | 'child';
+      color: string;
+    };
+  }>;
   task_completions?: Array<{
     id: string;
     completed_at: string;

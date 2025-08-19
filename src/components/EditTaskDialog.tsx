@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Task, Profile } from '@/types/task';
+import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 
 interface EditTaskDialogProps {
   task: Task;
@@ -33,6 +34,7 @@ export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTask
     description: '',
     points: 10,
     assigned_to: 'unassigned',
+    assignees: [] as string[],
     due_date: null as Date | null,
   });
 
@@ -40,11 +42,16 @@ export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTask
 
   useEffect(() => {
     if (task) {
+      // Get current assignees from the task
+      const currentAssignees = task.assignees?.map(a => a.profile_id) || 
+                              (task.assigned_to ? [task.assigned_to] : []);
+      
       setFormData({
         title: task.title,
         description: task.description || '',
         points: task.points,
         assigned_to: task.assigned_to || 'unassigned',
+        assignees: currentAssignees,
         due_date: task.due_date ? new Date(task.due_date) : null,
       });
     }
@@ -102,7 +109,7 @@ export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTask
           title: formData.title.trim(),
           description: formData.description.trim() || null,
           points: formData.points,
-          assigned_to: formData.assigned_to === 'unassigned' ? null : formData.assigned_to,
+          assigned_to: formData.assignees.length === 1 ? formData.assignees[0] : null, // For backward compatibility
           due_date: formData.due_date?.toISOString() || task.due_date,
         };
 
@@ -112,6 +119,29 @@ export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTask
           .eq('id', task.id);
 
         if (error) throw error;
+
+        // Update task assignees - first delete existing ones, then add new ones
+        const { error: deleteError } = await supabase
+          .from('task_assignees')
+          .delete()
+          .eq('task_id', task.id);
+
+        if (deleteError) throw deleteError;
+
+        // Insert new assignees if any are selected
+        if (formData.assignees.length > 0) {
+          const assigneeData = formData.assignees.map(assigneeProfileId => ({
+            task_id: task.id,
+            profile_id: assigneeProfileId,
+            assigned_by: task.created_by // Use the task creator as the assigner
+          }));
+
+          const { error: assigneeError } = await supabase
+            .from('task_assignees')
+            .insert(assigneeData);
+
+          if (assigneeError) throw assigneeError;
+        }
 
         toast({
           title: 'Success',
@@ -226,22 +256,12 @@ export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTask
 
             <div className="space-y-2">
               <Label>Assign to</Label>
-              <Select
-                value={formData.assigned_to}
-                onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Anyone can do it" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Anyone can do it</SelectItem>
-                  {familyMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.display_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MultiSelectAssignees
+                familyMembers={familyMembers}
+                selectedAssignees={formData.assignees}
+                onAssigneesChange={(assignees) => setFormData({ ...formData, assignees })}
+                placeholder="Select assignees..."
+              />
             </div>
           </div>
 

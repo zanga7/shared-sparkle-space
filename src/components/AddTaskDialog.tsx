@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useRecurringTasks } from '@/hooks/useRecurringTasks';
 import { Profile } from '@/types/task';
+import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 
 interface AddTaskDialogProps {
   familyMembers: Profile[];
@@ -50,6 +51,7 @@ export const AddTaskDialog = ({
     description: '',
     points: 10,
     assigned_to: 'unassigned',
+    assignees: [] as string[],
     due_date: selectedDate || null,
     is_repeating: false,
     recurring_frequency: 'daily' as 'daily' | 'weekly' | 'monthly',
@@ -100,19 +102,38 @@ export const AddTaskDialog = ({
           title: formData.title.trim(),
           description: formData.description.trim() || null,
           points: formData.points,
-          assigned_to: formData.assigned_to === 'unassigned' ? null : formData.assigned_to,
+          assigned_to: formData.assignees.length === 1 ? formData.assignees[0] : null, // For backward compatibility
           due_date: formData.due_date?.toISOString() || null,
           is_repeating: false,
           family_id: familyId,
           created_by: profileId
         };
 
-        const { error } = await supabase
+        const { data: taskResult, error } = await supabase
           .from('tasks')
-          .insert(taskData);
+          .insert(taskData)
+          .select('id')
+          .single();
 
         if (error) {
           throw error;
+        }
+
+        // Insert task assignees if any are selected
+        if (formData.assignees.length > 0 && taskResult) {
+          const assigneeData = formData.assignees.map(assigneeProfileId => ({
+            task_id: taskResult.id,
+            profile_id: assigneeProfileId,
+            assigned_by: profileId
+          }));
+
+          const { error: assigneeError } = await supabase
+            .from('task_assignees')
+            .insert(assigneeData);
+
+          if (assigneeError) {
+            throw assigneeError;
+          }
         }
 
         toast({
@@ -127,6 +148,7 @@ export const AddTaskDialog = ({
         description: '',
         points: 10,
         assigned_to: 'unassigned',
+        assignees: [],
         due_date: selectedDate || null,
         is_repeating: false,
         recurring_frequency: 'daily',
@@ -207,22 +229,12 @@ export const AddTaskDialog = ({
 
             <div className="space-y-2">
               <Label>Assign to</Label>
-              <Select
-                value={formData.assigned_to}
-                onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Anyone can do it" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Anyone can do it</SelectItem>
-                  {familyMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.display_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MultiSelectAssignees
+                familyMembers={familyMembers}
+                selectedAssignees={formData.assignees}
+                onAssigneesChange={(assignees) => setFormData({ ...formData, assignees })}
+                placeholder="Select assignees..."
+              />
             </div>
           </div>
 

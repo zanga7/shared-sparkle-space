@@ -18,6 +18,7 @@ import {
 import { format, isAfter, differenceInDays, addDays, addWeeks, addMonths } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Task, Profile } from '@/types/task';
+import { TaskAssigneesDisplay } from '@/components/ui/task-assignees-display';
 
 interface EnhancedTaskItemProps {
   task: Task;
@@ -179,18 +180,8 @@ export const EnhancedTaskItem = ({
               {task.points} pts
             </Badge>
 
-            {/* Assigned Member */}
-            {assignedProfile && (
-              <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                <Avatar className="h-3 w-3">
-                  <AvatarImage src={assignedProfile.avatar_url} />
-                  <AvatarFallback className="text-xs">
-                    {assignedProfile.display_name[0]}
-                  </AvatarFallback>
-                </Avatar>
-                {assignedProfile.display_name}
-              </Badge>
-            )}
+            {/* Assignees Display */}
+            <TaskAssigneesDisplay task={task} showNames={false} />
 
             {/* Recurring Badge with Streak */}
             {task.series_id && (
