@@ -23,41 +23,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useRecurringTasks } from '@/hooks/useRecurringTasks';
-
-interface Profile {
-  id: string;
-  display_name: string;
-  role: 'parent' | 'child';
-  total_points: number;
-  avatar_url?: string;
-  family_id: string;
-}
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  points: number;
-  is_repeating: boolean;
-  due_date?: string;
-  assigned_to?: string;
-  created_by?: string;
-  assigned_profile?: {
-    id: string;
-    display_name: string;
-    role: 'parent' | 'child';
-  };
-  task_completions?: Array<{
-    id: string;
-    completed_at: string;
-    completed_by: string;
-  }>;
-  recurring_frequency?: 'daily' | 'weekly' | 'monthly' | null;
-  recurring_interval?: number;
-  recurring_days_of_week?: number[];
-  recurring_end_date?: string;
-  series_id?: string | null;
-}
+import { Task, Profile } from '@/types/task';
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
@@ -116,6 +82,11 @@ const Dashboard = () => {
           is_repeating,
           due_date,
           assigned_to,
+          created_by,
+          recurring_frequency,
+          recurring_interval,
+          recurring_days_of_week,
+          recurring_end_date,
           series_id,
           assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role),
           task_completions(id, completed_at, completed_by)

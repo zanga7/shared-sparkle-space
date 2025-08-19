@@ -13,28 +13,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-
-interface Profile {
-  id: string;
-  display_name: string;
-  role: 'parent' | 'child';
-}
-
-interface Task {
-  id: string;
-  title: string;
-  description: string | null;
-  points: number;
-  due_date: string | null;
-  assigned_to: string | null;
-  created_by: string;
-  is_repeating: boolean;
-  recurring_frequency?: string | null;
-  recurring_interval?: number | null;
-  recurring_days_of_week?: number[] | null;
-  recurring_end_date?: string | null;
-  series_id?: string | null;
-}
+import { Task, Profile } from '@/types/task';
 
 interface EditTaskDialogProps {
   task: Task;

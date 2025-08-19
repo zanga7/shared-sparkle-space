@@ -1,0 +1,53 @@
+// Shared Task interface for the entire application
+export interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  points: number;
+  due_date: string | null;
+  assigned_to: string | null;
+  created_by: string;
+  is_repeating: boolean;
+  recurring_frequency: string | null;
+  recurring_interval: number | null;
+  recurring_days_of_week: number[] | null;
+  recurring_end_date: string | null;
+  series_id: string | null;
+  assigned_profile?: {
+    id: string;
+    display_name: string;
+    role: 'parent' | 'child';
+  };
+  task_completions?: Array<{
+    id: string;
+    completed_at: string;
+    completed_by: string;
+  }>;
+}
+
+export interface Profile {
+  id: string;
+  display_name: string;
+  role: 'parent' | 'child';
+  total_points: number;
+  avatar_url?: string;
+  family_id: string;
+}
+
+export interface TaskSeries {
+  id: string;
+  family_id: string;
+  title: string;
+  description: string | null;
+  points: number;
+  assigned_to: string | null;
+  recurring_frequency: string;
+  recurring_interval: number;
+  recurring_days_of_week: number[] | null;
+  recurring_end_date: string | null;
+  is_active: boolean;
+  last_generated_date: string | null;
+  next_due_date: string | null;
+  created_by: string;
+  created_at: string;
+}

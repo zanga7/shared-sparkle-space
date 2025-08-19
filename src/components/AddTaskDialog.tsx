@@ -14,12 +14,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useRecurringTasks } from '@/hooks/useRecurringTasks';
-
-interface Profile {
-  id: string;
-  display_name: string;
-  role: 'parent' | 'child';
-}
+import { Profile } from '@/types/task';
 
 interface AddTaskDialogProps {
   familyMembers: Profile[];

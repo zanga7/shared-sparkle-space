@@ -18,41 +18,7 @@ import {
 import { format, addDays, addWeeks, addMonths } from 'date-fns';
 import { useRecurringTasks } from '@/hooks/useRecurringTasks';
 import { useToast } from '@/hooks/use-toast';
-
-interface Profile {
-  id: string;
-  display_name: string;
-  role: 'parent' | 'child';
-}
-
-interface TaskSeries {
-  id: string;
-  family_id: string;
-  title: string;
-  description: string | null;
-  points: number;
-  assigned_to: string | null;
-  recurring_frequency: string;
-  recurring_interval: number;
-  recurring_days_of_week: number[] | null;
-  recurring_end_date: string | null;
-  is_active: boolean;
-  last_generated_date: string | null;
-  next_due_date: string | null;
-  created_at: string;
-}
-
-interface Task {
-  id: string;
-  series_id: string | null;
-  title: string;
-  due_date: string | null;
-  task_completions?: Array<{
-    id: string;
-    completed_at: string;
-    completed_by: string;
-  }>;
-}
+import { Profile, Task, TaskSeries } from '@/types/task';
 
 interface RecurringSeriesDialogProps {
   series: TaskSeries;
