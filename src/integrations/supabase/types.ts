@@ -14,6 +14,103 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          family_id: string
+          id: string
+          ip_address: unknown | null
+          new_data: Json | null
+          old_data: Json | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          family_id: string
+          id?: string
+          ip_address?: unknown | null
+          new_data?: Json | null
+          old_data?: Json | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          family_id?: string
+          id?: string
+          ip_address?: unknown | null
+          new_data?: Json | null
+          old_data?: Json | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categories: {
+        Row: {
+          color: string
+          created_at: string
+          created_by: string
+          family_id: string
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          created_by: string
+          family_id: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          created_by?: string
+          family_id?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       families: {
         Row: {
           created_at: string
@@ -35,36 +132,107 @@ export type Database = {
         }
         Relationships: []
       }
+      household_settings: {
+        Row: {
+          created_at: string
+          family_id: string
+          id: string
+          pin_attempts_limit: number
+          pin_lockout_duration: number
+          subscription_metadata: Json | null
+          theme_palette: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: string
+          pin_attempts_limit?: number
+          pin_lockout_duration?: number
+          subscription_metadata?: Json | null
+          theme_palette?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: string
+          pin_attempts_limit?: number
+          pin_lockout_duration?: number
+          subscription_metadata?: Json | null
+          theme_palette?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "household_settings_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: true
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
+          can_add_for_parents: boolean
+          can_add_for_self: boolean
+          can_add_for_siblings: boolean
+          color: string
           created_at: string
           display_name: string
+          failed_pin_attempts: number
           family_id: string
           id: string
+          pin_hash: string | null
+          pin_locked_until: string | null
           role: Database["public"]["Enums"]["user_role"]
+          status: string
+          streak_count: number
+          theme: Json | null
           total_points: number
           updated_at: string
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
+          can_add_for_parents?: boolean
+          can_add_for_self?: boolean
+          can_add_for_siblings?: boolean
+          color?: string
           created_at?: string
           display_name: string
+          failed_pin_attempts?: number
           family_id: string
           id?: string
+          pin_hash?: string | null
+          pin_locked_until?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          status?: string
+          streak_count?: number
+          theme?: Json | null
           total_points?: number
           updated_at?: string
           user_id: string
         }
         Update: {
           avatar_url?: string | null
+          can_add_for_parents?: boolean
+          can_add_for_self?: boolean
+          can_add_for_siblings?: boolean
+          color?: string
           created_at?: string
           display_name?: string
+          failed_pin_attempts?: number
           family_id?: string
           id?: string
+          pin_hash?: string | null
+          pin_locked_until?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          status?: string
+          streak_count?: number
+          theme?: Json | null
           total_points?: number
           updated_at?: string
           user_id?: string
@@ -191,6 +359,7 @@ export type Database = {
       tasks: {
         Row: {
           assigned_to: string | null
+          category_id: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -209,6 +378,7 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          category_id?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -227,6 +397,7 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          category_id?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -249,6 +420,13 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
             referencedColumns: ["id"]
           },
           {
@@ -279,6 +457,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_audit_log: {
+        Args: {
+          p_action: string
+          p_actor_id: string
+          p_entity_id?: string
+          p_entity_type: string
+          p_family_id: string
+          p_new_data?: Json
+          p_old_data?: Json
+        }
+        Returns: undefined
+      }
       get_user_family_id: {
         Args: Record<PropertyKey, never>
         Returns: string
