@@ -176,12 +176,18 @@ const Dashboard = () => {
     if (!profile || !task.task_completions || task.task_completions.length === 0) return;
     
     try {
+      console.log('Uncompleting task:', task.id, 'for user:', profile.id);
+      console.log('Current task completions:', task.task_completions);
+      
       // Remove the task completion record
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('task_completions')
         .delete()
         .eq('task_id', task.id)
-        .eq('completed_by', profile.id);
+        .eq('completed_by', profile.id)
+        .select();
+
+      console.log('Delete result:', { error, data });
 
       if (error) {
         throw error;
@@ -204,7 +210,8 @@ const Dashboard = () => {
         description: `${task.points} points removed`,
       });
 
-      fetchUserData();
+      // Force refresh the data
+      await fetchUserData();
     } catch (error) {
       console.error('Error uncompleting task:', error);
       toast({
@@ -367,6 +374,12 @@ const Dashboard = () => {
                   {tasks.map((task) => {
                     const isCompleted = task.task_completions && task.task_completions.length > 0;
                     const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !isCompleted;
+                    
+                    console.log(`Task ${task.title}:`, { 
+                      completions: task.task_completions, 
+                      isCompleted,
+                      completionCount: task.task_completions?.length || 0 
+                    });
                     
                     return (
                       <div 
