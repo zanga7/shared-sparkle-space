@@ -168,12 +168,20 @@ export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTask
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Task</DialogTitle>
-          <DialogDescription>
-            {isRecurringTask ? 
-              'Edit this recurring task. Choose whether to update just this instance or the entire series.' :
-              'Edit this task details'
-            }
-          </DialogDescription>
+              <DialogDescription>
+                {(() => {
+                  const assignees = task.assignees?.map(a => a.profile) || 
+                                   (task.assigned_profile ? [task.assigned_profile] : []);
+                  if (assignees.length > 1) {
+                    const names = assignees.map(a => a.display_name).join(', ');
+                    return `When completed, all assigned members (${names}) will receive ${task.points} points each.`;
+                  } else if (assignees.length === 1) {
+                    return `When completed, ${assignees[0].display_name} will receive ${task.points} points.`;
+                  } else {
+                    return `When completed, whoever finishes this task will receive ${task.points} points.`;
+                  }
+                })()}
+              </DialogDescription>
         </DialogHeader>
 
         {/* Recurring Task Edit Scope Selection */}

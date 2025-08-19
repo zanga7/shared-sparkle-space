@@ -188,7 +188,21 @@ export const AddTaskDialog = ({
             {selectedDate ? `Create Task for ${format(selectedDate, 'MMM d, yyyy')}` : 'Create New Task'}
           </DialogTitle>
           <DialogDescription>
-            Add a new chore or activity for your family
+            Add a new chore or activity for your family.
+            {(() => {
+              if (formData.assignees.length > 1) {
+                const selectedNames = familyMembers
+                  .filter(m => formData.assignees.includes(m.id))
+                  .map(m => m.display_name)
+                  .join(', ');
+                return ` When completed, all assigned members (${selectedNames}) will receive ${formData.points} points each.`;
+              } else if (formData.assignees.length === 1) {
+                const assignee = familyMembers.find(m => m.id === formData.assignees[0]);
+                return ` When completed, ${assignee?.display_name} will receive ${formData.points} points.`;
+              } else {
+                return ` When completed, whoever finishes this task will receive ${formData.points} points.`;
+              }
+            })()}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">

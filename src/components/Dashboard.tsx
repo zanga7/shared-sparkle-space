@@ -120,6 +120,14 @@ const Dashboard = () => {
     if (!profile) return;
     
     try {
+      // Get all assignees for this task (including both old and new format)
+      const assignees = task.assignees?.map(a => a.profile) || 
+                       (task.assigned_profile ? [task.assigned_profile] : []);
+      
+      // If no specific assignees, anyone can complete it and only they get points
+      const pointRecipients = assignees.length > 0 ? assignees : [profile];
+      
+      // Create task completion record
       const { error } = await supabase
         .from('task_completions')
         .insert({
@@ -132,21 +140,41 @@ const Dashboard = () => {
         throw error;
       }
 
-      // Update user's total points
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          total_points: profile.total_points + task.points
-        })
-        .eq('id', profile.id);
+      // Award points to all assignees (or just the completer if no assignees)
+      const pointUpdates = pointRecipients.map(async (recipient) => {
+        const currentProfile = familyMembers.find(m => m.id === recipient.id);
+        if (currentProfile) {
+          return supabase
+            .from('profiles')
+            .update({
+              total_points: currentProfile.total_points + task.points
+            })
+            .eq('id', recipient.id);
+        }
+      });
 
-      if (updateError) {
-        throw updateError;
+      const updateResults = await Promise.all(pointUpdates.filter(Boolean));
+      
+      // Check for errors in point updates
+      const updateErrors = updateResults.filter(result => result?.error);
+      if (updateErrors.length > 0) {
+        throw new Error('Failed to update some points');
+      }
+
+      // Create toast message based on point distribution
+      let toastMessage;
+      if (pointRecipients.length === 1 && pointRecipients[0].id === profile.id) {
+        toastMessage = `You earned ${task.points} points!`;
+      } else if (pointRecipients.length === 1) {
+        toastMessage = `${pointRecipients[0].display_name} earned ${task.points} points!`;
+      } else {
+        const names = pointRecipients.map(p => p.display_name).join(', ');
+        toastMessage = `${task.points} points awarded to: ${names}`;
       }
 
       toast({
         title: 'Task Completed!',
-        description: `You earned ${task.points} points!`,
+        description: toastMessage,
       });
 
       fetchUserData();
@@ -171,6 +199,10 @@ const Dashboard = () => {
         return;
       }
 
+      // Get all assignees who received points
+      const assignees = task.assignees?.map(a => a.profile) || 
+                       (task.assigned_profile ? [task.assigned_profile] : [profile]);
+
       // Remove the specific task completion record
       const { error } = await supabase
         .from('task_completions')
@@ -181,21 +213,39 @@ const Dashboard = () => {
         throw error;
       }
 
-      // Subtract points from user's total
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          total_points: profile.total_points - task.points
-        })
-        .eq('id', profile.id);
+      // Remove points from all assignees who received them
+      const pointUpdates = assignees.map(async (recipient) => {
+        const currentProfile = familyMembers.find(m => m.id === recipient.id);
+        if (currentProfile) {
+          return supabase
+            .from('profiles')
+            .update({
+              total_points: currentProfile.total_points - task.points
+            })
+            .eq('id', recipient.id);
+        }
+      });
 
-      if (updateError) {
-        throw updateError;
+      const updateResults = await Promise.all(pointUpdates.filter(Boolean));
+      
+      // Check for errors in point updates
+      const updateErrors = updateResults.filter(result => result?.error);
+      if (updateErrors.length > 0) {
+        throw new Error('Failed to update some points');
+      }
+
+      // Create toast message based on point removal
+      let toastMessage;
+      if (assignees.length === 1) {
+        toastMessage = `${task.points} points removed`;
+      } else {
+        const names = assignees.map(p => p.display_name).join(', ');
+        toastMessage = `${task.points} points removed from: ${names}`;
       }
 
       toast({
         title: 'Task Uncompleted',
-        description: `${task.points} points removed`,
+        description: toastMessage,
       });
 
       // Refresh the data
