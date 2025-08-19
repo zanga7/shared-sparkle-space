@@ -287,6 +287,11 @@ const Dashboard = () => {
             <Badge variant={profile.role === 'parent' ? 'default' : 'secondary'}>
               {profile.role === 'parent' ? 'Parent' : 'Child'}
             </Badge>
+            {profile.role === 'parent' && (
+              <Button variant="outline" asChild>
+                <a href="/admin">Admin Panel</a>
+              </Button>
+            )}
             <Button variant="outline" onClick={() => signOut()}>
               Sign Out
             </Button>
