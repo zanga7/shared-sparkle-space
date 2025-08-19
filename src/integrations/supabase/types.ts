@@ -142,6 +142,10 @@ export type Database = {
           id: string
           is_repeating: boolean
           points: number
+          recurring_days_of_week: number[] | null
+          recurring_end_date: string | null
+          recurring_frequency: string | null
+          recurring_interval: number | null
           title: string
           updated_at: string
         }
@@ -155,6 +159,10 @@ export type Database = {
           id?: string
           is_repeating?: boolean
           points?: number
+          recurring_days_of_week?: number[] | null
+          recurring_end_date?: string | null
+          recurring_frequency?: string | null
+          recurring_interval?: number | null
           title: string
           updated_at?: string
         }
@@ -168,6 +176,10 @@ export type Database = {
           id?: string
           is_repeating?: boolean
           points?: number
+          recurring_days_of_week?: number[] | null
+          recurring_end_date?: string | null
+          recurring_frequency?: string | null
+          recurring_interval?: number | null
           title?: string
           updated_at?: string
         }

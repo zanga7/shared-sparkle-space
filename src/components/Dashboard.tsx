@@ -49,6 +49,10 @@ interface Task {
     completed_at: string;
     completed_by: string;
   }>;
+  recurring_frequency?: 'daily' | 'weekly' | 'monthly' | null;
+  recurring_interval?: number;
+  recurring_days_of_week?: number[];
+  recurring_end_date?: string;
 }
 
 const Dashboard = () => {

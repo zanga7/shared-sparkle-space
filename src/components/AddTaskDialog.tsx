@@ -37,7 +37,11 @@ export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreate
     points: 10,
     assigned_to: 'unassigned',
     due_date: null as Date | null,
-    is_repeating: false
+    is_repeating: false,
+    recurring_frequency: 'daily' as 'daily' | 'weekly' | 'monthly',
+    recurring_interval: 1,
+    recurring_days_of_week: [] as number[],
+    recurring_end_date: null as Date | null
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,6 +65,11 @@ export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreate
         assigned_to: formData.assigned_to === 'unassigned' ? null : formData.assigned_to,
         due_date: formData.due_date?.toISOString() || null,
         is_repeating: formData.is_repeating,
+        recurring_frequency: formData.is_repeating ? formData.recurring_frequency : null,
+        recurring_interval: formData.is_repeating ? formData.recurring_interval : null,
+        recurring_days_of_week: formData.is_repeating && formData.recurring_frequency === 'weekly' 
+          ? formData.recurring_days_of_week : null,
+        recurring_end_date: formData.is_repeating ? formData.recurring_end_date?.toISOString() || null : null,
         family_id: familyId,
         created_by: profileId
       };
@@ -85,7 +94,11 @@ export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreate
         points: 10,
         assigned_to: 'unassigned',
         due_date: null,
-        is_repeating: false
+        is_repeating: false,
+        recurring_frequency: 'daily',
+        recurring_interval: 1,
+        recurring_days_of_week: [],
+        recurring_end_date: null
       });
 
       setOpen(false);
@@ -217,7 +230,12 @@ export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreate
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="frequency">Frequency</Label>
-                  <Select defaultValue="daily">
+                  <Select 
+                    value={formData.recurring_frequency}
+                    onValueChange={(value: 'daily' | 'weekly' | 'monthly') => 
+                      setFormData({ ...formData, recurring_frequency: value, recurring_days_of_week: [] })
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -235,20 +253,69 @@ export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreate
                     type="number"
                     min="1"
                     max="30"
-                    defaultValue="1"
+                    value={formData.recurring_interval}
+                    onChange={(e) => setFormData({ ...formData, recurring_interval: parseInt(e.target.value) || 1 })}
                     placeholder="1"
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Days of Week (for weekly tasks)</Label>
-                <div className="flex flex-wrap gap-2">
-                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
-                    <Button key={day} type="button" variant="outline" size="sm" className="text-xs">
-                      {day}
-                    </Button>
-                  ))}
+              
+              {formData.recurring_frequency === 'weekly' && (
+                <div className="space-y-2">
+                  <Label>Days of Week</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => {
+                      const dayNumber = index === 6 ? 0 : index + 1; // Sunday = 0, Monday = 1, etc.
+                      const isSelected = formData.recurring_days_of_week.includes(dayNumber);
+                      return (
+                        <Button 
+                          key={day} 
+                          type="button" 
+                          variant={isSelected ? "default" : "outline"} 
+                          size="sm" 
+                          className="text-xs"
+                          onClick={() => {
+                            const newDays = isSelected 
+                              ? formData.recurring_days_of_week.filter(d => d !== dayNumber)
+                              : [...formData.recurring_days_of_week, dayNumber].sort();
+                            setFormData({ ...formData, recurring_days_of_week: newDays });
+                          }}
+                        >
+                          {day}
+                        </Button>
+                      );
+                    })}
+                  </div>
                 </div>
+              )}
+              
+              <div className="space-y-2">
+                <Label>End Date (Optional)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formData.recurring_end_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.recurring_end_date ? format(formData.recurring_end_date, "PPP") : "No end date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.recurring_end_date}
+                      onSelect={(date) => setFormData({ ...formData, recurring_end_date: date || null })}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           )}
