@@ -25,6 +25,7 @@ interface AddTaskDialogProps {
   selectedDate?: Date | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  preselectedMemberId?: string | null;
 }
 
 export const AddTaskDialog = ({ 
@@ -34,7 +35,8 @@ export const AddTaskDialog = ({
   onTaskCreated, 
   selectedDate, 
   open: externalOpen, 
-  onOpenChange: externalOnOpenChange 
+  onOpenChange: externalOnOpenChange,
+  preselectedMemberId
 }: AddTaskDialogProps) => {
   const { toast } = useToast();
   const { createTaskSeries } = useRecurringTasks(familyId);
@@ -74,6 +76,23 @@ export const AddTaskDialog = ({
       }));
     }
   }, [selectedDate]);
+
+  // Handle preselected member
+  useEffect(() => {
+    if (preselectedMemberId && preselectedMemberId !== 'unassigned') {
+      setFormData(prev => ({ 
+        ...prev, 
+        assigned_to: preselectedMemberId,
+        assignees: [preselectedMemberId]
+      }));
+    } else if (preselectedMemberId === 'unassigned') {
+      setFormData(prev => ({ 
+        ...prev, 
+        assigned_to: 'unassigned',
+        assignees: []
+      }));
+    }
+  }, [preselectedMemberId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

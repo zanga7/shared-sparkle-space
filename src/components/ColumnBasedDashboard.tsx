@@ -40,6 +40,7 @@ const ColumnBasedDashboard = () => {
   const [viewingSeries, setViewingSeries] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedMemberForTask, setSelectedMemberForTask] = useState<string | null>(null);
   const { taskSeries } = useRecurringTasks(profile?.family_id);
 
   useEffect(() => {
@@ -329,6 +330,16 @@ const ColumnBasedDashboard = () => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  const handleAddTaskForMember = (memberId: string) => {
+    setSelectedMemberForTask(memberId);
+    setIsAddDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setIsAddDialogOpen(false);
+    setSelectedMemberForTask(null);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -402,7 +413,7 @@ const ColumnBasedDashboard = () => {
           </TabsList>
 
           <TabsContent value="columns" className="mt-6">
-            <div className="w-full overflow-x-auto">
+            <div className="w-full overflow-x-auto touch-pan-x">
               <div className="flex gap-4 pb-4" style={{ minWidth: 'fit-content' }}>
                 {/* Family member columns */}
                 {familyMembers.map(member => {
@@ -415,12 +426,12 @@ const ColumnBasedDashboard = () => {
                   );
 
                   return (
-                    <Card key={member.id} className="flex-shrink-0 w-80 h-fit">
+                    <Card key={member.id} className="flex-shrink-0 w-80 h-fit border-primary/20">
                       <CardHeader className="pb-3">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10">
                             <AvatarFallback 
-                              className="text-white font-semibold bg-primary"
+                              className="text-primary-foreground font-semibold bg-primary"
                             >
                               {getInitials(member.display_name)}
                             </AvatarFallback>
@@ -441,25 +452,39 @@ const ColumnBasedDashboard = () => {
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-3">
-                        {memberTasks.length === 0 ? (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <p className="text-sm">No tasks assigned</p>
-                          </div>
-                        ) : (
-                          memberTasks.map(task => (
-                            <div key={task.id} className="space-y-2">
-                              <EnhancedTaskItem
-                                task={task}
-                                allTasks={tasks}
-                                familyMembers={familyMembers}
-                                onToggle={handleTaskToggle}
-                                onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
-                                showActions={profile.role === 'parent'}
-                              />
+                        <div className="space-y-3 mb-4">
+                          {memberTasks.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                              <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p className="text-sm">No tasks assigned</p>
                             </div>
-                          ))
+                          ) : (
+                            memberTasks.map(task => (
+                              <div key={task.id} className="space-y-2">
+                                <EnhancedTaskItem
+                                  task={task}
+                                  allTasks={tasks}
+                                  familyMembers={familyMembers}
+                                  onToggle={handleTaskToggle}
+                                  onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                                  onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
+                                  showActions={profile.role === 'parent'}
+                                />
+                              </div>
+                            ))
+                          )}
+                        </div>
+                        
+                        {/* Add Task Button */}
+                        {profile.role === 'parent' && (
+                          <Button 
+                            variant="outline" 
+                            className="w-full border-dashed border-primary/40 text-primary hover:border-primary hover:text-primary"
+                            onClick={() => handleAddTaskForMember(member.id)}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Task for {member.display_name}
+                          </Button>
                         )}
                       </CardContent>
                     </Card>
@@ -483,19 +508,33 @@ const ColumnBasedDashboard = () => {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {tasksByMember.get('unassigned')?.map(task => (
-                        <div key={task.id} className="space-y-2">
-                          <EnhancedTaskItem
-                            task={task}
-                            allTasks={tasks}
-                            familyMembers={familyMembers}
-                            onToggle={handleTaskToggle}
-                            onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                            onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
-                            showActions={profile.role === 'parent'}
-                          />
-                        </div>
-                      ))}
+                      <div className="space-y-3 mb-4">
+                        {tasksByMember.get('unassigned')?.map(task => (
+                          <div key={task.id} className="space-y-2">
+                            <EnhancedTaskItem
+                              task={task}
+                              allTasks={tasks}
+                              familyMembers={familyMembers}
+                              onToggle={handleTaskToggle}
+                              onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                              onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
+                              showActions={profile.role === 'parent'}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Add Unassigned Task Button */}
+                      {profile.role === 'parent' && (
+                        <Button 
+                          variant="outline" 
+                          className="w-full border-dashed border-muted-foreground/30 text-muted-foreground hover:border-muted-foreground hover:text-foreground"
+                          onClick={() => handleAddTaskForMember('unassigned')}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Unassigned Task
+                        </Button>
+                      )}
                     </CardContent>
                   </Card>
                 )}
@@ -518,12 +557,13 @@ const ColumnBasedDashboard = () => {
       {isAddDialogOpen && (
         <AddTaskDialog
           open={isAddDialogOpen}
-          onOpenChange={setIsAddDialogOpen}
+          onOpenChange={handleDialogClose}
           familyMembers={familyMembers}
           familyId={profile.family_id}
           profileId={profile.id}
           onTaskCreated={fetchUserData}
           selectedDate={selectedDate}
+          preselectedMemberId={selectedMemberForTask}
         />
       )}
 

@@ -53,6 +53,18 @@ All colors MUST be HSL.
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Member color tokens for profiles */
+    --sky-400: 56 189 248;
+    --sky-500: 14 165 233;
+    --rose-400: 251 113 133;
+    --rose-500: 244 63 94;
+    --emerald-400: 52 211 153;
+    --emerald-500: 16 185 129;
+    --amber-400: 251 191 36;
+    --amber-500: 245 158 11;
+    --violet-400: 196 181 253;
+    --violet-500: 139 92 246;
   }
 
   .dark {
@@ -102,4 +114,28 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Touch scrolling for mobile */
+.touch-pan-x {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbar for cleaner look while keeping functionality */
+.touch-pan-x::-webkit-scrollbar {
+  height: 4px;
+}
+
+.touch-pan-x::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+.touch-pan-x::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 2px;
+}
+
+.touch-pan-x::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
 }
