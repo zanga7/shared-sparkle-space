@@ -8,13 +8,15 @@ interface TaskAssigneesDisplayProps {
   className?: string;
   showNames?: boolean;
   maxDisplay?: number;
+  onClick?: () => void;
 }
 
 export function TaskAssigneesDisplay({ 
   task, 
   className,
   showNames = false,
-  maxDisplay = 3
+  maxDisplay = 3,
+  onClick
 }: TaskAssigneesDisplayProps) {
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -26,7 +28,11 @@ export function TaskAssigneesDisplay({
 
   if (assignees.length === 0) {
     return (
-      <Badge variant="outline" className={cn("text-xs", className)}>
+      <Badge 
+        variant="outline" 
+        className={cn("text-xs cursor-pointer hover:bg-muted", className)}
+        onClick={onClick}
+      >
         Anyone
       </Badge>
     );
@@ -37,7 +43,10 @@ export function TaskAssigneesDisplay({
 
   if (showNames && assignees.length === 1) {
     return (
-      <div className={cn("flex items-center gap-2", className)}>
+      <div 
+        className={cn("flex items-center gap-2 cursor-pointer hover:bg-muted rounded p-1 -m-1", className)}
+        onClick={onClick}
+      >
         <Avatar className="h-6 w-6">
           <AvatarFallback className="text-xs">
             {getInitials(assignees[0].display_name)}
@@ -49,7 +58,10 @@ export function TaskAssigneesDisplay({
   }
 
   return (
-    <div className={cn("flex items-center gap-1", className)}>
+    <div 
+      className={cn("flex items-center gap-1 cursor-pointer hover:bg-muted rounded p-1 -m-1", className)}
+      onClick={onClick}
+    >
       <div className="flex -space-x-1">
         {displayedAssignees.map((assignee) => (
           <Avatar 

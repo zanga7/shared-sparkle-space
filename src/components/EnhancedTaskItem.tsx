@@ -181,7 +181,11 @@ export const EnhancedTaskItem = ({
             </Badge>
 
             {/* Assignees Display */}
-            <TaskAssigneesDisplay task={task} showNames={false} />
+            <TaskAssigneesDisplay 
+              task={task} 
+              showNames={false}
+              onClick={onEdit ? () => onEdit(task) : undefined}
+            />
 
             {/* Recurring Badge with Streak */}
             {task.series_id && (
