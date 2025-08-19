@@ -62,4 +62,10 @@ export interface TaskSeries {
   next_due_date: string | null;
   created_by: string;
   created_at: string;
+  start_date: string | null;
+  repetition_count: number | null;
+  remaining_repetitions: number | null;
+  monthly_type: 'date' | 'weekday' | null;
+  monthly_weekday_ordinal: number | null;
+  skip_next_occurrence: boolean;
 }

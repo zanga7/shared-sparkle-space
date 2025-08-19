@@ -18,6 +18,12 @@ interface TaskSeries {
   next_due_date: string | null;
   created_by: string;
   created_at: string;
+  start_date: string | null;
+  repetition_count: number | null;
+  remaining_repetitions: number | null;
+  monthly_type: 'date' | 'weekday' | null;
+  monthly_weekday_ordinal: number | null;
+  skip_next_occurrence: boolean;
 }
 
 export const useRecurringTasks = (familyId?: string) => {
@@ -37,7 +43,10 @@ export const useRecurringTasks = (familyId?: string) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTaskSeries(data || []);
+      setTaskSeries((data || []).map(item => ({
+        ...item,
+        monthly_type: item.monthly_type as 'date' | 'weekday' | null
+      })));
     } catch (error) {
       console.error('Error fetching task series:', error);
       toast({
@@ -61,6 +70,11 @@ export const useRecurringTasks = (familyId?: string) => {
     recurring_interval: number;
     recurring_days_of_week?: number[] | null;
     recurring_end_date?: string | null;
+    start_date?: string;
+    repetition_count?: number | null;
+    remaining_repetitions?: number | null;
+    monthly_type?: 'date' | 'weekday' | null;
+    monthly_weekday_ordinal?: number | null;
   }) => {
     try {
       const { data, error } = await supabase

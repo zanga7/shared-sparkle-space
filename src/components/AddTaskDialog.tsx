@@ -4,11 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Plus } from 'lucide-react';
+import { CalendarIcon, Plus, Repeat } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRecurringTasks } from '@/hooks/useRecurringTasks';
 import { Profile } from '@/types/task';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
+import { RecurringOptionsForm } from '@/components/RecurringOptionsForm';
 
 interface AddTaskDialogProps {
   familyMembers: Profile[];
@@ -54,16 +54,24 @@ export const AddTaskDialog = ({
     assignees: [] as string[],
     due_date: selectedDate || null,
     is_repeating: false,
-    recurring_frequency: 'daily' as 'daily' | 'weekly' | 'monthly',
+    recurring_frequency: 'weekly',
     recurring_interval: 1,
     recurring_days_of_week: [] as number[],
-    recurring_end_date: null as Date | null
+    recurring_end_date: null as Date | null,
+    start_date: (selectedDate || new Date()).toISOString(),
+    repetition_count: null as number | null,
+    monthly_type: 'date' as 'date' | 'weekday',
+    monthly_weekday_ordinal: 1,
   });
 
   // Update due_date when selectedDate changes
   useEffect(() => {
     if (selectedDate) {
-      setFormData(prev => ({ ...prev, due_date: selectedDate }));
+      setFormData(prev => ({ 
+        ...prev, 
+        due_date: selectedDate,
+        start_date: selectedDate.toISOString()
+      }));
     }
   }, [selectedDate]);
 
@@ -95,6 +103,11 @@ export const AddTaskDialog = ({
           recurring_days_of_week: formData.recurring_frequency === 'weekly' 
             ? formData.recurring_days_of_week : null,
           recurring_end_date: formData.recurring_end_date?.toISOString() || null,
+          start_date: formData.start_date,
+          repetition_count: formData.repetition_count,
+          remaining_repetitions: formData.repetition_count,
+          monthly_type: formData.monthly_type,
+          monthly_weekday_ordinal: formData.monthly_weekday_ordinal,
         });
       } else {
         // Create single task
@@ -151,10 +164,14 @@ export const AddTaskDialog = ({
         assignees: [],
         due_date: selectedDate || null,
         is_repeating: false,
-        recurring_frequency: 'daily',
+        recurring_frequency: 'weekly',
         recurring_interval: 1,
         recurring_days_of_week: [],
-        recurring_end_date: null
+        recurring_end_date: null,
+        start_date: (selectedDate || new Date()).toISOString(),
+        repetition_count: null,
+        monthly_type: 'date',
+        monthly_weekday_ordinal: 1,
       });
 
       setOpen(false);
@@ -288,100 +305,34 @@ export const AddTaskDialog = ({
             <Label htmlFor="repeating">Repeating task</Label>
           </div>
 
-          {/* Recurring options - shown when is_repeating is true */}
+          {/* Enhanced Recurring Options */}
           {formData.is_repeating && (
-            <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
-              <h4 className="font-medium text-sm">Recurring Options</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="frequency">Frequency</Label>
-                  <Select 
-                    value={formData.recurring_frequency}
-                    onValueChange={(value: 'daily' | 'weekly' | 'monthly') => 
-                      setFormData({ ...formData, recurring_frequency: value, recurring_days_of_week: [] })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="interval">Every</Label>
-                  <Input
-                    id="interval"
-                    type="number"
-                    min="1"
-                    max="30"
-                    value={formData.recurring_interval}
-                    onChange={(e) => setFormData({ ...formData, recurring_interval: parseInt(e.target.value) || 1 })}
-                    placeholder="1"
-                  />
-                </div>
+            <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Repeat className="h-4 w-4" />
+                Recurring Options
               </div>
-              
-              {formData.recurring_frequency === 'weekly' && (
-                <div className="space-y-2">
-                  <Label>Days of Week</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => {
-                      const dayNumber = index === 6 ? 0 : index + 1; // Sunday = 0, Monday = 1, etc.
-                      const isSelected = formData.recurring_days_of_week.includes(dayNumber);
-                      return (
-                        <Button 
-                          key={day} 
-                          type="button" 
-                          variant={isSelected ? "default" : "outline"} 
-                          size="sm" 
-                          className="text-xs"
-                          onClick={() => {
-                            const newDays = isSelected 
-                              ? formData.recurring_days_of_week.filter(d => d !== dayNumber)
-                              : [...formData.recurring_days_of_week, dayNumber].sort();
-                            setFormData({ ...formData, recurring_days_of_week: newDays });
-                          }}
-                        >
-                          {day}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-              
-              <div className="space-y-2">
-                <Label>End Date (Optional)</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !formData.recurring_end_date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.recurring_end_date ? format(formData.recurring_end_date, "PPP") : "No end date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formData.recurring_end_date}
-                      onSelect={(date) => setFormData({ ...formData, recurring_end_date: date || null })}
-                      disabled={(date) => date < new Date()}
-                      initialFocus
-                      className={cn("p-3 pointer-events-auto")}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+
+              <RecurringOptionsForm
+                formData={{
+                  recurring_frequency: formData.recurring_frequency,
+                  recurring_interval: formData.recurring_interval,
+                  recurring_days_of_week: formData.recurring_days_of_week,
+                  recurring_end_date: formData.recurring_end_date?.toISOString() || '',
+                  start_date: formData.start_date,
+                  repetition_count: formData.repetition_count,
+                  monthly_type: formData.monthly_type,
+                  monthly_weekday_ordinal: formData.monthly_weekday_ordinal,
+                }}
+                onChange={(field, value) => {
+                  if (field === 'recurring_end_date') {
+                    setFormData(prev => ({ ...prev, recurring_end_date: value ? new Date(value) : null }));
+                  } else {
+                    setFormData(prev => ({ ...prev, [field]: value }));
+                  }
+                }}
+                selectedDate={formData.due_date}
+              />
             </div>
           )}
 

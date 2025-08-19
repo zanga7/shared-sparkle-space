@@ -355,12 +355,18 @@ export type Database = {
           id: string
           is_active: boolean
           last_generated_date: string | null
+          monthly_type: string | null
+          monthly_weekday_ordinal: number | null
           next_due_date: string | null
           points: number
           recurring_days_of_week: number[] | null
           recurring_end_date: string | null
           recurring_frequency: string
           recurring_interval: number
+          remaining_repetitions: number | null
+          repetition_count: number | null
+          skip_next_occurrence: boolean | null
+          start_date: string | null
           title: string
           updated_at: string
         }
@@ -373,12 +379,18 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_generated_date?: string | null
+          monthly_type?: string | null
+          monthly_weekday_ordinal?: number | null
           next_due_date?: string | null
           points?: number
           recurring_days_of_week?: number[] | null
           recurring_end_date?: string | null
           recurring_frequency: string
           recurring_interval?: number
+          remaining_repetitions?: number | null
+          repetition_count?: number | null
+          skip_next_occurrence?: boolean | null
+          start_date?: string | null
           title: string
           updated_at?: string
         }
@@ -391,12 +403,18 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_generated_date?: string | null
+          monthly_type?: string | null
+          monthly_weekday_ordinal?: number | null
           next_due_date?: string | null
           points?: number
           recurring_days_of_week?: number[] | null
           recurring_end_date?: string | null
           recurring_frequency?: string
           recurring_interval?: number
+          remaining_repetitions?: number | null
+          repetition_count?: number | null
+          skip_next_occurrence?: boolean | null
+          start_date?: string | null
           title?: string
           updated_at?: string
         }
