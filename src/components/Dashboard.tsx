@@ -203,7 +203,7 @@ const Dashboard = () => {
                   <AddTaskDialog
                     familyMembers={familyMembers}
                     familyId={profile.family_id}
-                    userId={user?.id || ''}
+                    profileId={profile.id}
                     onTaskCreated={fetchUserData}
                   />
                 )}

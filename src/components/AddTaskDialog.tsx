@@ -23,11 +23,11 @@ interface Profile {
 interface AddTaskDialogProps {
   familyMembers: Profile[];
   familyId: string;
-  userId: string;
+  profileId: string;
   onTaskCreated: () => void;
 }
 
-export const AddTaskDialog = ({ familyMembers, familyId, userId, onTaskCreated }: AddTaskDialogProps) => {
+export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreated }: AddTaskDialogProps) => {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -62,7 +62,7 @@ export const AddTaskDialog = ({ familyMembers, familyId, userId, onTaskCreated }
         due_date: formData.due_date?.toISOString() || null,
         is_repeating: formData.is_repeating,
         family_id: familyId,
-        created_by: userId
+        created_by: profileId
       };
 
       const { error } = await supabase
