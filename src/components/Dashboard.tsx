@@ -314,43 +314,9 @@ const Dashboard = () => {
           </TabsList>
 
           <TabsContent value="tasks" className="space-y-6 mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              
-              {/* Family Members Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Family Members
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {familyMembers.map((member) => (
-                      <div key={member.id} className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={member.avatar_url} />
-                          <AvatarFallback>
-                            {member.display_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="font-medium">{member.display_name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {member.total_points} points
-                          </div>
-                        </div>
-                        <Badge variant={member.role === 'parent' ? 'default' : 'secondary'}>
-                          {member.role}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
+            <div className="space-y-6">
               {/* Enhanced Tasks Overview */}
-              <Card className="md:col-span-2">
+              <Card>
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <div>
@@ -394,7 +360,7 @@ const Dashboard = () => {
 
               {/* Recurring Series Management Card */}
               {taskSeries && taskSeries.length > 0 && (
-                <Card className="md:col-span-3">
+                <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <BarChart3 className="h-5 w-5" />
