@@ -35,7 +35,7 @@ export const AddTaskDialog = ({ familyMembers, familyId, userId, onTaskCreated }
     title: '',
     description: '',
     points: 10,
-    assigned_to: '',
+    assigned_to: 'unassigned',
     due_date: null as Date | null,
     is_repeating: false
   });
@@ -58,7 +58,7 @@ export const AddTaskDialog = ({ familyMembers, familyId, userId, onTaskCreated }
         title: formData.title.trim(),
         description: formData.description.trim() || null,
         points: formData.points,
-        assigned_to: formData.assigned_to || null,
+        assigned_to: formData.assigned_to === 'unassigned' ? null : formData.assigned_to,
         due_date: formData.due_date?.toISOString() || null,
         is_repeating: formData.is_repeating,
         family_id: familyId,
@@ -83,7 +83,7 @@ export const AddTaskDialog = ({ familyMembers, familyId, userId, onTaskCreated }
         title: '',
         description: '',
         points: 10,
-        assigned_to: '',
+        assigned_to: 'unassigned',
         due_date: null,
         is_repeating: false
       });
@@ -163,7 +163,7 @@ export const AddTaskDialog = ({ familyMembers, familyId, userId, onTaskCreated }
                   <SelectValue placeholder="Anyone can do it" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Anyone can do it</SelectItem>
+                  <SelectItem value="unassigned">Anyone can do it</SelectItem>
                   {familyMembers.map((member) => (
                     <SelectItem key={member.id} value={member.id}>
                       {member.display_name}
