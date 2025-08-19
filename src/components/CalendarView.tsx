@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
@@ -45,7 +45,7 @@ import {
   isPast,
   isSameMonth
 } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, getMemberColorClasses } from '@/lib/utils';
 import { Task, Profile } from '@/types/task';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { supabase } from '@/integrations/supabase/client';
@@ -67,16 +67,6 @@ interface TaskFilters {
 
 type ViewMode = 'today' | 'week' | 'month';
 
-// Generate colors for family members
-const memberColors = [
-  'bg-blue-100 text-blue-800 border-blue-200',
-  'bg-green-100 text-green-800 border-green-200', 
-  'bg-purple-100 text-purple-800 border-purple-200',
-  'bg-orange-100 text-orange-800 border-orange-200',
-  'bg-pink-100 text-pink-800 border-pink-200',
-  'bg-indigo-100 text-indigo-800 border-indigo-200',
-];
-
 export const CalendarView = ({ 
   tasks, 
   familyMembers, 
@@ -93,6 +83,17 @@ export const CalendarView = ({
   });
   const [showAnalytics, setShowAnalytics] = useState(false);
   const { toast } = useToast();
+
+  // Get member color classes using the global color system
+  const getMemberColors = (member: Profile | null) => {
+    if (!member) return {
+      bg: 'bg-muted/50',
+      border: 'border-muted',
+      text: 'text-muted-foreground',
+      bgSoft: 'bg-muted/30'
+    };
+    return getMemberColorClasses(member.color);
+  };
 
   // Calculate date range based on view mode
   const dateRange = useMemo(() => {
@@ -276,13 +277,6 @@ export const CalendarView = ({
     }
   };
 
-  // Get member color
-  const getMemberColor = (memberId: string | null) => {
-    if (!memberId) return 'bg-gray-100 text-gray-800 border-gray-200';
-    const index = familyMembers.findIndex(m => m.id === memberId);
-    return memberColors[index % memberColors.length];
-  };
-
   // Handle day click for task creation
   const handleDayClick = (date: Date) => {
     if (onCreateTask) {
@@ -304,6 +298,7 @@ export const CalendarView = ({
     const isOverdue = task.due_date && isPast(new Date(task.due_date)) && !isCompleted;
     const streak = calculateStreak(task);
     const assignedMember = familyMembers.find(m => m.id === task.assigned_to);
+    const memberColors = getMemberColors(assignedMember);
 
     return (
       <Draggable key={task.id} draggableId={task.id} index={index}>
@@ -316,7 +311,8 @@ export const CalendarView = ({
             className={cn(
               "p-2 mb-1 rounded-md border text-xs transition-all hover:shadow-md group",
               onEditTask ? "cursor-pointer hover:ring-2 hover:ring-primary/20" : "cursor-move",
-              getMemberColor(task.assigned_to),
+              memberColors.bgSoft,
+              memberColors.border,
               isCompleted && "opacity-60 line-through",
               isOverdue && "border-red-300 bg-red-50",
               snapshot.isDragging && "shadow-lg rotate-2"
@@ -348,11 +344,11 @@ export const CalendarView = ({
             </div>
             {assignedMember && (
               <div className="flex items-center gap-1 mt-1">
-                <Avatar className="h-3 w-3">
-                  <AvatarFallback className="text-xs">
-                    {assignedMember.display_name[0]}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  name={assignedMember.display_name}
+                  color={assignedMember.color}
+                  size="sm"
+                />
                 <span className="text-xs opacity-75">{assignedMember.display_name}</span>
               </div>
             )}
@@ -506,17 +502,21 @@ export const CalendarView = ({
                   
                   <div className="space-y-2">
                     <div className="text-sm font-medium">Member Progress</div>
-                    {analytics.memberStats.map((member, index) => (
-                      <div key={member.name} className="flex items-center gap-2">
-                        <Badge variant="outline" className={cn("text-xs", memberColors[index % memberColors.length])}>
-                          {member.name}
-                        </Badge>
-                        <Progress value={member.percentage} className="flex-1 h-2" />
-                        <span className="text-xs text-muted-foreground w-12 text-right">
-                          {member.completed}/{member.total}
-                        </span>
-                      </div>
-                    ))}
+                    {analytics.memberStats.map((member, index) => {
+                      const familyMember = familyMembers[index];
+                      const memberColors = getMemberColors(familyMember);
+                      return (
+                        <div key={member.name} className="flex items-center gap-2">
+                          <Badge variant="outline" className={cn("text-xs", memberColors.text, memberColors.border)}>
+                            {member.name}
+                          </Badge>
+                          <Progress value={member.percentage} className="flex-1 h-2" />
+                          <span className="text-xs text-muted-foreground w-12 text-right">
+                            {member.completed}/{member.total}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
@@ -725,15 +725,18 @@ export const CalendarView = ({
         <div className="flex flex-col gap-3 mt-4 pt-4 border-t">
           <div className="flex flex-wrap gap-2">
             <div className="text-sm font-medium">Family Members:</div>
-            {familyMembers.map((member, index) => (
-              <Badge 
-                key={member.id} 
-                variant="outline" 
-                className={cn("text-xs", memberColors[index % memberColors.length])}
-              >
-                {member.display_name}
-              </Badge>
-            ))}
+            {familyMembers.map((member) => {
+              const memberColors = getMemberColors(member);
+              return (
+                <Badge 
+                  key={member.id} 
+                  variant="outline" 
+                  className={cn("text-xs", memberColors.text, memberColors.border)}
+                >
+                  {member.display_name}
+                </Badge>
+              );
+            })}
           </div>
           
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
