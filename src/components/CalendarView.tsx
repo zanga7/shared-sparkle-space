@@ -24,7 +24,8 @@ import {
   Edit,
   Target,
   Users,
-  Calendar
+  Calendar,
+  Sun
 } from 'lucide-react';
 import { 
   format, 
@@ -35,8 +36,10 @@ import {
   eachDayOfInterval, 
   addWeeks, 
   addMonths, 
+  addDays,
   subWeeks, 
   subMonths, 
+  subDays,
   isSameDay,
   isToday,
   isPast,
@@ -62,7 +65,7 @@ interface TaskFilters {
   taskType: 'all' | 'recurring' | 'one-time';
 }
 
-type ViewMode = 'week' | 'month';
+type ViewMode = 'today' | 'week' | 'month';
 
 // Generate colors for family members
 const memberColors = [
@@ -82,7 +85,7 @@ export const CalendarView = ({
   onEditTask 
 }: CalendarViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>('week');
+  const [viewMode, setViewMode] = useState<ViewMode>('today');
   const [filters, setFilters] = useState<TaskFilters>({
     assignedTo: 'all',
     status: 'all',
@@ -94,7 +97,12 @@ export const CalendarView = ({
 
   // Calculate date range based on view mode
   const dateRange = useMemo(() => {
-    if (viewMode === 'week') {
+    if (viewMode === 'today') {
+      return {
+        start: new Date(),
+        end: new Date()
+      };
+    } else if (viewMode === 'week') {
       return {
         start: startOfWeek(currentDate, { weekStartsOn: 1 }),
         end: endOfWeek(currentDate, { weekStartsOn: 1 })
@@ -107,7 +115,7 @@ export const CalendarView = ({
     }
   }, [currentDate, viewMode]);
 
-  const days = eachDayOfInterval(dateRange);
+  const days = viewMode === 'today' ? [new Date()] : eachDayOfInterval(dateRange);
 
   // Filter tasks based on selected filters
   const filteredTasks = useMemo(() => {
@@ -219,7 +227,9 @@ export const CalendarView = ({
 
   // Handle navigation
   const navigatePrevious = () => {
-    if (viewMode === 'week') {
+    if (viewMode === 'today') {
+      setCurrentDate(subDays(currentDate, 1));
+    } else if (viewMode === 'week') {
       setCurrentDate(subWeeks(currentDate, 1));
     } else {
       setCurrentDate(subMonths(currentDate, 1));
@@ -227,7 +237,9 @@ export const CalendarView = ({
   };
 
   const navigateNext = () => {
-    if (viewMode === 'week') {
+    if (viewMode === 'today') {
+      setCurrentDate(addDays(currentDate, 1));
+    } else if (viewMode === 'week') {
       setCurrentDate(addWeeks(currentDate, 1));
     } else {
       setCurrentDate(addMonths(currentDate, 1));
@@ -372,10 +384,18 @@ export const CalendarView = ({
               {/* View Mode Toggle */}
               <div className="flex border rounded-md">
                 <Button
+                  variant={viewMode === 'today' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('today')}
+                  className="rounded-r-none"
+                >
+                  <Sun className="h-4 w-4" />
+                </Button>
+                <Button
                   variant={viewMode === 'week' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('week')}
-                  className="rounded-r-none"
+                  className="rounded-none"
                 >
                   <Rows3 className="h-4 w-4" />
                 </Button>
@@ -503,7 +523,9 @@ export const CalendarView = ({
         </div>
         
         <div className="text-lg font-semibold">
-          {viewMode === 'week' 
+          {viewMode === 'today' 
+            ? `Today - ${format(currentDate, 'EEEE, MMMM d, yyyy')}`
+            : viewMode === 'week' 
             ? `Week of ${format(dateRange.start, 'MMM d')} - ${format(dateRange.end, 'MMM d, yyyy')}`
             : format(currentDate, 'MMMM yyyy')
           }
@@ -512,97 +534,189 @@ export const CalendarView = ({
 
       <CardContent>
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className={cn(
-            "grid gap-2",
-            viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-7'
-          )}>
-            {/* Day Headers */}
-            {days.slice(0, 7).map((day) => (
-              <div key={format(day, 'E')} className="p-2 text-center font-medium text-sm border-b">
-                {format(day, 'EEE')}
+          {viewMode === 'today' ? (
+            // Today View - Single Column Layout
+            <div className="space-y-4">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-2">
+                  {format(currentDate, 'EEEE, MMMM d')}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {isToday(currentDate) ? "Today's Tasks" : format(currentDate, 'EEEE') + "'s Tasks"}
+                </p>
               </div>
-            ))}
+              
+              {(() => {
+                const dateKey = format(currentDate, 'yyyy-MM-dd');
+                const dayTasks = tasksByDate[dateKey] || [];
+                const completedCount = dayTasks.filter(t => t.task_completions?.length).length;
+                const totalCount = dayTasks.length;
 
-            {/* Calendar Days */}
-            {days.map((day) => {
-              const dateKey = format(day, 'yyyy-MM-dd');
-              const dayTasks = tasksByDate[dateKey] || [];
-              const completedCount = dayTasks.filter(t => t.task_completions?.length).length;
-              const totalCount = dayTasks.length;
-
-              return (
-                <Droppable key={dateKey} droppableId={dateKey}>
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                       onClick={() => handleDayClick(day)}
-                       className={cn(
-                        "min-h-[120px] p-2 border rounded-md transition-colors cursor-pointer group hover:bg-accent/50",
-                        isToday(day) && "bg-blue-50 border-blue-200",
-                        !isSameMonth(day, currentDate) && viewMode === 'month' && "opacity-50 bg-gray-50",
-                        snapshot.isDraggingOver && "bg-green-50 border-green-300"
-                      )}
-                    >
-                      {/* Day Number & Progress */}
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={cn(
-                          "text-sm font-medium",
-                          isToday(day) && "text-blue-600"
-                        )}>
-                          {format(day, 'd')}
-                        </span>
-                        
+                return (
+                  <Droppable droppableId={dateKey}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={cn(
+                          "min-h-[300px] p-6 border rounded-lg transition-colors bg-card",
+                          snapshot.isDraggingOver && "bg-green-50 border-green-300"
+                        )}
+                      >
+                        {/* Progress Summary */}
                         {totalCount > 0 && (
-                          <div className="flex items-center gap-1">
-                            <div className="w-6 h-1 bg-gray-200 rounded-full overflow-hidden">
+                          <div className="mb-6 p-4 bg-muted/50 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-medium">Progress</span>
+                              <span className="text-sm text-muted-foreground">
+                                {completedCount}/{totalCount} completed
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
                               <div 
-                                className="h-full bg-green-500 transition-all"
+                                className="bg-green-500 h-2 rounded-full transition-all"
                                 style={{ width: `${(completedCount / totalCount) * 100}%` }}
                               />
                             </div>
-                            <span className="text-xs text-muted-foreground">
-                              {completedCount}/{totalCount}
-                            </span>
+                          </div>
+                        )}
+
+                        {/* Tasks */}
+                        <div className="space-y-3">
+                          {dayTasks.length > 0 ? (
+                            dayTasks.map((task, index) => renderTask(task, index))
+                          ) : (
+                            <div className="text-center py-12">
+                              {snapshot.isDraggingOver ? (
+                                <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed border-green-300 rounded">
+                                  Drop task here
+                                </div>
+                              ) : (
+                                <div className="space-y-3">
+                                  <Clock className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                                  <div>
+                                    <p className="text-lg font-medium text-muted-foreground">
+                                      No tasks for {isToday(currentDate) ? 'today' : 'this day'}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {onCreateTask && "Click below to create a new task"}
+                                    </p>
+                                  </div>
+                                  {onCreateTask && (
+                                    <Button 
+                                      onClick={() => handleDayClick(currentDate)}
+                                      className="mt-4"
+                                    >
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      Add Task for {isToday(currentDate) ? 'Today' : format(currentDate, 'MMM d')}
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {provided.placeholder}
+                        </div>
+                      </div>
+                    )}
+                  </Droppable>
+                );
+              })()}
+            </div>
+          ) : (
+            // Week/Month Grid View
+            <div className={cn(
+              "grid gap-2",
+              viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-7'
+            )}>
+              {/* Day Headers */}
+              {days.slice(0, 7).map((day) => (
+                <div key={format(day, 'E')} className="p-2 text-center font-medium text-sm border-b">
+                  {format(day, 'EEE')}
+                </div>
+              ))}
+
+              {/* Calendar Days */}
+              {days.map((day) => {
+                const dateKey = format(day, 'yyyy-MM-dd');
+                const dayTasks = tasksByDate[dateKey] || [];
+                const completedCount = dayTasks.filter(t => t.task_completions?.length).length;
+                const totalCount = dayTasks.length;
+
+                return (
+                  <Droppable key={dateKey} droppableId={dateKey}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                         onClick={() => handleDayClick(day)}
+                         className={cn(
+                          "min-h-[120px] p-2 border rounded-md transition-colors cursor-pointer group hover:bg-accent/50",
+                          isToday(day) && "bg-blue-50 border-blue-200",
+                          !isSameMonth(day, currentDate) && viewMode === 'month' && "opacity-50 bg-gray-50",
+                          snapshot.isDraggingOver && "bg-green-50 border-green-300"
+                        )}
+                      >
+                        {/* Day Number & Progress */}
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={cn(
+                            "text-sm font-medium",
+                            isToday(day) && "text-blue-600"
+                          )}>
+                            {format(day, 'd')}
+                          </span>
+                          
+                          {totalCount > 0 && (
+                            <div className="flex items-center gap-1">
+                              <div className="w-6 h-1 bg-gray-200 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-green-500 transition-all"
+                                  style={{ width: `${(completedCount / totalCount) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {completedCount}/{totalCount}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Tasks */}
+                        <div className="space-y-1">
+                          {dayTasks.map((task, index) => renderTask(task, index))}
+                          {provided.placeholder}
+                        </div>
+
+                        {/* Empty State */}
+                        {dayTasks.length === 0 && (
+                          <div className="flex items-center justify-center h-full">
+                            {snapshot.isDraggingOver ? (
+                              <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed border-green-300 rounded w-full">
+                                Drop task here
+                              </div>
+                            ) : (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="opacity-0 group-hover:opacity-50 transition-opacity w-full h-8"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDayClick(day);
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add Task
+                              </Button>
+                            )}
                           </div>
                         )}
                       </div>
-
-                      {/* Tasks */}
-                      <div className="space-y-1">
-                        {dayTasks.map((task, index) => renderTask(task, index))}
-                        {provided.placeholder}
-                      </div>
-
-                      {/* Empty State */}
-                      {dayTasks.length === 0 && (
-                        <div className="flex items-center justify-center h-full">
-                          {snapshot.isDraggingOver ? (
-                            <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed border-green-300 rounded w-full">
-                              Drop task here
-                            </div>
-                          ) : (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="opacity-0 group-hover:opacity-50 transition-opacity w-full h-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDayClick(day);
-                              }}
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Add Task
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </Droppable>
-              );
-            })}
-          </div>
+                    )}
+                  </Droppable>
+                );
+              })}
+            </div>
+          )}
         </DragDropContext>
 
         {/* Legend & Summary */}
