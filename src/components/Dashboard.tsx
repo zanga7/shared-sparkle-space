@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, CheckCircle, Clock, Users } from 'lucide-react';
+import { AddTaskDialog } from '@/components/AddTaskDialog';
 
 interface Profile {
   id: string;
@@ -14,6 +15,7 @@ interface Profile {
   role: 'parent' | 'child';
   total_points: number;
   avatar_url?: string;
+  family_id: string;
 }
 
 interface Task {
@@ -198,10 +200,12 @@ const Dashboard = () => {
                   </CardDescription>
                 </div>
                 {profile.role === 'parent' && (
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Task
-                  </Button>
+                  <AddTaskDialog
+                    familyMembers={familyMembers}
+                    familyId={profile.family_id}
+                    userId={user?.id || ''}
+                    onTaskCreated={fetchUserData}
+                  />
                 )}
               </div>
             </CardHeader>
