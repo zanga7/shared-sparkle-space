@@ -3,15 +3,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, CheckCircle, Clock, Users, Edit, Trash2, Repeat, BarChart3, Settings } from 'lucide-react';
+import { Plus, CheckCircle, Clock, Users, Edit, Trash2, Repeat, BarChart3, Settings, Calendar, List } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
 import { EditTaskDialog } from '@/components/EditTaskDialog';
 import { RecurringSeriesDialog } from '@/components/RecurringSeriesDialog';
+import { CalendarView } from '@/components/CalendarView';
+import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -290,231 +293,179 @@ const Dashboard = () => {
       </header>
 
       <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          {/* Family Members Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Family Members
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {familyMembers.map((member) => (
-                  <div key={member.id} className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={member.avatar_url} />
-                      <AvatarFallback>
-                        {member.display_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="font-medium">{member.display_name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {member.total_points} points
-                      </div>
-                    </div>
-                    <Badge variant={member.role === 'parent' ? 'default' : 'secondary'}>
-                      {member.role}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="tasks" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="tasks" className="flex items-center gap-2">
+              <List className="h-4 w-4" />
+              Task List
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Calendar View
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Tasks Overview */}
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Family Tasks</CardTitle>
-                  <CardDescription>
-                    Current chores and activities
-                  </CardDescription>
-                </div>
-                {profile.role === 'parent' && (
-                  <AddTaskDialog
-                    familyMembers={familyMembers}
-                    familyId={profile.family_id}
-                    profileId={profile.id}
-                    onTaskCreated={fetchUserData}
-                  />
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {tasks.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No tasks yet. {profile.role === 'parent' ? 'Create your first task!' : 'Ask a parent to create some tasks.'}</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {tasks.map((task) => {
-                    const isCompleted = task.task_completions && task.task_completions.length > 0;
-                    const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !isCompleted;
-                    
-                    return (
-                      <div 
-                        key={task.id} 
-                        className={cn(
-                          "group relative flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors",
-                          isCompleted && "opacity-60 bg-muted/30",
-                          isOverdue && "border-destructive/50"
-                        )}
-                      >
-                        {/* Complete button at front */}
-                        <Button 
-                          size="sm" 
-                          variant={isCompleted ? "default" : "outline"}
-                          onClick={() => handleTaskToggle(task)}
-                          className={cn(
-                            "shrink-0",
-                            isCompleted && "bg-green-500 hover:bg-green-600"
-                          )}
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </Button>
-                        
-                        {/* Task details */}
-                        <div className="flex-1 min-w-0">
-                            <h3 className={cn("font-medium", isCompleted && "line-through")}>
-                              {task.title}
-                            </h3>
-                            {task.description && (
-                              <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
-                            )}
-                            <div className="flex items-center gap-2 mt-2 flex-wrap">
-                              <Badge variant="outline" className="text-xs">{task.points} pts</Badge>
-                              {task.assigned_profile && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {task.assigned_profile.display_name}
-                                </Badge>
-                              )}
-                              {task.series_id && (
-                                <Badge 
-                                  variant="outline" 
-                                  className="text-xs flex items-center gap-1 cursor-pointer hover:bg-muted"
-                                  onClick={() => {
-                                    const series = taskSeries.find(s => s.id === task.series_id);
-                                    if (series) setViewingSeries(series);
-                                  }}
-                                >
-                                  <Repeat className="h-3 w-3" />
-                                  Recurring
-                                </Badge>
-                              )}
-                              {task.due_date && (
-                                <Badge variant={isOverdue ? "destructive" : "outline"} className="text-xs">
-                                  Due {format(new Date(task.due_date), "MMM d")}
-                                </Badge>
-                              )}
-                              {isCompleted && (
-                                <Badge variant="default" className="text-xs bg-green-500">Completed</Badge>
-                              )}
-                            </div>
+          <TabsContent value="tasks" className="space-y-6 mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              {/* Family Members Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Family Members
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {familyMembers.map((member) => (
+                      <div key={member.id} className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={member.avatar_url} />
+                          <AvatarFallback>
+                            {member.display_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="font-medium">{member.display_name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {member.total_points} points
+                          </div>
                         </div>
-
-                        {/* Hover actions for parents */}
-                        {profile.role === 'parent' && !isCompleted && (
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => setEditingTask(task)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => setDeletingTask(task)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
+                        <Badge variant={member.role === 'parent' ? 'default' : 'secondary'}>
+                          {member.role}
+                        </Badge>
                       </div>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Enhanced Tasks Overview */}
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle>Family Tasks</CardTitle>
+                      <CardDescription>
+                        Current chores and activities with progress tracking
+                      </CardDescription>
+                    </div>
+                    {profile.role === 'parent' && (
+                      <AddTaskDialog
+                        familyMembers={familyMembers}
+                        familyId={profile.family_id}
+                        profileId={profile.id}
+                        onTaskCreated={fetchUserData}
+                      />
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {tasks.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No tasks yet. {profile.role === 'parent' ? 'Create your first task!' : 'Ask a parent to create some tasks.'}</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {tasks.map((task) => (
+                        <EnhancedTaskItem
+                          key={task.id}
+                          task={task}
+                          allTasks={tasks}
+                          familyMembers={familyMembers}
+                          onToggle={handleTaskToggle}
+                          onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                          onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
+                          showActions={profile.role === 'parent'}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Recurring Series Management Card */}
+              {taskSeries && taskSeries.length > 0 && (
+                <Card className="md:col-span-3">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5" />
+                      Recurring Series
+                    </CardTitle>
+                    <CardDescription>
+                      Manage your recurring task series
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {taskSeries.map((series) => {
+                        const seriesTaskCount = tasks.filter(t => t.series_id === series.id).length;
+                        const completedCount = tasks.filter(t => 
+                          t.series_id === series.id && 
+                          t.task_completions && 
+                          t.task_completions.length > 0
+                        ).length;
+                        const completionRate = seriesTaskCount > 0 ? Math.round((completedCount / seriesTaskCount) * 100) : 0;
+                        
+                        return (
+                          <Card key={series.id} className="border-2 hover:bg-muted/50 transition-colors">
+                            <CardContent className="pt-4">
+                              <div className="space-y-3">
+                                <div className="flex items-start justify-between">
+                                  <h4 className="font-medium truncate">{series.title}</h4>
+                                  <Badge variant={series.is_active ? "default" : "secondary"} className="text-xs">
+                                    {series.is_active ? "Active" : "Paused"}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="text-sm text-muted-foreground">
+                                  Every {series.recurring_interval} {series.recurring_frequency}
+                                  {series.recurring_interval > 1 ? 's' : ''}
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  <div className="text-center">
+                                    <div className="font-bold text-lg">{seriesTaskCount}</div>
+                                    <div className="text-muted-foreground">Tasks</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="font-bold text-lg text-green-500">{completionRate}%</div>
+                                    <div className="text-muted-foreground">Complete</div>
+                                  </div>
+                                </div>
+                                
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="w-full"
+                                  onClick={() => setViewingSeries(series)}
+                                >
+                                  <Settings className="h-4 w-4 mr-1" />
+                                  Manage Series
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
-            </CardContent>
-          </Card>
 
-          {/* Recurring Series Management Card */}
-          {taskSeries && taskSeries.length > 0 && (
-            <Card className="md:col-span-3">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Recurring Series
-                </CardTitle>
-                <CardDescription>
-                  Manage your recurring task series
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {taskSeries.map((series) => {
-                    const seriesTaskCount = tasks.filter(t => t.series_id === series.id).length;
-                    const completedCount = tasks.filter(t => 
-                      t.series_id === series.id && 
-                      t.task_completions && 
-                      t.task_completions.length > 0
-                    ).length;
-                    const completionRate = seriesTaskCount > 0 ? Math.round((completedCount / seriesTaskCount) * 100) : 0;
-                    
-                    return (
-                      <Card key={series.id} className="border-2 hover:bg-muted/50 transition-colors">
-                        <CardContent className="pt-4">
-                          <div className="space-y-3">
-                            <div className="flex items-start justify-between">
-                              <h4 className="font-medium truncate">{series.title}</h4>
-                              <Badge variant={series.is_active ? "default" : "secondary"} className="text-xs">
-                                {series.is_active ? "Active" : "Paused"}
-                              </Badge>
-                            </div>
-                            
-                            <div className="text-sm text-muted-foreground">
-                              Every {series.recurring_interval} {series.recurring_frequency}
-                              {series.recurring_interval > 1 ? 's' : ''}
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div className="text-center">
-                                <div className="font-bold text-lg">{seriesTaskCount}</div>
-                                <div className="text-muted-foreground">Tasks</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="font-bold text-lg text-green-500">{completionRate}%</div>
-                                <div className="text-muted-foreground">Complete</div>
-                              </div>
-                            </div>
-                            
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="w-full"
-                              onClick={() => setViewingSeries(series)}
-                            >
-                              <Settings className="h-4 w-4 mr-1" />
-                              Manage Series
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+            </div>
+          </TabsContent>
 
-        </div>
+          <TabsContent value="calendar" className="mt-6">
+            <CalendarView 
+              tasks={tasks}
+              familyMembers={familyMembers}
+              onTaskUpdated={fetchUserData}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Edit Task Dialog */}
