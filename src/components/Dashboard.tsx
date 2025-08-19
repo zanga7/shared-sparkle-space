@@ -180,7 +180,6 @@ const Dashboard = () => {
       const userCompletion = task.task_completions.find(completion => completion.completed_by === profile.id);
       
       if (!userCompletion) {
-        console.log('No completion found for current user');
         return;
       }
 
@@ -375,12 +374,6 @@ const Dashboard = () => {
                   {tasks.map((task) => {
                     const isCompleted = task.task_completions && task.task_completions.length > 0;
                     const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !isCompleted;
-                    
-                    console.log(`Task ${task.title}:`, { 
-                      completions: task.task_completions, 
-                      isCompleted,
-                      completionCount: task.task_completions?.length || 0 
-                    });
                     
                     return (
                       <div 
