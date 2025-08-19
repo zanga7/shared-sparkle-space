@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useRecurringTasks } from '@/hooks/useRecurringTasks';
 
 interface Profile {
   id: string;
@@ -29,6 +30,7 @@ interface AddTaskDialogProps {
 
 export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreated }: AddTaskDialogProps) => {
   const { toast } = useToast();
+  const { createTaskSeries } = useRecurringTasks(familyId);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -58,34 +60,47 @@ export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreate
     setLoading(true);
     
     try {
-      const taskData = {
-        title: formData.title.trim(),
-        description: formData.description.trim() || null,
-        points: formData.points,
-        assigned_to: formData.assigned_to === 'unassigned' ? null : formData.assigned_to,
-        due_date: formData.due_date?.toISOString() || null,
-        is_repeating: formData.is_repeating,
-        recurring_frequency: formData.is_repeating ? formData.recurring_frequency : null,
-        recurring_interval: formData.is_repeating ? formData.recurring_interval : null,
-        recurring_days_of_week: formData.is_repeating && formData.recurring_frequency === 'weekly' 
-          ? formData.recurring_days_of_week : null,
-        recurring_end_date: formData.is_repeating ? formData.recurring_end_date?.toISOString() || null : null,
-        family_id: familyId,
-        created_by: profileId
-      };
+      if (formData.is_repeating) {
+        // Create recurring task series
+        await createTaskSeries({
+          family_id: familyId,
+          title: formData.title.trim(),
+          description: formData.description.trim() || null,
+          points: formData.points,
+          assigned_to: formData.assigned_to === 'unassigned' ? null : formData.assigned_to,
+          created_by: profileId,
+          recurring_frequency: formData.recurring_frequency,
+          recurring_interval: formData.recurring_interval,
+          recurring_days_of_week: formData.recurring_frequency === 'weekly' 
+            ? formData.recurring_days_of_week : null,
+          recurring_end_date: formData.recurring_end_date?.toISOString() || null,
+        });
+      } else {
+        // Create single task
+        const taskData = {
+          title: formData.title.trim(),
+          description: formData.description.trim() || null,
+          points: formData.points,
+          assigned_to: formData.assigned_to === 'unassigned' ? null : formData.assigned_to,
+          due_date: formData.due_date?.toISOString() || null,
+          is_repeating: false,
+          family_id: familyId,
+          created_by: profileId
+        };
 
-      const { error } = await supabase
-        .from('tasks')
-        .insert(taskData);
+        const { error } = await supabase
+          .from('tasks')
+          .insert(taskData);
 
-      if (error) {
-        throw error;
+        if (error) {
+          throw error;
+        }
+
+        toast({
+          title: 'Success',
+          description: 'Task created successfully!',
+        });
       }
-
-      toast({
-        title: 'Success',
-        description: 'Task created successfully!',
-      });
 
       // Reset form
       setFormData({

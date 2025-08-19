@@ -131,6 +131,63 @@ export type Database = {
           },
         ]
       }
+      task_series: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          family_id: string
+          id: string
+          is_active: boolean
+          last_generated_date: string | null
+          next_due_date: string | null
+          points: number
+          recurring_days_of_week: number[] | null
+          recurring_end_date: string | null
+          recurring_frequency: string
+          recurring_interval: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          family_id: string
+          id?: string
+          is_active?: boolean
+          last_generated_date?: string | null
+          next_due_date?: string | null
+          points?: number
+          recurring_days_of_week?: number[] | null
+          recurring_end_date?: string | null
+          recurring_frequency: string
+          recurring_interval?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          family_id?: string
+          id?: string
+          is_active?: boolean
+          last_generated_date?: string | null
+          next_due_date?: string | null
+          points?: number
+          recurring_days_of_week?: number[] | null
+          recurring_end_date?: string | null
+          recurring_frequency?: string
+          recurring_interval?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           assigned_to: string | null
@@ -146,6 +203,7 @@ export type Database = {
           recurring_end_date: string | null
           recurring_frequency: string | null
           recurring_interval: number | null
+          series_id: string | null
           title: string
           updated_at: string
         }
@@ -163,6 +221,7 @@ export type Database = {
           recurring_end_date?: string | null
           recurring_frequency?: string | null
           recurring_interval?: number | null
+          series_id?: string | null
           title: string
           updated_at?: string
         }
@@ -180,6 +239,7 @@ export type Database = {
           recurring_end_date?: string | null
           recurring_frequency?: string | null
           recurring_interval?: number | null
+          series_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -203,6 +263,13 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "task_series"
             referencedColumns: ["id"]
           },
         ]

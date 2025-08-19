@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, CheckCircle, Clock, Users, Edit, Trash2 } from 'lucide-react';
+import { Plus, CheckCircle, Clock, Users, Edit, Trash2, Repeat } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
@@ -21,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useRecurringTasks } from '@/hooks/useRecurringTasks';
 
 interface Profile {
   id: string;
@@ -53,6 +54,7 @@ interface Task {
   recurring_interval?: number;
   recurring_days_of_week?: number[];
   recurring_end_date?: string;
+  series_id?: string | null;
 }
 
 const Dashboard = () => {
@@ -64,6 +66,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
+  const { taskSeries } = useRecurringTasks(profile?.family_id);
 
   useEffect(() => {
     if (user) {
@@ -110,6 +113,7 @@ const Dashboard = () => {
           is_repeating,
           due_date,
           assigned_to,
+          series_id,
           assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role),
           task_completions(id, completed_at, completed_by)
         `)
@@ -403,31 +407,34 @@ const Dashboard = () => {
                         
                         {/* Task details */}
                         <div className="flex-1 min-w-0">
-                          <h3 className={cn("font-medium", isCompleted && "line-through")}>
-                            {task.title}
-                          </h3>
-                          {task.description && (
-                            <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
-                          )}
-                          <div className="flex items-center gap-2 mt-2 flex-wrap">
-                            <Badge variant="outline" className="text-xs">{task.points} pts</Badge>
-                            {task.assigned_profile && (
-                              <Badge variant="secondary" className="text-xs">
-                                {task.assigned_profile.display_name}
-                              </Badge>
+                            <h3 className={cn("font-medium", isCompleted && "line-through")}>
+                              {task.title}
+                            </h3>
+                            {task.description && (
+                              <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
                             )}
-                            {task.is_repeating && (
-                              <Badge variant="outline" className="text-xs">Repeating</Badge>
-                            )}
-                            {task.due_date && (
-                              <Badge variant={isOverdue ? "destructive" : "outline"} className="text-xs">
-                                Due {format(new Date(task.due_date), "MMM d")}
-                              </Badge>
-                            )}
-                            {isCompleted && (
-                              <Badge variant="default" className="text-xs bg-green-500">Completed</Badge>
-                            )}
-                          </div>
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                              <Badge variant="outline" className="text-xs">{task.points} pts</Badge>
+                              {task.assigned_profile && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {task.assigned_profile.display_name}
+                                </Badge>
+                              )}
+                              {task.series_id && (
+                                <Badge variant="outline" className="text-xs flex items-center gap-1">
+                                  <Repeat className="h-3 w-3" />
+                                  Recurring
+                                </Badge>
+                              )}
+                              {task.due_date && (
+                                <Badge variant={isOverdue ? "destructive" : "outline"} className="text-xs">
+                                  Due {format(new Date(task.due_date), "MMM d")}
+                                </Badge>
+                              )}
+                              {isCompleted && (
+                                <Badge variant="default" className="text-xs bg-green-500">Completed</Badge>
+                              )}
+                            </div>
                         </div>
 
                         {/* Hover actions for parents */}
