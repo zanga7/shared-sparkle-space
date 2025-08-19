@@ -33,7 +33,7 @@ export function TaskAssigneesDisplay({
         className={cn("text-xs cursor-pointer hover:bg-muted", className)}
         onClick={onClick}
       >
-        Anyone
+        Click to assign
       </Badge>
     );
   }
