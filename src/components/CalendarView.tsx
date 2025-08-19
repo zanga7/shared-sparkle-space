@@ -92,7 +92,6 @@ export const CalendarView = ({
     taskType: 'all'
   });
   const [showAnalytics, setShowAnalytics] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const { toast } = useToast();
 
   // Calculate date range based on view mode
@@ -291,10 +290,12 @@ export const CalendarView = ({
     }
   };
 
-  // Handle task click
+  // Handle task click to edit directly
   const handleTaskClick = (task: Task, event: React.MouseEvent) => {
     event.stopPropagation();
-    setSelectedTask(task);
+    if (onEditTask) {
+      onEditTask(task);
+    }
   };
 
   // Render task item
@@ -313,7 +314,8 @@ export const CalendarView = ({
             {...provided.dragHandleProps}
             onClick={(e) => handleTaskClick(task, e)}
             className={cn(
-              "p-2 mb-1 rounded-md border text-xs cursor-move transition-all hover:shadow-md group",
+              "p-2 mb-1 rounded-md border text-xs transition-all hover:shadow-md group",
+              onEditTask ? "cursor-pointer hover:ring-2 hover:ring-primary/20" : "cursor-move",
               getMemberColor(task.assigned_to),
               isCompleted && "opacity-60 line-through",
               isOverdue && "border-red-300 bg-red-50",
@@ -325,7 +327,7 @@ export const CalendarView = ({
                 {isCompleted && <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />}
                 {isOverdue && <Clock className="h-3 w-3 text-red-500 flex-shrink-0" />}
                 <span className="truncate">{task.title}</span>
-                <Eye className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+                {onEditTask && <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity" />}
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
                 {task.due_date && (
@@ -751,77 +753,6 @@ export const CalendarView = ({
         </div>
       </CardContent>
 
-      {/* Task Detail Modal */}
-      {selectedTask && (
-        <Popover open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
-          <PopoverContent className="w-80">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold">{selectedTask.title}</h4>
-                <div className="flex items-center gap-1">
-                  {onEditTask && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => {
-                        onEditTask(selectedTask);
-                        setSelectedTask(null);
-                      }}
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                  )}
-                  <Badge variant="outline">{selectedTask.points}pt</Badge>
-                </div>
-              </div>
-              
-              {selectedTask.description && (
-                <p className="text-sm text-muted-foreground">{selectedTask.description}</p>
-              )}
-              
-              <div className="space-y-2 text-sm">
-                {selectedTask.due_date && (
-                  <div className="flex justify-between">
-                    <span>Due:</span>
-                    <span>{format(new Date(selectedTask.due_date), 'MMM d, yyyy HH:mm')}</span>
-                  </div>
-                )}
-                
-                {selectedTask.assigned_to && (
-                  <div className="flex justify-between">
-                    <span>Assigned to:</span>
-                    <span>{familyMembers.find(m => m.id === selectedTask.assigned_to)?.display_name}</span>
-                  </div>
-                )}
-                
-                {selectedTask.is_repeating && (
-                  <div className="flex justify-between">
-                    <span>Recurring:</span>
-                    <span className="capitalize">{selectedTask.recurring_frequency}</span>
-                  </div>
-                )}
-                
-                <div className="flex justify-between">
-                  <span>Status:</span>
-                  <Badge variant={selectedTask.task_completions?.length ? "secondary" : "outline"}>
-                    {selectedTask.task_completions?.length ? "Completed" : "Pending"}
-                  </Badge>
-                </div>
-                
-                {selectedTask.series_id && (
-                  <div className="flex justify-between">
-                    <span>Streak:</span>
-                    <div className="flex items-center gap-1">
-                      <Flame className="h-3 w-3 text-orange-500" />
-                      {calculateStreak(selectedTask)}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-      )}
     </Card>
   );
 };
