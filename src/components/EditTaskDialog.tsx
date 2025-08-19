@@ -5,14 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Profile {
   id: string;
@@ -23,15 +23,17 @@ interface Profile {
 interface Task {
   id: string;
   title: string;
-  description?: string;
+  description: string | null;
   points: number;
+  due_date: string | null;
+  assigned_to: string | null;
+  created_by: string;
   is_repeating: boolean;
-  due_date?: string;
-  assigned_to?: string;
-  recurring_frequency?: 'daily' | 'weekly' | 'monthly' | null;
-  recurring_interval?: number;
-  recurring_days_of_week?: number[];
-  recurring_end_date?: string;
+  recurring_frequency?: string | null;
+  recurring_interval?: number | null;
+  recurring_days_of_week?: number[] | null;
+  recurring_end_date?: string | null;
+  series_id?: string | null;
 }
 
 interface EditTaskDialogProps {
@@ -45,18 +47,17 @@ interface EditTaskDialogProps {
 export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTaskUpdated }: EditTaskDialogProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [editScope, setEditScope] = useState<'single' | 'series'>('single');
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     points: 10,
     assigned_to: 'unassigned',
     due_date: null as Date | null,
-    is_repeating: false,
-    recurring_frequency: 'daily' as 'daily' | 'weekly' | 'monthly',
-    recurring_interval: 1,
-    recurring_days_of_week: [] as number[],
-    recurring_end_date: null as Date | null
   });
+
+  const isRecurringTask = !!task.series_id;
 
   useEffect(() => {
     if (task) {
@@ -66,11 +67,6 @@ export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTask
         points: task.points,
         assigned_to: task.assigned_to || 'unassigned',
         due_date: task.due_date ? new Date(task.due_date) : null,
-        is_repeating: task.is_repeating,
-        recurring_frequency: task.recurring_frequency || 'daily',
-        recurring_interval: task.recurring_interval || 1,
-        recurring_days_of_week: task.recurring_days_of_week || [],
-        recurring_end_date: task.recurring_end_date ? new Date(task.recurring_end_date) : null
       });
     }
   }, [task]);
@@ -89,33 +85,60 @@ export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTask
     setLoading(true);
     
     try {
-      const taskData = {
-        title: formData.title.trim(),
-        description: formData.description.trim() || null,
-        points: formData.points,
-        assigned_to: formData.assigned_to === 'unassigned' ? null : formData.assigned_to,
-        due_date: formData.due_date?.toISOString() || null,
-        is_repeating: formData.is_repeating,
-        recurring_frequency: formData.is_repeating ? formData.recurring_frequency : null,
-        recurring_interval: formData.is_repeating ? formData.recurring_interval : null,
-        recurring_days_of_week: formData.is_repeating && formData.recurring_frequency === 'weekly' 
-          ? formData.recurring_days_of_week : null,
-        recurring_end_date: formData.is_repeating ? formData.recurring_end_date?.toISOString() || null : null,
-      };
+      if (isRecurringTask && editScope === 'series') {
+        // Update the task series for all future tasks
+        const { error: seriesError } = await supabase
+          .from('task_series')
+          .update({
+            title: formData.title.trim(),
+            description: formData.description.trim() || null,
+            points: formData.points,
+            assigned_to: formData.assigned_to === 'unassigned' ? null : formData.assigned_to,
+          })
+          .eq('id', task.series_id);
 
-      const { error } = await supabase
-        .from('tasks')
-        .update(taskData)
-        .eq('id', task.id);
+        if (seriesError) throw seriesError;
 
-      if (error) {
-        throw error;
+        // Update all future incomplete tasks in the series
+        const { error: tasksError } = await supabase
+          .from('tasks')
+          .update({
+            title: formData.title.trim(),
+            description: formData.description.trim() || null,
+            points: formData.points,
+            assigned_to: formData.assigned_to === 'unassigned' ? null : formData.assigned_to,
+          })
+          .eq('series_id', task.series_id)
+          .is('task_completions', null); // Only update uncompleted tasks
+
+        if (tasksError) throw tasksError;
+
+        toast({
+          title: 'Success',
+          description: 'Series updated - all future tasks will use these settings',
+        });
+      } else {
+        // Update just this single task
+        const taskData = {
+          title: formData.title.trim(),
+          description: formData.description.trim() || null,
+          points: formData.points,
+          assigned_to: formData.assigned_to === 'unassigned' ? null : formData.assigned_to,
+          due_date: formData.due_date?.toISOString() || task.due_date,
+        };
+
+        const { error } = await supabase
+          .from('tasks')
+          .update(taskData)
+          .eq('id', task.id);
+
+        if (error) throw error;
+
+        toast({
+          title: 'Success',
+          description: isRecurringTask ? 'This task instance updated' : 'Task updated successfully',
+        });
       }
-
-      toast({
-        title: 'Success',
-        description: 'Task updated successfully!',
-      });
 
       onOpenChange(false);
       onTaskUpdated();
@@ -137,9 +160,55 @@ export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTask
         <DialogHeader>
           <DialogTitle>Edit Task</DialogTitle>
           <DialogDescription>
-            Update the task details
+            {isRecurringTask ? 
+              'Edit this recurring task. Choose whether to update just this instance or the entire series.' :
+              'Edit this task details'
+            }
           </DialogDescription>
         </DialogHeader>
+
+        {/* Recurring Task Edit Scope Selection */}
+        {isRecurringTask && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <div className="space-y-3 mt-2">
+                <p className="font-medium">This is a recurring task. What would you like to edit?</p>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="edit-single"
+                      name="edit-scope"
+                      value="single"
+                      checked={editScope === 'single'}
+                      onChange={(e) => setEditScope(e.target.value as 'single' | 'series')}
+                      className="w-4 h-4"
+                    />
+                    <Label htmlFor="edit-single" className="text-sm">
+                      Edit only this task instance (due {task.due_date ? format(new Date(task.due_date), 'MMM d') : 'today'})
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="edit-series"
+                      name="edit-scope"
+                      value="series"
+                      checked={editScope === 'series'}
+                      onChange={(e) => setEditScope(e.target.value as 'single' | 'series')}
+                      className="w-4 h-4"
+                    />
+                    <Label htmlFor="edit-series" className="text-sm">
+                      Edit the entire recurring series (affects all future tasks)
+                    </Label>
+                  </div>
+                </div>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>
@@ -197,135 +266,33 @@ export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTask
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Due Date (Optional)</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !formData.due_date && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formData.due_date ? format(formData.due_date, "PPP") : "No due date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={formData.due_date}
-                  onSelect={(date) => setFormData({ ...formData, due_date: date || null })}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="repeating"
-              checked={formData.is_repeating}
-              onCheckedChange={(checked) => setFormData({ ...formData, is_repeating: checked })}
-            />
-            <Label htmlFor="repeating">Repeating task</Label>
-          </div>
-
-          {/* Recurring options - shown when is_repeating is true */}
-          {formData.is_repeating && (
-            <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
-              <h4 className="font-medium text-sm">Recurring Options</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="frequency">Frequency</Label>
-                  <Select 
-                    value={formData.recurring_frequency}
-                    onValueChange={(value: 'daily' | 'weekly' | 'monthly') => 
-                      setFormData({ ...formData, recurring_frequency: value, recurring_days_of_week: [] })
-                    }
+          {/* Only show due date for single task edits or non-recurring tasks */}
+          {(!isRecurringTask || editScope === 'single') && (
+            <div className="space-y-2">
+              <Label>Due Date (Optional)</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.due_date && "text-muted-foreground"
+                    )}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="interval">Every</Label>
-                  <Input
-                    id="interval"
-                    type="number"
-                    min="1"
-                    max="30"
-                    value={formData.recurring_interval}
-                    onChange={(e) => setFormData({ ...formData, recurring_interval: parseInt(e.target.value) || 1 })}
-                    placeholder="1"
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.due_date ? format(formData.due_date, "PPP") : "No due date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.due_date}
+                    onSelect={(date) => setFormData({ ...formData, due_date: date || null })}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
                   />
-                </div>
-              </div>
-              
-              {formData.recurring_frequency === 'weekly' && (
-                <div className="space-y-2">
-                  <Label>Days of Week</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => {
-                      const dayNumber = index === 6 ? 0 : index + 1; // Sunday = 0, Monday = 1, etc.
-                      const isSelected = formData.recurring_days_of_week.includes(dayNumber);
-                      return (
-                        <Button 
-                          key={day} 
-                          type="button" 
-                          variant={isSelected ? "default" : "outline"} 
-                          size="sm" 
-                          className="text-xs"
-                          onClick={() => {
-                            const newDays = isSelected 
-                              ? formData.recurring_days_of_week.filter(d => d !== dayNumber)
-                              : [...formData.recurring_days_of_week, dayNumber].sort();
-                            setFormData({ ...formData, recurring_days_of_week: newDays });
-                          }}
-                        >
-                          {day}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-              
-              <div className="space-y-2">
-                <Label>End Date (Optional)</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !formData.recurring_end_date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.recurring_end_date ? format(formData.recurring_end_date, "PPP") : "No end date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formData.recurring_end_date}
-                      onSelect={(date) => setFormData({ ...formData, recurring_end_date: date || null })}
-                      disabled={(date) => date < new Date()}
-                      initialFocus
-                      className={cn("p-3 pointer-events-auto")}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+                </PopoverContent>
+              </Popover>
             </div>
           )}
 
@@ -334,7 +301,9 @@ export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTask
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Updating...' : 'Update Task'}
+              {loading ? 'Updating...' : 
+                isRecurringTask && editScope === 'series' ? 'Update Series' : 'Update Task'
+              }
             </Button>
           </div>
         </form>
