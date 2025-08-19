@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { ExtendedProfile, ColorSwatch, ColorSwatches } from '@/types/admin';
 import { format } from 'date-fns';
+import { AddMemberDialog } from '@/components/admin/AddMemberDialog';
 
 const MemberManagement = () => {
   const { user } = useAuth();
@@ -35,6 +36,7 @@ const MemberManagement = () => {
   const [editingMember, setEditingMember] = useState<ExtendedProfile | null>(null);
   const [archivingMember, setArchivingMember] = useState<ExtendedProfile | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     display_name: '',
     role: 'child' as 'parent' | 'child',
@@ -221,6 +223,10 @@ const MemberManagement = () => {
             Manage family members, roles, and permissions
           </p>
         </div>
+        <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Add Member
+        </Button>
       </div>
 
       {/* Statistics */}
@@ -511,6 +517,14 @@ const MemberManagement = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Add Member Dialog */}
+      <AddMemberDialog
+        isOpen={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        familyId={profile?.family_id || ''}
+        onMemberAdded={fetchMemberData}
+      />
 
       {/* Archive Confirmation Dialog */}
       <AlertDialog open={!!archivingMember} onOpenChange={(open) => !open && setArchivingMember(null)}>
