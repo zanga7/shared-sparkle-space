@@ -38,6 +38,8 @@ const Dashboard = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
   const [viewingSeries, setViewingSeries] = useState<any>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const { taskSeries } = useRecurringTasks(profile?.family_id);
 
   useEffect(() => {
@@ -352,12 +354,10 @@ const Dashboard = () => {
                       </CardDescription>
                     </div>
                     {profile.role === 'parent' && (
-                      <AddTaskDialog
-                        familyMembers={familyMembers}
-                        familyId={profile.family_id}
-                        profileId={profile.id}
-                        onTaskCreated={fetchUserData}
-                      />
+                      <Button onClick={() => setIsAddDialogOpen(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Task
+                      </Button>
                     )}
                   </div>
                 </CardHeader>
@@ -463,6 +463,11 @@ const Dashboard = () => {
               tasks={tasks}
               familyMembers={familyMembers}
               onTaskUpdated={fetchUserData}
+              onCreateTask={profile.role === 'parent' ? (date) => {
+                setSelectedDate(date);
+                setIsAddDialogOpen(true);
+              } : undefined}
+              onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
             />
           </TabsContent>
         </Tabs>
@@ -488,6 +493,22 @@ const Dashboard = () => {
           open={!!viewingSeries}
           onOpenChange={(open) => !open && setViewingSeries(null)}
           onSeriesUpdated={fetchUserData}
+        />
+      )}
+
+      {/* Add Task Dialog */}
+      {isAddDialogOpen && (
+        <AddTaskDialog
+          familyMembers={familyMembers}
+          familyId={profile?.family_id || ''}
+          profileId={profile?.id || ''}
+          selectedDate={selectedDate}
+          onTaskCreated={() => {
+            fetchUserData();
+            setSelectedDate(null);
+          }}
+          open={isAddDialogOpen}
+          onOpenChange={setIsAddDialogOpen}
         />
       )}
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,25 +21,49 @@ interface AddTaskDialogProps {
   familyId: string;
   profileId: string;
   onTaskCreated: () => void;
+  selectedDate?: Date | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreated }: AddTaskDialogProps) => {
+export const AddTaskDialog = ({ 
+  familyMembers, 
+  familyId, 
+  profileId, 
+  onTaskCreated, 
+  selectedDate, 
+  open: externalOpen, 
+  onOpenChange: externalOnOpenChange 
+}: AddTaskDialogProps) => {
   const { toast } = useToast();
   const { createTaskSeries } = useRecurringTasks(familyId);
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Use external open state if provided, otherwise use internal state
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = externalOnOpenChange || setInternalOpen;
+  
+  // Initialize form data with selectedDate if provided
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     points: 10,
     assigned_to: 'unassigned',
-    due_date: null as Date | null,
+    due_date: selectedDate || null,
     is_repeating: false,
     recurring_frequency: 'daily' as 'daily' | 'weekly' | 'monthly',
     recurring_interval: 1,
     recurring_days_of_week: [] as number[],
     recurring_end_date: null as Date | null
   });
+
+  // Update due_date when selectedDate changes
+  useEffect(() => {
+    if (selectedDate) {
+      setFormData(prev => ({ ...prev, due_date: selectedDate }));
+    }
+  }, [selectedDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,7 +127,7 @@ export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreate
         description: '',
         points: 10,
         assigned_to: 'unassigned',
-        due_date: null,
+        due_date: selectedDate || null,
         is_repeating: false,
         recurring_frequency: 'daily',
         recurring_interval: 1,
@@ -127,15 +151,20 @@ export const AddTaskDialog = ({ familyMembers, familyId, profileId, onTaskCreate
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Task
-        </Button>
-      </DialogTrigger>
+      {/* Only show trigger if not externally controlled */}
+      {externalOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Task
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Task</DialogTitle>
+          <DialogTitle>
+            {selectedDate ? `Create Task for ${format(selectedDate, 'MMM d, yyyy')}` : 'Create New Task'}
+          </DialogTitle>
           <DialogDescription>
             Add a new chore or activity for your family
           </DialogDescription>

@@ -3,6 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
 import { 
   Calendar as CalendarIcon, 
   ChevronLeft, 
@@ -12,7 +16,15 @@ import {
   CheckCircle2,
   Clock,
   Flame,
-  TrendingUp
+  TrendingUp,
+  Plus,
+  Filter,
+  BarChart3,
+  Eye,
+  Edit,
+  Target,
+  Users,
+  Calendar
 } from 'lucide-react';
 import { 
   format, 
@@ -40,6 +52,14 @@ interface CalendarViewProps {
   tasks: Task[];
   familyMembers: Profile[];
   onTaskUpdated: () => void;
+  onCreateTask?: (date: Date) => void;
+  onEditTask?: (task: Task) => void;
+}
+
+interface TaskFilters {
+  assignedTo: string | 'all';
+  status: 'all' | 'completed' | 'pending' | 'overdue';
+  taskType: 'all' | 'recurring' | 'one-time';
 }
 
 type ViewMode = 'week' | 'month';
@@ -54,9 +74,22 @@ const memberColors = [
   'bg-indigo-100 text-indigo-800 border-indigo-200',
 ];
 
-export const CalendarView = ({ tasks, familyMembers, onTaskUpdated }: CalendarViewProps) => {
+export const CalendarView = ({ 
+  tasks, 
+  familyMembers, 
+  onTaskUpdated, 
+  onCreateTask, 
+  onEditTask 
+}: CalendarViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('week');
+  const [filters, setFilters] = useState<TaskFilters>({
+    assignedTo: 'all',
+    status: 'all',
+    taskType: 'all'
+  });
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const { toast } = useToast();
 
   // Calculate date range based on view mode
@@ -76,11 +109,39 @@ export const CalendarView = ({ tasks, familyMembers, onTaskUpdated }: CalendarVi
 
   const days = eachDayOfInterval(dateRange);
 
-  // Group tasks by date
+  // Filter tasks based on selected filters
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => {
+      // Filter by assigned member
+      if (filters.assignedTo !== 'all' && task.assigned_to !== filters.assignedTo) {
+        return false;
+      }
+      
+      // Filter by status
+      if (filters.status !== 'all') {
+        const isCompleted = task.task_completions && task.task_completions.length > 0;
+        const isOverdue = task.due_date && isPast(new Date(task.due_date)) && !isCompleted;
+        
+        if (filters.status === 'completed' && !isCompleted) return false;
+        if (filters.status === 'pending' && (isCompleted || isOverdue)) return false;
+        if (filters.status === 'overdue' && !isOverdue) return false;
+      }
+      
+      // Filter by task type
+      if (filters.taskType !== 'all') {
+        if (filters.taskType === 'recurring' && !task.is_repeating) return false;
+        if (filters.taskType === 'one-time' && task.is_repeating) return false;
+      }
+      
+      return true;
+    });
+  }, [tasks, filters]);
+
+  // Group filtered tasks by date
   const tasksByDate = useMemo(() => {
     const grouped: { [key: string]: Task[] } = {};
     
-    tasks.forEach(task => {
+    filteredTasks.forEach(task => {
       if (task.due_date) {
         const dateKey = format(new Date(task.due_date), 'yyyy-MM-dd');
         if (!grouped[dateKey]) {
@@ -91,7 +152,49 @@ export const CalendarView = ({ tasks, familyMembers, onTaskUpdated }: CalendarVi
     });
     
     return grouped;
-  }, [tasks]);
+  }, [filteredTasks]);
+
+  // Calculate analytics
+  const analytics = useMemo(() => {
+    const currentWeekTasks = filteredTasks.filter(task => {
+      if (!task.due_date) return false;
+      const taskDate = new Date(task.due_date);
+      const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+      return taskDate >= weekStart && taskDate <= weekEnd;
+    });
+
+    const completed = currentWeekTasks.filter(t => t.task_completions?.length).length;
+    const overdue = currentWeekTasks.filter(t => 
+      t.due_date && isPast(new Date(t.due_date)) && !t.task_completions?.length
+    ).length;
+    const pending = currentWeekTasks.length - completed - overdue;
+
+    const totalPoints = currentWeekTasks.reduce((sum, task) => {
+      return sum + (task.task_completions?.length ? task.points : 0);
+    }, 0);
+
+    const memberStats = familyMembers.map(member => {
+      const memberTasks = currentWeekTasks.filter(t => t.assigned_to === member.id);
+      const memberCompleted = memberTasks.filter(t => t.task_completions?.length).length;
+      return {
+        name: member.display_name,
+        completed: memberCompleted,
+        total: memberTasks.length,
+        percentage: memberTasks.length > 0 ? Math.round((memberCompleted / memberTasks.length) * 100) : 0
+      };
+    });
+
+    return {
+      total: currentWeekTasks.length,
+      completed,
+      pending,
+      overdue,
+      totalPoints,
+      completionRate: currentWeekTasks.length > 0 ? Math.round((completed / currentWeekTasks.length) * 100) : 0,
+      memberStats
+    };
+  }, [filteredTasks, currentDate, familyMembers]);
 
   // Calculate streaks for recurring tasks
   const calculateStreak = (task: Task) => {
@@ -169,6 +272,19 @@ export const CalendarView = ({ tasks, familyMembers, onTaskUpdated }: CalendarVi
     return memberColors[index % memberColors.length];
   };
 
+  // Handle day click for task creation
+  const handleDayClick = (date: Date) => {
+    if (onCreateTask) {
+      onCreateTask(date);
+    }
+  };
+
+  // Handle task click
+  const handleTaskClick = (task: Task, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setSelectedTask(task);
+  };
+
   // Render task item
   const renderTask = (task: Task, index: number) => {
     const isCompleted = task.task_completions && task.task_completions.length > 0;
@@ -183,8 +299,9 @@ export const CalendarView = ({ tasks, familyMembers, onTaskUpdated }: CalendarVi
             ref={provided.innerRef}
             {...provided.draggableProps}
             {...provided.dragHandleProps}
+            onClick={(e) => handleTaskClick(task, e)}
             className={cn(
-              "p-2 mb-1 rounded-md border text-xs cursor-move transition-all",
+              "p-2 mb-1 rounded-md border text-xs cursor-move transition-all hover:shadow-md group",
               getMemberColor(task.assigned_to),
               isCompleted && "opacity-60 line-through",
               isOverdue && "border-red-300 bg-red-50",
@@ -196,8 +313,14 @@ export const CalendarView = ({ tasks, familyMembers, onTaskUpdated }: CalendarVi
                 {isCompleted && <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />}
                 {isOverdue && <Clock className="h-3 w-3 text-red-500 flex-shrink-0" />}
                 <span className="truncate">{task.title}</span>
+                <Eye className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
+                {task.due_date && (
+                  <span className="text-xs opacity-60">
+                    {format(new Date(task.due_date), 'HH:mm')}
+                  </span>
+                )}
                 {streak > 0 && (
                   <Badge variant="secondary" className="text-xs h-4 px-1">
                     <Flame className="h-2 w-2 mr-1" />
@@ -228,45 +351,154 @@ export const CalendarView = ({ tasks, familyMembers, onTaskUpdated }: CalendarVi
   return (
     <Card className="w-full">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5" />
-            Family Calendar
-          </CardTitle>
-          
-          <div className="flex items-center gap-2">
-            {/* View Mode Toggle */}
-            <div className="flex border rounded-md">
+        <div className="flex flex-col gap-4">
+          {/* Header Row */}
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5" />
+              Family Calendar
+            </CardTitle>
+            
+            <div className="flex items-center gap-2">
+              {/* Analytics Toggle */}
               <Button
-                variant={viewMode === 'week' ? 'default' : 'ghost'}
+                variant="outline"
                 size="sm"
-                onClick={() => setViewMode('week')}
-                className="rounded-r-none"
+                onClick={() => setShowAnalytics(!showAnalytics)}
               >
-                <Rows3 className="h-4 w-4" />
+                <BarChart3 className="h-4 w-4" />
               </Button>
-              <Button
-                variant={viewMode === 'month' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('month')}
-                className="rounded-l-none"
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </Button>
+
+              {/* View Mode Toggle */}
+              <div className="flex border rounded-md">
+                <Button
+                  variant={viewMode === 'week' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('week')}
+                  className="rounded-r-none"
+                >
+                  <Rows3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'month' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('month')}
+                  className="rounded-l-none"
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Navigation */}
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" onClick={navigatePrevious}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
+                  Today
+                </Button>
+                <Button variant="outline" size="sm" onClick={navigateNext}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters & Analytics */}
+          <div className="flex flex-col gap-3">
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Filters:</span>
+              </div>
+              
+              <Select value={filters.assignedTo} onValueChange={(value) => 
+                setFilters(prev => ({ ...prev, assignedTo: value }))
+              }>
+                <SelectTrigger className="w-32 h-8">
+                  <SelectValue placeholder="Member" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Members</SelectItem>
+                  {familyMembers.map(member => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.display_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filters.status} onValueChange={(value: any) => 
+                setFilters(prev => ({ ...prev, status: value }))
+              }>
+                <SelectTrigger className="w-32 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filters.taskType} onValueChange={(value: any) => 
+                setFilters(prev => ({ ...prev, taskType: value }))
+              }>
+                <SelectTrigger className="w-32 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="recurring">Recurring</SelectItem>
+                  <SelectItem value="one-time">One-time</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Navigation */}
-            <div className="flex items-center gap-1">
-              <Button variant="outline" size="sm" onClick={navigatePrevious}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
-                Today
-              </Button>
-              <Button variant="outline" size="sm" onClick={navigateNext}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+            {/* Analytics */}
+            {showAnalytics && (
+              <Card className="bg-muted/50">
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">{analytics.completed}</div>
+                      <div className="text-xs text-muted-foreground">Completed</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-orange-600">{analytics.pending}</div>
+                      <div className="text-xs text-muted-foreground">Pending</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-red-600">{analytics.overdue}</div>
+                      <div className="text-xs text-muted-foreground">Overdue</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">{analytics.totalPoints}</div>
+                      <div className="text-xs text-muted-foreground">Points Earned</div>
+                    </div>
+                  </div>
+                  
+                  <Separator className="my-3" />
+                  
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Member Progress</div>
+                    {analytics.memberStats.map((member, index) => (
+                      <div key={member.name} className="flex items-center gap-2">
+                        <Badge variant="outline" className={cn("text-xs", memberColors[index % memberColors.length])}>
+                          {member.name}
+                        </Badge>
+                        <Progress value={member.percentage} className="flex-1 h-2" />
+                        <span className="text-xs text-muted-foreground w-12 text-right">
+                          {member.completed}/{member.total}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
         
@@ -304,8 +536,9 @@ export const CalendarView = ({ tasks, familyMembers, onTaskUpdated }: CalendarVi
                     <div
                       ref={provided.innerRef}
                       {...provided.droppableProps}
-                      className={cn(
-                        "min-h-[120px] p-2 border rounded-md transition-colors",
+                       onClick={() => handleDayClick(day)}
+                       className={cn(
+                        "min-h-[120px] p-2 border rounded-md transition-colors cursor-pointer group hover:bg-accent/50",
                         isToday(day) && "bg-blue-50 border-blue-200",
                         !isSameMonth(day, currentDate) && viewMode === 'month' && "opacity-50 bg-gray-50",
                         snapshot.isDraggingOver && "bg-green-50 border-green-300"
@@ -342,9 +575,26 @@ export const CalendarView = ({ tasks, familyMembers, onTaskUpdated }: CalendarVi
                       </div>
 
                       {/* Empty State */}
-                      {dayTasks.length === 0 && snapshot.isDraggingOver && (
-                        <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed border-green-300 rounded">
-                          Drop task here
+                      {dayTasks.length === 0 && (
+                        <div className="flex items-center justify-center h-full">
+                          {snapshot.isDraggingOver ? (
+                            <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed border-green-300 rounded w-full">
+                              Drop task here
+                            </div>
+                          ) : (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="opacity-0 group-hover:opacity-50 transition-opacity w-full h-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDayClick(day);
+                              }}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add Task
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -355,20 +605,109 @@ export const CalendarView = ({ tasks, familyMembers, onTaskUpdated }: CalendarVi
           </div>
         </DragDropContext>
 
-        {/* Legend */}
-        <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
-          <div className="text-sm font-medium">Family Members:</div>
-          {familyMembers.map((member, index) => (
-            <Badge 
-              key={member.id} 
-              variant="outline" 
-              className={cn("text-xs", memberColors[index % memberColors.length])}
-            >
-              {member.display_name}
-            </Badge>
-          ))}
+        {/* Legend & Summary */}
+        <div className="flex flex-col gap-3 mt-4 pt-4 border-t">
+          <div className="flex flex-wrap gap-2">
+            <div className="text-sm font-medium">Family Members:</div>
+            {familyMembers.map((member, index) => (
+              <Badge 
+                key={member.id} 
+                variant="outline" 
+                className={cn("text-xs", memberColors[index % memberColors.length])}
+              >
+                {member.display_name}
+              </Badge>
+            ))}
+          </div>
+          
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Target className="h-4 w-4" />
+              Showing {filteredTasks.length} of {tasks.length} tasks
+            </div>
+            <div className="flex items-center gap-1">
+              <Users className="h-4 w-4" />
+              {familyMembers.length} family members
+            </div>
+            <div className="flex items-center gap-1">
+              <Calendar className="h-4 w-4" />
+              Week completion: {analytics.completionRate}%
+            </div>
+          </div>
         </div>
       </CardContent>
+
+      {/* Task Detail Modal */}
+      {selectedTask && (
+        <Popover open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
+          <PopoverContent className="w-80">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold">{selectedTask.title}</h4>
+                <div className="flex items-center gap-1">
+                  {onEditTask && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        onEditTask(selectedTask);
+                        setSelectedTask(null);
+                      }}
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                  )}
+                  <Badge variant="outline">{selectedTask.points}pt</Badge>
+                </div>
+              </div>
+              
+              {selectedTask.description && (
+                <p className="text-sm text-muted-foreground">{selectedTask.description}</p>
+              )}
+              
+              <div className="space-y-2 text-sm">
+                {selectedTask.due_date && (
+                  <div className="flex justify-between">
+                    <span>Due:</span>
+                    <span>{format(new Date(selectedTask.due_date), 'MMM d, yyyy HH:mm')}</span>
+                  </div>
+                )}
+                
+                {selectedTask.assigned_to && (
+                  <div className="flex justify-between">
+                    <span>Assigned to:</span>
+                    <span>{familyMembers.find(m => m.id === selectedTask.assigned_to)?.display_name}</span>
+                  </div>
+                )}
+                
+                {selectedTask.is_repeating && (
+                  <div className="flex justify-between">
+                    <span>Recurring:</span>
+                    <span className="capitalize">{selectedTask.recurring_frequency}</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between">
+                  <span>Status:</span>
+                  <Badge variant={selectedTask.task_completions?.length ? "secondary" : "outline"}>
+                    {selectedTask.task_completions?.length ? "Completed" : "Pending"}
+                  </Badge>
+                </div>
+                
+                {selectedTask.series_id && (
+                  <div className="flex justify-between">
+                    <span>Streak:</span>
+                    <div className="flex items-center gap-1">
+                      <Flame className="h-3 w-3 text-orange-500" />
+                      {calculateStreak(selectedTask)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
     </Card>
   );
 };
