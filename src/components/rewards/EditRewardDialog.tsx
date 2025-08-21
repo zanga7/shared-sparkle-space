@@ -14,6 +14,7 @@ interface EditRewardDialogProps {
   reward: Reward | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onUpdate?: (rewardId: string, rewardData: any) => Promise<void>;
 }
 
 interface EditRewardFormData {
@@ -25,10 +26,9 @@ interface EditRewardFormData {
   is_active: boolean;
 }
 
-export function EditRewardDialog({ reward, open, onOpenChange }: EditRewardDialogProps) {
-  const { updateReward, deleteReward, refreshData } = useRewards();
+export function EditRewardDialog({ reward, open, onOpenChange, onUpdate }: EditRewardDialogProps) {
+  const { updateReward } = useRewards();
   const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState<EditRewardFormData>({
     title: '',
     description: '',
@@ -58,32 +58,29 @@ export function EditRewardDialog({ reward, open, onOpenChange }: EditRewardDialo
 
   const handleUpdate = async () => {
     if (!reward || !formData.title || formData.cost_points <= 0) return;
-    
+
     setIsUpdating(true);
     try {
-      await updateReward(reward.id, formData);
-      // Refresh the data to ensure UI updates immediately
-      await refreshData();
+      if (onUpdate) {
+        // Use the parent's update handler
+        await onUpdate(reward.id, formData);
+      } else {
+        // Fallback to direct hook call with proper parameters
+        await updateReward(reward.id, {
+          title: formData.title,
+          description: formData.description || undefined,
+          cost_points: formData.cost_points,
+          reward_type: formData.reward_type,
+          image_url: formData.image_url || undefined,
+          is_active: formData.is_active
+        });
+      }
+      
       onOpenChange(false);
     } catch (error) {
-      console.error('Update failed:', error);
-      // Don't close dialog on error so user can retry
+      console.error('Error updating reward:', error);
     } finally {
       setIsUpdating(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!reward) return;
-    
-    setIsDeleting(true);
-    try {
-      await deleteReward(reward.id);
-      // Refresh the data to ensure UI updates immediately
-      await refreshData();
-      onOpenChange(false);
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -164,14 +161,9 @@ export function EditRewardDialog({ reward, open, onOpenChange }: EditRewardDialo
         </div>
 
         <DialogFooter>
-          <Button 
-            variant="destructive" 
-            onClick={handleDelete} 
-            disabled={isUpdating || isDeleting}
-          >
-            {isDeleting ? 'Deleting...' : 'Delete'}
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
           </Button>
-          
           <Button 
             onClick={handleUpdate} 
             disabled={!formData.title || formData.cost_points <= 0 || isUpdating}

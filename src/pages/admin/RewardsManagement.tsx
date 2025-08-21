@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,9 +24,10 @@ interface RewardFormData {
 }
 
 export default function RewardsManagement() {
-  const { rewards, loading, createReward, refreshData } = useRewards();
+  const { rewards, loading, createReward, updateReward, deleteReward } = useRewards();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingReward, setEditingReward] = useState<Reward | null>(null);
+  const [deletingReward, setDeletingReward] = useState<Reward | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<RewardFormData>({
     title: '',
@@ -37,6 +39,12 @@ export default function RewardsManagement() {
 
   const handleInputChange = (field: keyof RewardFormData, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Fetch reward data function similar to MemberManagement
+  const fetchRewardData = async () => {
+    // This triggers a refresh of the rewards data
+    window.location.reload();
   };
 
   const handleCreateReward = async () => {
@@ -55,15 +63,30 @@ export default function RewardsManagement() {
       });
       
       setIsCreateDialogOpen(false);
-      setFormData({
-        title: '',
-        description: '',
-        cost_points: 10,
-        reward_type: 'always_available',
-        image_url: null
-      });
+      resetForm();
+      fetchRewardData(); // Refresh immediately like MemberManagement
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleUpdateReward = async (rewardId: string, rewardData: any) => {
+    try {
+      await updateReward(rewardId, rewardData);
+      setEditingReward(null);
+      fetchRewardData(); // Refresh immediately
+    } catch (error) {
+      console.error('Error updating reward:', error);
+    }
+  };
+
+  const handleDeleteReward = async (reward: Reward) => {
+    try {
+      await deleteReward(reward.id);
+      setDeletingReward(null);
+      fetchRewardData(); // Refresh immediately
+    } catch (error) {
+      console.error('Error deleting reward:', error);
     }
   };
 
@@ -259,6 +282,14 @@ export default function RewardsManagement() {
                       <Edit className="w-4 h-4 mr-1" />
                       Edit
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeletingReward(reward)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -272,7 +303,29 @@ export default function RewardsManagement() {
         reward={editingReward}
         open={!!editingReward}
         onOpenChange={(open) => !open && setEditingReward(null)}
+        onUpdate={handleUpdateReward}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingReward} onOpenChange={() => setDeletingReward(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Reward</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deletingReward?.title}"? This action will deactivate the reward and it won't be available for future requests.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => deletingReward && handleDeleteReward(deletingReward)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
