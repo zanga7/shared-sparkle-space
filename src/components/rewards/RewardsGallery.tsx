@@ -81,7 +81,7 @@ export function RewardsGallery() {
 
   // Determine if this is a parent or child view
   const isParentView = userProfile?.role === 'parent';
-  const isChildView = !isParentView && (selectedChildId && isChildAuthenticated);
+  const isChildView = !isParentView && selectedChildId;
 
   // Parent View - Show all rewards with assignment info
   if (isParentView) {
@@ -156,7 +156,11 @@ export function RewardsGallery() {
                     </div>
                     
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>Type: {reward.reward_type === 'once_off' ? 'One-time' : 'Always available'}</span>
+                      <span>Type: {
+                        reward.reward_type === 'once_off' ? 'One-time' : 
+                        reward.reward_type === 'group_contribution' ? 'Group Goal' : 
+                        'Always available'
+                      }</span>
                       <span>Status: {reward.is_active ? 'Active' : 'Inactive'}</span>
                     </div>
                   </div>

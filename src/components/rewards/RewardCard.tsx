@@ -47,7 +47,12 @@ export function RewardCard({ reward, userBalance, canRequest, onRequest, isReque
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Gift className="w-4 h-4" />
           <span>
-            {reward.reward_type === 'once_off' ? 'One-time reward' : 'Always available'}
+            {reward.reward_type === 'once_off' 
+              ? 'One-time reward' 
+              : reward.reward_type === 'group_contribution' 
+                ? 'Group contribution required'
+                : 'Always available'
+            }
           </span>
         </div>
       </CardContent>
@@ -65,6 +70,8 @@ export function RewardCard({ reward, userBalance, canRequest, onRequest, isReque
             'Not Available'
           ) : !canAfford ? (
             `Need ${reward.cost_points - userBalance} more points`
+          ) : reward.reward_type === 'group_contribution' ? (
+            'Contribute Points'
           ) : (
             'Request Reward'
           )}

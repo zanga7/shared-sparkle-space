@@ -120,23 +120,19 @@ export function useRewards() {
   const updateReward = async (rewardId: string, rewardData: Partial<Omit<Reward, 'id' | 'family_id' | 'created_by' | 'created_at' | 'updated_at'>>) => {
     try {
       const { data, error } = await supabase
-        .rpc('update_reward', {
-          reward_id_param: rewardId,
-          title_param: rewardData.title || '',
-          description_param: rewardData.description || null,
-          cost_points_param: rewardData.cost_points || 0,
-          reward_type_param: rewardData.reward_type || 'always_available',
-          image_url_param: rewardData.image_url || null,
-          is_active_param: rewardData.is_active !== undefined ? rewardData.is_active : true
-        });
+        .from('rewards')
+        .update({
+          title: rewardData.title,
+          description: rewardData.description || null,
+          cost_points: rewardData.cost_points,
+          reward_type: rewardData.reward_type,
+          image_url: rewardData.image_url || null,
+          is_active: rewardData.is_active,
+          assigned_to: rewardData.assigned_to
+        })
+        .eq('id', rewardId);
 
       if (error) throw error;
-
-      const result = data as { success: boolean; error?: string; message?: string };
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to update reward');
-      }
 
       toast.success('Reward updated successfully');
       // Don't call fetchRewards here - let the component handle refresh
