@@ -139,8 +139,8 @@ export function useRewards() {
       }
 
       toast.success('Reward updated successfully');
-      // Force refresh by calling fetchRewards directly
-      await fetchRewards();
+      // Don't call fetchRewards here - let the component handle refresh
+      // await fetchRewards();
     } catch (error) {
       console.error('Error updating reward:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to update reward');
@@ -165,7 +165,7 @@ export function useRewards() {
       }
 
       toast.success('Reward deleted successfully');
-      await fetchRewards();
+      // Don't call fetchRewards here - let the component handle refresh
     } catch (error) {
       console.error('Error deleting reward:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to delete reward');
