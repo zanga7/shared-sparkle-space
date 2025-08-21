@@ -7,10 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { useRewards } from '@/hooks/useRewards';
 import { ApprovalQueue } from '@/components/rewards/ApprovalQueue';
-import { Plus, Gift, Settings, Coins } from 'lucide-react';
+import { EditRewardDialog } from '@/components/rewards/EditRewardDialog';
+import { Plus, Gift, Settings, Coins, Edit, Trash2 } from 'lucide-react';
 import type { Reward } from '@/types/rewards';
 
 interface RewardFormData {
@@ -18,19 +19,20 @@ interface RewardFormData {
   description: string;
   cost_points: number;
   reward_type: 'once_off' | 'always_available';
-  image_url: string;
+  image_url: string | null;
 }
 
 export default function RewardsManagement() {
   const { rewards, loading, createReward } = useRewards();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingReward, setEditingReward] = useState<Reward | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<RewardFormData>({
     title: '',
     description: '',
     cost_points: 10,
     reward_type: 'always_available',
-    image_url: ''
+    image_url: null
   });
 
   const handleInputChange = (field: keyof RewardFormData, value: string | number) => {
@@ -58,7 +60,7 @@ export default function RewardsManagement() {
         description: '',
         cost_points: 10,
         reward_type: 'always_available',
-        image_url: ''
+        image_url: null
       });
     } finally {
       setIsCreating(false);
@@ -71,7 +73,7 @@ export default function RewardsManagement() {
       description: '',
       cost_points: 10,
       reward_type: 'always_available',
-      image_url: ''
+      image_url: null
     });
   };
 
@@ -160,12 +162,9 @@ export default function RewardsManagement() {
               </div>
 
               <div>
-                <Label htmlFor="image_url">Image URL (optional)</Label>
-                <Input
-                  id="image_url"
-                  placeholder="https://example.com/reward-image.jpg"
-                  value={formData.image_url}
-                  onChange={(e) => handleInputChange('image_url', e.target.value)}
+                <ImageUpload
+                  value={formData.image_url || undefined}
+                  onChange={(url) => handleInputChange('image_url', url)}
                 />
               </div>
             </div>
@@ -224,10 +223,12 @@ export default function RewardsManagement() {
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="text-lg leading-tight">{reward.title}</CardTitle>
-                    <Badge variant="secondary" className="flex items-center gap-1 whitespace-nowrap">
-                      <Coins className="w-3 h-3" />
-                      {reward.cost_points}
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge variant="secondary" className="flex items-center gap-1 whitespace-nowrap">
+                        <Coins className="w-3 h-3" />
+                        {reward.cost_points}
+                      </Badge>
+                    </div>
                   </div>
                   {reward.description && (
                     <CardDescription className="text-sm">
@@ -237,7 +238,7 @@ export default function RewardsManagement() {
                 </CardHeader>
 
                 <CardContent>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <Badge variant={reward.reward_type === 'once_off' ? 'outline' : 'secondary'}>
                         {reward.reward_type === 'once_off' ? 'One-time' : 'Always available'}
@@ -247,12 +248,31 @@ export default function RewardsManagement() {
                       </Badge>
                     </div>
                   </div>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditingReward(reward)}
+                      className="flex-1"
+                    >
+                      <Edit className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         )}
       </div>
+
+      {/* Edit Reward Dialog */}
+      <EditRewardDialog
+        reward={editingReward}
+        open={!!editingReward}
+        onOpenChange={(open) => !open && setEditingReward(null)}
+      />
     </div>
   );
 }

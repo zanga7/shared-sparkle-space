@@ -122,6 +122,60 @@ export function useRewards() {
     }
   };
 
+  // Update an existing reward
+  const updateReward = async (rewardId: string, rewardData: Partial<Omit<Reward, 'id' | 'family_id' | 'created_by' | 'created_at' | 'updated_at'>>) => {
+    try {
+      const { data, error } = await supabase
+        .rpc('update_reward', {
+          reward_id_param: rewardId,
+          title_param: rewardData.title || '',
+          description_param: rewardData.description || '',
+          cost_points_param: rewardData.cost_points || 0,
+          reward_type_param: rewardData.reward_type || 'always_available',
+          image_url_param: rewardData.image_url || '',
+          is_active_param: rewardData.is_active !== undefined ? rewardData.is_active : true
+        });
+
+      if (error) throw error;
+
+      const result = data as { success: boolean; error?: string; message?: string };
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update reward');
+      }
+
+      toast.success('Reward updated successfully');
+      await fetchRewards();
+    } catch (error) {
+      console.error('Error updating reward:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to update reward');
+    }
+  };
+
+  // Delete a reward
+  const deleteReward = async (rewardId: string) => {
+    try {
+      const { data, error } = await supabase
+        .rpc('delete_reward', {
+          reward_id_param: rewardId
+        });
+
+      if (error) throw error;
+
+      const result = data as { success: boolean; error?: string; message?: string };
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete reward');
+      }
+
+      toast.success('Reward deleted successfully');
+      await fetchRewards();
+    } catch (error) {
+      console.error('Error deleting reward:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete reward');
+    }
+  };
+
   // Request a reward
   const requestReward = async (rewardId: string, profileId: string) => {
     try {
@@ -273,6 +327,8 @@ export function useRewards() {
     pointsBalances,
     loading,
     createReward,
+    updateReward,
+    deleteReward,
     requestReward,
     approveRewardRequest,
     denyRewardRequest,

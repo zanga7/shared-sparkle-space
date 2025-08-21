@@ -908,6 +908,10 @@ export type Database = {
         Args: { integration_id_param: string }
         Returns: Json
       }
+      delete_reward: {
+        Args: { reward_id_param: string }
+        Returns: Json
+      }
       deny_reward_request: {
         Args: { denial_note_param?: string; request_id_param: string }
         Returns: Json
@@ -1046,6 +1050,18 @@ export type Database = {
           expires_at_param?: string
           integration_id_param: string
           refresh_token_param?: string
+        }
+        Returns: Json
+      }
+      update_reward: {
+        Args: {
+          cost_points_param: number
+          description_param: string
+          image_url_param: string
+          is_active_param: boolean
+          reward_id_param: string
+          reward_type_param: string
+          title_param: string
         }
         Returns: Json
       }
