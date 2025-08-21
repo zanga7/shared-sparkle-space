@@ -1,87 +1,92 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PinInput } from '@/components/ui/pin-input';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { ExtendedProfile } from '@/types/admin';
 
 interface SetChildPinDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  childProfile: {
-    id: string;
-    display_name: string;
-  } | null;
-  onSuccess: () => void;
+  childProfile: ExtendedProfile | null;
+  onSuccess?: () => void;
 }
 
-export const SetChildPinDialog = ({
-  open,
-  onOpenChange,
+export const SetChildPinDialog = ({ 
+  open, 
+  onOpenChange, 
   childProfile,
-  onSuccess
+  onSuccess 
 }: SetChildPinDialogProps) => {
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSavePin = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!childProfile) return;
 
     if (pin !== confirmPin) {
       toast({
-        title: "Error",
-        description: "PINs do not match. Please try again.",
+        title: "PIN Mismatch",
+        description: "The PINs do not match. Please try again.",
         variant: "destructive",
       });
       return;
     }
 
-    if (pin.length !== 4) {
+    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
       toast({
-        title: "Error",
+        title: "Invalid PIN",
         description: "PIN must be exactly 4 digits.",
         variant: "destructive",
       });
       return;
     }
 
+    setIsLoading(true);
+    
     try {
-      setIsLoading(true);
-
-      const { data, error } = await supabase.functions.invoke('set-child-pin', {
-        body: {
-          profileId: childProfile.id,
-          pin: pin
-        }
+      const { data, error } = await supabase.rpc('set_child_pin', {
+        profile_id_param: childProfile.id,
+        new_pin: pin
       });
 
       if (error) {
-        throw error;
+        console.error('Set PIN error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to set PIN. Please try again.",
+          variant: "destructive",
+        });
+        return;
       }
 
-      const result = data;
+      const result = data as { success: boolean; error?: string; message?: string };
 
       if (result.success) {
         toast({
           title: "PIN Set Successfully",
           description: `PIN has been set for ${childProfile.display_name}`,
         });
+        
         setPin('');
         setConfirmPin('');
         onOpenChange(false);
-        onSuccess();
+        onSuccess?.();
       } else {
         toast({
-          title: "Error",
-          description: result.error || "Failed to set PIN",
+          title: "Failed to Set PIN",
+          description: result.error || "An error occurred while setting the PIN.",
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Error setting PIN:', error);
+      console.error('Set PIN error:', error);
       toast({
         title: "Error",
         description: "Failed to set PIN. Please try again.",
@@ -92,60 +97,69 @@ export const SetChildPinDialog = ({
     }
   };
 
-  const handleCancel = () => {
+  const handleClose = () => {
     setPin('');
     setConfirmPin('');
     onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
             Set PIN for {childProfile?.display_name}
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6 py-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="pin">Enter 4-digit PIN</Label>
-            <PinInput
+            <Label htmlFor="pin">New PIN (4 digits)</Label>
+            <Input
+              id="pin"
+              type="password"
+              inputMode="numeric"
+              pattern="\d{4}"
+              maxLength={4}
               value={pin}
-              onChange={setPin}
-              length={4}
-              disabled={isLoading}
-              className="justify-center"
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              placeholder="Enter 4-digit PIN"
+              required
             />
           </div>
-
+          
           <div className="space-y-2">
-            <Label htmlFor="confirm-pin">Confirm PIN</Label>
-            <PinInput
+            <Label htmlFor="confirmPin">Confirm PIN</Label>
+            <Input
+              id="confirmPin"
+              type="password"
+              inputMode="numeric"
+              pattern="\d{4}"
+              maxLength={4}
               value={confirmPin}
-              onChange={setConfirmPin}
-              length={4}
-              disabled={isLoading}
-              className="justify-center"
+              onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              placeholder="Confirm 4-digit PIN"
+              required
             />
           </div>
 
-          <div className="flex justify-end space-x-2">
-            <Button
-              variant="outline"
-              onClick={handleCancel}
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleClose}
               disabled={isLoading}
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleSavePin}
+            <Button 
+              type="submit" 
               disabled={isLoading || pin.length !== 4 || confirmPin.length !== 4}
             >
               {isLoading ? 'Setting PIN...' : 'Set PIN'}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

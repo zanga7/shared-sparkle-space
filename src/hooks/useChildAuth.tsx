@@ -69,8 +69,9 @@ export const ChildAuthProvider = ({ children }: { children: React.ReactNode }) =
       setLoading(true);
       
       // Use secure server-side PIN authentication
-      const { data, error } = await supabase.functions.invoke('secure-pin-auth', {
-        body: { profileId, pin }
+      const { data, error } = await supabase.rpc('authenticate_child_pin', {
+        profile_id_param: profileId,
+        pin_attempt: pin
       });
 
       if (error) {
@@ -83,7 +84,7 @@ export const ChildAuthProvider = ({ children }: { children: React.ReactNode }) =
         return false;
       }
 
-      const result = data;
+      const result = data as { success: boolean; error?: string; profile_id?: string; locked_until?: string };
 
       if (result.success) {
         setSelectedChildId(profileId);
