@@ -101,7 +101,7 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
             <img 
               src={preview} 
               alt="Reward preview" 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-center"
             />
           </div>
           <div className="flex gap-2 mt-2">

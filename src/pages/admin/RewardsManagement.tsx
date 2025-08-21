@@ -215,7 +215,7 @@ export default function RewardsManagement() {
                     <img 
                       src={reward.image_url} 
                       alt={reward.title}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover object-center"
                     />
                   </div>
                 )}

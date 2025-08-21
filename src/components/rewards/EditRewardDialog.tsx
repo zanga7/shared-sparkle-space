@@ -62,8 +62,6 @@ export function EditRewardDialog({ reward, open, onOpenChange }: EditRewardDialo
     setIsUpdating(true);
     try {
       await updateReward(reward.id, formData);
-      // Refresh the data to ensure UI updates immediately
-      await refreshData();
       onOpenChange(false);
     } catch (error) {
       console.error('Update failed:', error);
@@ -79,8 +77,6 @@ export function EditRewardDialog({ reward, open, onOpenChange }: EditRewardDialo
     setIsDeleting(true);
     try {
       await deleteReward(reward.id);
-      // Refresh the data to ensure UI updates immediately
-      await refreshData();
       onOpenChange(false);
     } finally {
       setIsDeleting(false);

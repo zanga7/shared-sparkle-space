@@ -34,25 +34,23 @@ export function useRewards() {
     if (!user) return;
 
     try {
-      // Simplified query to avoid foreign key issues
+      // Simple query without joins to avoid foreign key issues
       const { data, error } = await supabase
         .from('reward_requests')
-        .select(`
-          *
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching reward requests:', error);
-        // Don't show error toast for missing reward requests table/relationships
-        // This is expected if reward requests haven't been fully set up yet
+        // If the table doesn't exist or has relationship issues, just skip it
+        console.log('Reward requests not available yet:', error.message);
+        setRewardRequests([]);
         return;
       }
       
       setRewardRequests((data || []) as RewardRequest[]);
     } catch (error) {
-      console.error('Error fetching reward requests:', error);
-      // Don't show error toast for missing functionality
+      console.log('Reward requests functionality not available yet');
+      setRewardRequests([]);
     }
   };
 
@@ -141,7 +139,7 @@ export function useRewards() {
       }
 
       toast.success('Reward updated successfully');
-      // Refresh the data immediately after successful update
+      // Force refresh by calling fetchRewards directly
       await fetchRewards();
     } catch (error) {
       console.error('Error updating reward:', error);
@@ -333,6 +331,6 @@ export function useRewards() {
     cancelRewardRequest,
     addPointsAdjustment,
     getPointsBalance,
-    refreshData: () => Promise.all([fetchRewards(), fetchRewardRequests(), fetchPointsBalances()])
+    refreshData: () => Promise.all([fetchRewards(), fetchPointsBalances()])
   };
 }
