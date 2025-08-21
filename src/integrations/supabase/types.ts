@@ -728,63 +728,7 @@ export type Database = {
       }
     }
     Views: {
-      calendar_integrations_secure: {
-        Row: {
-          access_token_status: string | null
-          calendar_id: string | null
-          created_at: string | null
-          created_ip: unknown | null
-          expires_at: string | null
-          id: string | null
-          integration_type: string | null
-          is_active: boolean | null
-          is_token_expired: boolean | null
-          last_access_ip: unknown | null
-          last_token_refresh: string | null
-          profile_id: string | null
-          refresh_token_status: string | null
-          security_flags: Json | null
-          token_refresh_count: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          access_token_status?: never
-          calendar_id?: string | null
-          created_at?: string | null
-          created_ip?: unknown | null
-          expires_at?: string | null
-          id?: string | null
-          integration_type?: string | null
-          is_active?: boolean | null
-          is_token_expired?: never
-          last_access_ip?: unknown | null
-          last_token_refresh?: string | null
-          profile_id?: string | null
-          refresh_token_status?: never
-          security_flags?: Json | null
-          token_refresh_count?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          access_token_status?: never
-          calendar_id?: string | null
-          created_at?: string | null
-          created_ip?: unknown | null
-          expires_at?: string | null
-          id?: string | null
-          integration_type?: string | null
-          is_active?: boolean | null
-          is_token_expired?: never
-          last_access_ip?: unknown | null
-          last_token_refresh?: string | null
-          profile_id?: string | null
-          refresh_token_status?: never
-          security_flags?: Json | null
-          token_refresh_count?: number | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       authenticate_child_pin: {
@@ -899,6 +843,10 @@ export type Database = {
           refresh_token: string
         }[]
       }
+      get_token_encryption_status: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_user_calendar_integrations: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -944,6 +892,10 @@ export type Database = {
           p_success?: boolean
         }
         Returns: undefined
+      }
+      migrate_existing_tokens_to_encrypted: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       revoke_calendar_integration: {
         Args: { integration_id: string; reason?: string }
