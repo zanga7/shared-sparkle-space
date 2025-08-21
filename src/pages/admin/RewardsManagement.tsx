@@ -57,8 +57,8 @@ export default function RewardsManagement() {
         cost_points: formData.cost_points,
         reward_type: formData.reward_type,
         image_url: formData.image_url || undefined,
-        is_active: true,
-        assigned_to: null // Available to all by default
+        assigned_to: null, // Available to all by default
+        is_active: true
       });
       
       setIsCreateDialogOpen(false);
@@ -81,9 +81,11 @@ export default function RewardsManagement() {
 
   const handleDeleteReward = async (reward: Reward) => {
     try {
+      console.log('Attempting to delete reward:', reward.id);
       await deleteReward(reward.id);
+      console.log('Delete completed, refreshing data...');
       setDeletingReward(null);
-      fetchRewardData(); // Refresh immediately
+      await fetchRewardData(); // Refresh immediately
     } catch (error) {
       console.error('Error deleting reward:', error);
     }
@@ -237,7 +239,7 @@ export default function RewardsManagement() {
                     <img 
                       src={reward.image_url} 
                       alt={reward.title}
-                      className="w-full h-full object-cover object-center"
+                      className="w-full h-full object-cover"
                     />
                   </div>
                 )}
