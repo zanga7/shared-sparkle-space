@@ -692,9 +692,26 @@ export type Database = {
         }
         Returns: undefined
       }
+      get_calendar_integration_safe: {
+        Args: { integration_id: string }
+        Returns: {
+          calendar_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          integration_type: string
+          is_active: boolean
+          profile_id: string
+          updated_at: string
+        }[]
+      }
       get_user_family_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      is_calendar_integration_owner: {
+        Args: { integration_id: string }
+        Returns: boolean
       }
       is_current_user_parent: {
         Args: Record<PropertyKey, never>
