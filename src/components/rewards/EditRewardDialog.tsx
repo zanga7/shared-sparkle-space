@@ -61,15 +61,7 @@ export function EditRewardDialog({ reward, open, onOpenChange }: EditRewardDialo
     
     setIsUpdating(true);
     try {
-      await updateReward(reward.id, {
-        title: formData.title,
-        description: formData.description || undefined,
-        cost_points: formData.cost_points,
-        reward_type: formData.reward_type,
-        image_url: formData.image_url || undefined,
-        is_active: formData.is_active
-      });
-      
+      await updateReward(reward.id, formData);
       onOpenChange(false);
     } finally {
       setIsUpdating(false);
@@ -88,19 +80,6 @@ export function EditRewardDialog({ reward, open, onOpenChange }: EditRewardDialo
     }
   };
 
-  const resetForm = () => {
-    if (reward) {
-      setFormData({
-        title: reward.title,
-        description: reward.description || '',
-        cost_points: reward.cost_points,
-        reward_type: reward.reward_type,
-        image_url: reward.image_url || null,
-        is_active: reward.is_active
-      });
-    }
-  };
-
   if (!reward) return null;
 
   return (
@@ -109,7 +88,7 @@ export function EditRewardDialog({ reward, open, onOpenChange }: EditRewardDialo
         <DialogHeader>
           <DialogTitle>Edit Reward</DialogTitle>
           <DialogDescription>
-            Update the reward details. Changes will be saved immediately.
+            Update the reward details below.
           </DialogDescription>
         </DialogHeader>
 
@@ -177,29 +156,21 @@ export function EditRewardDialog({ reward, open, onOpenChange }: EditRewardDialo
           </div>
         </div>
 
-        <DialogFooter className="flex items-center justify-between">
+        <DialogFooter>
           <Button 
             variant="destructive" 
             onClick={handleDelete} 
             disabled={isUpdating || isDeleting}
           >
-            {isDeleting ? 'Deleting...' : 'Delete Reward'}
+            {isDeleting ? 'Deleting...' : 'Delete'}
           </Button>
           
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button variant="outline" onClick={resetForm}>
-              Reset
-            </Button>
-            <Button 
-              onClick={handleUpdate} 
-              disabled={!formData.title || formData.cost_points <= 0 || isUpdating}
-            >
-              {isUpdating ? 'Updating...' : 'Update Reward'}
-            </Button>
-          </div>
+          <Button 
+            onClick={handleUpdate} 
+            disabled={!formData.title || formData.cost_points <= 0 || isUpdating}
+          >
+            {isUpdating ? 'Saving...' : 'Save Changes'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

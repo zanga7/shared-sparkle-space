@@ -129,10 +129,10 @@ export function useRewards() {
         .rpc('update_reward', {
           reward_id_param: rewardId,
           title_param: rewardData.title || '',
-          description_param: rewardData.description || '',
+          description_param: rewardData.description || null,
           cost_points_param: rewardData.cost_points || 0,
           reward_type_param: rewardData.reward_type || 'always_available',
-          image_url_param: rewardData.image_url || '',
+          image_url_param: rewardData.image_url || null,
           is_active_param: rewardData.is_active !== undefined ? rewardData.is_active : true
         });
 
