@@ -728,12 +728,72 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      calendar_integrations_secure: {
+        Row: {
+          access_token_status: string | null
+          calendar_id: string | null
+          created_at: string | null
+          created_ip: unknown | null
+          expires_at: string | null
+          id: string | null
+          integration_type: string | null
+          is_active: boolean | null
+          is_token_expired: boolean | null
+          last_access_ip: unknown | null
+          last_token_refresh: string | null
+          profile_id: string | null
+          refresh_token_status: string | null
+          security_flags: Json | null
+          token_refresh_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          access_token_status?: never
+          calendar_id?: string | null
+          created_at?: string | null
+          created_ip?: unknown | null
+          expires_at?: string | null
+          id?: string | null
+          integration_type?: string | null
+          is_active?: boolean | null
+          is_token_expired?: never
+          last_access_ip?: unknown | null
+          last_token_refresh?: string | null
+          profile_id?: string | null
+          refresh_token_status?: never
+          security_flags?: Json | null
+          token_refresh_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          access_token_status?: never
+          calendar_id?: string | null
+          created_at?: string | null
+          created_ip?: unknown | null
+          expires_at?: string | null
+          id?: string | null
+          integration_type?: string | null
+          is_active?: boolean | null
+          is_token_expired?: never
+          last_access_ip?: unknown | null
+          last_token_refresh?: string | null
+          profile_id?: string | null
+          refresh_token_status?: never
+          security_flags?: Json | null
+          token_refresh_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       authenticate_child_pin: {
         Args: { pin_attempt: string; profile_id_param: string }
         Returns: Json
+      }
+      can_access_calendar_integration: {
+        Args: { integration_profile_id: string }
+        Returns: boolean
       }
       check_token_access_rate_limit: {
         Args: {
@@ -755,6 +815,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      create_calendar_integration: {
+        Args: {
+          access_token_param: string
+          calendar_id_param: string
+          expires_at_param?: string
+          integration_type_param: string
+          refresh_token_param?: string
+        }
+        Returns: Json
+      }
       decrypt_oauth_token: {
         Args: {
           encrypted_data: string
@@ -762,6 +832,10 @@ export type Database = {
           token_type?: string
         }
         Returns: string
+      }
+      delete_calendar_integration: {
+        Args: { integration_id_param: string }
+        Returns: Json
       }
       encrypt_calendar_token: {
         Args: { token_value: string }
@@ -823,6 +897,23 @@ export type Database = {
           expires_at: string
           is_expired: boolean
           refresh_token: string
+        }[]
+      }
+      get_user_calendar_integrations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          calendar_id: string
+          created_at: string
+          expires_at: string
+          has_access_token: boolean
+          has_refresh_token: boolean
+          id: string
+          integration_type: string
+          is_active: boolean
+          is_token_expired: boolean
+          last_token_refresh: string
+          token_refresh_count: number
+          updated_at: string
         }[]
       }
       get_user_family_id: {
