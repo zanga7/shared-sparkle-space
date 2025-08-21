@@ -1,4 +1,6 @@
 import type { Config } from "tailwindcss";
+import { fontFamily } from "tailwindcss/defaultTheme";
+import defaultTheme from "tailwindcss/defaultTheme";
 
 export default {
 	darkMode: ["class"],
@@ -9,7 +11,11 @@ export default {
 		"./src/**/*.{ts,tsx}",
 	],
 	prefix: "",
-	theme: {
+  theme: {
+    screens: {
+      'xs': '475px',
+      ...defaultTheme.screens,
+    },
 		container: {
 			center: true,
 			padding: '2rem',

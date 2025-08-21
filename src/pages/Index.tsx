@@ -15,9 +15,9 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-background w-full">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold">Loading...</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold">Loading...</h1>
         </div>
       </div>
     );

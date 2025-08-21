@@ -209,11 +209,11 @@ const CalendarSettings = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
+    <div className="w-full max-w-full p-4 sm:p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Calendar Settings</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl font-bold">Calendar Settings</h1>
+        <p className="text-muted-foreground text-sm sm:text-base">
           Manage external calendar integrations for your family members
         </p>
       </div>
@@ -257,22 +257,22 @@ const CalendarSettings = () => {
             {/* Family Member Connections */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Family Member Calendars</h3>
-              <div className="space-y-4">
-                {familyMembers.map((member) => {
+               <div className="grid gap-4">
+                 {familyMembers.map((member) => {
                   const memberIntegrations = integrations.filter(i => i.profile_id === member.id);
                   const googleIntegration = memberIntegrations.find(i => i.integration_type === 'google');
                   const outlookIntegration = memberIntegrations.find(i => i.integration_type === 'outlook');
 
                   return (
                     <Card key={member.id} className="overflow-hidden">
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <UserAvatar
-                              name={member.display_name}
-                              color={member.color}
-                              size="md"
-                            />
+                       <CardContent className="p-4 sm:p-6">
+                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+                           <div className="flex items-center gap-3">
+                             <UserAvatar
+                               name={member.display_name}
+                               color={member.color}
+                               size="md"
+                             />
                             <div>
                               <div className="font-medium">{member.display_name}</div>
                               <div className="text-sm text-muted-foreground">

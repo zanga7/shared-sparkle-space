@@ -442,53 +442,55 @@ const ColumnBasedDashboard = () => {
   const tasksByMember = getTasksByMember();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background w-full">
       {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+      <header className="bg-card border-b px-4 lg:px-6 py-4">
+        <div className="max-w-full mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Family Chores</h1>
-            <p className="text-muted-foreground">Welcome back, {profile.display_name}!</p>
+            <h1 className="text-xl sm:text-2xl font-bold">Family Chores</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Welcome back, {profile.display_name}!</p>
           </div>
-          <div className="flex items-center gap-4">
-            <Badge variant={profile.role === 'parent' ? 'default' : 'secondary'}>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+            <Badge variant={profile.role === 'parent' ? 'default' : 'secondary'} className="text-xs sm:text-sm">
               {profile.role === 'parent' ? 'Parent' : 'Child'}
             </Badge>
             {profile.role === 'parent' && (
               <>
-                <Button variant="outline" asChild>
+                <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">
                   <a href="/admin">Admin Panel</a>
                 </Button>
-                <Button onClick={() => setIsAddDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button onClick={() => setIsAddDialogOpen(true)} size="sm" className="text-xs sm:text-sm">
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Add Task
                 </Button>
               </>
             )}
-            <Button variant="outline" onClick={() => signOut()}>
+            <Button variant="outline" onClick={() => signOut()} size="sm" className="text-xs sm:text-sm">
               Sign Out
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6">
+      {/* Main Content */}
+      <div className="w-full px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
         <Tabs defaultValue="columns" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="columns" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Members View
+          <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto sm:mx-0">
+            <TabsTrigger value="columns" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Members</span>
+              <span className="xs:hidden">Board</span>
             </TabsTrigger>
-            <TabsTrigger value="calendar" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Calendar View
+            <TabsTrigger value="calendar" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+              Calendar
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="columns" className="mt-6">
+          <TabsContent value="columns" className="mt-4 sm:mt-6">
             <DragDropContext onDragEnd={handleDragEnd}>
               <div className="w-full overflow-x-auto touch-pan-x">
-                <div className="flex gap-4 pb-4" style={{ minWidth: 'fit-content' }}>
+                <div className="flex gap-3 sm:gap-4 pb-4" style={{ minWidth: 'fit-content' }}>
                   {/* Family member columns */}
                   {familyMembers.map(member => {
                     const memberTasks = tasksByMember.get(member.id) || [];
@@ -501,7 +503,7 @@ const ColumnBasedDashboard = () => {
 
                     return (
                       <Card key={member.id} className={cn(
-                        "flex-shrink-0 w-80 h-fit border-2",
+                        "flex-shrink-0 w-72 sm:w-80 h-fit border-2",
                         getMemberColorClasses(member.color).border,
                         getMemberColorClasses(member.color).bgSoft
                       )}>
@@ -510,25 +512,26 @@ const ColumnBasedDashboard = () => {
                           getMemberColorClasses(member.color).border
                         )}>
                           <div className="flex items-center gap-3">
-                            <UserAvatar
-                              name={member.display_name}
-                              color={member.color}
-                              size="lg"
-                            />
-                            <div>
-                              <CardTitle className="text-lg">{member.display_name}</CardTitle>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Badge variant={member.role === 'parent' ? 'default' : 'secondary'} className="text-xs">
-                                  {member.role}
-                                </Badge>
-                                <span>{member.total_points} pts</span>
-                              </div>
+                             <UserAvatar
+                               name={member.display_name}
+                               color={member.color}
+                               size="md"
+                               className="sm:h-10 sm:w-10"
+                             />
+                             <div className="min-w-0 flex-1">
+                               <CardTitle className="text-base sm:text-lg truncate">{member.display_name}</CardTitle>
+                               <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                                 <Badge variant={member.role === 'parent' ? 'default' : 'secondary'} className="text-xs">
+                                   {member.role}
+                                 </Badge>
+                                 <span className="truncate">{member.total_points} pts</span>
+                               </div>
                             </div>
                           </div>
-                          <div className="flex justify-between text-sm text-muted-foreground">
-                            <span>{pendingTasks.length} pending</span>
-                            <span>{completedTasks.length} completed</span>
-                          </div>
+                           <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
+                             <span>{pendingTasks.length} pending</span>
+                             <span>{completedTasks.length} completed</span>
+                           </div>
                         </CardHeader>
 
                         <Droppable droppableId={member.id}>
@@ -541,13 +544,13 @@ const ColumnBasedDashboard = () => {
                               ref={provided.innerRef}
                               {...provided.droppableProps}
                             >
-                              <div className="space-y-3 mb-4 min-h-[100px]">
-                                {memberTasks.length === 0 ? (
-                                  <div className="text-center py-8 text-muted-foreground">
-                                    <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                    <p className="text-sm">
-                                      {snapshot.isDraggingOver ? 'Drop task here to assign' : 'No tasks assigned'}
-                                    </p>
+                               <div className="space-y-2 sm:space-y-3 mb-4 min-h-[100px]">
+                                 {memberTasks.length === 0 ? (
+                                   <div className="text-center py-6 sm:py-8 text-muted-foreground">
+                                     <Clock className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
+                                     <p className="text-xs sm:text-sm px-2">
+                                       {snapshot.isDraggingOver ? 'Drop task here to assign' : 'No tasks assigned'}
+                                     </p>
                                   </div>
                                 ) : (
                                   memberTasks.map((task, index) => (
@@ -593,8 +596,9 @@ const ColumnBasedDashboard = () => {
                                     '--hover-bg': getMemberColorClasses(member.color).accent.replace('bg-', ''),
                                   } as React.CSSProperties}
                                 >
-                                  <Plus className="h-4 w-4 mr-2" />
-                                  Add Task for {member.display_name}
+                                   <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                   <span className="hidden xs:inline">Add Task for {member.display_name}</span>
+                                   <span className="xs:hidden">Add Task</span>
                                 </Button>
                               )}
                             </CardContent>
@@ -606,19 +610,19 @@ const ColumnBasedDashboard = () => {
 
                   {/* Unassigned tasks column */}
                   {(tasksByMember.get('unassigned')?.length > 0 || profile.role === 'parent') && (
-                    <Card className="flex-shrink-0 w-80 h-fit">
+                     <Card className="flex-shrink-0 w-72 sm:w-80 h-fit">
                       <CardHeader className="pb-3">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarFallback className="bg-muted text-muted-foreground">
-                              ?
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <CardTitle className="text-lg">Unassigned</CardTitle>
-                            <CardDescription>Drag to assign to members</CardDescription>
-                          </div>
-                        </div>
+                         <div className="flex items-center gap-2 sm:gap-3">
+                           <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                             <AvatarFallback className="bg-muted text-muted-foreground text-xs sm:text-sm">
+                               ?
+                             </AvatarFallback>
+                           </Avatar>
+                           <div className="min-w-0 flex-1">
+                             <CardTitle className="text-base sm:text-lg">Unassigned</CardTitle>
+                             <CardDescription className="text-xs sm:text-sm">Drag to assign to members</CardDescription>
+                           </div>
+                         </div>
                       </CardHeader>
                       
                       <Droppable droppableId="unassigned">
@@ -631,14 +635,14 @@ const ColumnBasedDashboard = () => {
                             ref={provided.innerRef}
                             {...provided.droppableProps}
                           >
-                            <div className="space-y-3 mb-4 min-h-[100px]">
-                              {tasksByMember.get('unassigned')?.length === 0 ? (
-                                <div className="text-center py-8 text-muted-foreground">
-                                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                  <p className="text-sm">
-                                    {snapshot.isDraggingOver ? 'Drop here to unassign' : 'No unassigned tasks'}
-                                  </p>
-                                </div>
+                             <div className="space-y-2 sm:space-y-3 mb-4 min-h-[100px]">
+                               {tasksByMember.get('unassigned')?.length === 0 ? (
+                                 <div className="text-center py-6 sm:py-8 text-muted-foreground">
+                                   <Users className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
+                                   <p className="text-xs sm:text-sm px-2">
+                                     {snapshot.isDraggingOver ? 'Drop here to unassign' : 'No unassigned tasks'}
+                                   </p>
+                                 </div>
                               ) : (
                                 tasksByMember.get('unassigned')?.map((task, index) => (
                                   <Draggable key={task.id} draggableId={task.id} index={index}>
@@ -669,15 +673,17 @@ const ColumnBasedDashboard = () => {
                             </div>
                             
                             {/* Add Unassigned Task Button */}
-                            {profile.role === 'parent' && (
-                              <Button 
-                                variant="outline" 
-                                className="w-full border-dashed border-muted-foreground/30 text-muted-foreground hover:border-muted-foreground hover:text-foreground"
-                                onClick={() => handleAddTaskForMember('unassigned')}
-                              >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Unassigned Task
-                              </Button>
+                             {profile.role === 'parent' && (
+                               <Button 
+                                 variant="outline" 
+                                 size="sm"
+                                 className="w-full border-dashed border-muted-foreground/30 text-muted-foreground hover:border-muted-foreground hover:text-foreground text-xs sm:text-sm"
+                                 onClick={() => handleAddTaskForMember('unassigned')}
+                               >
+                                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                 <span className="hidden xs:inline">Add Unassigned Task</span>
+                                 <span className="xs:hidden">Add Task</span>
+                               </Button>
                             )}
                           </CardContent>
                         )}
@@ -689,13 +695,15 @@ const ColumnBasedDashboard = () => {
             </DragDropContext>
           </TabsContent>
 
-          <TabsContent value="calendar" className="mt-6">
-            <CalendarView
-              tasks={tasks}
-              familyMembers={familyMembers}
-              onTaskUpdated={fetchUserData}
-              onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
-            />
+          <TabsContent value="calendar" className="mt-4 sm:mt-6">
+            <div className="w-full">
+              <CalendarView
+                tasks={tasks}
+                familyMembers={familyMembers}
+                onTaskUpdated={fetchUserData}
+                onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
+              />
+            </div>
           </TabsContent>
         </Tabs>
       </div>

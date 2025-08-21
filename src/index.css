@@ -116,6 +116,11 @@ All colors MUST be HSL.
   }
 }
 
+/* Responsive utilities */
+.container-responsive {
+  @apply w-full max-w-full px-4 sm:px-6 lg:px-8;
+}
+
 /* Touch scrolling for mobile */
 .touch-pan-x {
   -webkit-overflow-scrolling: touch;
@@ -138,4 +143,31 @@ All colors MUST be HSL.
 
 .touch-pan-x::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Responsive text truncation */
+.text-responsive {
+  @apply text-sm sm:text-base;
+}
+
+.text-responsive-lg {
+  @apply text-base sm:text-lg lg:text-xl;
+}
+
+/* Mobile-optimized spacing */
+.space-responsive {
+  @apply space-y-2 sm:space-y-4;
+}
+
+.gap-responsive {
+  @apply gap-2 sm:gap-4;
+}
+
+.p-responsive {
+  @apply p-3 sm:p-4 lg:p-6;
+}
+
+/* Improved mobile touch targets */
+.touch-target {
+  @apply min-h-[44px] min-w-[44px];
 }

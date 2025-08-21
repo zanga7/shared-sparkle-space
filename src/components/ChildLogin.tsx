@@ -44,10 +44,10 @@ export const ChildLogin = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen p-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading...</p>
+          <p className="mt-2 text-muted-foreground text-sm sm:text-base">Loading...</p>
         </div>
       </div>
     );
@@ -74,8 +74,8 @@ export const ChildLogin = () => {
               size="lg" 
               className="mx-auto mb-4"
             />
-            <CardTitle>Welcome back, {selectedProfile.display_name}!</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg sm:text-xl">Welcome back, {selectedProfile.display_name}!</CardTitle>
+            <CardDescription className="text-sm sm:text-base">
               {locked ? 'Account is temporarily locked. Try again later.' : 'Enter your PIN to continue'}
             </CardDescription>
           </CardHeader>
@@ -111,13 +111,13 @@ export const ChildLogin = () => {
     <div className="flex items-center justify-center min-h-screen p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
-          <CardTitle>Choose Your Profile</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg sm:text-xl">Choose Your Profile</CardTitle>
+          <CardDescription className="text-sm sm:text-base">
             Select your profile to continue
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-4">
             {childProfiles.map((profile) => {
               const locked = isProfileLocked(profile);
               
@@ -125,7 +125,7 @@ export const ChildLogin = () => {
                 <Button
                   key={profile.id}
                   variant="ghost"
-                  className="flex flex-col items-center p-6 h-auto space-y-3 hover:bg-accent"
+                  className="flex flex-col items-center p-4 sm:p-6 h-auto space-y-3 hover:bg-accent touch-target"
                   onClick={() => selectChild(profile.id)}
                   disabled={locked}
                 >

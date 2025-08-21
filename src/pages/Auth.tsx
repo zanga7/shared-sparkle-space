@@ -72,12 +72,12 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 w-full">
       <div className="w-full flex flex-col items-center space-y-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Family Chores</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-xl sm:text-2xl font-bold">Family Chores</CardTitle>
+            <CardDescription className="text-sm sm:text-base">
               Manage chores and rewards for your family
             </CardDescription>
           </CardHeader>
