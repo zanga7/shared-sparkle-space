@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useRecurringTasks } from '@/hooks/useRecurringTasks';
+import { GenerateRotatingTasksButton } from '@/components/GenerateRotatingTasksButton';
 import { Task, Profile } from '@/types/task';
 
 const Dashboard = () => {
@@ -376,10 +377,13 @@ const Dashboard = () => {
                       </CardDescription>
                     </div>
                     {profile.role === 'parent' && (
-                      <Button onClick={() => setIsAddDialogOpen(true)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Task
-                      </Button>
+                      <div className="flex gap-2">
+                        <GenerateRotatingTasksButton onTasksGenerated={fetchUserData} />
+                        <Button onClick={() => setIsAddDialogOpen(true)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Task
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </CardHeader>
@@ -490,6 +494,7 @@ const Dashboard = () => {
                 setIsAddDialogOpen(true);
               } : undefined}
               onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
+              familyId={profile.family_id}
             />
           </TabsContent>
         </Tabs>

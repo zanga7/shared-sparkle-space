@@ -50,6 +50,8 @@ import { Task, Profile } from '@/types/task';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useEvents } from '@/hooks/useEvents';
+import { EventDialog } from '@/components/EventDialog';
 
 interface CalendarViewProps {
   tasks: Task[];
@@ -57,6 +59,7 @@ interface CalendarViewProps {
   onTaskUpdated: () => void;
   onCreateTask?: (date: Date) => void;
   onEditTask?: (task: Task) => void;
+  familyId?: string;
 }
 
 interface TaskFilters {
@@ -72,7 +75,8 @@ export const CalendarView = ({
   familyMembers, 
   onTaskUpdated, 
   onCreateTask, 
-  onEditTask 
+  onEditTask,
+  familyId 
 }: CalendarViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('today');
@@ -82,7 +86,10 @@ export const CalendarView = ({
     taskType: 'all'
   });
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
+  const [selectedEventDate, setSelectedEventDate] = useState<Date | null>(null);
   const { toast } = useToast();
+  const { events, createEvent } = useEvents(familyId);
 
   // Get member color classes using the global color system
   const getMemberColors = (member: Profile | null) => {
@@ -277,11 +284,17 @@ export const CalendarView = ({
     }
   };
 
-  // Handle day click for task creation
+  // Handle day click for task/event creation
   const handleDayClick = (date: Date) => {
     if (onCreateTask) {
       onCreateTask(date);
     }
+  };
+
+  // Handle event creation
+  const handleCreateEvent = (date: Date) => {
+    setSelectedEventDate(date);
+    setIsEventDialogOpen(true);
   };
 
   // Handle task click to edit directly
@@ -701,14 +714,14 @@ export const CalendarView = ({
                                 variant="ghost" 
                                 size="sm" 
                                 className="opacity-0 group-hover:opacity-50 transition-opacity w-full h-8"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDayClick(day);
-                                }}
-                              >
-                                <Plus className="h-3 w-3 mr-1" />
-                                 New Event
-                              </Button>
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   handleCreateEvent(day);
+                                 }}
+                               >
+                                 <Plus className="h-3 w-3 mr-1" />
+                                 + New Event
+                               </Button>
                             )}
                           </div>
                         )}
@@ -741,6 +754,34 @@ export const CalendarView = ({
           
         </div>
       </CardContent>
+
+      {/* Event Dialog */}
+      <EventDialog
+        open={isEventDialogOpen}
+        onOpenChange={setIsEventDialogOpen}
+        familyMembers={familyMembers}
+        onSave={async (eventData) => {
+          if (!familyId) return;
+          
+          // Set default times if not provided
+          const defaultStart = selectedEventDate ? new Date(selectedEventDate) : new Date();
+          const defaultEnd = new Date(defaultStart);
+          defaultEnd.setHours(defaultStart.getHours() + 1);
+          
+          await createEvent({
+            title: eventData.title,
+            description: eventData.description,
+            location: eventData.location,
+            start_date: eventData.start_date || defaultStart.toISOString(),
+            end_date: eventData.end_date || defaultEnd.toISOString(),
+            is_all_day: eventData.is_all_day || false,
+            family_id: familyId,
+            created_by: familyMembers[0]?.id || '', // TODO: Get current user's profile ID
+            attendees: eventData.attendees
+          });
+          setIsEventDialogOpen(false);
+        }}
+      />
     </Card>
   );
 };
