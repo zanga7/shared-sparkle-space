@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, CheckCircle, Clock, Edit, Trash2, Calendar, List, Users } from 'lucide-react';
+import { AddButton } from '@/components/ui/add-button';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
@@ -28,6 +29,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useRecurringTasks } from '@/hooks/useRecurringTasks';
+import { useRotatingTasks } from '@/hooks/useRotatingTasks';
 import { Task, Profile } from '@/types/task';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 
@@ -45,6 +47,7 @@ const ColumnBasedDashboard = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedMemberForTask, setSelectedMemberForTask] = useState<string | null>(null);
   const { taskSeries } = useRecurringTasks(profile?.family_id);
+  const { rotatingTasks } = useRotatingTasks(profile?.family_id);
 
   useEffect(() => {
     if (user) {
@@ -375,6 +378,7 @@ const ColumnBasedDashboard = () => {
     // Add unassigned tasks category
     tasksByMember.set('unassigned', []);
     
+    // Add regular tasks
     tasks.forEach(task => {
       if (task.assignees && task.assignees.length > 0) {
         // Task has multiple assignees - add to each
@@ -393,6 +397,39 @@ const ColumnBasedDashboard = () => {
         const unassignedTasks = tasksByMember.get('unassigned') || [];
         unassignedTasks.push(task);
         tasksByMember.set('unassigned', unassignedTasks);
+      }
+    });
+
+    // Add rotating tasks for the current member
+    rotatingTasks.forEach(rotatingTask => {
+      if (!rotatingTask.is_paused && rotatingTask.is_active) {
+        const currentMemberIndex = rotatingTask.current_member_index;
+        const currentMemberId = rotatingTask.member_order[currentMemberIndex];
+        
+        if (currentMemberId) {
+          // Create a virtual task for the rotating task
+          const virtualTask: Task = {
+            id: `rotating-${rotatingTask.id}`,
+            title: `🔄 ${rotatingTask.name}`,
+            description: rotatingTask.description || '',
+            points: rotatingTask.points,
+            assigned_to: currentMemberId,
+            due_date: null,
+            created_by: rotatingTask.created_by,
+            is_repeating: false,
+            recurring_frequency: null,
+            recurring_interval: null,
+            recurring_days_of_week: null,
+            recurring_end_date: null,
+            series_id: null,
+            task_completions: [],
+            assignees: []
+          };
+
+          const memberTasks = tasksByMember.get(currentMemberId) || [];
+          memberTasks.push(virtualTask);
+          tasksByMember.set(currentMemberId, memberTasks);
+        }
       }
     });
     
@@ -447,7 +484,7 @@ const ColumnBasedDashboard = () => {
       <header className="bg-card border-b px-4 lg:px-6 py-4">
         <div className="max-w-full mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold">Family Chores</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">Family Dashboard</h1>
             <p className="text-muted-foreground text-sm sm:text-base">Welcome back, {profile.display_name}!</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">
@@ -583,23 +620,17 @@ const ColumnBasedDashboard = () => {
                               
                               {/* Add Task Button */}
                               {profile.role === 'parent' && (
-                                <Button 
-                                  variant="outline" 
+                                <AddButton
                                   className={cn(
-                                    "w-full border-dashed hover:text-white transition-colors",
+                                    "w-full",
                                     getMemberColorClasses(member.color).border,
-                                    getMemberColorClasses(member.color).text,
-                                    `hover:${getMemberColorClasses(member.color).accent.replace('bg-', '')}`
+                                    getMemberColorClasses(member.color).text
                                   )}
                                   onClick={() => handleAddTaskForMember(member.id)}
-                                  style={{
-                                    '--hover-bg': getMemberColorClasses(member.color).accent.replace('bg-', ''),
-                                  } as React.CSSProperties}
                                 >
-                                   <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                                    <span className="hidden xs:inline">Add Task for {member.display_name}</span>
                                    <span className="xs:hidden">Add Task</span>
-                                </Button>
+                                </AddButton>
                               )}
                             </CardContent>
                           )}

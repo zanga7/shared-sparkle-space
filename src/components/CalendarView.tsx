@@ -27,6 +27,7 @@ import {
   Calendar,
   Sun
 } from 'lucide-react';
+import { AddButton } from '@/components/ui/add-button';
 import { 
   format, 
   startOfWeek, 
@@ -88,8 +89,9 @@ export const CalendarView = ({
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
   const [selectedEventDate, setSelectedEventDate] = useState<Date | null>(null);
+  const [defaultMember, setDefaultMember] = useState<string>('');
   const { toast } = useToast();
-  const { events, createEvent } = useEvents(familyId);
+  const { events, createEvent, refreshEvents } = useEvents(familyId);
 
   // Get member color classes using the global color system
   const getMemberColors = (member: Profile | null) => {
@@ -632,18 +634,15 @@ export const CalendarView = ({
                             
                             {/* Add New Event Button */}
                             <div className="pt-2 border-t border-muted/30">
-                              <Button
-                                variant="ghost"
-                                size="sm"
+                              <AddButton
                                 className="w-full h-8 text-xs"
+                                text="Add Event"
                                 onClick={() => {
                                   setSelectedEventDate(currentDate);
+                                  setDefaultMember(member.id);
                                   setIsEventDialogOpen(true);
                                 }}
-                              >
-                                <Plus className="h-3 w-3 mr-1" />
-                                Add Event
-                              </Button>
+                              />
                             </div>
                             
                             {/* Empty State */}
@@ -728,17 +727,14 @@ export const CalendarView = ({
 
                         {/* Add Event Button - Always show for days with tasks too */}
                         <div className="mt-2 pt-2 border-t border-muted/50">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <AddButton
                             className="w-full h-6 text-xs opacity-0 group-hover:opacity-75 transition-opacity"
+                            text="New Event"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleCreateEvent(day);
                             }}
-                          >
-                            New Event
-                          </Button>
+                          />
                         </div>
 
                         {/* Empty State */}
@@ -786,6 +782,7 @@ export const CalendarView = ({
         open={isEventDialogOpen}
         onOpenChange={setIsEventDialogOpen}
         familyMembers={familyMembers}
+        defaultMember={defaultMember}
         onSave={async (eventData) => {
           if (!familyId) return;
           
@@ -801,8 +798,10 @@ export const CalendarView = ({
               created_by: familyMembers[0]?.id || '', 
               attendees: eventData.attendees
             });
+            refreshEvents();
             setIsEventDialogOpen(false);
             setSelectedEventDate(null);
+            setDefaultMember('');
           } catch (error) {
             console.error('Error creating event:', error);
           }
