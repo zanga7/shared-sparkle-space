@@ -59,15 +59,13 @@ export function EditRewardDialog({ reward, open, onOpenChange }: EditRewardDialo
   const handleUpdate = async () => {
     if (!reward || !formData.title || formData.cost_points <= 0) return;
     
-    console.log('Updating reward:', reward.id, 'with data:', formData);
-    
     setIsUpdating(true);
     try {
       await updateReward(reward.id, formData);
-      console.log('Update successful');
       onOpenChange(false);
     } catch (error) {
       console.error('Update failed:', error);
+      // Don't close dialog on error so user can retry
     } finally {
       setIsUpdating(false);
     }

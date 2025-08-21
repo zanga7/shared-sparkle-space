@@ -124,16 +124,6 @@ export function useRewards() {
   // Update an existing reward
   const updateReward = async (rewardId: string, rewardData: Partial<Omit<Reward, 'id' | 'family_id' | 'created_by' | 'created_at' | 'updated_at'>>) => {
     try {
-      console.log('Calling update_reward with:', {
-        reward_id_param: rewardId,
-        title_param: rewardData.title || '',
-        description_param: rewardData.description || null,
-        cost_points_param: rewardData.cost_points || 0,
-        reward_type_param: rewardData.reward_type || 'always_available',
-        image_url_param: rewardData.image_url || null,
-        is_active_param: rewardData.is_active !== undefined ? rewardData.is_active : true
-      });
-
       const { data, error } = await supabase
         .rpc('update_reward', {
           reward_id_param: rewardId,
@@ -145,8 +135,6 @@ export function useRewards() {
           is_active_param: rewardData.is_active !== undefined ? rewardData.is_active : true
         });
 
-      console.log('RPC response:', { data, error });
-
       if (error) throw error;
 
       const result = data as { success: boolean; error?: string; message?: string };
@@ -156,6 +144,7 @@ export function useRewards() {
       }
 
       toast.success('Reward updated successfully');
+      // Refresh the data immediately after successful update
       await fetchRewards();
     } catch (error) {
       console.error('Error updating reward:', error);
