@@ -910,7 +910,11 @@ export type Database = {
       }
       delete_reward: {
         Args: { reward_id_param: string }
-        Returns: Json
+        Returns: {
+          error: string
+          message: string
+          success: boolean
+        }[]
       }
       deny_reward_request: {
         Args: { denial_note_param?: string; request_id_param: string }

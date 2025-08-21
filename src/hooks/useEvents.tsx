@@ -44,16 +44,38 @@ export const useEvents = (familyId?: string) => {
     start_date: string;
     end_date: string;
     is_all_day: boolean;
-    family_id: string;
-    created_by: string;
     attendees?: string[];
   }) => {
+    if (!familyId) {
+      toast({
+        title: 'Error',
+        description: 'Family ID is required to create events',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       const { attendees, ...eventFields } = eventData;
       
+      // Get the current user's profile ID to use as created_by
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error('User profile not found');
+      }
+
       const { data: event, error: eventError } = await supabase
         .from('events')
-        .insert([eventFields])
+        .insert([{
+          ...eventFields,
+          family_id: familyId,
+          created_by: profile.id
+        }])
         .select()
         .single();
 
@@ -64,7 +86,7 @@ export const useEvents = (familyId?: string) => {
         const attendeeRecords = attendees.map(profileId => ({
           event_id: event.id,
           profile_id: profileId,
-          added_by: eventData.created_by
+          added_by: profile.id
         }));
 
         const { error: attendeesError } = await supabase

@@ -158,7 +158,7 @@ export function useRewards() {
 
       if (error) throw error;
 
-      const result = data as { success: boolean; error?: string; message?: string };
+      const result = Array.isArray(data) ? data[0] : data as { success: boolean; error?: string; message?: string };
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to delete reward');

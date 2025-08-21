@@ -77,32 +77,51 @@ export const useRecurringTasks = (familyId?: string) => {
     monthly_weekday_ordinal?: number | null;
   }) => {
     try {
+      setLoading(true);
+
+      // For now, create the task series normally and handle first task generation via trigger
       const { data, error } = await supabase
         .from('task_series')
-        .insert([seriesData])
+        .insert({
+          family_id: seriesData.family_id,
+          title: seriesData.title,
+          description: seriesData.description,
+          points: seriesData.points,
+          assigned_to: seriesData.assigned_to,
+          created_by: seriesData.created_by,
+          recurring_frequency: seriesData.recurring_frequency,
+          recurring_interval: seriesData.recurring_interval,
+          recurring_days_of_week: seriesData.recurring_days_of_week,
+          recurring_end_date: seriesData.recurring_end_date,
+          start_date: seriesData.start_date,
+          repetition_count: seriesData.repetition_count,
+          remaining_repetitions: seriesData.remaining_repetitions,
+          monthly_type: seriesData.monthly_type,
+          monthly_weekday_ordinal: seriesData.monthly_weekday_ordinal,
+          is_active: true
+        })
         .select()
         .single();
 
       if (error) throw error;
 
-      // Generate the first task immediately
-      await supabase.functions.invoke('generate-recurring-tasks');
-      
-      await fetchTaskSeries();
+      // Let the database trigger handle first task creation
+
       toast({
         title: 'Success',
-        description: 'Recurring task created successfully',
+        description: 'Recurring task series created successfully!',
       });
-
-      return data;
+      await fetchTaskSeries(); // Refresh the list
     } catch (error) {
       console.error('Error creating task series:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create recurring task',
+        description: 'Failed to create recurring task series',
         variant: 'destructive',
       });
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 

@@ -803,8 +803,6 @@ export const CalendarView = ({
                   start_date: eventData.start_date,
                   end_date: eventData.end_date,
                   is_all_day: eventData.is_all_day,
-                  family_id: familyId,
-                  created_by: familyMembers[0]?.id || '', 
                   attendees: eventData.attendees
                 });
                 await refreshEvents();

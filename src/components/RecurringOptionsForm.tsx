@@ -294,6 +294,12 @@ export const RecurringOptionsForm: React.FC<RecurringOptionsFormProps> = ({
               onCheckedChange={(checked) => {
                 if (checked) {
                   onChange('repetition_count', null);
+                  // Set a default end date (1 month from now) if not already set
+                  if (!formData.recurring_end_date) {
+                    const defaultEndDate = new Date();
+                    defaultEndDate.setMonth(defaultEndDate.getMonth() + 1);
+                    onChange('recurring_end_date', defaultEndDate.toISOString());
+                  }
                 } else {
                   onChange('recurring_end_date', '');
                 }
