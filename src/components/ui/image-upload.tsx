@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,11 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(value || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Update preview when value changes (for edit mode)
+  useEffect(() => {
+    setPreview(value || null);
+  }, [value]);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -99,17 +104,28 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
               className="w-full h-full object-cover"
             />
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleRemove}
-            disabled={disabled || uploading}
-            className="mt-2"
-          >
-            <X className="w-4 h-4 mr-2" />
-            Remove Image
-          </Button>
+          <div className="flex gap-2 mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled || uploading}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Replace Image
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRemove}
+              disabled={disabled || uploading}
+            >
+              <X className="w-4 h-4 mr-2" />
+              Remove Image
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-2">
@@ -145,6 +161,18 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
             {uploading ? 'Uploading...' : 'Upload Image'}
           </Button>
         </div>
+      )}
+
+      {/* Hidden input for when preview is shown */}
+      {preview && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          disabled={disabled || uploading}
+          className="hidden"
+        />
       )}
     </div>
   );
