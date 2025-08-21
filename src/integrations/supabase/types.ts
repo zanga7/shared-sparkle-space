@@ -755,8 +755,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      decrypt_oauth_token: {
+        Args: {
+          encrypted_data: string
+          requesting_integration_id?: string
+          token_type?: string
+        }
+        Returns: string
+      }
       encrypt_calendar_token: {
         Args: { token_value: string }
+        Returns: string
+      }
+      encrypt_oauth_token: {
+        Args: { token_type?: string; token_value: string }
         Returns: string
       }
       get_calendar_integration_safe: {
@@ -804,6 +816,15 @@ export type Database = {
           refresh_token: string
         }[]
       }
+      get_decrypted_calendar_tokens: {
+        Args: { integration_id_param: string }
+        Returns: {
+          access_token: string
+          expires_at: string
+          is_expired: boolean
+          refresh_token: string
+        }[]
+      }
       get_user_family_id: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -839,6 +860,15 @@ export type Database = {
       }
       set_child_pin: {
         Args: { new_pin: string; profile_id_param: string }
+        Returns: Json
+      }
+      store_encrypted_calendar_tokens: {
+        Args: {
+          access_token_param: string
+          expires_at_param?: string
+          integration_id_param: string
+          refresh_token_param?: string
+        }
         Returns: Json
       }
       validate_calendar_token_access: {
