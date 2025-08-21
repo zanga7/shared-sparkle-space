@@ -294,8 +294,9 @@ export const CalendarView = ({
   };
 
   // Handle event creation
-  const handleCreateEvent = (date: Date) => {
+  const handleCreateEvent = (date: Date, memberId?: string) => {
     setSelectedEventDate(date);
+    setDefaultMember(memberId || '');
     setIsEventDialogOpen(true);
   };
 
@@ -612,8 +613,11 @@ export const CalendarView = ({
                             {/* Tasks */}
                             {memberTasks.map((task, index) => renderTask(task, index))}
                             
-                            {/* Events */}
-                            {memberEvents.map((event) => (
+                           {/* Events */}
+                            {events.filter(event => {
+                              const eventDate = new Date(event.start_date);
+                              return format(eventDate, 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd');
+                            }).map((event) => (
                               <div 
                                 key={event.id}
                                 className="p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs"
@@ -647,7 +651,10 @@ export const CalendarView = ({
                             </div>
                             
                             {/* Empty State */}
-                            {memberTasks.length === 0 && memberEvents.length === 0 && (
+                            {memberTasks.length === 0 && events.filter(event => {
+                              const eventDate = new Date(event.start_date);
+                              return format(eventDate, 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd');
+                            }).length === 0 && (
                               <div className="text-center py-8">
                                 <div className="text-xs text-muted-foreground">
                                   No items for {isToday(currentDate) ? 'today' : 'this day'}

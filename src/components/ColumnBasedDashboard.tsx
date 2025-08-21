@@ -47,7 +47,7 @@ const ColumnBasedDashboard = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedMemberForTask, setSelectedMemberForTask] = useState<string | null>(null);
   const { taskSeries } = useRecurringTasks(profile?.family_id);
-  const { rotatingTasks } = useRotatingTasks(profile?.family_id);
+  const { rotatingTasks, refreshRotatingTasks } = useRotatingTasks(profile?.family_id);
 
   useEffect(() => {
     if (user) {
@@ -158,7 +158,8 @@ const ColumnBasedDashboard = () => {
             });
           }
 
-          fetchUserData();
+          // Refresh both user data and rotating tasks to reflect the change immediately
+          await Promise.all([fetchUserData(), refreshRotatingTasks()]);
           return;
         }
       }
@@ -407,7 +408,7 @@ const ColumnBasedDashboard = () => {
   const getTasksByMember = () => {
     const tasksByMember = new Map<string, Task[]>();
     
-    // Initialize with all family members
+    // Initialize with all family members in the same order as familyMembers array
     familyMembers.forEach(member => {
       tasksByMember.set(member.id, []);
     });
