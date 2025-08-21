@@ -68,73 +68,41 @@ export const ChildAuthProvider = ({ children }: { children: React.ReactNode }) =
     try {
       setLoading(true);
       
-      // For now, use a simple PIN validation 
-      // In production, this should use proper hashing and database validation
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', profileId)
-        .is('user_id', null)
-        .single();
+      // Use secure server-side PIN authentication
+      const { data, error } = await supabase.functions.invoke('secure-pin-auth', {
+        body: { profileId, pin }
+      });
 
-      if (error || !profile) {
+      if (error) {
+        console.error('Function invocation error:', error);
         toast({
-          title: "Authentication Failed",
-          description: "Profile not found",
+          title: "Error",
+          description: "Authentication service unavailable. Please try again.",
           variant: "destructive",
         });
         return false;
       }
 
-      // Check if profile is locked
-      if (profile.pin_locked_until && new Date(profile.pin_locked_until) > new Date()) {
-        toast({
-          title: "Account Locked",
-          description: "Too many failed attempts. Try again later.",
-          variant: "destructive",
-        });
-        return false;
-      }
+      const result = data;
 
-      // Simple PIN validation (replace with proper hashing in production)
-      const storedPin = profile.pin_hash;
-      if (storedPin && storedPin === pin) {
-        // Reset failed attempts on successful login
-        await supabase
-          .from('profiles')
-          .update({ failed_pin_attempts: 0, pin_locked_until: null })
-          .eq('id', profileId);
-
+      if (result.success) {
         setSelectedChildId(profileId);
         setIsChildAuthenticated(true);
         toast({
           title: "Welcome!",
           description: "Successfully logged in",
         });
+        // Refresh profiles to get updated lock status
+        await refreshProfiles();
         return true;
       } else {
-        // Increment failed attempts
-        const newFailedAttempts = (profile.failed_pin_attempts || 0) + 1;
-        const maxAttempts = 3; // Should come from household_settings
-        const lockoutDuration = 300; // 5 minutes in seconds
-        
-        const updates: any = { failed_pin_attempts: newFailedAttempts };
-        if (newFailedAttempts >= maxAttempts) {
-          updates.pin_locked_until = new Date(Date.now() + lockoutDuration * 1000).toISOString();
-        }
-
-        await supabase
-          .from('profiles')
-          .update(updates)
-          .eq('id', profileId);
-
         toast({
           title: "Authentication Failed",
-          description: newFailedAttempts >= maxAttempts 
-            ? "Account locked due to too many failed attempts." 
-            : "Invalid PIN. Please try again.",
+          description: result.error || "Invalid PIN. Please try again.",
           variant: "destructive",
         });
+        // Refresh profiles to get updated lock status
+        await refreshProfiles();
         return false;
       }
     } catch (error) {

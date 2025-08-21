@@ -50,10 +50,9 @@ export const CalendarSecurityMonitor = () => {
         setAlerts(alertsData || []);
       }
 
-      // Fetch security summary
+      // Fetch security summary using the secure function
       const { data: summaryData, error: summaryError } = await supabase
-        .from('calendar_security_summary')
-        .select('*');
+        .rpc('get_calendar_security_summary');
 
       if (summaryError) {
         console.error('Error fetching security summary:', summaryError);

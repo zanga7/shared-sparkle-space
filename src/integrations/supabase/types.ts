@@ -728,22 +728,13 @@ export type Database = {
       }
     }
     Views: {
-      calendar_security_summary: {
-        Row: {
-          access_count_7_days: number | null
-          created_at: string | null
-          failed_access_count_7_days: number | null
-          id: string | null
-          integration_type: string | null
-          is_active: boolean | null
-          last_token_refresh: string | null
-          owner_name: string | null
-          token_refresh_count: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
+      authenticate_child_pin: {
+        Args: { pin_attempt: string; profile_id_param: string }
+        Returns: Json
+      }
       check_token_access_rate_limit: {
         Args: {
           integration_id: string
@@ -791,6 +782,20 @@ export type Database = {
           severity: string
         }[]
       }
+      get_calendar_security_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          access_count_7_days: number
+          created_at: string
+          failed_access_count_7_days: number
+          id: string
+          integration_type: string
+          is_active: boolean
+          last_token_refresh: string
+          owner_name: string
+          token_refresh_count: number
+        }[]
+      }
       get_calendar_token_for_api: {
         Args: { integration_id: string; requesting_function?: string }
         Returns: {
@@ -801,6 +806,10 @@ export type Database = {
       }
       get_user_family_id: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      hash_pin: {
+        Args: { pin_text: string }
         Returns: string
       }
       is_calendar_integration_owner: {
@@ -828,8 +837,16 @@ export type Database = {
         Args: { integration_id: string; reason?: string }
         Returns: boolean
       }
+      set_child_pin: {
+        Args: { new_pin: string; profile_id_param: string }
+        Returns: Json
+      }
       validate_calendar_token_access: {
         Args: { integration_id: string; requesting_user_id?: string }
+        Returns: boolean
+      }
+      verify_pin: {
+        Args: { pin_hash: string; pin_text: string }
         Returns: boolean
       }
     }
