@@ -781,6 +781,16 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_calendar_security_alerts: {
+        Args: { family_id_param?: string }
+        Returns: {
+          alert_message: string
+          alert_type: string
+          created_at: string
+          integration_id: string
+          severity: string
+        }[]
+      }
       get_calendar_token_for_api: {
         Args: { integration_id: string; requesting_function?: string }
         Returns: {
@@ -799,6 +809,10 @@ export type Database = {
       }
       is_current_user_parent: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_parent_in_same_family: {
+        Args: { target_profile_id: string }
         Returns: boolean
       }
       log_calendar_token_access: {

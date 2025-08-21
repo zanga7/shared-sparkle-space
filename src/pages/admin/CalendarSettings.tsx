@@ -22,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { CalendarSecurityMonitor } from '@/components/admin/CalendarSecurityMonitor';
 
 const CalendarSettings = () => {
   const { user } = useAuth();
@@ -421,6 +422,9 @@ const CalendarSettings = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Security Monitoring Section */}
+      <CalendarSecurityMonitor />
 
       {/* Delete Integration Dialog */}
       <AlertDialog 
