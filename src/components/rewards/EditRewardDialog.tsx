@@ -7,7 +7,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 import { useRewards } from '@/hooks/useRewards';
+import { supabase } from '@/integrations/supabase/client';
 import type { Reward } from '@/types/rewards';
 
 interface EditRewardDialogProps {
@@ -21,21 +23,24 @@ interface EditRewardFormData {
   title: string;
   description: string;
   cost_points: number;
-  reward_type: 'once_off' | 'always_available';
+  reward_type: 'once_off' | 'always_available' | 'group_contribution';
   image_url: string | null;
   is_active: boolean;
+  assigned_to: string[] | null;
 }
 
 export function EditRewardDialog({ reward, open, onOpenChange, onUpdate }: EditRewardDialogProps) {
   const { updateReward } = useRewards();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [familyMembers, setFamilyMembers] = useState<any[]>([]);
   const [formData, setFormData] = useState<EditRewardFormData>({
     title: '',
     description: '',
     cost_points: 10,
     reward_type: 'always_available',
     image_url: null,
-    is_active: true
+    is_active: true,
+    assigned_to: null
   });
 
   // Update form data when reward changes
@@ -47,10 +52,36 @@ export function EditRewardDialog({ reward, open, onOpenChange, onUpdate }: EditR
         cost_points: reward.cost_points,
         reward_type: reward.reward_type,
         image_url: reward.image_url || null,
-        is_active: reward.is_active
+        is_active: reward.is_active,
+        assigned_to: reward.assigned_to
       });
     }
   }, [reward]);
+
+  // Fetch family members
+  useEffect(() => {
+    const fetchFamilyMembers = async () => {
+      if (!open) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, display_name, role, color')
+          .order('display_name');
+        
+        if (error) {
+          console.error('Error fetching family members:', error);
+          return;
+        }
+        
+        setFamilyMembers(data || []);
+      } catch (error) {
+        console.error('Error fetching family members:', error);
+      }
+    };
+
+    fetchFamilyMembers();
+  }, [open]);
 
   const handleInputChange = (field: keyof EditRewardFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -140,8 +171,25 @@ export function EditRewardDialog({ reward, open, onOpenChange, onUpdate }: EditR
               <SelectContent>
                 <SelectItem value="always_available">Always Available</SelectItem>
                 <SelectItem value="once_off">One-time Only</SelectItem>
+                <SelectItem value="group_contribution">Group Contribution</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-assigned_to">Available to</Label>
+            <MultiSelectAssignees
+              familyMembers={familyMembers}
+              selectedAssignees={formData.assigned_to || []}
+              onAssigneesChange={(assignees) => handleInputChange('assigned_to', assignees.length > 0 ? assignees : null)}
+              placeholder="Select family members (leave empty for everyone)"
+            />
+            <p className="text-sm text-muted-foreground">
+              {formData.reward_type === 'group_contribution' 
+                ? 'All selected members must contribute points together'
+                : 'Leave empty to make available to all family members'
+              }
+            </p>
           </div>
 
           <ImageUpload

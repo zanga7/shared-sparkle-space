@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,18 +9,22 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
+import { MultiAssigneeAvatarGroup } from '@/components/ui/multi-assignee-avatar-group';
 import { useRewards } from '@/hooks/useRewards';
 import { ApprovalQueue } from '@/components/rewards/ApprovalQueue';
 import { EditRewardDialog } from '@/components/rewards/EditRewardDialog';
-import { Plus, Gift, Settings, Coins, Edit, Trash2 } from 'lucide-react';
+import { Plus, Gift, Settings, Coins, Edit, Trash2, Users } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import type { Reward } from '@/types/rewards';
 
 interface RewardFormData {
   title: string;
   description: string;
   cost_points: number;
-  reward_type: 'once_off' | 'always_available';
+  reward_type: 'once_off' | 'always_available' | 'group_contribution';
   image_url: string | null;
+  assigned_to: string[] | null;
 }
 
 export default function RewardsManagement() {
@@ -29,17 +33,42 @@ export default function RewardsManagement() {
   const [editingReward, setEditingReward] = useState<Reward | null>(null);
   const [deletingReward, setDeletingReward] = useState<Reward | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [familyMembers, setFamilyMembers] = useState<any[]>([]);
   const [formData, setFormData] = useState<RewardFormData>({
     title: '',
     description: '',
     cost_points: 10,
     reward_type: 'always_available',
-    image_url: null
+    image_url: null,
+    assigned_to: null
   });
 
-  const handleInputChange = (field: keyof RewardFormData, value: string | number) => {
+  const handleInputChange = (field: keyof RewardFormData, value: string | number | string[] | null) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  // Fetch family members
+  useEffect(() => {
+    const fetchFamilyMembers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, display_name, role, color')
+          .order('display_name');
+        
+        if (error) {
+          console.error('Error fetching family members:', error);
+          return;
+        }
+        
+        setFamilyMembers(data || []);
+      } catch (error) {
+        console.error('Error fetching family members:', error);
+      }
+    };
+
+    fetchFamilyMembers();
+  }, []);
   
   // Fetch reward data function similar to MemberManagement
   const fetchRewardData = async () => {
@@ -57,7 +86,7 @@ export default function RewardsManagement() {
         cost_points: formData.cost_points,
         reward_type: formData.reward_type,
         image_url: formData.image_url || undefined,
-        assigned_to: null, // Available to all by default
+        assigned_to: formData.assigned_to,
         is_active: true
       });
       
@@ -97,7 +126,8 @@ export default function RewardsManagement() {
       description: '',
       cost_points: 10,
       reward_type: 'always_available',
-      image_url: null
+      image_url: null,
+      assigned_to: null
     });
   };
 
@@ -181,8 +211,25 @@ export default function RewardsManagement() {
                   <SelectContent>
                     <SelectItem value="always_available">Always Available</SelectItem>
                     <SelectItem value="once_off">One-time Only</SelectItem>
+                    <SelectItem value="group_contribution">Group Contribution</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="assigned_to">Available to</Label>
+                <MultiSelectAssignees
+                  familyMembers={familyMembers}
+                  selectedAssignees={formData.assigned_to || []}
+                  onAssigneesChange={(assignees) => handleInputChange('assigned_to', assignees.length > 0 ? assignees : null)}
+                  placeholder="Select family members (leave empty for everyone)"
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  {formData.reward_type === 'group_contribution' 
+                    ? 'All selected members must contribute points together'
+                    : 'Leave empty to make available to all family members'
+                  }
+                </p>
               </div>
 
               <div>
@@ -263,14 +310,28 @@ export default function RewardsManagement() {
 
                 <CardContent>
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={reward.reward_type === 'once_off' ? 'outline' : 'secondary'}>
-                        {reward.reward_type === 'once_off' ? 'One-time' : 'Always available'}
-                      </Badge>
-                      <Badge variant={reward.is_active ? 'default' : 'outline'}>
-                        {reward.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </div>
+                     <div className="flex items-center gap-2 flex-wrap">
+                       <Badge variant={reward.reward_type === 'once_off' ? 'outline' : reward.reward_type === 'group_contribution' ? 'destructive' : 'secondary'}>
+                         {reward.reward_type === 'once_off' ? 'One-time' : reward.reward_type === 'group_contribution' ? 'Group Goal' : 'Always available'}
+                       </Badge>
+                       <Badge variant={reward.is_active ? 'default' : 'outline'}>
+                         {reward.is_active ? 'Active' : 'Inactive'}
+                       </Badge>
+                     </div>
+                     
+                     {/* Show assignees */}
+                     <div className="flex items-center gap-2 mt-2">
+                       <Users className="w-4 h-4 text-muted-foreground" />
+                       {reward.assigned_to && reward.assigned_to.length > 0 ? (
+                         <MultiAssigneeAvatarGroup 
+                           assignees={familyMembers.filter(member => reward.assigned_to?.includes(member.id))} 
+                           maxDisplay={3}
+                           size="sm"
+                         />
+                       ) : (
+                         <span className="text-sm text-muted-foreground">Available to everyone</span>
+                       )}
+                     </div>
                   </div>
                   
                   <div className="flex gap-2">

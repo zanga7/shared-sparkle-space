@@ -288,6 +288,39 @@ export type Database = {
         }
         Relationships: []
       }
+      group_contributions: {
+        Row: {
+          contributed_at: string
+          created_at: string
+          family_id: string
+          id: string
+          points_contributed: number
+          profile_id: string
+          reward_id: string
+          updated_at: string
+        }
+        Insert: {
+          contributed_at?: string
+          created_at?: string
+          family_id: string
+          id?: string
+          points_contributed?: number
+          profile_id: string
+          reward_id: string
+          updated_at?: string
+        }
+        Update: {
+          contributed_at?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          points_contributed?: number
+          profile_id?: string
+          reward_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       household_settings: {
         Row: {
           created_at: string
@@ -492,7 +525,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
-          reward_type: string
+          reward_type: Database["public"]["Enums"]["reward_type"]
           title: string
           updated_at: string
         }
@@ -506,7 +539,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
-          reward_type?: string
+          reward_type?: Database["public"]["Enums"]["reward_type"]
           title: string
           updated_at?: string
         }
@@ -520,7 +553,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
-          reward_type?: string
+          reward_type?: Database["public"]["Enums"]["reward_type"]
           title?: string
           updated_at?: string
         }
@@ -1079,6 +1112,7 @@ export type Database = {
       }
     }
     Enums: {
+      reward_type: "once_off" | "always_available" | "group_contribution"
       user_role: "parent" | "child"
     }
     CompositeTypes: {
@@ -1207,6 +1241,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      reward_type: ["once_off", "always_available", "group_contribution"],
       user_role: ["parent", "child"],
     },
   },
