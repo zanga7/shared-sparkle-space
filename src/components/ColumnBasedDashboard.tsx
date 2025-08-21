@@ -477,9 +477,9 @@ const ColumnBasedDashboard = () => {
         <Tabs defaultValue="columns" className="w-full">
           <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto sm:mx-0">
             <TabsTrigger value="columns" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Members</span>
-              <span className="xs:hidden">Board</span>
+              <List className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Tasks</span>
+              <span className="xs:hidden">Tasks</span>
             </TabsTrigger>
             <TabsTrigger value="calendar" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />

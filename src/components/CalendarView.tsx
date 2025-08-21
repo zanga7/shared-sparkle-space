@@ -550,93 +550,117 @@ export const CalendarView = ({
       <CardContent>
         <DragDropContext onDragEnd={handleDragEnd}>
           {viewMode === 'today' ? (
-            // Today View - Single Column Layout
+            // Today View - Member Columns Layout
             <div className="space-y-4">
-              <div className="text-center">
+              <div className="text-center mb-6">
                 <h3 className="text-lg font-semibold mb-2">
                   {format(currentDate, 'EEEE, MMMM d')}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {isToday(currentDate) ? "Today's Tasks" : format(currentDate, 'EEEE') + "'s Tasks"}
+                  {isToday(currentDate) ? "Today's Schedule" : format(currentDate, 'EEEE') + "'s Schedule"}
                 </p>
               </div>
               
-              {(() => {
-                const dateKey = format(currentDate, 'yyyy-MM-dd');
-                const dayTasks = tasksByDate[dateKey] || [];
-                const completedCount = dayTasks.filter(t => t.task_completions?.length).length;
-                const totalCount = dayTasks.length;
+              {/* Member Columns */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {familyMembers.map((member) => {
+                  const dateKey = format(currentDate, 'yyyy-MM-dd');
+                  const memberTasks = (tasksByDate[dateKey] || []).filter(task => 
+                    task.assigned_to === member.id || 
+                    task.assignees?.some(a => a.profile_id === member.id)
+                  );
+                  const memberEvents = events.filter(event =>
+                    event.attendees?.some((a: any) => a.profile_id === member.id) ||
+                    (!event.attendees || event.attendees.length === 0)
+                  );
+                  const memberColors = getMemberColors(member);
 
-                return (
-                  <Droppable droppableId={dateKey}>
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                        className={cn(
-                          "min-h-[300px] p-6 border rounded-lg transition-colors bg-card",
-                          snapshot.isDraggingOver && "bg-green-50 border-green-300"
-                        )}
-                      >
-                        {/* Progress Summary */}
-                        {totalCount > 0 && (
-                          <div className="mb-6 p-4 bg-muted/50 rounded-lg">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium">Progress</span>
-                              <span className="text-sm text-muted-foreground">
-                                {completedCount}/{totalCount} completed
-                              </span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-green-500 h-2 rounded-full transition-all"
-                                style={{ width: `${(completedCount / totalCount) * 100}%` }}
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Tasks */}
-                        <div className="space-y-3">
-                          {dayTasks.length > 0 ? (
-                            dayTasks.map((task, index) => renderTask(task, index))
-                          ) : (
-                            <div className="text-center py-12">
-                              {snapshot.isDraggingOver ? (
-                                <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed border-green-300 rounded">
-                                  Drop task here
-                                </div>
-                              ) : (
-                                <div className="space-y-3">
-                                  <Clock className="h-12 w-12 mx-auto text-muted-foreground/50" />
-                                  <div>
-                                    <p className="text-lg font-medium text-muted-foreground">
-                                      No tasks for {isToday(currentDate) ? 'today' : 'this day'}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                      {onCreateTask && "Click below to create a new task"}
-                                    </p>
-                                  </div>
-                                  {onCreateTask && (
-                                    <Button 
-                                      onClick={() => handleDayClick(currentDate)}
-                                      className="mt-4"
-                                    >
-                                      <Plus className="h-4 w-4 mr-2" />
-                                      Add Task for {isToday(currentDate) ? 'Today' : format(currentDate, 'MMM d')}
-                                    </Button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
+                  return (
+                    <Droppable key={member.id} droppableId={member.id}>
+                      {(provided, snapshot) => (
+                        <Card 
+                          className={cn(
+                            "transition-colors",
+                            memberColors.bgSoft,
+                            memberColors.border,
+                            snapshot.isDraggingOver && "ring-2 ring-primary/20"
                           )}
-                          {provided.placeholder}
-                        </div>
-                      </div>
-                    )}
-                  </Droppable>
-                );
-              })()}
+                        >
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center gap-2">
+                              <UserAvatar
+                                name={member.display_name}
+                                color={member.color}
+                                size="sm"
+                              />
+                              <div>
+                                <CardTitle className="text-sm">{member.display_name}</CardTitle>
+                                <p className="text-xs text-muted-foreground">
+                                  {memberTasks.length + memberEvents.length} items
+                                </p>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          
+                          <CardContent 
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            className="space-y-2 min-h-[200px]"
+                          >
+                            {/* Tasks */}
+                            {memberTasks.map((task, index) => renderTask(task, index))}
+                            
+                            {/* Events */}
+                            {memberEvents.map((event) => (
+                              <div 
+                                key={event.id}
+                                className="p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium text-purple-700">{event.title}</span>
+                                  <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600">
+                                    Event
+                                  </Badge>
+                                </div>
+                                {event.location && (
+                                  <p className="text-xs text-purple-600 mt-1">{event.location}</p>
+                                )}
+                              </div>
+                            ))}
+                            
+                            {provided.placeholder}
+                            
+                            {/* Add New Event Button */}
+                            <div className="pt-2 border-t border-muted/30">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="w-full h-8 text-xs"
+                                onClick={() => {
+                                  setSelectedEventDate(currentDate);
+                                  setIsEventDialogOpen(true);
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add Event
+                              </Button>
+                            </div>
+                            
+                            {/* Empty State */}
+                            {memberTasks.length === 0 && memberEvents.length === 0 && (
+                              <div className="text-center py-8">
+                                <div className="text-xs text-muted-foreground">
+                                  No items for {isToday(currentDate) ? 'today' : 'this day'}
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
+                    </Droppable>
+                  );
+                })}
+              </div>
             </div>
           ) : (
             // Week/Month Grid View
@@ -702,27 +726,29 @@ export const CalendarView = ({
                           {provided.placeholder}
                         </div>
 
+                        {/* Add Event Button - Always show for days with tasks too */}
+                        <div className="mt-2 pt-2 border-t border-muted/50">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="w-full h-6 text-xs opacity-0 group-hover:opacity-75 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCreateEvent(day);
+                            }}
+                          >
+                            New Event
+                          </Button>
+                        </div>
+
                         {/* Empty State */}
                         {dayTasks.length === 0 && (
-                          <div className="flex items-center justify-center h-full">
+                          <div className="flex items-center justify-center h-full min-h-[60px]">
                             {snapshot.isDraggingOver ? (
                               <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed border-green-300 rounded w-full">
                                 Drop task here
                               </div>
-                            ) : (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="opacity-0 group-hover:opacity-50 transition-opacity w-full h-8"
-                                 onClick={(e) => {
-                                   e.stopPropagation();
-                                   handleCreateEvent(day);
-                                 }}
-                               >
-                                 <Plus className="h-3 w-3 mr-1" />
-                                 + New Event
-                               </Button>
-                            )}
+                            ) : null}
                           </div>
                         )}
                       </div>
@@ -763,23 +789,23 @@ export const CalendarView = ({
         onSave={async (eventData) => {
           if (!familyId) return;
           
-          // Set default times if not provided
-          const defaultStart = selectedEventDate ? new Date(selectedEventDate) : new Date();
-          const defaultEnd = new Date(defaultStart);
-          defaultEnd.setHours(defaultStart.getHours() + 1);
-          
-          await createEvent({
-            title: eventData.title,
-            description: eventData.description,
-            location: eventData.location,
-            start_date: eventData.start_date || defaultStart.toISOString(),
-            end_date: eventData.end_date || defaultEnd.toISOString(),
-            is_all_day: eventData.is_all_day || false,
-            family_id: familyId,
-            created_by: familyMembers[0]?.id || '', // TODO: Get current user's profile ID
-            attendees: eventData.attendees
-          });
-          setIsEventDialogOpen(false);
+          try {
+            await createEvent({
+              title: eventData.title,
+              description: eventData.description,
+              location: eventData.location,
+              start_date: eventData.start_date,
+              end_date: eventData.end_date,
+              is_all_day: eventData.is_all_day,
+              family_id: familyId,
+              created_by: familyMembers[0]?.id || '', 
+              attendees: eventData.attendees
+            });
+            setIsEventDialogOpen(false);
+            setSelectedEventDate(null);
+          } catch (error) {
+            console.error('Error creating event:', error);
+          }
         }}
       />
     </Card>
