@@ -908,6 +908,10 @@ export type Database = {
         Args: { integration_id_param: string }
         Returns: Json
       }
+      deny_reward_request: {
+        Args: { denial_note_param?: string; request_id_param: string }
+        Returns: Json
+      }
       encrypt_calendar_token: {
         Args: { token_value: string }
         Returns: string

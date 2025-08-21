@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, CheckCircle, Clock, Edit, Trash2, Calendar, List, Users } from 'lucide-react';
+import { Plus, CheckCircle, Clock, Edit, Trash2, Calendar, List, Users, Gift } from 'lucide-react';
 import { AddButton } from '@/components/ui/add-button';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -532,6 +532,12 @@ const ColumnBasedDashboard = () => {
             <Badge variant={profile.role === 'parent' ? 'default' : 'secondary'} className="text-xs sm:text-sm">
               {profile.role === 'parent' ? 'Parent' : 'Child'}
             </Badge>
+            <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">
+              <a href="/rewards">
+                <Gift className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                Rewards
+              </a>
+            </Button>
             {profile.role === 'parent' && (
               <>
                 <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">

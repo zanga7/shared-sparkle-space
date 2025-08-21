@@ -174,30 +174,25 @@ export function useRewards() {
   // Deny a reward request
   const denyRewardRequest = async (requestId: string, note?: string) => {
     try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (!profile) throw new Error('Profile not found');
-
-      const { error } = await supabase
-        .from('reward_requests')
-        .update({
-          status: 'denied',
-          approved_by: profile.id,
-          approval_note: note
-        })
-        .eq('id', requestId);
+      const { data, error } = await supabase
+        .rpc('deny_reward_request', {
+          request_id_param: requestId,
+          denial_note_param: note
+        });
 
       if (error) throw error;
+
+      const result = data as { success: boolean; error?: string; message?: string };
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to deny request');
+      }
 
       toast.success('Reward request denied');
       await fetchRewardRequests();
     } catch (error) {
       console.error('Error denying reward request:', error);
-      toast.error('Failed to deny request');
+      toast.error(error instanceof Error ? error.message : 'Failed to deny request');
     }
   };
 
