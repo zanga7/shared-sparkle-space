@@ -69,37 +69,88 @@ export type Database = {
           access_token: string
           calendar_id: string | null
           created_at: string
+          created_ip: unknown | null
           expires_at: string | null
           id: string
           integration_type: string
           is_active: boolean
+          last_access_ip: unknown | null
+          last_token_refresh: string | null
           profile_id: string
           refresh_token: string | null
+          security_flags: Json | null
+          token_refresh_count: number | null
           updated_at: string
         }
         Insert: {
           access_token: string
           calendar_id?: string | null
           created_at?: string
+          created_ip?: unknown | null
           expires_at?: string | null
           id?: string
           integration_type: string
           is_active?: boolean
+          last_access_ip?: unknown | null
+          last_token_refresh?: string | null
           profile_id: string
           refresh_token?: string | null
+          security_flags?: Json | null
+          token_refresh_count?: number | null
           updated_at?: string
         }
         Update: {
           access_token?: string
           calendar_id?: string | null
           created_at?: string
+          created_ip?: unknown | null
           expires_at?: string | null
           id?: string
           integration_type?: string
           is_active?: boolean
+          last_access_ip?: unknown | null
+          last_token_refresh?: string | null
           profile_id?: string
           refresh_token?: string | null
+          security_flags?: Json | null
+          token_refresh_count?: number | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      calendar_token_audit: {
+        Row: {
+          action: string
+          created_at: string
+          error_message: string | null
+          id: string
+          integration_id: string
+          ip_address: unknown | null
+          success: boolean
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          integration_id: string
+          ip_address?: unknown | null
+          success?: boolean
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          integration_id?: string
+          ip_address?: unknown | null
+          success?: boolean
+          user_agent?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -677,9 +728,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      calendar_security_summary: {
+        Row: {
+          access_count_7_days: number | null
+          created_at: string | null
+          failed_access_count_7_days: number | null
+          id: string | null
+          integration_type: string | null
+          is_active: boolean | null
+          last_token_refresh: string | null
+          owner_name: string | null
+          token_refresh_count: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      check_token_access_rate_limit: {
+        Args: {
+          integration_id: string
+          max_requests?: number
+          time_window_minutes?: number
+        }
+        Returns: boolean
+      }
       create_audit_log: {
         Args: {
           p_action: string
@@ -691,6 +763,10 @@ export type Database = {
           p_old_data?: Json
         }
         Returns: undefined
+      }
+      encrypt_calendar_token: {
+        Args: { token_value: string }
+        Returns: string
       }
       get_calendar_integration_safe: {
         Args: { integration_id: string }
@@ -705,6 +781,14 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_calendar_token_for_api: {
+        Args: { integration_id: string; requesting_function?: string }
+        Returns: {
+          access_token: string
+          expires_at: string
+          refresh_token: string
+        }[]
+      }
       get_user_family_id: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -715,6 +799,19 @@ export type Database = {
       }
       is_current_user_parent: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      log_calendar_token_access: {
+        Args: {
+          p_action: string
+          p_error_message?: string
+          p_integration_id: string
+          p_success?: boolean
+        }
+        Returns: undefined
+      }
+      validate_calendar_token_access: {
+        Args: { integration_id: string; requesting_user_id?: string }
         Returns: boolean
       }
     }
