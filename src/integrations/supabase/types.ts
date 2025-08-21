@@ -1055,12 +1055,12 @@ export type Database = {
       }
       update_reward: {
         Args: {
-          cost_points_param: number
-          description_param: string
-          image_url_param: string
-          is_active_param: boolean
+          cost_points_param?: number
+          description_param?: string
+          image_url_param?: string
+          is_active_param?: boolean
           reward_id_param: string
-          reward_type_param: string
+          reward_type_param?: string
           title_param: string
         }
         Returns: Json
