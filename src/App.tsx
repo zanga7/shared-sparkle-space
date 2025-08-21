@@ -11,6 +11,8 @@ import NotFound from "./pages/NotFound";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import MemberManagement from "./pages/admin/MemberManagement";
+import RotatingTasksManagement from "./pages/admin/RotatingTasksManagement";
+import CalendarSettings from "./pages/admin/CalendarSettings";
 
 const queryClient = new QueryClient();
 
