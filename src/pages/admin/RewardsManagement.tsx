@@ -306,12 +306,12 @@ export default function RewardsManagement() {
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deletingReward} onOpenChange={() => setDeletingReward(null)}>
+      <AlertDialog open={!!deletingReward} onOpenChange={(open) => !open && setDeletingReward(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Reward</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deletingReward?.title}"? This action will deactivate the reward and it won't be available for future requests.
+              Are you sure you want to delete "{deletingReward?.title}"? This action cannot be undone and will deactivate the reward.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
