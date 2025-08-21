@@ -24,7 +24,7 @@ interface RewardFormData {
 }
 
 export default function RewardsManagement() {
-  const { rewards, loading, createReward, updateReward, deleteReward } = useRewards();
+  const { rewards, loading, createReward, updateReward, deleteReward, refreshData } = useRewards();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingReward, setEditingReward] = useState<Reward | null>(null);
   const [deletingReward, setDeletingReward] = useState<Reward | null>(null);
@@ -40,11 +40,10 @@ export default function RewardsManagement() {
   const handleInputChange = (field: keyof RewardFormData, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
-
+  
   // Fetch reward data function similar to MemberManagement
   const fetchRewardData = async () => {
-    // This triggers a refresh of the rewards data
-    window.location.reload();
+    await refreshData();
   };
 
   const handleCreateReward = async () => {
