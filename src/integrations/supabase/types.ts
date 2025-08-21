@@ -64,6 +64,45 @@ export type Database = {
           },
         ]
       }
+      calendar_integrations: {
+        Row: {
+          access_token: string
+          calendar_id: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          integration_type: string
+          is_active: boolean
+          profile_id: string
+          refresh_token: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          calendar_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          integration_type: string
+          is_active?: boolean
+          profile_id: string
+          refresh_token?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          calendar_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          integration_type?: string
+          is_active?: boolean
+          profile_id?: string
+          refresh_token?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string
@@ -110,6 +149,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      event_attendees: {
+        Row: {
+          added_at: string
+          added_by: string
+          event_id: string
+          id: string
+          profile_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by: string
+          event_id: string
+          id?: string
+          profile_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string
+          event_id?: string
+          id?: string
+          profile_id?: string
+        }
+        Relationships: []
+      }
+      events: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string
+          family_id: string
+          id: string
+          is_all_day: boolean
+          location: string | null
+          start_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date: string
+          family_id: string
+          id?: string
+          is_all_day?: boolean
+          location?: string | null
+          start_date: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string
+          family_id?: string
+          id?: string
+          is_all_day?: boolean
+          location?: string | null
+          start_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       families: {
         Row: {
@@ -246,6 +351,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rotating_tasks: {
+        Row: {
+          cadence: string
+          created_at: string
+          created_by: string
+          current_member_index: number
+          description: string | null
+          family_id: string
+          id: string
+          is_active: boolean
+          is_paused: boolean
+          member_order: string[]
+          monthly_day: number | null
+          name: string
+          points: number
+          updated_at: string
+          weekly_days: number[] | null
+        }
+        Insert: {
+          cadence: string
+          created_at?: string
+          created_by: string
+          current_member_index?: number
+          description?: string | null
+          family_id: string
+          id?: string
+          is_active?: boolean
+          is_paused?: boolean
+          member_order: string[]
+          monthly_day?: number | null
+          name: string
+          points?: number
+          updated_at?: string
+          weekly_days?: number[] | null
+        }
+        Update: {
+          cadence?: string
+          created_at?: string
+          created_by?: string
+          current_member_index?: number
+          description?: string | null
+          family_id?: string
+          id?: string
+          is_active?: boolean
+          is_paused?: boolean
+          member_order?: string[]
+          monthly_day?: number | null
+          name?: string
+          points?: number
+          updated_at?: string
+          weekly_days?: number[] | null
+        }
+        Relationships: []
       }
       task_assignees: {
         Row: {

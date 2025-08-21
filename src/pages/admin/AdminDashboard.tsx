@@ -345,11 +345,11 @@ const AdminDashboard = () => {
               <span className="text-sm font-medium">Manage Categories</span>
             </a>
             <a 
-              href="/admin/audit" 
+              href="/admin/rotating-tasks" 
               className="flex flex-col items-center p-4 border rounded-lg hover:bg-muted/50 transition-colors"
             >
               <Activity className="h-8 w-8 mb-2 text-primary" />
-              <span className="text-sm font-medium">View Audit Logs</span>
+              <span className="text-sm font-medium">Rotating Tasks</span>
             </a>
           </div>
         </CardContent>

@@ -25,10 +25,12 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/child-auth" element={<ChildAuth />} />
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="members" element={<MemberManagement />} />
-            </Route>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="members" element={<MemberManagement />} />
+            <Route path="rotating-tasks" element={<RotatingTasksManagement />} />
+            <Route path="calendar-settings" element={<CalendarSettings />} />
+          </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

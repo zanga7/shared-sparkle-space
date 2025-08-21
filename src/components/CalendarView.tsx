@@ -707,7 +707,7 @@ export const CalendarView = ({
                                 }}
                               >
                                 <Plus className="h-3 w-3 mr-1" />
-                                Add Task
+                                 New Event
                               </Button>
                             )}
                           </div>
@@ -739,23 +739,8 @@ export const CalendarView = ({
             })}
           </div>
           
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Target className="h-4 w-4" />
-              Showing {filteredTasks.length} of {tasks.length} tasks
-            </div>
-            <div className="flex items-center gap-1">
-              <Users className="h-4 w-4" />
-              {familyMembers.length} family members
-            </div>
-            <div className="flex items-center gap-1">
-              <Calendar className="h-4 w-4" />
-              Week completion: {analytics.completionRate}%
-            </div>
-          </div>
         </div>
       </CardContent>
-
     </Card>
   );
 };
