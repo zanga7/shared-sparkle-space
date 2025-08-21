@@ -810,6 +810,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      revoke_calendar_integration: {
+        Args: { integration_id: string; reason?: string }
+        Returns: boolean
+      }
       validate_calendar_token_access: {
         Args: { integration_id: string; requesting_user_id?: string }
         Returns: boolean
