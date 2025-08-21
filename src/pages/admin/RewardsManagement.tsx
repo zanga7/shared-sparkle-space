@@ -23,7 +23,7 @@ interface RewardFormData {
 }
 
 export default function RewardsManagement() {
-  const { rewards, loading, createReward } = useRewards();
+  const { rewards, loading, createReward, refreshData } = useRewards();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingReward, setEditingReward] = useState<Reward | null>(null);
   const [isCreating, setIsCreating] = useState(false);
