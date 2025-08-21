@@ -21,11 +21,13 @@ import {
   Trash2,
   Shield,
   Key,
-  UserCog
+  UserCog,
+  GripVertical
 } from 'lucide-react';
 import { ExtendedProfile, ColorSwatch, ColorSwatches } from '@/types/admin';
 import { format } from 'date-fns';
 import { AddMemberDialog } from '@/components/admin/AddMemberDialog';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 const MemberManagement = () => {
   const { user } = useAuth();
@@ -67,11 +69,12 @@ const MemberManagement = () => {
 
       setProfile(profileData as ExtendedProfile);
 
-      // Fetch family members
+      // Fetch family members ordered by sort_order
       const { data: membersData, error: membersError } = await supabase
         .from('profiles')
         .select('*')
         .eq('family_id', profileData.family_id)
+        .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true });
 
       if (membersError) throw membersError;
@@ -197,6 +200,40 @@ const MemberManagement = () => {
     }
   };
 
+  const handleDragEnd = async (result: any) => {
+    if (!result.destination) return;
+
+    const items = Array.from(activeMembers);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    // Update sort_order for all affected items
+    try {
+      const updatePromises = items.map((member, index) => 
+        supabase
+          .from('profiles')
+          .update({ sort_order: index + 1 })
+          .eq('id', member.id)
+      );
+
+      await Promise.all(updatePromises);
+
+      toast({
+        title: 'Success',
+        description: 'Member order updated successfully',
+      });
+
+      fetchMemberData();
+    } catch (error) {
+      console.error('Error updating member order:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update member order',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const activeMembers = familyMembers.filter(m => m.status === 'active');
   const archivedMembers = familyMembers.filter(m => m.status === 'archived');
 
@@ -269,14 +306,36 @@ const MemberManagement = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {activeMembers.map((member) => (
-              <div key={member.id} className="flex items-center gap-4 p-4 border rounded-lg">
-                <Avatar className="h-12 w-12">
-                  <AvatarFallback className={ColorSwatches[member.color as ColorSwatch] || ColorSwatches.sky}>
-                    {member.display_name[0]}
-                  </AvatarFallback>
-                </Avatar>
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="members">
+              {(provided) => (
+                <div 
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                  className="space-y-4"
+                >
+                  {activeMembers.map((member, index) => (
+                    <Draggable key={member.id} draggableId={member.id} index={index}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={`flex items-center gap-4 p-4 border rounded-lg transition-all ${
+                            snapshot.isDragging ? 'shadow-lg rotate-1 scale-105' : ''
+                          }`}
+                        >
+                          <div
+                            {...provided.dragHandleProps}
+                            className="flex items-center justify-center p-2 cursor-grab active:cursor-grabbing hover:bg-gray-100 rounded"
+                          >
+                            <GripVertical className="h-4 w-4 text-gray-400" />
+                          </div>
+                          
+                          <Avatar className="h-12 w-12">
+                            <AvatarFallback className={ColorSwatches[member.color as ColorSwatch] || ColorSwatches.sky}>
+                              {member.display_name[0]}
+                            </AvatarFallback>
+                          </Avatar>
                 
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -301,44 +360,50 @@ const MemberManagement = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {member.role === 'child' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => resetMemberPIN(member)}
-                      className="gap-1"
-                    >
-                      <Key className="h-3 w-3" />
-                      Reset PIN
-                    </Button>
-                  )}
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditMember(member)}
-                    className="gap-1"
-                  >
-                    <Edit className="h-3 w-3" />
-                    Edit
-                  </Button>
-                  
-                  {member.id !== profile?.id && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setArchivingMember(member)}
-                      className="gap-1"
-                    >
-                      <Archive className="h-3 w-3" />
-                      Archive
-                    </Button>
-                  )}
+                          <div className="flex items-center gap-2">
+                            {member.role === 'child' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => resetMemberPIN(member)}
+                                className="gap-1"
+                              >
+                                <Key className="h-3 w-3" />
+                                Reset PIN
+                              </Button>
+                            )}
+                            
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditMember(member)}
+                              className="gap-1"
+                            >
+                              <Edit className="h-3 w-3" />
+                              Edit
+                            </Button>
+                            
+                            {member.id !== profile?.id && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setArchivingMember(member)}
+                                className="gap-1"
+                              >
+                                <Archive className="h-3 w-3" />
+                                Archive
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
                 </div>
-              </div>
-            ))}
-          </div>
+              )}
+            </Droppable>
+          </DragDropContext>
         </CardContent>
       </Card>
 

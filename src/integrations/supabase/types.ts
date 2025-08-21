@@ -344,6 +344,7 @@ export type Database = {
           pin_hash: string | null
           pin_locked_until: string | null
           role: Database["public"]["Enums"]["user_role"]
+          sort_order: number | null
           status: string
           streak_count: number
           theme: Json | null
@@ -365,6 +366,7 @@ export type Database = {
           pin_hash?: string | null
           pin_locked_until?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          sort_order?: number | null
           status?: string
           streak_count?: number
           theme?: Json | null
@@ -386,6 +388,7 @@ export type Database = {
           pin_hash?: string | null
           pin_locked_until?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          sort_order?: number | null
           status?: string
           streak_count?: number
           theme?: Json | null

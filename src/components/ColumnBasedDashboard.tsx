@@ -71,11 +71,14 @@ const ColumnBasedDashboard = () => {
 
       setProfile(profileData);
 
-      // Fetch family members
+      // Fetch family members ordered by sort_order for consistent column positioning
       const { data: membersData, error: membersError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('family_id', profileData.family_id);
+        .eq('family_id', profileData.family_id)
+        .eq('status', 'active')
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true });
 
       if (membersError) {
         console.error('Members error:', membersError);
