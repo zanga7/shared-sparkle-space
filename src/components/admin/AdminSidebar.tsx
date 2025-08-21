@@ -24,13 +24,15 @@ import {
   Pin,
   Download,
   RotateCcw,
-  Calendar
+  Calendar,
+  Gift
 } from "lucide-react";
 
 const adminMenuItems = [
   { title: "Dashboard", url: "/admin", icon: Home, exact: true },
   { title: "Family Members", url: "/admin/members", icon: Users },
   { title: "Rotating Tasks", url: "/admin/rotating-tasks", icon: RotateCcw },
+  { title: "Rewards", url: "/admin/rewards", icon: Gift },
   { title: "Calendar Settings", url: "/admin/calendar-settings", icon: Calendar },
   { title: "Permissions", url: "/admin/permissions", icon: Shield },
   { title: "Categories", url: "/admin/categories", icon: Database },

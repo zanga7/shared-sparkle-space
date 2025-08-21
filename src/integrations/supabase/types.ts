@@ -329,6 +329,45 @@ export type Database = {
           },
         ]
       }
+      points_ledger: {
+        Row: {
+          created_at: string
+          created_by: string
+          entry_type: string
+          family_id: string
+          id: string
+          points: number
+          profile_id: string
+          reason: string
+          reward_request_id: string | null
+          task_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          entry_type: string
+          family_id: string
+          id?: string
+          points: number
+          profile_id: string
+          reason: string
+          reward_request_id?: string | null
+          task_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          entry_type?: string
+          family_id?: string
+          id?: string
+          points?: number
+          profile_id?: string
+          reason?: string
+          reward_request_id?: string | null
+          task_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -405,6 +444,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reward_requests: {
+        Row: {
+          approval_note: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          points_cost: number
+          requested_by: string
+          reward_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approval_note?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          points_cost: number
+          requested_by: string
+          reward_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approval_note?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          points_cost?: number
+          requested_by?: string
+          reward_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      rewards: {
+        Row: {
+          assigned_to: string[] | null
+          cost_points: number
+          created_at: string
+          created_by: string
+          description: string | null
+          family_id: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          reward_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string[] | null
+          cost_points: number
+          created_at?: string
+          created_by: string
+          description?: string | null
+          family_id: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          reward_type?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string[] | null
+          cost_points?: number
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          family_id?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          reward_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       rotating_tasks: {
         Row: {
@@ -734,6 +854,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_reward_request: {
+        Args: { approval_note_param?: string; request_id_param: string }
+        Returns: Json
+      }
       authenticate_child_pin: {
         Args: { pin_attempt: string; profile_id_param: string }
         Returns: Json
@@ -845,6 +969,10 @@ export type Database = {
           is_expired: boolean
           refresh_token: string
         }[]
+      }
+      get_profile_points_balance: {
+        Args: { profile_id_param: string }
+        Returns: number
       }
       get_token_encryption_status: {
         Args: Record<PropertyKey, never>
