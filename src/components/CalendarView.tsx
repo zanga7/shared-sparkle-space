@@ -582,7 +582,7 @@ export const CalendarView = ({
                       {(provided, snapshot) => (
                         <Card 
                           className={cn(
-                            "transition-colors",
+                            "transition-colors border-2",
                             memberColors.bgSoft,
                             memberColors.border,
                             snapshot.isDraggingOver && "ring-2 ring-primary/20"
@@ -637,6 +637,7 @@ export const CalendarView = ({
                               <AddButton
                                 className="w-full h-8 text-xs"
                                 text="Add Event"
+                                showIcon={true}
                                 onClick={() => {
                                   setSelectedEventDate(currentDate);
                                   setDefaultMember(member.id);
@@ -729,7 +730,8 @@ export const CalendarView = ({
                         <div className="mt-2 pt-2 border-t border-muted/50">
                           <AddButton
                             className="w-full h-6 text-xs opacity-0 group-hover:opacity-75 transition-opacity"
-                            text="New Event"
+                            text="Add Event"
+                            showIcon={true}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleCreateEvent(day);
@@ -783,29 +785,29 @@ export const CalendarView = ({
         onOpenChange={setIsEventDialogOpen}
         familyMembers={familyMembers}
         defaultMember={defaultMember}
-        onSave={async (eventData) => {
-          if (!familyId) return;
-          
-          try {
-            await createEvent({
-              title: eventData.title,
-              description: eventData.description,
-              location: eventData.location,
-              start_date: eventData.start_date,
-              end_date: eventData.end_date,
-              is_all_day: eventData.is_all_day,
-              family_id: familyId,
-              created_by: familyMembers[0]?.id || '', 
-              attendees: eventData.attendees
-            });
-            refreshEvents();
-            setIsEventDialogOpen(false);
-            setSelectedEventDate(null);
-            setDefaultMember('');
-          } catch (error) {
-            console.error('Error creating event:', error);
-          }
-        }}
+            onSave={async (eventData) => {
+              if (!familyId) return;
+              
+              try {
+                await createEvent({
+                  title: eventData.title,
+                  description: eventData.description,
+                  location: eventData.location,
+                  start_date: eventData.start_date,
+                  end_date: eventData.end_date,
+                  is_all_day: eventData.is_all_day,
+                  family_id: familyId,
+                  created_by: familyMembers[0]?.id || '', 
+                  attendees: eventData.attendees
+                });
+                await refreshEvents();
+                setIsEventDialogOpen(false);
+                setSelectedEventDate(null);
+                setDefaultMember('');
+              } catch (error) {
+                console.error('Error creating event:', error);
+              }
+            }}
       />
     </Card>
   );

@@ -127,6 +127,43 @@ const ColumnBasedDashboard = () => {
     if (!profile) return;
     
     try {
+      // Check if this is a rotating task
+      if (task.id.startsWith('rotating-')) {
+        const rotatingTaskId = task.id.replace('rotating-', '');
+        const rotatingTask = rotatingTasks.find(rt => rt.id === rotatingTaskId);
+        
+        if (rotatingTask) {
+          // Advance to next member in rotation
+          const nextIndex = (rotatingTask.current_member_index + 1) % rotatingTask.member_order.length;
+          await supabase
+            .from('rotating_tasks')
+            .update({ current_member_index: nextIndex })
+            .eq('id', rotatingTaskId);
+
+          // Award points to the current member
+          const currentMemberId = rotatingTask.member_order[rotatingTask.current_member_index];
+          const currentMember = familyMembers.find(m => m.id === currentMemberId);
+          
+          if (currentMember) {
+            await supabase
+              .from('profiles')
+              .update({
+                total_points: currentMember.total_points + task.points
+              })
+              .eq('id', currentMemberId);
+
+            toast({
+              title: 'Rotating Task Completed!',
+              description: `${currentMember.display_name} earned ${task.points} points! Next: ${familyMembers.find(m => m.id === rotatingTask.member_order[nextIndex])?.display_name}`,
+            });
+          }
+
+          fetchUserData();
+          return;
+        }
+      }
+
+      // Regular task completion logic
       // Get all assignees for this task (including both old and new format)
       const assignees = task.assignees?.map(a => a.profile) || 
                        (task.assigned_profile ? [task.assigned_profile] : []);
@@ -620,17 +657,15 @@ const ColumnBasedDashboard = () => {
                               
                               {/* Add Task Button */}
                               {profile.role === 'parent' && (
-                                <AddButton
-                                  className={cn(
-                                    "w-full",
-                                    getMemberColorClasses(member.color).border,
-                                    getMemberColorClasses(member.color).text
-                                  )}
-                                  onClick={() => handleAddTaskForMember(member.id)}
-                                >
-                                   <span className="hidden xs:inline">Add Task for {member.display_name}</span>
-                                   <span className="xs:hidden">Add Task</span>
-                                </AddButton>
+                                 <AddButton
+                                   className={cn(
+                                     "w-full",
+                                     getMemberColorClasses(member.color).border,
+                                     getMemberColorClasses(member.color).text
+                                   )}
+                                   text="Add Task"
+                                   onClick={() => handleAddTaskForMember(member.id)}
+                                 />
                               )}
                             </CardContent>
                           )}
@@ -703,19 +738,16 @@ const ColumnBasedDashboard = () => {
                               {provided.placeholder}
                             </div>
                             
-                            {/* Add Unassigned Task Button */}
+                             {/* Add Task Button */}
                              {profile.role === 'parent' && (
-                               <Button 
-                                 variant="outline" 
-                                 size="sm"
-                                 className="w-full border-dashed border-muted-foreground/30 text-muted-foreground hover:border-muted-foreground hover:text-foreground text-xs sm:text-sm"
-                                 onClick={() => handleAddTaskForMember('unassigned')}
-                               >
-                                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                                 <span className="hidden xs:inline">Add Unassigned Task</span>
-                                 <span className="xs:hidden">Add Task</span>
-                               </Button>
-                            )}
+                               <div className="pt-3 border-t">
+                                 <AddButton
+                                   className="w-full"
+                                   text="Add Task"
+                                   onClick={() => setIsAddDialogOpen(true)}
+                                 />
+                               </div>
+                             )}
                           </CardContent>
                         )}
                       </Droppable>
