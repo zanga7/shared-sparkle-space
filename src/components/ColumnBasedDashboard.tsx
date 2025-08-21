@@ -18,6 +18,8 @@ import { EditTaskDialog } from '@/components/EditTaskDialog';
 import { RecurringSeriesDialog } from '@/components/RecurringSeriesDialog';
 import { CalendarView } from '@/components/CalendarView';
 import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
+import { RewardsGallery } from '@/components/rewards/RewardsGallery';
+import { ChildAuthProvider } from '@/hooks/useChildAuth';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -532,12 +534,6 @@ const ColumnBasedDashboard = () => {
             <Badge variant={profile.role === 'parent' ? 'default' : 'secondary'} className="text-xs sm:text-sm">
               {profile.role === 'parent' ? 'Parent' : 'Child'}
             </Badge>
-            <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">
-              <a href="/rewards">
-                <Gift className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                Rewards
-              </a>
-            </Button>
             {profile.role === 'parent' && (
               <>
                 <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">
@@ -559,7 +555,7 @@ const ColumnBasedDashboard = () => {
       {/* Main Content */}
       <div className="w-full px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
         <Tabs defaultValue="columns" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto sm:mx-0">
+          <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto sm:mx-0">
             <TabsTrigger value="columns" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <List className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden xs:inline">Tasks</span>
@@ -568,6 +564,10 @@ const ColumnBasedDashboard = () => {
             <TabsTrigger value="calendar" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
               Calendar
+            </TabsTrigger>
+            <TabsTrigger value="rewards" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Gift className="h-3 w-3 sm:h-4 sm:w-4" />
+              Rewards
             </TabsTrigger>
           </TabsList>
 
@@ -776,6 +776,14 @@ const ColumnBasedDashboard = () => {
                 onTaskUpdated={fetchUserData}
                 onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
               />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="rewards" className="mt-4 sm:mt-6">
+            <div className="w-full">
+              <ChildAuthProvider>
+                <RewardsGallery />
+              </ChildAuthProvider>
             </div>
           </TabsContent>
         </Tabs>

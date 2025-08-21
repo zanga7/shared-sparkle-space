@@ -14,7 +14,7 @@ import MemberManagement from "./pages/admin/MemberManagement";
 import RotatingTasksManagement from "./pages/admin/RotatingTasksManagement";
 import CalendarSettings from "./pages/admin/CalendarSettings";
 import RewardsManagement from "./pages/admin/RewardsManagement";
-import Rewards from "./pages/Rewards";
+
 
 const queryClient = new QueryClient();
 
@@ -29,7 +29,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/child-auth" element={<ChildAuth />} />
-            <Route path="/rewards" element={<Rewards />} />
+            
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="members" element={<MemberManagement />} />
