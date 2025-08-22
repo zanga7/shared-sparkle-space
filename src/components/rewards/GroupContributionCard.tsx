@@ -40,7 +40,7 @@ export function GroupContributionCard({
   
   // Calculate how many members need to contribute (based on assigned_to)
   const requiredContributors = reward.assigned_to?.length || 1;
-  const isCompleted = contributorsCount >= requiredContributors;
+  const rewardCompleted = contributorsCount >= requiredContributors;
 
   const handleContribute = async () => {
     const amount = parseInt(contributionAmount);
@@ -133,7 +133,7 @@ export function GroupContributionCard({
         )}
       </CardContent>
 
-      {!isCompleted && !hasUserContributedFull && (
+      {!rewardCompleted && !hasUserContributedFull && (
         <CardFooter className="flex-shrink-0 space-y-3">
           <div className="w-full space-y-2">
             <Label htmlFor={`contribution-${reward.id}`}>Contribute {reward.cost_points} Points</Label>
@@ -163,7 +163,7 @@ export function GroupContributionCard({
         </CardFooter>
       )}
       
-      {isCompleted && (
+      {rewardCompleted && (
         <CardFooter className="flex-shrink-0">
           <div className="w-full text-center">
             <Badge variant="default" className="bg-green-500">
