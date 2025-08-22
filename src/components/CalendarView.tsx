@@ -809,6 +809,7 @@ export const CalendarView = ({
         open={isEventDialogOpen}
         onOpenChange={setIsEventDialogOpen}
         familyMembers={familyMembers}
+        defaultDate={selectedEventDate || undefined}
         defaultMember={defaultMember}
             onSave={async (eventData) => {
               if (!familyId) return;
