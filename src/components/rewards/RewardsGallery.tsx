@@ -21,7 +21,7 @@ interface Profile {
   color: string;
 }
 
-export function RewardsGallery() {
+export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string | null }) {
   const { rewards, loading, requestReward, getPointsBalance } = useRewards();
   const { selectedChildId, childProfiles, isChildAuthenticated } = useChildAuth();
   const { user } = useAuth();
@@ -77,7 +77,14 @@ export function RewardsGallery() {
   // Determine current view state
   const isParentView = userProfile?.role === 'parent';
   const isChildView = selectedChildId && isChildAuthenticated;
-  const currentProfileId = isChildView ? selectedChildId : userProfile?.id;
+  const isMemberFilterView = selectedMemberId && allProfiles.length > 0;
+  
+  // Get the current profile ID based on context
+  const currentProfileId = isMemberFilterView 
+    ? selectedMemberId 
+    : isChildView 
+    ? selectedChildId 
+    : userProfile?.id;
 
   // Get available rewards for current context
   const availableRewards = rewards.filter((reward: Reward) => {
@@ -208,6 +215,57 @@ export function RewardsGallery() {
       });
     }
   };
+
+  // For member filter view - show rewards for specific member
+  if (isMemberFilterView) {
+    const selectedMember = allProfiles.find(p => p.id === selectedMemberId);
+    const userBalance = getPointsBalance(selectedMemberId!);
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Gift className="w-6 h-6 text-primary" />
+            <h2 className="text-2xl font-bold">
+              Rewards for {selectedMember?.display_name}
+            </h2>
+          </div>
+          <div className="flex items-center gap-2 text-lg font-semibold">
+            <span>Balance:</span>
+            <div className="flex items-center gap-1 text-primary">
+              <Gift className="w-5 h-5" />
+              {userBalance} points
+            </div>
+          </div>
+        </div>
+
+        {availableRewards.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-8">
+              <Gift className="w-12 h-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium text-muted-foreground mb-2">No Rewards Available</h3>
+              <p className="text-sm text-muted-foreground text-center">
+                No rewards are currently available for {selectedMember?.display_name}.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {availableRewards.map((reward) => (
+              <RewardCard
+                key={reward.id}
+                reward={reward}
+                userBalance={userBalance}
+                canRequest={userBalance >= reward.cost_points}
+                onRequest={() => handleRequestReward(reward.id)}
+                isRequesting={requestingIds.has(reward.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // For parent dashboard - show rewards they can claim
   if (isParentView && !isChildView) {

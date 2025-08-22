@@ -782,7 +782,7 @@ const ColumnBasedDashboard = () => {
           <TabsContent value="rewards" className="mt-4 sm:mt-6">
             <div className="w-full">
               <ChildAuthProvider>
-                <RewardsGallery />
+                <RewardsGallery selectedMemberId={selectedMemberFilter} />
               </ChildAuthProvider>
             </div>
           </TabsContent>
