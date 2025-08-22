@@ -67,7 +67,7 @@ export function RewardCard({ reward, userBalance, canRequest, onRequest, isReque
           {isRequesting ? (
             'Requesting...'
           ) : !canRequest ? (
-            'Not Available'
+            'Not Enough Points'
           ) : !canAfford ? (
             `Need ${reward.cost_points - userBalance} more points`
           ) : reward.reward_type === 'group_contribution' ? (

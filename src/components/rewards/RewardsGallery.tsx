@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Gift, Users, User, Crown } from 'lucide-react';
+import { Loader2, Gift, Users, User, Crown, Coins } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Reward, GroupContribution } from '@/types/rewards';
@@ -31,6 +31,7 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [groupContributions, setGroupContributions] = useState<GroupContribution[]>([]);
+  const [claimedRewards, setClaimedRewards] = useState<any[]>([]);
 
   // Fetch user profile and family members for parent view
   useEffect(() => {
@@ -134,12 +135,38 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
     }
   };
 
+  // Fetch claimed rewards for member filter view
+  const fetchClaimedRewards = async (profileId: string) => {
+    try {
+      const { data: rewardRequests, error } = await supabase
+        .from('reward_requests')
+        .select(`
+          *,
+          reward:rewards(*)
+        `)
+        .eq('requested_by', profileId)
+        .eq('status', 'approved');
+
+      if (error) throw error;
+      setClaimedRewards(rewardRequests || []);
+    } catch (error) {
+      console.error('Error fetching claimed rewards:', error);
+    }
+  };
+
   // Update group contributions when available rewards change
   useEffect(() => {
     if (availableRewards.length > 0) {
       fetchGroupContributions();
     }
   }, [availableRewards.length]); // Use length to avoid infinite loops
+
+  // Fetch claimed rewards for member filter view
+  useEffect(() => {
+    if (isMemberFilterView && selectedMemberId) {
+      fetchClaimedRewards(selectedMemberId);
+    }
+  }, [isMemberFilterView, selectedMemberId]);
 
   if (loading || profilesLoading) {
     return (
@@ -167,6 +194,16 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
 
   const handleGroupContribution = async (rewardId: string, amount: number) => {
     if (!currentProfileId) return;
+    
+    // Check if user has already contributed to this reward
+    const existingContribution = groupContributions.find(
+      c => c.reward_id === rewardId && c.profile_id === currentProfileId
+    );
+    
+    if (existingContribution) {
+      toast.error('You have already contributed to this reward');
+      return;
+    }
     
     setContributingIds(prev => new Set(prev).add(rewardId));
     try {
@@ -250,18 +287,84 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {availableRewards.map((reward) => (
-              <RewardCard
-                key={reward.id}
-                reward={reward}
-                userBalance={userBalance}
-                canRequest={userBalance >= reward.cost_points}
-                onRequest={() => handleRequestReward(reward.id)}
-                isRequesting={requestingIds.has(reward.id)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {availableRewards.map((reward) => {
+                if (reward.reward_type === 'group_contribution') {
+                  const rewardContributions = groupContributions.filter(c => c.reward_id === reward.id);
+                  return (
+                    <GroupContributionCard
+                      key={reward.id}
+                      reward={reward}
+                      userBalance={userBalance}
+                      profileId={selectedMemberId!}
+                      contributions={rewardContributions}
+                      onContribute={(amount) => handleGroupContribution(reward.id, amount)}
+                      isContributing={contributingIds.has(reward.id)}
+                    />
+                  );
+                }
+                
+                return (
+                  <RewardCard
+                    key={reward.id}
+                    reward={reward}
+                    userBalance={userBalance}
+                    canRequest={userBalance >= reward.cost_points}
+                    onRequest={() => handleRequestReward(reward.id)}
+                    isRequesting={requestingIds.has(reward.id)}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Claimed Rewards Section */}
+            {claimedRewards.length > 0 && (
+              <div className="mt-8 space-y-4">
+                <h3 className="text-xl font-semibold flex items-center gap-2">
+                  <Gift className="w-5 h-5 text-green-600" />
+                  Claimed Rewards
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {claimedRewards.map((request) => (
+                    <Card key={request.id} className="h-full flex flex-col opacity-75">
+                      {request.reward?.image_url && (
+                        <div className="aspect-video w-full overflow-hidden rounded-t-lg">
+                          <img 
+                            src={request.reward.image_url} 
+                            alt={request.reward.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      
+                      <CardHeader className="flex-shrink-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <CardTitle className="text-lg leading-tight">{request.reward?.title}</CardTitle>
+                          <Badge variant="outline" className="flex items-center gap-1 whitespace-nowrap text-green-600">
+                            <Gift className="w-3 h-3" />
+                            Claimed
+                          </Badge>
+                        </div>
+                        {request.reward?.description && (
+                          <CardDescription className="text-sm">
+                            {request.reward.description}
+                          </CardDescription>
+                        )}
+                      </CardHeader>
+
+                      <CardContent className="flex-grow">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Coins className="w-4 h-4" />
+                          <span>{request.points_cost} points spent</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     );

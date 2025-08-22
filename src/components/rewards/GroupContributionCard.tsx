@@ -28,10 +28,9 @@ export function GroupContributionCard({
   isContributing 
 }: GroupContributionCardProps) {
   
-  // Check if this user has already contributed the full amount
+  // Check if this user has already contributed
   const userContribution = contributions.find(c => c.profile_id === profileId);
-  const userContributedAmount = userContribution?.points_contributed || 0;
-  const hasUserContributedFull = userContributedAmount >= reward.cost_points;
+  const hasUserContributed = !!userContribution;
   
   // Get all unique contributors who have contributed the full amount
   const fullContributors = contributions.filter(c => c.points_contributed >= reward.cost_points);
@@ -49,8 +48,8 @@ export function GroupContributionCard({
       return;
     }
     
-    if (hasUserContributedFull) {
-      toast.error('You have already contributed the full amount for this reward');
+    if (hasUserContributed) {
+      toast.error('You have already contributed to this reward');
       return;
     }
     
@@ -116,7 +115,7 @@ export function GroupContributionCard({
         )}
       </CardContent>
 
-      {!rewardCompleted && !hasUserContributedFull && (
+      {!rewardCompleted && !hasUserContributed && (
         <CardFooter className="flex-shrink-0">
           <div className="w-full space-y-3">
             <div className="text-center">
@@ -139,11 +138,11 @@ export function GroupContributionCard({
         </CardFooter>
       )}
       
-      {!rewardCompleted && hasUserContributedFull && (
+      {!rewardCompleted && hasUserContributed && (
         <CardFooter className="flex-shrink-0">
           <div className="w-full text-center space-y-2">
             <div className="text-sm text-green-600 font-medium">
-              ✓ You've contributed {reward.cost_points} points
+              ✓ You've contributed {userContribution?.points_contributed} points
             </div>
             <p className="text-xs text-muted-foreground">
               Waiting for other members to contribute...
