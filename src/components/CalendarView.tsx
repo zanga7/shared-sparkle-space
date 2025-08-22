@@ -92,6 +92,7 @@ export const CalendarView = ({
   const [selectedEventDate, setSelectedEventDate] = useState<Date | null>(null);
   const [defaultMember, setDefaultMember] = useState<string>('');
   const { toast } = useToast();
+  console.log('CalendarView: familyId passed to useEvents:', familyId);
   const { events, createEvent, refreshEvents } = useEvents(familyId);
 
   // Get member color classes using the global color system

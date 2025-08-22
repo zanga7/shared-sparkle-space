@@ -9,7 +9,11 @@ export const useEvents = (familyId?: string) => {
   const { toast } = useToast();
 
   const fetchEvents = async () => {
-    if (!familyId) return;
+    console.log('useEvents: fetchEvents called with familyId:', familyId);
+    if (!familyId) {
+      console.log('useEvents: No familyId provided, skipping fetch');
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -189,6 +193,7 @@ export const useEvents = (familyId?: string) => {
   };
 
   useEffect(() => {
+    console.log('useEvents: useEffect triggered with familyId:', familyId);
     fetchEvents();
   }, [familyId]);
 
