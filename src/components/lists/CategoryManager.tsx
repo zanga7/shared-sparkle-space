@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -109,7 +110,7 @@ export function CategoryManager({ open, onOpenChange, familyId }: CategoryManage
           color: newCategory.color,
           icon: newCategory.icon,
           sort_order: maxSortOrder + 1,
-          created_by: (await supabase.auth.getUser()).data.user?.id
+          created_by: (await supabase.from('profiles').select('id').eq('family_id', familyId).eq('role', 'parent').single()).data?.id
         });
 
       if (error) throw error;
@@ -200,6 +201,9 @@ export function CategoryManager({ open, onOpenChange, familyId }: CategoryManage
       <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Manage Categories</DialogTitle>
+          <DialogDescription>
+            Create and organize categories for your lists and items.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col space-y-4">

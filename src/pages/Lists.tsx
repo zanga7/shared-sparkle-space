@@ -295,6 +295,35 @@ const Lists = () => {
     }
   };
 
+  const deleteList = async (list: List) => {
+    if (!window.confirm(`Are you sure you want to delete "${list.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('lists')
+        .delete()
+        .eq('id', list.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'List deleted',
+        description: 'List has been permanently deleted'
+      });
+
+      fetchLists();
+    } catch (error) {
+      console.error('Error deleting list:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete list',
+        variant: 'destructive'
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -399,6 +428,15 @@ const Lists = () => {
                           archiveList(list);
                         }}>
                           {list.is_archived ? 'Restore' : 'Archive'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteList(list);
+                          }}
+                          className="text-destructive"
+                        >
+                          Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

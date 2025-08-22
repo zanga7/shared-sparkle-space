@@ -392,6 +392,13 @@ export type Database = {
             referencedRelation: "list_items"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "list_item_assignees_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       list_items: {
