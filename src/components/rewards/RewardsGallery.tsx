@@ -239,7 +239,9 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
     const selectedMember = allProfiles.find(p => p.id === selectedMemberId);
     const userBalance = getPointsBalance(selectedMemberId!);
     const memberRequests = getMemberRewardRequests(selectedMemberId!);
-    const waitingApprovalRequests = memberRequests.filter(req => req.status === 'pending');
+    const pendingRequests = memberRequests.filter(req => req.status === 'pending');
+    const deniedRequests = memberRequests.filter(req => req.status === 'denied');
+    const approvedRequests = memberRequests.filter(req => req.status === 'approved');
     const claimedRequests = memberRequests.filter(req => req.status === 'claimed');
 
     return (
@@ -303,17 +305,17 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
             </div>
 
             {/* Member reward history */}
-            {(waitingApprovalRequests.length > 0 || claimedRequests.length > 0) && (
+            {(pendingRequests.length > 0 || deniedRequests.length > 0 || approvedRequests.length > 0 || claimedRequests.length > 0) && (
               <div className="mt-8 space-y-6">
                 {/* Waiting approval section */}
-                {waitingApprovalRequests.length > 0 && (
+                {pendingRequests.length > 0 && (
                   <div>
                     <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                       <Clock className="w-5 h-5 text-yellow-500" />
-                      Waiting Approval ({waitingApprovalRequests.length})
+                      Waiting Approval ({pendingRequests.length})
                     </h3>
                     <div className="space-y-2">
-                      {waitingApprovalRequests.map((request) => (
+                      {pendingRequests.map((request) => (
                         <div key={request.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
                           <div>
                             <p className="font-medium text-sm">{request.reward?.title}</p>
@@ -330,12 +332,68 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
                   </div>
                 )}
 
+                {/* Denied rewards section */}
+                {deniedRequests.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-red-500" />
+                      Denied ({deniedRequests.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {deniedRequests.map((request) => (
+                        <div key={request.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
+                          <div>
+                            <p className="font-medium text-sm">{request.reward?.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Denied {format(new Date(request.updated_at), 'PP')} • {request.points_cost} points
+                            </p>
+                            {request.approval_note && (
+                              <p className="text-xs text-red-600 mt-1">Note: {request.approval_note}</p>
+                            )}
+                          </div>
+                          <Badge variant="secondary" className="bg-red-100 text-red-800">
+                            Denied
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Approved rewards section */}
+                {approvedRequests.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                      Approved ({approvedRequests.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {approvedRequests.map((request) => (
+                        <div key={request.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
+                          <div>
+                            <p className="font-medium text-sm">{request.reward?.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Approved {format(new Date(request.updated_at), 'PP')} • {request.points_cost} points
+                            </p>
+                            {request.approval_note && (
+                              <p className="text-xs text-green-600 mt-1">Note: {request.approval_note}</p>
+                            )}
+                          </div>
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                            Approved
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Claimed rewards section */}
                 {claimedRequests.length > 0 && (
                   <div>
                     <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                      Claimed Rewards ({claimedRequests.length})
+                      <CheckCircle className="w-5 h-5 text-blue-500" />
+                      Claimed ({claimedRequests.length})
                     </h3>
                     <div className="space-y-2">
                       {claimedRequests.map((request) => (
@@ -346,7 +404,7 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
                               Claimed {format(new Date(request.updated_at), 'PP')} • {request.points_cost} points
                             </p>
                           </div>
-                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
                             Claimed
                           </Badge>
                         </div>
