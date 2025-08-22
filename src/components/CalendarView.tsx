@@ -603,7 +603,9 @@ export const CalendarView = ({
                   const memberEvents = events.filter(event => {
                     const eventDate = new Date(event.start_date);
                     const isEventOnThisDate = format(eventDate, 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd');
-                    const isEventForThisMember = event.attendees?.some((a: any) => a.profile_id === member.id);
+                    // Show events if no attendees (for all members) or if member is an attendee
+                    const isEventForThisMember = !event.attendees || event.attendees.length === 0 || 
+                      event.attendees?.some((a: any) => a.profile_id === member.id);
                     return isEventOnThisDate && isEventForThisMember;
                   });
                   const memberColors = getMemberColors(member);

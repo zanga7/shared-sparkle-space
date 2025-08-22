@@ -14,19 +14,36 @@ export const useEvents = (familyId?: string) => {
     }
 
     try {
-      const { data, error } = await supabase
+      // First fetch events
+      const { data: eventsData, error: eventsError } = await supabase
         .from('events')
         .select('*')
         .eq('family_id', familyId)
         .order('start_date', { ascending: true });
 
-      if (error) throw error;
+      if (eventsError) throw eventsError;
+
+      // Then fetch attendees for all events
+      const eventsWithAttendees = await Promise.all(
+        (eventsData || []).map(async (event) => {
+          const { data: attendeesData } = await supabase
+            .from('event_attendees')
+            .select(`
+              id,
+              profile_id,
+              added_by,
+              profile:profiles!event_attendees_profile_id_fkey(id, display_name, role, color)
+            `)
+            .eq('event_id', event.id);
+          
+          return {
+            ...event,
+            attendees: attendeesData || []
+          };
+        })
+      );
       
-      // For now, just set events without attendees
-      setEvents((data || []).map(event => ({
-        ...event,
-        attendees: []
-      })));
+      setEvents(eventsWithAttendees);
     } catch (error) {
       console.error('Error fetching events:', error);
       toast({
