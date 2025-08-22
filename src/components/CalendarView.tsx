@@ -29,6 +29,7 @@ import {
   MapPin
 } from 'lucide-react';
 import { AddButton } from '@/components/ui/add-button';
+import { EventAttendeesDisplay } from '@/components/ui/event-attendees-display';
 import { 
   format, 
   startOfWeek, 
@@ -173,17 +174,39 @@ export const CalendarView = ({
     return grouped;
   }, [filteredTasks]);
 
-  // Group events by date
+  // Group events by date - handle multi-day events
   const eventsByDate = useMemo(() => {
     const grouped: { [key: string]: any[] } = {};
     
     events.forEach(event => {
       if (event.start_date) {
-        const dateKey = format(new Date(event.start_date), 'yyyy-MM-dd');
-        if (!grouped[dateKey]) {
-          grouped[dateKey] = [];
+        const startDate = new Date(event.start_date);
+        const endDate = event.end_date ? new Date(event.end_date) : startDate;
+        
+        // Create events for each day the event spans
+        const currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+          const dateKey = format(currentDate, 'yyyy-MM-dd');
+          if (!grouped[dateKey]) {
+            grouped[dateKey] = [];
+          }
+          
+          // Add event with indication if it's start, middle, or end of multi-day event
+          const isMultiDay = format(startDate, 'yyyy-MM-dd') !== format(endDate, 'yyyy-MM-dd');
+          const isFirstDay = format(currentDate, 'yyyy-MM-dd') === format(startDate, 'yyyy-MM-dd');
+          const isLastDay = format(currentDate, 'yyyy-MM-dd') === format(endDate, 'yyyy-MM-dd');
+          
+          grouped[dateKey].push({
+            ...event,
+            isMultiDay,
+            isFirstDay,
+            isLastDay,
+            originalStart: startDate,
+            originalEnd: endDate
+          });
+          
+          currentDate.setDate(currentDate.getDate() + 1);
         }
-        grouped[dateKey].push(event);
       }
     });
     
@@ -772,35 +795,51 @@ export const CalendarView = ({
                           {/* Events */}
                           {dayEvents.map((event) => (
                             <div 
-                              key={event.id}
-                              className="group p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs hover:shadow-md cursor-pointer transition-all"
+                              key={`${event.id}-${format(day, 'yyyy-MM-dd')}`}
+                              className={cn(
+                                "group p-2 mb-1 text-xs hover:shadow-md cursor-pointer transition-all border",
+                                "bg-purple-50 border-purple-200 text-purple-700",
+                                event.isMultiDay && !event.isFirstDay && !event.isLastDay && "rounded-none border-l-0 border-r-0",
+                                event.isMultiDay && event.isFirstDay && "rounded-r-none border-r-0",
+                                event.isMultiDay && event.isLastDay && "rounded-l-none border-l-0",
+                                !event.isMultiDay && "rounded-md"
+                              )}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleEditEvent(event);
                               }}
                             >
                               <div className="flex items-center justify-between">
-                                <span className="font-medium text-purple-700 truncate">{event.title}</span>
-                                <div className="flex items-center gap-1">
+                                <span className="font-medium truncate">
+                                  {event.isMultiDay && !event.isFirstDay ? `↳ ${event.title}` : event.title}
+                                </span>
+                                <div className="flex items-center gap-1 shrink-0">
                                   <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600">
-                                    Event
+                                    {event.isMultiDay ? (event.isFirstDay ? 'Start' : event.isLastDay ? 'End' : 'Multi') : 'Event'}
                                   </Badge>
                                   <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-purple-600" />
                                 </div>
                               </div>
+                              
+                              {/* Attendees Display */}
                               {event.attendees && event.attendees.length > 0 && (
-                                <div className="flex items-center gap-1 mt-1">
-                                  <Users className="h-2.5 w-2.5 text-purple-600" />
-                                  <span className="text-xs text-purple-600 truncate">
-                                    {event.attendees.map((a: any) => a.profile?.display_name).join(', ')}
-                                  </span>
+                                <div className="mt-1">
+                                  <EventAttendeesDisplay
+                                    attendees={event.attendees}
+                                    showNames={false}
+                                    maxDisplay={3}
+                                    className="text-purple-600"
+                                  />
                                 </div>
                               )}
-                              {event.start_date && (
+                              
+                              {/* Time Display - only show on first day or single day events */}
+                              {(!event.isMultiDay || event.isFirstDay) && event.start_date && (
                                 <div className="flex items-center gap-1 mt-1">
                                   <Clock className="h-2.5 w-2.5 text-purple-600" />
                                   <span className="text-xs text-purple-600">
                                     {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
+                                    {event.isMultiDay && ` - ${format(new Date(event.originalEnd), 'MMM d')}`}
                                   </span>
                                 </div>
                               )}
