@@ -23,7 +23,7 @@ interface Profile {
 }
 
 export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string | null }) {
-  const { rewards, rewardRequests, loading, requestReward, getPointsBalance } = useRewards();
+  const { rewards, rewardRequests, loading, requestReward, cancelRewardRequest, getPointsBalance } = useRewards();
   const { selectedChildId, childProfiles, isChildAuthenticated } = useChildAuth();
   const { user } = useAuth();
   const [requestingIds, setRequestingIds] = useState<Set<string>>(new Set());
@@ -173,6 +173,16 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
     }
   };
 
+  const handleCancelRequest = async (requestId: string) => {
+    try {
+      await cancelRewardRequest(requestId);
+      toast.success('Reward request cancelled');
+    } catch (error) {
+      console.error('Error cancelling request:', error);
+      toast.error('Failed to cancel request');
+    }
+  };
+
   const handleGroupContribution = async (rewardId: string, amount: number) => {
     if (!currentProfileId) return;
     
@@ -315,19 +325,29 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
                       Waiting Approval ({pendingRequests.length})
                     </h3>
                     <div className="space-y-2">
-                      {pendingRequests.map((request) => (
-                        <div key={request.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
-                          <div>
-                            <p className="font-medium text-sm">{request.reward?.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                              Requested {format(new Date(request.created_at), 'PP')} • {request.points_cost} points
-                            </p>
-                          </div>
-                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                            Pending
-                          </Badge>
-                        </div>
-                      ))}
+                       {pendingRequests.map((request) => (
+                         <div key={request.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
+                           <div>
+                             <p className="font-medium text-sm">{request.reward?.title}</p>
+                             <p className="text-xs text-muted-foreground">
+                               Requested {format(new Date(request.created_at), 'PP')} • {request.points_cost} points
+                             </p>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                               Pending
+                             </Badge>
+                             <Button 
+                               size="sm" 
+                               variant="outline" 
+                               onClick={() => handleCancelRequest(request.id)}
+                               className="text-xs"
+                             >
+                               Cancel
+                             </Button>
+                           </div>
+                         </div>
+                       ))}
                     </div>
                   </div>
                 )}

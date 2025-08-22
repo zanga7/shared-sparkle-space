@@ -25,6 +25,7 @@ interface RewardFormData {
   reward_type: 'once_off' | 'always_available' | 'group_contribution';
   image_url: string | null;
   assigned_to: string[] | null;
+  auto_approve: boolean;
 }
 
 export default function RewardsManagement() {
@@ -40,10 +41,11 @@ export default function RewardsManagement() {
     cost_points: 10,
     reward_type: 'always_available',
     image_url: null,
-    assigned_to: null
+    assigned_to: null,
+    auto_approve: false
   });
 
-  const handleInputChange = (field: keyof RewardFormData, value: string | number | string[] | null) => {
+  const handleInputChange = (field: keyof RewardFormData, value: string | number | string[] | null | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -87,7 +89,8 @@ export default function RewardsManagement() {
         reward_type: formData.reward_type,
         image_url: formData.image_url || undefined,
         assigned_to: formData.assigned_to,
-        is_active: true
+        is_active: true,
+        auto_approve: formData.auto_approve
       });
       
       setIsCreateDialogOpen(false);
@@ -127,7 +130,8 @@ export default function RewardsManagement() {
       cost_points: 10,
       reward_type: 'always_available',
       image_url: null,
-      assigned_to: null
+      assigned_to: null,
+      auto_approve: false
     });
   };
 
@@ -216,7 +220,23 @@ export default function RewardsManagement() {
                 </Select>
               </div>
 
-              <div>
+                <div>
+                  <Label htmlFor="auto_approve">Auto-approve requests</Label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <input
+                      type="checkbox"
+                      id="auto_approve"
+                      checked={formData.auto_approve || false}
+                      onChange={(e) => handleInputChange('auto_approve', e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                    <label htmlFor="auto_approve" className="text-sm text-muted-foreground">
+                      Skip approval queue and automatically approve requests
+                    </label>
+                  </div>
+                </div>
+
+                <div>
                 <Label htmlFor="assigned_to">Available to</Label>
                 <MultiSelectAssignees
                   familyMembers={familyMembers}

@@ -690,6 +690,7 @@ export type Database = {
       rewards: {
         Row: {
           assigned_to: string[] | null
+          auto_approve: boolean
           cost_points: number
           created_at: string
           created_by: string
@@ -704,6 +705,7 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string[] | null
+          auto_approve?: boolean
           cost_points: number
           created_at?: string
           created_by: string
@@ -718,6 +720,7 @@ export type Database = {
         }
         Update: {
           assigned_to?: string[] | null
+          auto_approve?: boolean
           cost_points?: number
           created_at?: string
           created_by?: string

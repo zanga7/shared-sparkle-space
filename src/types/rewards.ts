@@ -11,6 +11,7 @@ export interface Reward {
   created_by: string;
   created_at: string;
   updated_at: string;
+  auto_approve: boolean;
 }
 
 export interface RewardRequest {
