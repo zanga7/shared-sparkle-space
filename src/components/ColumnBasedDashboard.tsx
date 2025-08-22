@@ -51,6 +51,7 @@ const ColumnBasedDashboard = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedMemberForTask, setSelectedMemberForTask] = useState<string | null>(null);
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('columns');
   const { taskSeries } = useRecurringTasks(profile?.family_id);
   const { rotatingTasks, refreshRotatingTasks } = useRotatingTasks(profile?.family_id);
 
@@ -544,29 +545,19 @@ const ColumnBasedDashboard = () => {
         selectedMember={selectedMemberFilter}
         onMemberSelect={setSelectedMemberFilter}
         onSettingsClick={handleSettingsClick}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       />
 
       {/* Main Content */}
       <div className="w-full px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
-        <Tabs defaultValue="columns" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 max-w-2xl mx-auto sm:mx-0">
-            <TabsTrigger value="columns" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Tasks</span>
-              <span className="xs:hidden">Tasks</span>
-            </TabsTrigger>
-            <TabsTrigger value="lists" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <List className="h-3 w-3 sm:h-4 sm:w-4" />
-              Lists
-            </TabsTrigger>
-            <TabsTrigger value="calendar" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
-              Calendar
-            </TabsTrigger>
-            <TabsTrigger value="rewards" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Gift className="h-3 w-3 sm:h-4 sm:w-4" />
-              Rewards
-            </TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          {/* Hidden tab list since navigation is in header */}
+          <TabsList className="hidden">
+            <TabsTrigger value="columns">Tasks</TabsTrigger>
+            <TabsTrigger value="lists">Lists</TabsTrigger>
+            <TabsTrigger value="calendar">Calendar</TabsTrigger>
+            <TabsTrigger value="rewards">Rewards</TabsTrigger>
           </TabsList>
 
           <TabsContent value="columns" className="mt-4 sm:mt-6">
