@@ -23,37 +23,38 @@ export const useEvents = (familyId?: string) => {
 
       if (eventsError) throw eventsError;
 
-      // Then fetch attendees for all events
-      const eventsWithAttendees = await Promise.all(
-        (eventsData || []).map(async (event) => {
-          // First get the attendee records
-          const { data: attendeesData } = await supabase
-            .from('event_attendees')
-            .select('id, profile_id, added_by')
-            .eq('event_id', event.id);
+      // Then fetch attendees for all events with a simpler approach
+      const eventsWithAttendees = [];
+      
+      for (const event of eventsData || []) {
+        // Get attendees for this event
+        const { data: attendees } = await supabase
+          .from('event_attendees')
+          .select('*')
+          .eq('event_id', event.id);
+        
+        // Get profile info for each attendee
+        const attendeesWithProfiles = [];
+        for (const attendee of attendees || []) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, display_name, role, color')
+            .eq('id', attendee.profile_id)
+            .single();
           
-          // Then get the profile information for each attendee
-          const attendeesWithProfiles = await Promise.all(
-            (attendeesData || []).map(async (attendee) => {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('id, display_name, role, color')
-                .eq('id', attendee.profile_id)
-                .single();
-              
-              return {
-                ...attendee,
-                profile: profile
-              };
-            })
-          );
-          
-          return {
-            ...event,
-            attendees: attendeesWithProfiles
-          };
-        })
-      );
+          if (profile) {
+            attendeesWithProfiles.push({
+              ...attendee,
+              profile
+            });
+          }
+        }
+        
+        eventsWithAttendees.push({
+          ...event,
+          attendees: attendeesWithProfiles
+        });
+      }
       
       setEvents(eventsWithAttendees);
     } catch (error) {

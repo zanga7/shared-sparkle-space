@@ -603,7 +603,7 @@ export const CalendarView = ({
                    const memberEvents = events.filter(event => {
                      const eventDate = new Date(event.start_date);
                      const isEventOnThisDate = format(eventDate, 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd');
-                     // Show events if no attendees (for all members) or if member is specifically assigned
+                     // Show events if member is specifically assigned OR if no attendees are assigned (show for all)
                      const isEventForThisMember = !event.attendees || event.attendees.length === 0 || 
                        event.attendees?.some((a: any) => a.profile_id === member.id);
                      return isEventOnThisDate && isEventForThisMember;
