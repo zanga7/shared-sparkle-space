@@ -120,7 +120,10 @@ export const useEvents = (familyId?: string) => {
           .from('event_attendees')
           .insert(attendeeRecords);
 
-        if (attendeesError) throw attendeesError;
+        if (attendeesError) {
+          console.error('Error adding attendees:', attendeesError);
+          throw attendeesError;
+        }
       }
 
       await fetchEvents();
@@ -152,32 +155,45 @@ export const useEvents = (familyId?: string) => {
 
       // Update attendees if provided
       if (attendees !== undefined) {
-        // Remove existing attendees
-        await supabase
+        // Remove existing attendees first
+        const { error: deleteError } = await supabase
           .from('event_attendees')
           .delete()
           .eq('event_id', id);
 
+        if (deleteError) {
+          console.error('Error removing existing attendees:', deleteError);
+          throw deleteError;
+        }
+
         // Add new attendees
         if (attendees.length > 0) {
           // Get the current user's profile to use as added_by
-          const { data: profile } = await supabase
+          const { data: currentProfile, error: profileError } = await supabase
             .from('profiles')
             .select('id')
             .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
             .single();
 
+          if (profileError || !currentProfile) {
+            console.error('Error getting current user profile:', profileError);
+            throw new Error('Could not get current user profile');
+          }
+
           const attendeeRecords = attendees.map(profileId => ({
             event_id: id,
             profile_id: profileId,
-            added_by: profile?.id || updates.created_by || ''
+            added_by: currentProfile.id
           }));
 
           const { error: attendeesError } = await supabase
             .from('event_attendees')
             .insert(attendeeRecords);
 
-          if (attendeesError) throw attendeesError;
+          if (attendeesError) {
+            console.error('Error adding new attendees:', attendeesError);
+            throw attendeesError;
+          }
         }
       }
 
