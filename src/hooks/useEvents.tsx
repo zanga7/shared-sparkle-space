@@ -32,13 +32,21 @@ export const useEvents = (familyId?: string) => {
               id,
               profile_id,
               added_by,
-              profile:profiles!event_attendees_profile_id_fkey(id, display_name, role, color)
+              profiles!profile_id (
+                id,
+                display_name,
+                role,
+                color
+              )
             `)
             .eq('event_id', event.id);
           
           return {
             ...event,
-            attendees: attendeesData || []
+            attendees: (attendeesData || []).map(attendee => ({
+              ...attendee,
+              profile: attendee.profiles
+            }))
           };
         })
       );
@@ -152,10 +160,17 @@ export const useEvents = (familyId?: string) => {
 
         // Add new attendees
         if (attendees.length > 0) {
+          // Get the current user's profile to use as added_by
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+            .single();
+
           const attendeeRecords = attendees.map(profileId => ({
             event_id: id,
             profile_id: profileId,
-            added_by: updates.created_by || ''
+            added_by: profile?.id || updates.created_by || ''
           }));
 
           const { error: attendeesError } = await supabase
