@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { RewardCard } from './RewardCard';
 import { GroupContributionCard } from './GroupContributionCard';
@@ -87,29 +88,186 @@ export function RewardsGallery() {
   const isParentView = userProfile?.role === 'parent';
   const isChildView = selectedChildId && isChildAuthenticated;
 
-  // Parent View - Show all rewards with assignment info
-  if (isParentView) {
+  // For parent dashboard - show rewards they can claim
+  if (isParentView && !isChildView) {
+    const userBalance = getPointsBalance(userProfile.id);
+    
+    // Filter rewards that are available to the parent user
+    const availableRewards = rewards.filter((reward: Reward) => {
+      if (!reward.is_active) return false;
+      // If assigned_to is null, reward is available to all
+      if (!reward.assigned_to) return true;
+      // If assigned_to contains the parent's profile ID
+      return reward.assigned_to.includes(userProfile.id);
+    });
+
+    const handleRequestReward = async (rewardId: string) => {
+      if (!userProfile) return;
+      
+      setRequestingIds(prev => new Set(prev).add(rewardId));
+      try {
+        await requestReward(rewardId, userProfile.id);
+      } finally {
+        setRequestingIds(prev => {
+          const next = new Set(prev);
+          next.delete(rewardId);
+          return next;
+        });
+      }
+    };
+
+    const handleGroupContribution = async (rewardId: string, amount: number) => {
+      if (!userProfile) return;
+      
+      setContributingIds(prev => new Set(prev).add(rewardId));
+      try {
+        // Create contribution entry
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('family_id')
+          .eq('id', userProfile.id)
+          .single();
+
+        if (!profile) throw new Error('Profile not found');
+
+        const { error } = await supabase
+          .from('group_contributions')
+          .insert({
+            reward_id: rewardId,
+            profile_id: userProfile.id,
+            family_id: profile.family_id,
+            points_contributed: amount
+          });
+
+        if (error) throw error;
+
+        // Create ledger entry for spending points
+        await supabase
+          .from('points_ledger')
+          .insert({
+            profile_id: userProfile.id,
+            family_id: profile.family_id,
+            entry_type: 'spend',
+            points: -amount,
+            reason: `Group contribution to reward`,
+            created_by: userProfile.id
+          });
+
+        toast.success(`Contributed ${amount} points successfully`);
+        fetchGroupContributions(); // Refresh contributions
+      } catch (error) {
+        console.error('Error contributing to group reward:', error);
+        toast.error('Failed to contribute to reward');
+      } finally {
+        setContributingIds(prev => {
+          const next = new Set(prev);
+          next.delete(rewardId);
+          return next;
+        });
+      }
+    };
+
+    // Fetch group contributions for available rewards
+    const fetchGroupContributions = async () => {
+      try {
+        const rewardIds = availableRewards
+          .filter(r => r.reward_type === 'group_contribution')
+          .map(r => r.id);
+
+        if (rewardIds.length === 0) return;
+
+        // Fetch contributions first
+        const { data: contributions, error: contribError } = await supabase
+          .from('group_contributions')
+          .select('*')
+          .in('reward_id', rewardIds);
+
+        if (contribError) throw contribError;
+
+        // Fetch profiles for contributors
+        const profileIds = [...new Set(contributions?.map(c => c.profile_id) || [])];
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, display_name, color')
+          .in('id', profileIds);
+
+        if (profileError) throw profileError;
+
+        // Combine the data
+        const contributionsWithProfiles = contributions?.map(contribution => ({
+          ...contribution,
+          contributor: profiles?.find(p => p.id === contribution.profile_id)
+        })) || [];
+
+        setGroupContributions(contributionsWithProfiles as GroupContribution[]);
+      } catch (error) {
+        console.error('Error fetching group contributions:', error);
+      }
+    };
+
+    // Fetch contributions when available rewards change
+    useEffect(() => {
+      fetchGroupContributions();
+    }, [availableRewards]);
+
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Crown className="w-6 h-6 text-yellow-500" />
-            <h2 className="text-2xl font-bold">Family Rewards Management</h2>
+            <h2 className="text-2xl font-bold">Available Rewards</h2>
           </div>
-          <Badge variant="secondary" className="flex items-center gap-1">
-            <Users className="w-4 h-4" />
-            Parent View
-          </Badge>
+          <div className="flex items-center gap-2 text-lg font-semibold">
+            <span>Your Balance:</span>
+            <div className="flex items-center gap-1 text-primary">
+              <Gift className="w-5 h-5" />
+              {userBalance} points
+            </div>
+          </div>
         </div>
 
-        {rewards.length === 0 ? (
+        {availableRewards.length === 0 ? (
           <Alert>
             <Gift className="w-4 h-4" />
             <AlertDescription>
-              No rewards have been created yet. Visit the admin panel to create rewards for your family.
+              No rewards are currently available for you. Check back later or earn more points!
             </AlertDescription>
           </Alert>
         ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {availableRewards.map((reward) => {
+              if (reward.reward_type === 'group_contribution') {
+                const rewardContributions = groupContributions.filter(c => c.reward_id === reward.id);
+                return (
+                  <GroupContributionCard
+                    key={reward.id}
+                    reward={reward}
+                    userBalance={userBalance}
+                    profileId={userProfile.id}
+                    contributions={rewardContributions}
+                    onContribute={(amount) => handleGroupContribution(reward.id, amount)}
+                    isContributing={contributingIds.has(reward.id)}
+                  />
+                );
+              }
+              
+              return (
+                <RewardCard
+                  key={reward.id}
+                  reward={reward}
+                  userBalance={userBalance}
+                  canRequest={true}
+                  onRequest={() => handleRequestReward(reward.id)}
+                  isRequesting={requestingIds.has(reward.id)}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {/* Management View Toggle */}
+        <div className="mt-8 pt-6 border-t">
+          <h3 className="text-lg font-semibold mb-4">All Family Rewards (Management View)</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {rewards.map((reward) => (
               <Card key={reward.id} className="relative">
@@ -172,7 +330,7 @@ export function RewardsGallery() {
               </Card>
             ))}
           </div>
-        )}
+        </div>
       </div>
     );
   }
