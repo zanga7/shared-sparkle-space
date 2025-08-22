@@ -1,14 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useRewards } from '@/hooks/useRewards';
-import { Check, X, Clock, User, Coins, RotateCcw, CheckCircle } from 'lucide-react';
+import { Check, X, Clock, User, Coins, RotateCcw, CheckCircle, Filter } from 'lucide-react';
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
 import type { RewardRequest } from '@/types/rewards';
+
+interface Profile {
+  id: string;
+  display_name: string;
+  role: string;
+}
 
 export function ApprovalQueue() {
   const { rewardRequests, approveRewardRequest, denyRewardRequest, revokeRewardRequest, markRewardClaimed, getPointsBalance } = useRewards();
@@ -18,8 +26,34 @@ export function ApprovalQueue() {
   const [isDenying, setIsDenying] = useState(false);
   const [isRevoking, setIsRevoking] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [familyMembers, setFamilyMembers] = useState<Profile[]>([]);
+  const [selectedMember, setSelectedMember] = useState<string>('all');
 
   const pendingRequests = rewardRequests.filter(req => req.status === 'pending');
+  
+  // Filter requests by selected member
+  const filteredRequests = selectedMember === 'all' 
+    ? rewardRequests 
+    : rewardRequests.filter(req => req.requested_by === selectedMember);
+
+  // Fetch family members for filter
+  useEffect(() => {
+    const fetchFamilyMembers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, display_name, role')
+          .order('display_name');
+        
+        if (error) throw error;
+        setFamilyMembers(data || []);
+      } catch (error) {
+        console.error('Error fetching family members:', error);
+      }
+    };
+
+    fetchFamilyMembers();
+  }, []);
 
   const handleApprove = async () => {
     if (!selectedRequest) return;
@@ -97,33 +131,58 @@ export function ApprovalQueue() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Approval Queue</h2>
-        <Badge variant="secondary" className="flex items-center gap-1">
-          <Clock className="w-4 h-4" />
-          {pendingRequests.length} pending
-        </Badge>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4" />
+            <Select value={selectedMember} onValueChange={setSelectedMember}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Members</SelectItem>
+                {familyMembers.map((member) => (
+                  <SelectItem key={member.id} value={member.id}>
+                    {member.display_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Badge variant="secondary" className="flex items-center gap-1">
+            <Clock className="w-4 h-4" />
+            {filteredRequests.filter(req => req.status === 'pending').length} pending
+          </Badge>
+        </div>
       </div>
 
-      <div className="space-y-3">
-        {rewardRequests.map((request) => {
+      <div className="space-y-2">
+        {filteredRequests.map((request) => {
           const currentBalance = getPointsBalance(request.requested_by);
           const canAfford = currentBalance >= request.points_cost;
 
           return (
             <Card key={request.id} className="relative">
-              <CardContent className="p-4">
+              <CardContent className="p-3">
                 <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3">
-                      <div>
-                        <h4 className="font-medium text-sm">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-medium text-sm truncate">
                           {request.reward?.title || 'Unknown Reward'}
                         </h4>
-                        <p className="text-xs text-muted-foreground">
-                          {request.requestor?.display_name || 'Unknown User'} • {request.points_cost} points
-                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{request.requestor?.display_name || 'Unknown User'}</span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Coins className="w-3 h-3" />
+                            {request.points_cost}
+                          </span>
+                          <span>•</span>
+                          <span>{format(new Date(request.created_at), 'MMM d')}</span>
+                        </div>
                       </div>
                     </div>
                   </div>

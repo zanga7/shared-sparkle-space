@@ -11,7 +11,7 @@ export function useRewards() {
   const [pointsBalances, setPointsBalances] = useState<PointsBalance[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch active rewards
+  // Fetch all rewards (both active and inactive)
   const fetchRewards = async () => {
     if (!user) return;
 
@@ -19,7 +19,6 @@ export function useRewards() {
       const { data, error } = await supabase
         .from('rewards')
         .select('*')
-        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
