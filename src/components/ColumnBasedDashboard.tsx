@@ -505,8 +505,8 @@ const ColumnBasedDashboard = () => {
   };
 
   const handleSettingsClick = () => {
-    // Navigate to admin panel or settings
-    window.open('/admin', '_blank');
+    // Navigate to admin dashboard
+    window.location.href = '/admin';
   };
 
   if (loading) {
@@ -564,117 +564,119 @@ const ColumnBasedDashboard = () => {
             <DragDropContext onDragEnd={handleDragEnd}>
               <div className="w-full overflow-x-auto touch-pan-x">
                 <div className="flex gap-3 sm:gap-4 pb-4" style={{ minWidth: 'fit-content' }}>
-                  {/* Family member columns */}
-                  {familyMembers.map(member => {
-                    const memberTasks = tasksByMember.get(member.id) || [];
-                    const completedTasks = memberTasks.filter(task => 
-                      task.task_completions && task.task_completions.length > 0
-                    );
-                    const pendingTasks = memberTasks.filter(task => 
-                      !task.task_completions || task.task_completions.length === 0
-                    );
+                   {/* Family member columns - filtered if a member is selected */}
+                   {familyMembers
+                     .filter(member => !selectedMemberFilter || member.id === selectedMemberFilter)
+                     .map(member => {
+                     const memberTasks = tasksByMember.get(member.id) || [];
+                     const completedTasks = memberTasks.filter(task => 
+                       task.task_completions && task.task_completions.length > 0
+                     );
+                     const pendingTasks = memberTasks.filter(task => 
+                       !task.task_completions || task.task_completions.length === 0
+                     );
 
-                    return (
-                      <Card key={member.id} className={cn(
-                        "flex-shrink-0 w-72 sm:w-80 h-fit border-2",
-                        getMemberColorClasses(member.color).border,
-                        getMemberColorClasses(member.color).bgSoft
-                      )}>
-                        <CardHeader className={cn(
-                          "pb-3 border-b",
-                          getMemberColorClasses(member.color).border
-                        )}>
-                          <div className="flex items-center gap-3">
-                             <UserAvatar
-                               name={member.display_name}
-                               color={member.color}
-                               size="md"
-                               className="sm:h-10 sm:w-10"
-                             />
-                             <div className="min-w-0 flex-1">
-                               <CardTitle className="text-base sm:text-lg truncate">{member.display_name}</CardTitle>
-                               <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
-                                 <Badge variant={member.role === 'parent' ? 'default' : 'secondary'} className="text-xs">
-                                   {member.role}
-                                 </Badge>
-                                 <span className="truncate">{member.total_points} pts</span>
-                               </div>
-                            </div>
-                          </div>
-                           <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
-                             <span>{pendingTasks.length} pending</span>
-                             <span>{completedTasks.length} completed</span>
+                     return (
+                       <Card key={member.id} className={cn(
+                         "flex-shrink-0 w-72 sm:w-80 h-fit border-2",
+                         getMemberColorClasses(member.color).border,
+                         getMemberColorClasses(member.color).bgSoft
+                       )}>
+                         <CardHeader className={cn(
+                           "pb-3 border-b",
+                           getMemberColorClasses(member.color).border
+                         )}>
+                           <div className="flex items-center gap-3">
+                              <UserAvatar
+                                name={member.display_name}
+                                color={member.color}
+                                size="md"
+                                className="sm:h-10 sm:w-10"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <CardTitle className="text-base sm:text-lg truncate">{member.display_name}</CardTitle>
+                                <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                                  <Badge variant={member.role === 'parent' ? 'default' : 'secondary'} className="text-xs">
+                                    {member.role}
+                                  </Badge>
+                                  <span className="truncate">{member.total_points} pts</span>
+                                </div>
+                             </div>
                            </div>
-                        </CardHeader>
+                            <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
+                              <span>{pendingTasks.length} pending</span>
+                              <span>{completedTasks.length} completed</span>
+                            </div>
+                         </CardHeader>
 
-                        <Droppable droppableId={member.id}>
-                          {(provided, snapshot) => (
-                            <CardContent 
-                              className={cn(
-                                "space-y-3 transition-colors",
-                                snapshot.isDraggingOver && "bg-accent/50"
-                              )}
-                              ref={provided.innerRef}
-                              {...provided.droppableProps}
-                            >
-                               <div className="space-y-2 sm:space-y-3 mb-4 min-h-[100px]">
-                                 {memberTasks.length === 0 ? (
-                                   <div className="text-center py-6 sm:py-8 text-muted-foreground">
-                                     <Clock className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
-                                     <p className="text-xs sm:text-sm px-2">
-                                       {snapshot.isDraggingOver ? 'Drop task here to assign' : 'No tasks assigned'}
-                                     </p>
-                                  </div>
-                                ) : (
-                                  memberTasks.map((task, index) => (
-                                    <Draggable key={task.id} draggableId={task.id} index={index}>
-                                      {(provided, snapshot) => (
-                                        <div
-                                          ref={provided.innerRef}
-                                          {...provided.draggableProps}
-                                          {...provided.dragHandleProps}
-                                          className={cn(
-                                            snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50"
-                                          )}
-                                        >
-                                          <EnhancedTaskItem
-                                            task={task}
-                                            allTasks={tasks}
-                                            familyMembers={familyMembers}
-                                            onToggle={handleTaskToggle}
-                                            onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                            onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
-                                            showActions={profile.role === 'parent' && !snapshot.isDragging}
-                                          />
-                                        </div>
-                                      )}
-                                    </Draggable>
-                                  ))
-                                )}
-                                {provided.placeholder}
-                              </div>
-                              
-                              {/* Add Task Button */}
-                              {profile.role === 'parent' && (
-                                 <AddButton
-                                   className={cn(
-                                     "w-full",
-                                     getMemberColorClasses(member.color).border,
-                                     getMemberColorClasses(member.color).text
-                                   )}
-                                   text="Add Task"
-                                   onClick={() => handleAddTaskForMember(member.id)}
-                                 />
-                              )}
-                            </CardContent>
-                          )}
-                        </Droppable>
-                      </Card>
-                    );
-                  })}
+                         <Droppable droppableId={member.id}>
+                           {(provided, snapshot) => (
+                             <CardContent 
+                               className={cn(
+                                 "space-y-3 transition-colors",
+                                 snapshot.isDraggingOver && "bg-accent/50"
+                               )}
+                               ref={provided.innerRef}
+                               {...provided.droppableProps}
+                             >
+                                <div className="space-y-2 sm:space-y-3 mb-4 min-h-[100px]">
+                                  {memberTasks.length === 0 ? (
+                                    <div className="text-center py-6 sm:py-8 text-muted-foreground">
+                                      <Clock className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
+                                      <p className="text-xs sm:text-sm px-2">
+                                        {snapshot.isDraggingOver ? 'Drop task here to assign' : 'No tasks assigned'}
+                                      </p>
+                                   </div>
+                                 ) : (
+                                   memberTasks.map((task, index) => (
+                                     <Draggable key={task.id} draggableId={task.id} index={index}>
+                                       {(provided, snapshot) => (
+                                         <div
+                                           ref={provided.innerRef}
+                                           {...provided.draggableProps}
+                                           {...provided.dragHandleProps}
+                                           className={cn(
+                                             snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50"
+                                           )}
+                                         >
+                                           <EnhancedTaskItem
+                                             task={task}
+                                             allTasks={tasks}
+                                             familyMembers={familyMembers}
+                                             onToggle={handleTaskToggle}
+                                             onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                                             onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
+                                             showActions={profile.role === 'parent' && !snapshot.isDragging}
+                                           />
+                                         </div>
+                                       )}
+                                     </Draggable>
+                                   ))
+                                 )}
+                                 {provided.placeholder}
+                               </div>
+                               
+                               {/* Add Task Button */}
+                               {profile.role === 'parent' && (
+                                  <AddButton
+                                    className={cn(
+                                      "w-full",
+                                      getMemberColorClasses(member.color).border,
+                                      getMemberColorClasses(member.color).text
+                                    )}
+                                    text="Add Task"
+                                    onClick={() => handleAddTaskForMember(member.id)}
+                                  />
+                               )}
+                             </CardContent>
+                           )}
+                         </Droppable>
+                       </Card>
+                     );
+                   })}
 
-                  {/* Unassigned tasks column */}
-                  {(tasksByMember.get('unassigned')?.length > 0 || profile.role === 'parent') && (
+                   {/* Unassigned tasks column - only show if no member filter or if unassigned has tasks */}
+                   {!selectedMemberFilter && (tasksByMember.get('unassigned')?.length > 0 || profile.role === 'parent') && (
                      <Card className="flex-shrink-0 w-72 sm:w-80 h-fit">
                       <CardHeader className="pb-3">
                          <div className="flex items-center gap-2 sm:gap-3">
@@ -766,8 +768,11 @@ const ColumnBasedDashboard = () => {
           <TabsContent value="calendar" className="mt-4 sm:mt-6">
             <div className="w-full">
               <CalendarView
-                tasks={tasks}
-                familyMembers={familyMembers}
+                tasks={selectedMemberFilter ? tasks.filter(task => 
+                  task.assigned_to === selectedMemberFilter || 
+                  task.assignees?.some(a => a.profile_id === selectedMemberFilter)
+                ) : tasks}
+                familyMembers={selectedMemberFilter ? familyMembers.filter(m => m.id === selectedMemberFilter) : familyMembers}
                 onTaskUpdated={fetchUserData}
                 onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
               />
