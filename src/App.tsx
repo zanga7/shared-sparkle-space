@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import ChildAuth from "./pages/ChildAuth";
 import NotFound from "./pages/NotFound";
 import Rewards from "./pages/Rewards";
+import Lists from "./pages/Lists";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import MemberManagement from "./pages/admin/MemberManagement";
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/child-auth" element={<ChildAuth />} />
             <Route path="/rewards" element={<Rewards />} />
+            <Route path="/lists" element={<Lists />} />
             
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />

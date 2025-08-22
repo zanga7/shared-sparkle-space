@@ -20,6 +20,7 @@ import { CalendarView } from '@/components/CalendarView';
 import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
 import { RewardsGallery } from '@/components/rewards/RewardsGallery';
 import { ChildAuthProvider } from '@/hooks/useChildAuth';
+import Lists from '@/pages/Lists';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -555,11 +556,15 @@ const ColumnBasedDashboard = () => {
       {/* Main Content */}
       <div className="w-full px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
         <Tabs defaultValue="columns" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto sm:mx-0">
+          <TabsList className="grid w-full grid-cols-4 max-w-2xl mx-auto sm:mx-0">
             <TabsTrigger value="columns" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <List className="h-3 w-3 sm:h-4 sm:w-4" />
+              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden xs:inline">Tasks</span>
               <span className="xs:hidden">Tasks</span>
+            </TabsTrigger>
+            <TabsTrigger value="lists" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <List className="h-3 w-3 sm:h-4 sm:w-4" />
+              Lists
             </TabsTrigger>
             <TabsTrigger value="calendar" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -766,6 +771,12 @@ const ColumnBasedDashboard = () => {
                 </div>
               </div>
             </DragDropContext>
+          </TabsContent>
+
+          <TabsContent value="lists" className="mt-4 sm:mt-6">
+            <div className="w-full">
+              <Lists />
+            </div>
           </TabsContent>
 
           <TabsContent value="calendar" className="mt-4 sm:mt-6">

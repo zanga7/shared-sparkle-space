@@ -362,6 +362,172 @@ export type Database = {
           },
         ]
       }
+      list_item_assignees: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          id: string
+          list_item_id: string
+          profile_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          id?: string
+          list_item_id: string
+          profile_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          id?: string
+          list_item_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_item_assignees_list_item_id_fkey"
+            columns: ["list_item_id"]
+            isOneToOne: false
+            referencedRelation: "list_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      list_items: {
+        Row: {
+          category: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string
+          due_date: string | null
+          id: string
+          is_completed: boolean
+          list_id: string
+          name: string
+          notes: string | null
+          quantity: number | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by: string
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean
+          list_id: string
+          name: string
+          notes?: string | null
+          quantity?: number | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean
+          list_id?: string
+          name?: string
+          notes?: string | null
+          quantity?: number | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_items_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      list_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          family_id: string | null
+          id: string
+          is_global: boolean
+          list_type: string
+          name: string
+          template_items: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          family_id?: string | null
+          id?: string
+          is_global?: boolean
+          list_type: string
+          name: string
+          template_items?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          family_id?: string | null
+          id?: string
+          is_global?: boolean
+          list_type?: string
+          name?: string
+          template_items?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lists: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          family_id: string
+          id: string
+          is_archived: boolean
+          list_type: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          family_id: string
+          id?: string
+          is_archived?: boolean
+          list_type?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          family_id?: string
+          id?: string
+          is_archived?: boolean
+          list_type?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       points_ledger: {
         Row: {
           created_at: string
