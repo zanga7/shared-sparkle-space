@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, CheckCircle, Clock, Edit, Trash2, Calendar, List, Users, Gift } from 'lucide-react';
+import { Plus, CheckCircle, Clock, Edit, Trash2, Calendar, List, Users, Gift, Settings } from 'lucide-react';
+import { NavigationHeader } from '@/components/NavigationHeader';
 import { AddButton } from '@/components/ui/add-button';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -49,6 +50,7 @@ const ColumnBasedDashboard = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedMemberForTask, setSelectedMemberForTask] = useState<string | null>(null);
+  const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
   const { taskSeries } = useRecurringTasks(profile?.family_id);
   const { rotatingTasks, refreshRotatingTasks } = useRotatingTasks(profile?.family_id);
 
@@ -410,7 +412,7 @@ const ColumnBasedDashboard = () => {
     }
   };
 
-  // Get tasks organized by family member
+  // Get tasks organized by family member with filtering
   const getTasksByMember = () => {
     const tasksByMember = new Map<string, Task[]>();
     
@@ -477,6 +479,13 @@ const ColumnBasedDashboard = () => {
       }
     });
     
+    // Filter tasks by selected member if one is chosen
+    if (selectedMemberFilter) {
+      const filteredMap = new Map<string, Task[]>();
+      filteredMap.set(selectedMemberFilter, tasksByMember.get(selectedMemberFilter) || []);
+      return filteredMap;
+    }
+    
     return tasksByMember;
   };
 
@@ -492,6 +501,11 @@ const ColumnBasedDashboard = () => {
   const handleDialogClose = () => {
     setIsAddDialogOpen(false);
     setSelectedMemberForTask(null);
+  };
+
+  const handleSettingsClick = () => {
+    // Navigate to admin panel or settings
+    window.open('/admin', '_blank');
   };
 
   if (loading) {
@@ -524,34 +538,13 @@ const ColumnBasedDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background w-full">
-      {/* Header */}
-      <header className="bg-card border-b px-4 lg:px-6 py-4">
-        <div className="max-w-full mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold">Family Dashboard</h1>
-            <p className="text-muted-foreground text-sm sm:text-base">Welcome back, {profile.display_name}!</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-            <Badge variant={profile.role === 'parent' ? 'default' : 'secondary'} className="text-xs sm:text-sm">
-              {profile.role === 'parent' ? 'Parent' : 'Child'}
-            </Badge>
-            {profile.role === 'parent' && (
-              <>
-                <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">
-                  <a href="/admin">Admin Panel</a>
-                </Button>
-                <Button onClick={() => setIsAddDialogOpen(true)} size="sm" className="text-xs sm:text-sm">
-                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  Add Task
-                </Button>
-              </>
-            )}
-            <Button variant="outline" onClick={() => signOut()} size="sm" className="text-xs sm:text-sm">
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
+      {/* Navigation Header */}
+      <NavigationHeader
+        familyMembers={familyMembers}
+        selectedMember={selectedMemberFilter}
+        onMemberSelect={setSelectedMemberFilter}
+        onSettingsClick={handleSettingsClick}
+      />
 
       {/* Main Content */}
       <div className="w-full px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
