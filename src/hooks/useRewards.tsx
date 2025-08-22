@@ -60,26 +60,19 @@ export function useRewards() {
     if (!user) return;
 
     try {
-      // Get all family members
+      // Get all family members with their total_points directly from profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, total_points')
         .order('sort_order');
 
       if (profilesError) throw profilesError;
 
-      // Get balance for each profile
-      const balances: PointsBalance[] = [];
-      for (const profile of profiles || []) {
-        const { data: balanceData, error: balanceError } = await supabase
-          .rpc('get_profile_points_balance', { profile_id_param: profile.id });
-
-        if (balanceError) throw balanceError;
-        balances.push({
-          profile_id: profile.id,
-          balance: balanceData || 0
-        });
-      }
+      // Map the profiles to PointsBalance format
+      const balances: PointsBalance[] = (profiles || []).map(profile => ({
+        profile_id: profile.id,
+        balance: profile.total_points || 0
+      }));
 
       setPointsBalances(balances);
     } catch (error) {
