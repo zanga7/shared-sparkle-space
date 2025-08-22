@@ -35,20 +35,53 @@ export function useRewards() {
     if (!user) return;
 
     try {
-      // Simple query without joins to avoid foreign key issues
-      const { data, error } = await supabase
+      // First get the raw reward requests
+      const { data: requests, error } = await supabase
         .from('reward_requests')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
-        // If the table doesn't exist or has relationship issues, just skip it
         console.log('Reward requests not available yet:', error.message);
         setRewardRequests([]);
         return;
       }
+
+      if (!requests || requests.length === 0) {
+        setRewardRequests([]);
+        return;
+      }
+
+      // Get all unique reward IDs and profile IDs
+      const rewardIds = [...new Set(requests.map(req => req.reward_id))];
+      const profileIds = [...new Set(requests.map(req => req.requested_by))];
+
+      // Fetch rewards and profiles in parallel
+      const [rewardsData, profilesData] = await Promise.all([
+        supabase.from('rewards').select('id, title, description, cost_points').in('id', rewardIds),
+        supabase.from('profiles').select('id, display_name, color').in('id', profileIds)
+      ]);
+
+      // Create lookup maps
+      const rewardsMap = new Map();
+      const profilesMap = new Map();
+
+      if (rewardsData.data) {
+        rewardsData.data.forEach(reward => rewardsMap.set(reward.id, reward));
+      }
+
+      if (profilesData.data) {
+        profilesData.data.forEach(profile => profilesMap.set(profile.id, profile));
+      }
+
+      // Combine the data
+      const enrichedRequests = requests.map(request => ({
+        ...request,
+        reward: rewardsMap.get(request.reward_id) || null,
+        requestor: profilesMap.get(request.requested_by) || null
+      }));
       
-      setRewardRequests((data || []) as RewardRequest[]);
+      setRewardRequests(enrichedRequests as RewardRequest[]);
     } catch (error) {
       console.log('Reward requests functionality not available yet');
       setRewardRequests([]);
