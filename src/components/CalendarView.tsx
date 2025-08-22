@@ -600,14 +600,13 @@ export const CalendarView = ({
                     task.assigned_to === member.id || 
                     task.assignees?.some(a => a.profile_id === member.id)
                   );
-                  const memberEvents = events.filter(event => {
-                    const eventDate = new Date(event.start_date);
-                    const isEventOnThisDate = format(eventDate, 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd');
-                    // Show events if no attendees (for all members) or if member is an attendee
-                    const isEventForThisMember = !event.attendees || event.attendees.length === 0 || 
-                      event.attendees?.some((a: any) => a.profile_id === member.id);
-                    return isEventOnThisDate && isEventForThisMember;
-                  });
+                   const memberEvents = events.filter(event => {
+                     const eventDate = new Date(event.start_date);
+                     const isEventOnThisDate = format(eventDate, 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd');
+                     // Only show events if member is specifically assigned as an attendee
+                     const isEventForThisMember = event.attendees?.some((a: any) => a.profile_id === member.id);
+                     return isEventOnThisDate && isEventForThisMember;
+                   });
                   const memberColors = getMemberColors(member);
 
                   return (
@@ -723,6 +722,7 @@ export const CalendarView = ({
               {days.map((day) => {
                 const dateKey = format(day, 'yyyy-MM-dd');
                 const dayTasks = tasksByDate[dateKey] || [];
+                const dayEvents = eventsByDate[dateKey] || [];
                 const completedCount = dayTasks.filter(t => t.task_completions?.length).length;
                 const totalCount = dayTasks.length;
 
@@ -764,9 +764,48 @@ export const CalendarView = ({
                           )}
                         </div>
 
-                        {/* Tasks */}
+                        {/* Tasks and Events */}
                         <div className="space-y-1">
                           {dayTasks.map((task, index) => renderTask(task, index))}
+                          
+                          {/* Events */}
+                          {dayEvents.map((event) => (
+                            <div 
+                              key={event.id}
+                              className="group p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs hover:shadow-md cursor-pointer transition-all"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditEvent(event);
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-purple-700 truncate">{event.title}</span>
+                                <div className="flex items-center gap-1">
+                                  <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600">
+                                    Event
+                                  </Badge>
+                                  <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-purple-600" />
+                                </div>
+                              </div>
+                              {event.attendees && event.attendees.length > 0 && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <Users className="h-2.5 w-2.5 text-purple-600" />
+                                  <span className="text-xs text-purple-600 truncate">
+                                    {event.attendees.map((a: any) => a.profile?.display_name).join(', ')}
+                                  </span>
+                                </div>
+                              )}
+                              {event.start_date && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <Clock className="h-2.5 w-2.5 text-purple-600" />
+                                  <span className="text-xs text-purple-600">
+                                    {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          
                           {provided.placeholder}
                         </div>
 
