@@ -25,7 +25,8 @@ import {
   Target,
   Users,
   Calendar,
-  Sun
+  Sun,
+  MapPin
 } from 'lucide-react';
 import { AddButton } from '@/components/ui/add-button';
 import { 
@@ -170,6 +171,23 @@ export const CalendarView = ({
     
     return grouped;
   }, [filteredTasks]);
+
+  // Group events by date
+  const eventsByDate = useMemo(() => {
+    const grouped: { [key: string]: any[] } = {};
+    
+    events.forEach(event => {
+      if (event.start_date) {
+        const dateKey = format(new Date(event.start_date), 'yyyy-MM-dd');
+        if (!grouped[dateKey]) {
+          grouped[dateKey] = [];
+        }
+        grouped[dateKey].push(event);
+      }
+    });
+    
+    return grouped;
+  }, [events]);
 
   // Calculate analytics
   const analytics = useMemo(() => {
