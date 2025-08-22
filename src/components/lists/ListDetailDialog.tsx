@@ -114,7 +114,7 @@ export function ListDetailDialog({
         .select(`
           *,
           assignees:list_item_assignees(
-            profile:profiles!list_item_assignees_profile_id_fkey(id, display_name, role, color)
+            profile:profiles(id, display_name, role, color)
           )
         `)
         .eq('list_id', list.id)

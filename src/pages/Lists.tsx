@@ -16,12 +16,15 @@ import {
   Archive,
   Calendar,
   Users,
-  MoreVertical
+  MoreVertical,
+  Hash
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ListDetailDialog } from '@/components/lists/ListDetailDialog';
 import { CreateListDialog } from '@/components/lists/CreateListDialog';
+import { EditListDialog } from '@/components/lists/EditListDialog';
+import { CategoryManager } from '@/components/lists/CategoryManager';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,6 +64,8 @@ const Lists = () => {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [selectedList, setSelectedList] = useState<List | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingList, setEditingList] = useState<List | null>(null);
+  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -309,10 +314,20 @@ const Lists = () => {
             <h1 className="text-3xl font-bold">Lists</h1>
             <p className="text-muted-foreground">Manage your family shopping, camping, and to-do lists</p>
           </div>
-          <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            New List
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsCategoryManagerOpen(true)} 
+              className="gap-2"
+            >
+              <Hash className="h-4 w-4" />
+              Manage Categories
+            </Button>
+            <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              New List
+            </Button>
+          </div>
         </div>
 
         {/* Search and Filters */}
@@ -367,6 +382,12 @@ const Lists = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingList(list);
+                        }}>
+                          Edit
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => {
                           e.stopPropagation();
                           duplicateList(list);
@@ -465,6 +486,26 @@ const Lists = () => {
         onListCreated={handleListCreated}
         profile={profile!}
       />
+
+      {editingList && (
+        <EditListDialog
+          list={editingList}
+          open={!!editingList}
+          onOpenChange={() => setEditingList(null)}
+          onListUpdated={() => {
+            fetchLists();
+            setEditingList(null);
+          }}
+        />
+      )}
+
+      {profile && (
+        <CategoryManager
+          open={isCategoryManagerOpen}
+          onOpenChange={setIsCategoryManagerOpen}
+          familyId={profile.family_id}
+        />
+      )}
     </div>
   );
 };
