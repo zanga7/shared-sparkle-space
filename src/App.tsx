@@ -16,6 +16,7 @@ import MemberManagement from "./pages/admin/MemberManagement";
 import RotatingTasksManagement from "./pages/admin/RotatingTasksManagement";
 import CalendarSettings from "./pages/admin/CalendarSettings";
 import RewardsManagement from "./pages/admin/RewardsManagement";
+import RewardApprovals from "./pages/admin/RewardApprovals";
 
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="rotating-tasks" element={<RotatingTasksManagement />} />
             <Route path="calendar-settings" element={<CalendarSettings />} />
             <Route path="rewards" element={<RewardsManagement />} />
+            <Route path="reward-approvals" element={<RewardApprovals />} />
           </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -200,18 +200,38 @@ export function useRewards() {
       const reward = rewards.find(r => r.id === rewardId);
       if (!reward) throw new Error('Reward not found');
 
-      const { error } = await supabase
+      // First create the reward request as pending
+      const { data: insertData, error: insertError } = await supabase
         .from('reward_requests')
         .insert({
           reward_id: rewardId,
           requested_by: profileId,
-          points_cost: reward.cost_points
-        });
+          points_cost: reward.cost_points,
+          status: 'pending'
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
-      toast.success('Reward request submitted');
-      await fetchRewardRequests();
+      // If auto-approve is enabled, immediately approve it
+      if (reward.auto_approve && insertData) {
+        try {
+          await supabase.rpc('approve_reward_request', {
+            request_id_param: insertData.id,
+            approval_note_param: 'Auto-approved reward request'
+          });
+          
+          toast.success('Reward automatically approved!');
+        } catch (approveError) {
+          console.error('Error auto-approving reward:', approveError);
+          toast.success('Reward request submitted for approval');
+        }
+      } else {
+        toast.success('Reward request submitted for approval');
+      }
+
+      await Promise.all([fetchRewardRequests(), fetchPointsBalances()]);
     } catch (error) {
       console.error('Error requesting reward:', error);
       toast.error('Failed to request reward');

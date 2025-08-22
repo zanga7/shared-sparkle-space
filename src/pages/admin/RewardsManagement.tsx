@@ -12,7 +12,7 @@ import { ImageUpload } from '@/components/ui/image-upload';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 import { MultiAssigneeAvatarGroup } from '@/components/ui/multi-assignee-avatar-group';
 import { useRewards } from '@/hooks/useRewards';
-import { ApprovalQueue } from '@/components/rewards/ApprovalQueue';
+
 import { EditRewardDialog } from '@/components/rewards/EditRewardDialog';
 import { Plus, Gift, Settings, Coins, Edit, Trash2, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -151,7 +151,7 @@ export default function RewardsManagement() {
         <div>
           <h1 className="text-3xl font-bold">Rewards Management</h1>
           <p className="text-muted-foreground">
-            Create and manage family rewards, and approve reward requests.
+            Create and manage family rewards that members can request with their points.
           </p>
         </div>
         
@@ -273,11 +273,6 @@ export default function RewardsManagement() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-
-      {/* Approval Queue */}
-      <div>
-        <ApprovalQueue />
       </div>
 
       {/* Existing Rewards */}
