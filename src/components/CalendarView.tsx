@@ -91,8 +91,9 @@ export const CalendarView = ({
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
   const [selectedEventDate, setSelectedEventDate] = useState<Date | null>(null);
   const [defaultMember, setDefaultMember] = useState<string>('');
+  const [editingEvent, setEditingEvent] = useState<any>(null);
   const { toast } = useToast();
-  const { events, createEvent, refreshEvents } = useEvents(familyId);
+  const { events, createEvent, updateEvent, deleteEvent, refreshEvents } = useEvents(familyId);
 
   // Get member color classes using the global color system
   const getMemberColors = (member: Profile | null) => {
@@ -313,8 +314,17 @@ export const CalendarView = ({
 
   // Handle event creation
   const handleCreateEvent = (date: Date, memberId?: string) => {
+    setEditingEvent(null);
     setSelectedEventDate(date);
     setDefaultMember(memberId || '');
+    setIsEventDialogOpen(true);
+  };
+
+  // Handle event editing
+  const handleEditEvent = (event: any) => {
+    setEditingEvent(event);
+    setSelectedEventDate(new Date(event.start_date));
+    setDefaultMember('');
     setIsEventDialogOpen(true);
   };
 
@@ -590,10 +600,12 @@ export const CalendarView = ({
                     task.assigned_to === member.id || 
                     task.assignees?.some(a => a.profile_id === member.id)
                   );
-                  const memberEvents = events.filter(event =>
-                    event.attendees?.some((a: any) => a.profile_id === member.id) ||
-                    (!event.attendees || event.attendees.length === 0)
-                  );
+                  const memberEvents = events.filter(event => {
+                    const eventDate = new Date(event.start_date);
+                    const isEventOnThisDate = format(eventDate, 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd');
+                    const isEventForThisMember = event.attendees?.some((a: any) => a.profile_id === member.id);
+                    return isEventOnThisDate && isEventForThisMember;
+                  });
                   const memberColors = getMemberColors(member);
 
                   return (
@@ -631,23 +643,35 @@ export const CalendarView = ({
                             {/* Tasks */}
                             {memberTasks.map((task, index) => renderTask(task, index))}
                             
-                           {/* Events */}
-                            {events.filter(event => {
-                              const eventDate = new Date(event.start_date);
-                              return format(eventDate, 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd');
-                            }).map((event) => (
+                            {/* Events */}
+                            {memberEvents.map((event) => (
                               <div 
                                 key={event.id}
-                                className="p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs"
+                                className="group p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs hover:shadow-md cursor-pointer transition-all"
+                                onClick={() => handleEditEvent(event)}
                               >
                                 <div className="flex items-center justify-between">
                                   <span className="font-medium text-purple-700">{event.title}</span>
-                                  <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600">
-                                    Event
-                                  </Badge>
+                                  <div className="flex items-center gap-1">
+                                    <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600">
+                                      Event
+                                    </Badge>
+                                    <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-purple-600" />
+                                  </div>
                                 </div>
                                 {event.location && (
-                                  <p className="text-xs text-purple-600 mt-1">{event.location}</p>
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <MapPin className="h-2.5 w-2.5 text-purple-600" />
+                                    <p className="text-xs text-purple-600">{event.location}</p>
+                                  </div>
+                                )}
+                                {event.start_date && (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <Clock className="h-2.5 w-2.5 text-purple-600" />
+                                    <p className="text-xs text-purple-600">
+                                      {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
+                                    </p>
+                                  </div>
                                 )}
                               </div>
                             ))}
@@ -665,10 +689,7 @@ export const CalendarView = ({
                             </div>
                             
                             {/* Empty State */}
-                            {memberTasks.length === 0 && events.filter(event => {
-                              const eventDate = new Date(event.start_date);
-                              return format(eventDate, 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd');
-                            }).length === 0 && (
+                            {memberTasks.length === 0 && memberEvents.length === 0 && (
                               <div className="text-center py-8">
                                 <div className="text-xs text-muted-foreground">
                                   No items for {isToday(currentDate) ? 'today' : 'this day'}
@@ -807,35 +828,69 @@ export const CalendarView = ({
         familyMembers={familyMembers}
         defaultDate={selectedEventDate || undefined}
         defaultMember={defaultMember}
+            editingEvent={editingEvent}
             onSave={async (eventData) => {
               if (!familyId) return;
               
               try {
-                const result = await createEvent({
-                  title: eventData.title,
-                  description: eventData.description,
-                  location: eventData.location,
-                  start_date: eventData.start_date,
-                  end_date: eventData.end_date,
-                  is_all_day: eventData.is_all_day,
-                  attendees: eventData.attendees
-                });
-                
-                if (result) {
+                if (editingEvent) {
+                  // Update existing event
+                  await updateEvent(editingEvent.id, {
+                    title: eventData.title,
+                    description: eventData.description,
+                    location: eventData.location,
+                    start_date: eventData.start_date,
+                    end_date: eventData.end_date,
+                    is_all_day: eventData.is_all_day
+                  }, eventData.attendees);
+                  
                   toast({
                     title: 'Success',
-                    description: 'Event created successfully',
+                    description: 'Event updated successfully',
                   });
+                } else {
+                  // Create new event
+                  const result = await createEvent({
+                    title: eventData.title,
+                    description: eventData.description,
+                    location: eventData.location,
+                    start_date: eventData.start_date,
+                    end_date: eventData.end_date,
+                    is_all_day: eventData.is_all_day,
+                    attendees: eventData.attendees
+                  });
+                  
+                  if (result) {
+                    toast({
+                      title: 'Success',
+                      description: 'Event created successfully',
+                    });
+                  }
                 }
                 
                 await refreshEvents();
                 setIsEventDialogOpen(false);
                 setSelectedEventDate(null);
                 setDefaultMember('');
+                setEditingEvent(null);
               } catch (error) {
-                console.error('Error creating event:', error);
+                console.error('Error saving event:', error);
               }
             }}
+            onDelete={editingEvent ? async () => {
+              try {
+                await deleteEvent(editingEvent.id);
+                toast({
+                  title: 'Success',
+                  description: 'Event deleted successfully',
+                });
+                await refreshEvents();
+                setIsEventDialogOpen(false);
+                setEditingEvent(null);
+              } catch (error) {
+                console.error('Error deleting event:', error);
+              }
+            } : undefined}
       />
     </Card>
   );

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,7 @@ interface EventDialogProps {
     is_all_day: boolean;
     attendees?: string[];
   }) => void;
+  onDelete?: () => void;
   editingEvent?: Event | null;
   defaultDate?: Date;
   defaultMember?: string;
@@ -38,6 +39,7 @@ export const EventDialog = ({
   onOpenChange,
   familyMembers,
   onSave,
+  onDelete,
   editingEvent,
   defaultDate,
   defaultMember
@@ -66,6 +68,37 @@ export const EventDialog = ({
     editingEvent?.attendees?.map(a => a.profile_id) || 
     (defaultMember ? [defaultMember] : [])
   );
+
+  // Reset form when editing event changes or dialog opens/closes
+  useEffect(() => {
+    if (open) {
+      if (editingEvent) {
+        // Populate form with existing event data
+        setTitle(editingEvent.title || '');
+        setDescription(editingEvent.description || '');
+        setLocation(editingEvent.location || '');
+        setStartDate(new Date(editingEvent.start_date));
+        setEndDate(new Date(editingEvent.end_date));
+        setStartTime(format(new Date(editingEvent.start_date), 'HH:mm'));
+        setEndTime(format(new Date(editingEvent.end_date), 'HH:mm'));
+        setIsAllDay(editingEvent.is_all_day || false);
+        setSelectedAttendees(editingEvent.attendees?.map(a => a.profile_id) || []);
+      } else {
+        // Reset form for new event
+        setTitle('');
+        setDescription('');
+        setLocation('');
+        const newStartDate = defaultDate || new Date();
+        const newEndDate = defaultDate ? new Date(defaultDate.getTime() + 60 * 60 * 1000) : new Date(Date.now() + 60 * 60 * 1000);
+        setStartDate(newStartDate);
+        setEndDate(newEndDate);
+        setStartTime(format(newStartDate, 'HH:mm'));
+        setEndTime(format(newEndDate, 'HH:mm'));
+        setIsAllDay(false);
+        setSelectedAttendees(defaultMember ? [defaultMember] : []);
+      }
+    }
+  }, [open, editingEvent, defaultDate, defaultMember]);
 
   const toggleAttendee = (memberId: string) => {
     setSelectedAttendees(prev => 
@@ -315,16 +348,31 @@ export const EventDialog = ({
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSave}
-              disabled={!title.trim()}
-            >
-              {editingEvent ? 'Update' : 'Create'} Event
-            </Button>
+          <div className="flex justify-between pt-4">
+            <div>
+              {editingEvent && onDelete && (
+                <Button 
+                  variant="destructive" 
+                  onClick={() => {
+                    onDelete();
+                    onOpenChange(false);
+                  }}
+                >
+                  Delete Event
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSave}
+                disabled={!title.trim()}
+              >
+                {editingEvent ? 'Update' : 'Create'} Event
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
