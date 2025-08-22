@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import { OverlappingAvatarGroup } from '@/components/ui/overlapping-avatar-group';
 import { useRewards } from '@/hooks/useRewards';
 import { Check, X, Clock, User, Coins, RotateCcw, CheckCircle, Filter } from 'lucide-react';
 import { format } from 'date-fns';
@@ -170,11 +171,26 @@ export function ApprovalQueue() {
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3">
-                      <UserAvatar 
-                        name={request.requestor?.display_name || 'Unknown User'}
-                        color={request.requestor?.color || 'sky'}
-                        size="sm"
-                      />
+                      {/* Show overlapping avatars for group rewards or single avatar for individual */}
+                      {request.reward?.reward_type === 'group_contribution' && request.reward?.assigned_to?.length ? (
+                        <OverlappingAvatarGroup 
+                          members={request.reward.assigned_to.map(id => {
+                            const profile = familyMembers.find(m => m.id === id);
+                            return {
+                              id: id,
+                              display_name: profile?.display_name || 'Unknown',
+                              color: 'sky' // You could add color to familyMembers if needed
+                            };
+                          })}
+                          size="sm"
+                        />
+                      ) : (
+                        <UserAvatar 
+                          name={request.requestor?.display_name || 'Unknown User'}
+                          color={request.requestor?.color || 'sky'}
+                          size="sm"
+                        />
+                      )}
                       <div className="min-w-0 flex-1">
                         <h4 className="font-medium text-sm truncate">
                           {request.reward?.title || 'Unknown Reward'}
