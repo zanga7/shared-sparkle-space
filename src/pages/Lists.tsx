@@ -41,6 +41,8 @@ interface List {
   created_at: string;
   updated_at: string;
   created_by: string;
+  family_id: string;
+  category_id?: string;
   items_count?: number;
   completed_count?: number;
   assignees_count?: number;
@@ -163,11 +165,11 @@ const Lists = () => {
     // Apply type filter
     switch (selectedFilter) {
       case 'shopping':
-        return list.list_type === 'shopping';
+        return list.list_type === 'shopping' && !list.is_archived;
       case 'camping':
-        return list.list_type === 'camping';
+        return list.list_type === 'camping' && !list.is_archived;
       case 'custom':
-        return list.list_type === 'custom';
+        return list.list_type === 'custom' && !list.is_archived;
       case 'archived':
         return list.is_archived;
       case 'all':
@@ -374,12 +376,12 @@ const Lists = () => {
 
         {/* Tabs */}
         <Tabs value={selectedFilter} onValueChange={setSelectedFilter} className="mb-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="shopping">Shopping</TabsTrigger>
-            <TabsTrigger value="camping">Camping</TabsTrigger>
-            <TabsTrigger value="custom">Custom</TabsTrigger>
-            <TabsTrigger value="archived">Archived</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-5 h-auto">
+            <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
+            <TabsTrigger value="shopping" className="flex-1">Shopping</TabsTrigger>
+            <TabsTrigger value="camping" className="flex-1">Camping</TabsTrigger>
+            <TabsTrigger value="custom" className="flex-1">Custom</TabsTrigger>
+            <TabsTrigger value="archived" className="flex-1">Archived</TabsTrigger>
           </TabsList>
         </Tabs>
 

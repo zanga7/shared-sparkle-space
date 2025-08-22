@@ -23,6 +23,13 @@ import { useToast } from '@/hooks/use-toast';
 import { ShoppingCart, Tent, List as ListIcon } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
+interface Category {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+}
+
 interface Profile {
   id: string;
   family_id: string;
@@ -51,17 +58,20 @@ export function CreateListDialog({
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    list_type: 'custom' as string
+    list_type: 'custom' as string,
+    category_id: '' as string
   });
 
   useEffect(() => {
     if (open) {
       fetchTemplates();
+      fetchCategories();
     }
   }, [open]);
 
@@ -76,6 +86,22 @@ export function CreateListDialog({
       setTemplates((data || []) as Template[]);
     } catch (error) {
       console.error('Error fetching templates:', error);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('family_id', profile.family_id)
+        .eq('is_active', true)
+        .order('sort_order');
+
+      if (error) throw error;
+      setCategories((data || []) as Category[]);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
     }
   };
 
@@ -113,6 +139,7 @@ export function CreateListDialog({
           name: formData.name.trim(),
           description: formData.description.trim() || null,
           list_type: formData.list_type,
+          category_id: formData.category_id || null,
           created_by: profile.id
         })
         .select()
@@ -161,7 +188,8 @@ export function CreateListDialog({
       setFormData({
         name: '',
         description: '',
-        list_type: 'custom'
+        list_type: 'custom',
+        category_id: ''
       });
       setSelectedTemplate(null);
       
@@ -263,6 +291,34 @@ export function CreateListDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Category Selection */}
+          {categories.length > 0 && (
+            <div className="space-y-2">
+              <Label>Category (Optional)</Label>
+              <Select value={formData.category_id} onValueChange={(value) => setFormData(prev => ({ ...prev, category_id: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">
+                    <span className="text-muted-foreground">No category</span>
+                  </SelectItem>
+                  {categories.map(category => (
+                    <SelectItem key={category.id} value={category.id}>
+                      <div className="flex items-center gap-2">
+                        {renderIcon(category.icon)}
+                        <span>{category.name}</span>
+                        <Badge variant="outline" className={`text-xs ${getColorClass(category.color)}`}>
+                          {category.color}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Templates */}
           {templates.filter(t => t.list_type === formData.list_type).length > 0 && (
