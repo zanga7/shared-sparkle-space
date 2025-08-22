@@ -660,11 +660,7 @@ export const CalendarView = ({
                                 className="w-full h-8 text-xs"
                                 text="Add Event"
                                 showIcon={true}
-                                onClick={() => {
-                                  setSelectedEventDate(currentDate);
-                                  setDefaultMember(member.id);
-                                  setIsEventDialogOpen(true);
-                                }}
+                                onClick={() => handleCreateEvent(currentDate, member.id)}
                               />
                             </div>
                             
@@ -815,7 +811,7 @@ export const CalendarView = ({
               if (!familyId) return;
               
               try {
-                await createEvent({
+                const result = await createEvent({
                   title: eventData.title,
                   description: eventData.description,
                   location: eventData.location,
@@ -824,6 +820,14 @@ export const CalendarView = ({
                   is_all_day: eventData.is_all_day,
                   attendees: eventData.attendees
                 });
+                
+                if (result) {
+                  toast({
+                    title: 'Success',
+                    description: 'Event created successfully',
+                  });
+                }
+                
                 await refreshEvents();
                 setIsEventDialogOpen(false);
                 setSelectedEventDate(null);
