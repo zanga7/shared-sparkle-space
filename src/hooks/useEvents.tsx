@@ -26,27 +26,31 @@ export const useEvents = (familyId?: string) => {
       // Then fetch attendees for all events
       const eventsWithAttendees = await Promise.all(
         (eventsData || []).map(async (event) => {
+          // First get the attendee records
           const { data: attendeesData } = await supabase
             .from('event_attendees')
-            .select(`
-              id,
-              profile_id,
-              added_by,
-              profiles!profile_id (
-                id,
-                display_name,
-                role,
-                color
-              )
-            `)
+            .select('id, profile_id, added_by')
             .eq('event_id', event.id);
+          
+          // Then get the profile information for each attendee
+          const attendeesWithProfiles = await Promise.all(
+            (attendeesData || []).map(async (attendee) => {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('id, display_name, role, color')
+                .eq('id', attendee.profile_id)
+                .single();
+              
+              return {
+                ...attendee,
+                profile: profile
+              };
+            })
+          );
           
           return {
             ...event,
-            attendees: (attendeesData || []).map(attendee => ({
-              ...attendee,
-              profile: attendee.profiles
-            }))
+            attendees: attendeesWithProfiles
           };
         })
       );
@@ -110,11 +114,15 @@ export const useEvents = (familyId?: string) => {
 
       // Add attendees if provided
       if (attendees && attendees.length > 0) {
+        console.log('Creating attendees:', { attendees, eventId: event.id, profileId: profile.id });
+        
         const attendeeRecords = attendees.map(profileId => ({
           event_id: event.id,
           profile_id: profileId,
           added_by: profile.id
         }));
+
+        console.log('Attendee records to insert:', attendeeRecords);
 
         const { error: attendeesError } = await supabase
           .from('event_attendees')
@@ -124,6 +132,10 @@ export const useEvents = (familyId?: string) => {
           console.error('Error adding attendees:', attendeesError);
           throw attendeesError;
         }
+        
+        console.log('Attendees added successfully');
+      } else {
+        console.log('No attendees to add:', { attendees });
       }
 
       await fetchEvents();
