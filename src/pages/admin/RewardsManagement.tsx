@@ -267,97 +267,198 @@ export default function RewardsManagement() {
           Manage Rewards
         </h2>
         
-        {rewards.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-8">
-              <Gift className="w-12 h-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Rewards Created</h3>
-              <p className="text-muted-foreground text-center">
-                Create your first reward to motivate your family members!
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {rewards.map((reward: Reward) => (
-              <Card key={reward.id}>
-                {reward.image_url && (
-                  <div className="aspect-video w-full overflow-hidden rounded-t-lg">
-                    <img 
-                      src={reward.image_url} 
-                      alt={reward.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-lg leading-tight">{reward.title}</CardTitle>
-                    <div className="flex items-center gap-1">
-                      <Badge variant="secondary" className="flex items-center gap-1 whitespace-nowrap">
-                        <Coins className="w-3 h-3" />
-                        {reward.cost_points}
-                      </Badge>
-                    </div>
-                  </div>
-                  {reward.description && (
-                    <CardDescription className="text-sm">
-                      {reward.description}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-
-                <CardContent>
-                  <div className="flex items-center justify-between mb-4">
-                     <div className="flex items-center gap-2 flex-wrap">
-                       <Badge variant={reward.reward_type === 'once_off' ? 'outline' : reward.reward_type === 'group_contribution' ? 'destructive' : 'secondary'}>
-                         {reward.reward_type === 'once_off' ? 'One-time' : reward.reward_type === 'group_contribution' ? 'Group Goal' : 'Always available'}
-                       </Badge>
-                       <Badge variant={reward.is_active ? 'default' : 'outline'}>
-                         {reward.is_active ? 'Active' : 'Inactive'}
-                       </Badge>
-                     </div>
-                     
-                     {/* Show assignees */}
-                     <div className="flex items-center gap-2 mt-2">
-                       <Users className="w-4 h-4 text-muted-foreground" />
-                       {reward.assigned_to && reward.assigned_to.length > 0 ? (
-                         <MultiAssigneeAvatarGroup 
-                           assignees={familyMembers.filter(member => reward.assigned_to?.includes(member.id))} 
-                           maxDisplay={3}
-                           size="sm"
-                         />
-                       ) : (
-                         <span className="text-sm text-muted-foreground">Available to everyone</span>
-                       )}
-                     </div>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditingReward(reward)}
-                      className="flex-1"
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDeletingReward(reward)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+        {/* Show active and inactive rewards */}
+        <div className="space-y-6">
+          {/* Active Rewards */}
+          <div>
+            <h3 className="text-lg font-medium mb-4">Active Rewards</h3>
+            {rewards.filter(r => r.is_active).length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-8">
+                  <Gift className="w-12 h-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Active Rewards</h3>
+                  <p className="text-muted-foreground text-center">
+                    Create your first reward to motivate your family members!
+                  </p>
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {rewards.filter(r => r.is_active).map((reward: Reward) => (
+                  <Card key={reward.id}>
+                    {reward.image_url && (
+                      <div className="aspect-video w-full overflow-hidden rounded-t-lg">
+                        <img 
+                          src={reward.image_url} 
+                          alt={reward.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="text-lg leading-tight">{reward.title}</CardTitle>
+                        <div className="flex items-center gap-1">
+                          <Badge variant="secondary" className="flex items-center gap-1 whitespace-nowrap">
+                            <Coins className="w-3 h-3" />
+                            {reward.cost_points}
+                          </Badge>
+                        </div>
+                      </div>
+                      {reward.description && (
+                        <CardDescription className="text-sm">
+                          {reward.description}
+                        </CardDescription>
+                      )}
+                    </CardHeader>
+
+                    <CardContent>
+                      <div className="flex items-center justify-between mb-4">
+                         <div className="flex items-center gap-2 flex-wrap">
+                           <Badge variant={reward.reward_type === 'once_off' ? 'outline' : reward.reward_type === 'group_contribution' ? 'destructive' : 'secondary'}>
+                             {reward.reward_type === 'once_off' ? 'One-time' : reward.reward_type === 'group_contribution' ? 'Group Goal' : 'Always available'}
+                           </Badge>
+                           <Badge variant="default">Active</Badge>
+                         </div>
+                         
+                         {/* Show assignees */}
+                         <div className="flex items-center gap-2 mt-2">
+                           <Users className="w-4 h-4 text-muted-foreground" />
+                           {reward.assigned_to && reward.assigned_to.length > 0 ? (
+                             <MultiAssigneeAvatarGroup 
+                               assignees={familyMembers.filter(member => reward.assigned_to?.includes(member.id))} 
+                               maxDisplay={3}
+                               size="sm"
+                             />
+                           ) : (
+                             <span className="text-sm text-muted-foreground">Available to everyone</span>
+                           )}
+                         </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingReward(reward)}
+                          className="flex-1"
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setDeletingReward(reward)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Inactive Rewards */}
+          {rewards.filter(r => !r.is_active).length > 0 && (
+            <div>
+              <h3 className="text-lg font-medium mb-4 text-muted-foreground">Inactive Rewards</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {rewards.filter(r => !r.is_active).map((reward: Reward) => (
+                  <Card key={reward.id} className="opacity-75">
+                    {reward.image_url && (
+                      <div className="aspect-video w-full overflow-hidden rounded-t-lg">
+                        <img 
+                          src={reward.image_url} 
+                          alt={reward.title}
+                          className="w-full h-full object-cover grayscale"
+                        />
+                      </div>
+                    )}
+                    
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="text-lg leading-tight text-muted-foreground">{reward.title}</CardTitle>
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className="flex items-center gap-1 whitespace-nowrap">
+                            <Coins className="w-3 h-3" />
+                            {reward.cost_points}
+                          </Badge>
+                        </div>
+                      </div>
+                      {reward.description && (
+                        <CardDescription className="text-sm">
+                          {reward.description}
+                        </CardDescription>
+                      )}
+                    </CardHeader>
+
+                    <CardContent>
+                      <div className="flex items-center justify-between mb-4">
+                         <div className="flex items-center gap-2 flex-wrap">
+                           <Badge variant={reward.reward_type === 'once_off' ? 'outline' : reward.reward_type === 'group_contribution' ? 'destructive' : 'secondary'}>
+                             {reward.reward_type === 'once_off' ? 'One-time' : reward.reward_type === 'group_contribution' ? 'Group Goal' : 'Always available'}
+                           </Badge>
+                           <Badge variant="outline">Inactive</Badge>
+                         </div>
+                         
+                         {/* Show assignees */}
+                         <div className="flex items-center gap-2 mt-2">
+                           <Users className="w-4 h-4 text-muted-foreground" />
+                           {reward.assigned_to && reward.assigned_to.length > 0 ? (
+                             <MultiAssigneeAvatarGroup 
+                               assignees={familyMembers.filter(member => reward.assigned_to?.includes(member.id))} 
+                               maxDisplay={3}
+                               size="sm"
+                             />
+                           ) : (
+                             <span className="text-sm text-muted-foreground">Available to everyone</span>
+                           )}
+                         </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingReward(reward)}
+                          className="flex-1"
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setDeletingReward(reward)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {rewards.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-8">
+                <Gift className="w-12 h-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Rewards Created</h3>
+                <p className="text-muted-foreground text-center">
+                  Create your first reward to motivate your family members!
+                </p>
+              </CardContent>
+            </Card>
+          ) : null}
       </div>
 
       {/* Edit Reward Dialog */}
