@@ -6,16 +6,18 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useRewards } from '@/hooks/useRewards';
-import { Check, X, Clock, User, Coins } from 'lucide-react';
+import { Check, X, Clock, User, Coins, RotateCcw, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import type { RewardRequest } from '@/types/rewards';
 
 export function ApprovalQueue() {
-  const { rewardRequests, approveRewardRequest, denyRewardRequest, getPointsBalance } = useRewards();
+  const { rewardRequests, approveRewardRequest, denyRewardRequest, revokeRewardRequest, markRewardClaimed, getPointsBalance } = useRewards();
   const [selectedRequest, setSelectedRequest] = useState<RewardRequest | null>(null);
   const [note, setNote] = useState('');
   const [isApproving, setIsApproving] = useState(false);
   const [isDenying, setIsDenying] = useState(false);
+  const [isRevoking, setIsRevoking] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
 
   const pendingRequests = rewardRequests.filter(req => req.status === 'pending');
 
@@ -45,12 +47,39 @@ export function ApprovalQueue() {
     }
   };
 
+  const handleRevoke = async () => {
+    if (!selectedRequest) return;
+    
+    setIsRevoking(true);
+    try {
+      await revokeRewardRequest(selectedRequest.id, note || undefined);
+      setSelectedRequest(null);
+      setNote('');
+    } finally {
+      setIsRevoking(false);
+    }
+  };
+
+  const handleMarkClaimed = async () => {
+    if (!selectedRequest) return;
+    
+    setIsClaiming(true);
+    try {
+      await markRewardClaimed(selectedRequest.id);
+      setSelectedRequest(null);
+      setNote('');
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'approved': return 'bg-green-100 text-green-800 border-green-200';
       case 'denied': return 'bg-red-100 text-red-800 border-red-200';
       case 'cancelled': return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'claimed': return 'bg-blue-100 text-blue-800 border-blue-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
@@ -77,67 +106,46 @@ export function ApprovalQueue() {
         </Badge>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {rewardRequests.map((request) => {
           const currentBalance = getPointsBalance(request.requested_by);
           const canAfford = currentBalance >= request.points_cost;
 
           return (
             <Card key={request.id} className="relative">
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-4">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">
-                      {request.reward?.title || 'Unknown Reward'}
-                    </CardTitle>
-                    <CardDescription className="flex items-center gap-2 mt-1">
-                      <User className="w-4 h-4" />
-                      Requested by {request.requestor?.display_name || 'Unknown User'}
-                    </CardDescription>
-                  </div>
-                  
-                  <div className="flex flex-col items-end gap-2">
-                    <Badge className={getStatusColor(request.status)}>
-                      {request.status}
-                    </Badge>
-                    <div className="flex items-center gap-1 text-sm">
-                      <Coins className="w-4 h-4" />
-                      {request.points_cost} points
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <h4 className="font-medium text-sm">
+                          {request.reward?.title || 'Unknown Reward'}
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          {request.requestor?.display_name || 'Unknown User'} • {request.points_cost} points
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardHeader>
-
-              <CardContent>
-                <div className="space-y-3">
-                  {request.reward?.description && (
-                    <p className="text-sm text-muted-foreground">
-                      {request.reward.description}
-                    </p>
-                  )}
                   
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Requested: {format(new Date(request.created_at), 'PPp')}
-                    </span>
-                    <span className={`font-medium ${canAfford ? 'text-green-600' : 'text-red-600'}`}>
-                      Current balance: {currentBalance} points
-                    </span>
-                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className={getStatusColor(request.status)} variant="secondary">
+                      {request.status}
+                    </Badge>
 
-                  {request.status === 'pending' && (
-                    <div className="flex gap-2 pt-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            disabled={!canAfford}
-                            onClick={() => setSelectedRequest(request)}
-                          >
-                            <Check className="w-4 h-4 mr-1" />
-                            Approve
-                          </Button>
-                        </DialogTrigger>
+                    {request.status === 'pending' && (
+                      <div className="flex gap-1">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              disabled={!canAfford}
+                              onClick={() => setSelectedRequest(request)}
+                            >
+                              <Check className="w-3 h-3 mr-1" />
+                              Approve
+                            </Button>
+                          </DialogTrigger>
                         
                         <DialogContent>
                           <DialogHeader>
@@ -168,20 +176,20 @@ export function ApprovalQueue() {
                               {isApproving ? 'Approving...' : 'Approve'}
                             </Button>
                           </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
+                          </DialogContent>
+                        </Dialog>
 
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => setSelectedRequest(request)}
-                          >
-                            <X className="w-4 h-4 mr-1" />
-                            Deny
-                          </Button>
-                        </DialogTrigger>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => setSelectedRequest(request)}
+                            >
+                              <X className="w-3 h-3 mr-1" />
+                              Deny
+                            </Button>
+                          </DialogTrigger>
                         
                         <DialogContent>
                           <DialogHeader>
@@ -211,18 +219,95 @@ export function ApprovalQueue() {
                               {isDenying ? 'Denying...' : 'Deny'}
                             </Button>
                           </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  )}
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    )}
 
-                  {request.approval_note && (
-                    <div className="mt-3 p-3 bg-muted rounded-lg">
-                      <p className="text-sm font-medium">Note:</p>
-                      <p className="text-sm text-muted-foreground">{request.approval_note}</p>
-                    </div>
-                  )}
+                    {request.status === 'approved' && (
+                      <div className="flex gap-1">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              onClick={() => setSelectedRequest(request)}
+                            >
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              Mark Claimed
+                            </Button>
+                          </DialogTrigger>
+                          
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Mark as Claimed</DialogTitle>
+                              <DialogDescription>
+                                Mark {request.requestor?.display_name}'s reward "{request.reward?.title}" as claimed?
+                              </DialogDescription>
+                            </DialogHeader>
+
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setSelectedRequest(null)}>
+                                Cancel
+                              </Button>
+                              <Button onClick={handleMarkClaimed} disabled={isClaiming}>
+                                {isClaiming ? 'Marking...' : 'Mark Claimed'}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              onClick={() => setSelectedRequest(request)}
+                            >
+                              <RotateCcw className="w-3 h-3 mr-1" />
+                              Revoke
+                            </Button>
+                          </DialogTrigger>
+                          
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Revoke Reward</DialogTitle>
+                              <DialogDescription>
+                                Revoke {request.requestor?.display_name}'s reward "{request.reward?.title}" and refund {request.points_cost} points?
+                              </DialogDescription>
+                            </DialogHeader>
+
+                            <div className="space-y-4">
+                              <div>
+                                <Label htmlFor="revoke-note">Reason (optional)</Label>
+                                <Textarea
+                                  id="revoke-note"
+                                  placeholder="Explain why this reward was revoked..."
+                                  value={note}
+                                  onChange={(e) => setNote(e.target.value)}
+                                />
+                              </div>
+                            </div>
+
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setSelectedRequest(null)}>
+                                Cancel
+                              </Button>
+                              <Button variant="destructive" onClick={handleRevoke} disabled={isRevoking}>
+                                {isRevoking ? 'Revoking...' : 'Revoke & Refund'}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {request.approval_note && (
+                  <div className="mt-3 p-2 bg-muted rounded text-xs">
+                    <span className="font-medium">Note:</span> {request.approval_note}
+                  </div>
+                )}
               </CardContent>
             </Card>
           );

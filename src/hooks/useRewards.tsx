@@ -324,6 +324,51 @@ export function useRewards() {
     return pointsBalances.find(b => b.profile_id === profileId)?.balance || 0;
   };
 
+  const refreshData = async () => {
+    await Promise.all([fetchRewards(), fetchRewardRequests(), fetchPointsBalances()]);
+  };
+
+  // Revoke reward request and refund points
+  const revokeRewardRequest = async (requestId: string, note?: string): Promise<void> => {
+    try {
+      const { data, error } = await supabase.rpc('revoke_reward_request', {
+        request_id_param: requestId,
+        revoke_note_param: note
+      });
+
+      if (error) throw error;
+      
+      const result = data as { success: boolean; error?: string; message?: string };
+      if (!result.success) throw new Error(result.error);
+
+      toast.success('Reward revoked and points refunded');
+      await refreshData();
+    } catch (error) {
+      console.error('Error revoking reward:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to revoke reward');
+    }
+  };
+
+  // Mark reward as claimed
+  const markRewardClaimed = async (requestId: string): Promise<void> => {
+    try {
+      const { data, error } = await supabase.rpc('mark_reward_claimed', {
+        request_id_param: requestId
+      });
+
+      if (error) throw error;
+      
+      const result = data as { success: boolean; error?: string; message?: string };
+      if (!result.success) throw new Error(result.error);
+
+      toast.success('Reward marked as claimed');
+      await refreshData();
+    } catch (error) {
+      console.error('Error marking reward as claimed:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to mark reward as claimed');
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -352,8 +397,10 @@ export function useRewards() {
     approveRewardRequest,
     denyRewardRequest,
     cancelRewardRequest,
+    revokeRewardRequest,
+    markRewardClaimed,
     addPointsAdjustment,
     getPointsBalance,
-    refreshData: () => Promise.all([fetchRewards(), fetchPointsBalances()])
+    refreshData
   };
 }

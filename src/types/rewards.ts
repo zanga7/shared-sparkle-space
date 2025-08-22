@@ -18,7 +18,7 @@ export interface RewardRequest {
   reward_id: string;
   requested_by: string;
   points_cost: number;
-  status: 'pending' | 'approved' | 'denied' | 'cancelled';
+  status: 'pending' | 'approved' | 'denied' | 'cancelled' | 'claimed';
   approved_by?: string;
   approval_note?: string;
   created_at: string;

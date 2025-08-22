@@ -8,7 +8,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Gift, Users, User, Crown, Coins } from 'lucide-react';
+import { Loader2, Gift, Users, User, Crown, Coins, Clock, CheckCircle } from 'lucide-react';
+import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Reward, GroupContribution } from '@/types/rewards';
@@ -22,7 +23,7 @@ interface Profile {
 }
 
 export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string | null }) {
-  const { rewards, loading, requestReward, getPointsBalance } = useRewards();
+  const { rewards, rewardRequests, loading, requestReward, getPointsBalance } = useRewards();
   const { selectedChildId, childProfiles, isChildAuthenticated } = useChildAuth();
   const { user } = useAuth();
   const [requestingIds, setRequestingIds] = useState<Set<string>>(new Set());
@@ -135,23 +136,9 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
     }
   };
 
-  // Fetch claimed rewards for member filter view
-  const fetchClaimedRewards = async (profileId: string) => {
-    try {
-      const { data: rewardRequests, error } = await supabase
-        .from('reward_requests')
-        .select(`
-          *,
-          reward:rewards(*)
-        `)
-        .eq('requested_by', profileId)
-        .eq('status', 'approved');
-
-      if (error) throw error;
-      setClaimedRewards(rewardRequests || []);
-    } catch (error) {
-      console.error('Error fetching claimed rewards:', error);
-    }
+  // Get reward requests for the selected member
+  const getMemberRewardRequests = (profileId: string) => {
+    return rewardRequests.filter(req => req.requested_by === profileId);
   };
 
   // Update group contributions when available rewards change
@@ -161,12 +148,6 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
     }
   }, [availableRewards.length]); // Use length to avoid infinite loops
 
-  // Fetch claimed rewards for member filter view
-  useEffect(() => {
-    if (isMemberFilterView && selectedMemberId) {
-      fetchClaimedRewards(selectedMemberId);
-    }
-  }, [isMemberFilterView, selectedMemberId]);
 
   if (loading || profilesLoading) {
     return (
@@ -257,6 +238,9 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
   if (isMemberFilterView) {
     const selectedMember = allProfiles.find(p => p.id === selectedMemberId);
     const userBalance = getPointsBalance(selectedMemberId!);
+    const memberRequests = getMemberRewardRequests(selectedMemberId!);
+    const waitingApprovalRequests = memberRequests.filter(req => req.status === 'pending');
+    const claimedRequests = memberRequests.filter(req => req.status === 'claimed');
 
     return (
       <div className="space-y-6">
@@ -318,50 +302,58 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
               })}
             </div>
 
-            {/* Claimed Rewards Section */}
-            {claimedRewards.length > 0 && (
-              <div className="mt-8 space-y-4">
-                <h3 className="text-xl font-semibold flex items-center gap-2">
-                  <Gift className="w-5 h-5 text-green-600" />
-                  Claimed Rewards
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {claimedRewards.map((request) => (
-                    <Card key={request.id} className="h-full flex flex-col opacity-75">
-                      {request.reward?.image_url && (
-                        <div className="aspect-video w-full overflow-hidden rounded-t-lg">
-                          <img 
-                            src={request.reward.image_url} 
-                            alt={request.reward.title}
-                            className="w-full h-full object-cover"
-                          />
+            {/* Member reward history */}
+            {(waitingApprovalRequests.length > 0 || claimedRequests.length > 0) && (
+              <div className="mt-8 space-y-6">
+                {/* Waiting approval section */}
+                {waitingApprovalRequests.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-yellow-500" />
+                      Waiting Approval ({waitingApprovalRequests.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {waitingApprovalRequests.map((request) => (
+                        <div key={request.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
+                          <div>
+                            <p className="font-medium text-sm">{request.reward?.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Requested {format(new Date(request.created_at), 'PP')} • {request.points_cost} points
+                            </p>
+                          </div>
+                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                            Pending
+                          </Badge>
                         </div>
-                      )}
-                      
-                      <CardHeader className="flex-shrink-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <CardTitle className="text-lg leading-tight">{request.reward?.title}</CardTitle>
-                          <Badge variant="outline" className="flex items-center gap-1 whitespace-nowrap text-green-600">
-                            <Gift className="w-3 h-3" />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Claimed rewards section */}
+                {claimedRequests.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                      Claimed Rewards ({claimedRequests.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {claimedRequests.map((request) => (
+                        <div key={request.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
+                          <div>
+                            <p className="font-medium text-sm">{request.reward?.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Claimed {format(new Date(request.updated_at), 'PP')} • {request.points_cost} points
+                            </p>
+                          </div>
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">
                             Claimed
                           </Badge>
                         </div>
-                        {request.reward?.description && (
-                          <CardDescription className="text-sm">
-                            {request.reward.description}
-                          </CardDescription>
-                        )}
-                      </CardHeader>
-
-                      <CardContent className="flex-grow">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Coins className="w-4 h-4" />
-                          <span>{request.points_cost} points spent</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </>

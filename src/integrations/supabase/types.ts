@@ -1242,6 +1242,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      mark_reward_claimed: {
+        Args: { request_id_param: string }
+        Returns: Json
+      }
       migrate_existing_tokens_to_encrypted: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -1249,6 +1253,10 @@ export type Database = {
       revoke_calendar_integration: {
         Args: { integration_id: string; reason?: string }
         Returns: boolean
+      }
+      revoke_reward_request: {
+        Args: { request_id_param: string; revoke_note_param?: string }
+        Returns: Json
       }
       set_child_pin: {
         Args: { new_pin: string; profile_id_param: string }
@@ -1285,6 +1293,12 @@ export type Database = {
       }
     }
     Enums: {
+      reward_request_status:
+        | "pending"
+        | "approved"
+        | "denied"
+        | "cancelled"
+        | "claimed"
       reward_type: "once_off" | "always_available" | "group_contribution"
       user_role: "parent" | "child"
     }
@@ -1414,6 +1428,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      reward_request_status: [
+        "pending",
+        "approved",
+        "denied",
+        "cancelled",
+        "claimed",
+      ],
       reward_type: ["once_off", "always_available", "group_contribution"],
       user_role: ["parent", "child"],
     },
