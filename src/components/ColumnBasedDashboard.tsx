@@ -775,6 +775,7 @@ const ColumnBasedDashboard = () => {
                 familyMembers={selectedMemberFilter ? familyMembers.filter(m => m.id === selectedMemberFilter) : familyMembers}
                 onTaskUpdated={fetchUserData}
                 onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
+                familyId={profile.family_id}
               />
             </div>
           </TabsContent>

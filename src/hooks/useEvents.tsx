@@ -9,9 +9,7 @@ export const useEvents = (familyId?: string) => {
   const { toast } = useToast();
 
   const fetchEvents = async () => {
-    console.log('useEvents: fetchEvents called with familyId:', familyId);
     if (!familyId) {
-      console.log('useEvents: No familyId provided, skipping fetch');
       return;
     }
 
@@ -193,7 +191,6 @@ export const useEvents = (familyId?: string) => {
   };
 
   useEffect(() => {
-    console.log('useEvents: useEffect triggered with familyId:', familyId);
     fetchEvents();
   }, [familyId]);
 
