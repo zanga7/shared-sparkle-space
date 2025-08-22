@@ -29,14 +29,18 @@ export function GroupContributionCard({
 }: GroupContributionCardProps) {
   const [contributionAmount, setContributionAmount] = useState<string>('');
   
-  // Calculate total contributed and remaining
-  const totalContributed = contributions.reduce((sum, c) => sum + c.points_contributed, 0);
-  const remainingNeeded = Math.max(0, reward.cost_points - totalContributed);
-  const progressPercentage = Math.min(100, (totalContributed / reward.cost_points) * 100);
-  
-  // Check if this user has already contributed
+  // Check if this user has already contributed the full amount
   const userContribution = contributions.find(c => c.profile_id === profileId);
   const userContributedAmount = userContribution?.points_contributed || 0;
+  const hasUserContributedFull = userContributedAmount >= reward.cost_points;
+  
+  // Get all unique contributors who have contributed the full amount
+  const fullContributors = contributions.filter(c => c.points_contributed >= reward.cost_points);
+  const contributorsCount = fullContributors.length;
+  
+  // Calculate how many members need to contribute (based on assigned_to)
+  const requiredContributors = reward.assigned_to?.length || 1;
+  const isCompleted = contributorsCount >= requiredContributors;
 
   const handleContribute = async () => {
     const amount = parseInt(contributionAmount);
@@ -50,8 +54,13 @@ export function GroupContributionCard({
       return;
     }
     
-    if (amount > remainingNeeded) {
-      toast.error(`Only ${remainingNeeded} points needed to complete this reward`);
+    if (hasUserContributedFull) {
+      toast.error('You have already contributed the full amount for this reward');
+      return;
+    }
+    
+    if (amount !== reward.cost_points) {
+      toast.error(`You must contribute exactly ${reward.cost_points} points for this group reward`);
       return;
     }
     
@@ -62,8 +71,6 @@ export function GroupContributionCard({
       console.error('Contribution failed:', error);
     }
   };
-
-  const isCompleted = totalContributed >= reward.cost_points;
 
   return (
     <Card className="h-full flex flex-col">
@@ -100,57 +107,57 @@ export function GroupContributionCard({
         
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span>Progress</span>
-            <span>{totalContributed} / {reward.cost_points} points</span>
+            <span>Contributors</span>
+            <span>{contributorsCount} / {requiredContributors} members</span>
           </div>
-          <Progress value={progressPercentage} className="h-2" />
+          <Progress value={(contributorsCount / requiredContributors) * 100} className="h-2" />
         </div>
         
-        {contributions.length > 0 && (
+        {fullContributors.length > 0 && (
           <div className="space-y-1">
-            <p className="text-sm font-medium">Contributors:</p>
+            <p className="text-sm font-medium">Full Contributors:</p>
             <div className="flex flex-wrap gap-1">
-              {contributions.map((contribution) => (
+              {fullContributors.map((contribution) => (
                 <Badge key={contribution.id} variant="outline" className="text-xs">
-                  {contribution.contributor?.display_name}: {contribution.points_contributed}
+                  {contribution.contributor?.display_name}
                 </Badge>
               ))}
             </div>
           </div>
         )}
         
-        {userContributedAmount > 0 && (
-          <div className="text-sm text-muted-foreground">
-            You've contributed: {userContributedAmount} points
+        {hasUserContributedFull && (
+          <div className="text-sm text-green-600 font-medium">
+            ✓ You've contributed the full amount
           </div>
         )}
       </CardContent>
 
-      {!isCompleted && (
+      {!isCompleted && !hasUserContributedFull && (
         <CardFooter className="flex-shrink-0 space-y-3">
           <div className="w-full space-y-2">
-            <Label htmlFor={`contribution-${reward.id}`}>Contribute Points</Label>
+            <Label htmlFor={`contribution-${reward.id}`}>Contribute {reward.cost_points} Points</Label>
             <div className="flex gap-2">
               <Input
                 id={`contribution-${reward.id}`}
                 type="number"
-                placeholder="Amount"
+                placeholder={reward.cost_points.toString()}
                 value={contributionAmount}
                 onChange={(e) => setContributionAmount(e.target.value)}
-                min="1"
-                max={Math.min(userBalance, remainingNeeded)}
+                min={reward.cost_points}
+                max={reward.cost_points}
                 className="flex-1"
               />
               <Button 
                 onClick={handleContribute}
-                disabled={!contributionAmount || parseInt(contributionAmount) <= 0 || parseInt(contributionAmount) > userBalance || isContributing}
+                disabled={!contributionAmount || parseInt(contributionAmount) !== reward.cost_points || parseInt(contributionAmount) > userBalance || isContributing}
                 variant="default"
               >
                 {isContributing ? 'Contributing...' : 'Contribute'}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Balance: {userBalance} points • Need: {remainingNeeded} more points
+              Balance: {userBalance} points • Required: {reward.cost_points} points
             </p>
           </div>
         </CardFooter>
