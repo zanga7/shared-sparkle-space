@@ -3,34 +3,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Plus, 
   Search, 
-  ShoppingCart, 
-  Tent, 
-  List as ListIcon, 
-  Archive,
-  Calendar,
-  Users,
-  MoreVertical,
   Hash
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { ListDetailDialog } from '@/components/lists/ListDetailDialog';
+import { InlineListCard } from '@/components/lists/InlineListCard';
 import { CreateListDialog } from '@/components/lists/CreateListDialog';
 import { EditListDialog } from '@/components/lists/EditListDialog';
 import { CategoryManager } from '@/components/lists/CategoryManager';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 interface List {
   id: string;
@@ -54,6 +37,8 @@ interface Profile {
   family_id: string;
   display_name: string;
   role: 'parent' | 'child';
+  color: string;
+  total_points: number;
 }
 
 const Lists = () => {
@@ -64,7 +49,6 @@ const Lists = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const [selectedList, setSelectedList] = useState<List | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingList, setEditingList] = useState<List | null>(null);
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
@@ -90,7 +74,15 @@ const Lists = () => {
         .single();
 
       if (error) throw error;
-      setProfile(data);
+      
+      // Ensure required fields have defaults
+      const profileData = {
+        ...data,
+        color: data.color || 'sky',
+        total_points: data.total_points || 0
+      };
+      
+      setProfile(profileData);
     } catch (error) {
       console.error('Error fetching profile:', error);
       toast({
@@ -178,28 +170,6 @@ const Lists = () => {
     }
   });
 
-  const getListIcon = (type: string) => {
-    switch (type) {
-      case 'shopping':
-        return <ShoppingCart className="h-4 w-4" />;
-      case 'camping':
-        return <Tent className="h-4 w-4" />;
-      default:
-        return <ListIcon className="h-4 w-4" />;
-    }
-  };
-
-  const getListTypeColor = (type: string) => {
-    switch (type) {
-      case 'shopping':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-      case 'camping':
-        return 'bg-amber-100 text-amber-800 border-amber-200';
-      default:
-        return 'bg-sky-100 text-sky-800 border-sky-200';
-    }
-  };
-
   const handleListCreated = () => {
     fetchLists();
     setIsCreateDialogOpen(false);
@@ -207,7 +177,6 @@ const Lists = () => {
 
   const handleListUpdated = () => {
     fetchLists();
-    setSelectedList(null);
   };
 
   const duplicateList = async (list: List) => {
@@ -388,110 +357,22 @@ const Lists = () => {
         {/* Lists Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredLists.map((list) => (
-            <Card 
-              key={list.id} 
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => setSelectedList(list)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2 flex-1">
-                    {getListIcon(list.list_type)}
-                    <CardTitle className="text-lg truncate">{list.name}</CardTitle>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge 
-                      variant="outline" 
-                      className={cn("text-xs", getListTypeColor(list.list_type))}
-                    >
-                      {list.list_type}
-                    </Badge>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingList(list);
-                        }}>
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation();
-                          duplicateList(list);
-                        }}>
-                          Duplicate
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation();
-                          archiveList(list);
-                        }}>
-                          {list.is_archived ? 'Restore' : 'Archive'}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteList(list);
-                          }}
-                          className="text-destructive"
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-                {list.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">{list.description}</p>
-                )}
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
-                  <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1">
-                      <ListIcon className="h-3 w-3" />
-                      {list.items_count || 0} items
-                    </span>
-                    {(list.assignees_count || 0) > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {list.assignees_count} assigned
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                {(list.items_count || 0) > 0 && (
-                  <div className="mb-3">
-                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                      <span>Progress</span>
-                      <span>{list.completed_count || 0} of {list.items_count || 0} done</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div 
-                        className="bg-primary rounded-full h-2 transition-all"
-                        style={{ 
-                          width: `${list.items_count ? ((list.completed_count || 0) / list.items_count) * 100 : 0}%` 
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-                
-                <div className="text-xs text-muted-foreground">
-                  Updated {format(new Date(list.updated_at), 'MMM d, yyyy')}
-                </div>
-              </CardContent>
-            </Card>
+            <InlineListCard
+              key={list.id}
+              list={list}
+              profile={profile!}
+              onEditList={setEditingList}
+              onDuplicateList={duplicateList}
+              onArchiveList={archiveList}
+              onDeleteList={deleteList}
+              onListUpdated={handleListUpdated}
+            />
           ))}
         </div>
 
         {filteredLists.length === 0 && (
           <div className="text-center py-12">
-            <ListIcon className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <div className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">No lists found</h3>
             <p className="text-muted-foreground mb-4">
               {searchQuery 
@@ -510,16 +391,6 @@ const Lists = () => {
       </div>
 
       {/* Dialogs */}
-      {selectedList && (
-        <ListDetailDialog
-          list={selectedList}
-          open={!!selectedList}
-          onOpenChange={() => setSelectedList(null)}
-          onListUpdated={handleListUpdated}
-          profile={profile!}
-        />
-      )}
-
       <CreateListDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
@@ -531,21 +402,16 @@ const Lists = () => {
         <EditListDialog
           list={editingList}
           open={!!editingList}
-          onOpenChange={() => setEditingList(null)}
-          onListUpdated={() => {
-            fetchLists();
-            setEditingList(null);
-          }}
+          onOpenChange={(open) => !open && setEditingList(null)}
+          onListUpdated={handleListUpdated}
         />
       )}
 
-      {profile && (
-        <CategoryManager
-          open={isCategoryManagerOpen}
-          onOpenChange={setIsCategoryManagerOpen}
-          familyId={profile.family_id}
-        />
-      )}
+      <CategoryManager
+        open={isCategoryManagerOpen}
+        onOpenChange={setIsCategoryManagerOpen}
+        familyId={profile!.family_id}
+      />
     </div>
   );
 };
