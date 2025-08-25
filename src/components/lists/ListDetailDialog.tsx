@@ -200,14 +200,23 @@ export function ListDetailDialog({
         };
       });
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('list_items')
-        .insert(newItems);
+        .insert(newItems)
+        .select('*');
 
       if (error) throw error;
 
+      // Update items state directly (AJAX approach)
+      if (data) {
+        const newItemsWithAssignees = data.map(item => ({
+          ...item,
+          assignees: [] as any[]
+        }));
+        setItems(prev => [...prev, ...newItemsWithAssignees]);
+      }
+
       setNewItemText('');
-      fetchItems();
       
       // Refocus input
       setTimeout(() => {
@@ -225,17 +234,29 @@ export function ListDetailDialog({
 
   const toggleItemComplete = async (item: ListItem) => {
     try {
+      const newCompleted = !item.is_completed;
       const { error } = await supabase
         .from('list_items')
         .update({
-          is_completed: !item.is_completed,
-          completed_at: !item.is_completed ? new Date().toISOString() : null,
-          completed_by: !item.is_completed ? profile.id : null
+          is_completed: newCompleted,
+          completed_at: newCompleted ? new Date().toISOString() : null,
+          completed_by: newCompleted ? profile.id : null
         })
         .eq('id', item.id);
 
       if (error) throw error;
-      fetchItems();
+      
+      // Update items state directly (AJAX approach)
+      setItems(prev => prev.map(i => 
+        i.id === item.id 
+          ? {
+              ...i,
+              is_completed: newCompleted,
+              completed_at: newCompleted ? new Date().toISOString() : null,
+              completed_by: newCompleted ? profile.id : null
+            }
+          : i
+      ));
     } catch (error) {
       console.error('Error toggling item:', error);
       toast({
@@ -254,7 +275,11 @@ export function ListDetailDialog({
         .eq('id', itemId);
 
       if (error) throw error;
-      fetchItems();
+      
+      // Update items state directly (AJAX approach)
+      setItems(prev => prev.map(item => 
+        item.id === itemId ? { ...item, ...updates } : item
+      ));
     } catch (error) {
       console.error('Error updating item:', error);
       toast({
@@ -273,7 +298,9 @@ export function ListDetailDialog({
         .eq('id', itemId);
 
       if (error) throw error;
-      fetchItems();
+      
+      // Update items state directly (AJAX approach)
+      setItems(prev => prev.filter(item => item.id !== itemId));
     } catch (error) {
       console.error('Error deleting item:', error);
       toast({
@@ -338,7 +365,28 @@ export function ListDetailDialog({
           .insert(assignments);
       }
 
-      fetchItems();
+      // Update items state directly (AJAX approach)
+      setItems(prev => prev.map(item => 
+        item.id === itemId 
+          ? {
+              ...item,
+              assignees: selectedAssignees.map(id => {
+                const member = familyMembers.find(m => m.id === id);
+                return {
+                  profile: {
+                    id: member?.id || '',
+                    family_id: member?.family_id || '',
+                    display_name: member?.display_name || '',
+                    role: member?.role || 'child',
+                    color: member?.color || 'sky',
+                    total_points: member?.total_points || 0
+                  }
+                };
+              })
+            }
+          : item
+      ));
+      
       setAssigningItem(null);
     } catch (error) {
       console.error('Error updating assignments:', error);
@@ -365,7 +413,8 @@ export function ListDetailDialog({
         description: 'All completed items have been removed'
       });
       
-      fetchItems();
+      // Update items state directly (AJAX approach)
+      setItems(prev => prev.filter(item => !item.is_completed));
     } catch (error) {
       console.error('Error clearing completed items:', error);
       toast({

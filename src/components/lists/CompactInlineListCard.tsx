@@ -29,6 +29,8 @@ import {
   ListTodo
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 
 interface Profile {
   id: string;
@@ -549,6 +551,76 @@ export function CompactInlineListCard({
           </div>
         )}
       </CardContent>
+
+      {/* Assignment Dialog */}
+      {showAssignDialog && assigningItem && (
+        <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Assign Task</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                Assign "{items.find(i => i.id === assigningItem)?.name}" to:
+              </div>
+              <MultiSelectAssignees
+                familyMembers={familyMembers}
+                selectedAssignees={items.find(i => i.id === assigningItem)?.assignees?.map(a => a.id) || []}
+                onAssigneesChange={async (selectedAssignees) => {
+                  try {
+                    // Remove existing assignments
+                    await supabase
+                      .from('list_item_assignees')
+                      .delete()
+                      .eq('list_item_id', assigningItem);
+
+                    // Add new assignments
+                    if (selectedAssignees.length > 0) {
+                      const assignments = selectedAssignees.map(profileId => ({
+                        list_item_id: assigningItem,
+                        profile_id: profileId,
+                        assigned_by: profile.id
+                      }));
+
+                      await supabase
+                        .from('list_item_assignees')
+                        .insert(assignments);
+                    }
+
+                    // Update local state (AJAX approach)
+                    setItems(prev => prev.map(item => 
+                      item.id === assigningItem 
+                        ? {
+                            ...item,
+                            assignees: selectedAssignees.map(id => {
+                              const member = familyMembers.find(m => m.id === id);
+                              return {
+                                id: member?.id || '',
+                                display_name: member?.display_name || '',
+                                color: member?.color || 'sky'
+                              };
+                            })
+                          }
+                        : item
+                    ));
+
+                    setShowAssignDialog(false);
+                    setAssigningItem(null);
+                    onListUpdated();
+                  } catch (error) {
+                    console.error('Error updating assignments:', error);
+                    toast({
+                      title: 'Error',
+                      description: 'Failed to update assignments',
+                      variant: 'destructive'
+                    });
+                  }
+                }}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </Card>
   );
 }
