@@ -139,7 +139,7 @@ export function CreateListDialog({
           name: formData.name.trim(),
           description: formData.description.trim() || null,
           list_type: formData.list_type,
-          category_id: formData.category_id || null,
+          category_id: formData.category_id === 'none' ? null : formData.category_id || null,
           created_by: profile.id
         })
         .select()
@@ -301,7 +301,7 @@ export function CreateListDialog({
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">
+                  <SelectItem value="none">
                     <span className="text-muted-foreground">No category</span>
                   </SelectItem>
                   {categories.map(category => (

@@ -109,7 +109,7 @@ export function EditListDialog({
           name: name.trim(),
           description: description.trim() || null,
           list_type: listType,
-          category_id: categoryId || null,
+          category_id: categoryId === 'none' ? null : categoryId || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', list.id);
@@ -196,7 +196,7 @@ export function EditListDialog({
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">
+                  <SelectItem value="none">
                     <span className="text-muted-foreground">No category</span>
                   </SelectItem>
                   {categories.map(category => (
