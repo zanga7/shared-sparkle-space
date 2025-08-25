@@ -12,17 +12,37 @@ import { useRewards } from '@/hooks/useRewards';
 import { Check, X, Clock, User, Coins, RotateCcw, CheckCircle, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
-import type { RewardRequest } from '@/types/rewards';
+import type { RewardRequest, GroupContribution } from '@/types/rewards';
 
 interface Profile {
   id: string;
   display_name: string;
   role: string;
+  color?: string;
+}
+
+interface GroupedRewardRequest {
+  id: string;
+  reward_id: string;
+  reward_title: string;
+  reward_type: string;
+  points_cost: number;
+  status: string;
+  created_at: string;
+  approval_note?: string;
+  contributors: Array<{
+    id: string;
+    display_name: string;
+    color?: string;
+    points_contributed?: number;
+  }>;
+  requests: RewardRequest[];
 }
 
 export function ApprovalQueue() {
   const { rewardRequests, approveRewardRequest, denyRewardRequest, revokeRewardRequest, markRewardClaimed, getPointsBalance } = useRewards();
   const [selectedRequest, setSelectedRequest] = useState<RewardRequest | null>(null);
+  const [selectedGroupedRequest, setSelectedGroupedRequest] = useState<GroupedRewardRequest | null>(null);
   const [note, setNote] = useState('');
   const [isApproving, setIsApproving] = useState(false);
   const [isDenying, setIsDenying] = useState(false);
@@ -30,82 +50,196 @@ export function ApprovalQueue() {
   const [isClaiming, setIsClaiming] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<Profile[]>([]);
   const [selectedMember, setSelectedMember] = useState<string>('all');
+  const [groupContributions, setGroupContributions] = useState<GroupContribution[]>([]);
 
-  const pendingRequests = rewardRequests.filter(req => req.status === 'pending');
-  
+  // Group reward requests for group contributions
+  const groupedRequests = () => {
+    const grouped: { [key: string]: GroupedRewardRequest } = {};
+    
+    rewardRequests.forEach(request => {
+      if (request.reward?.reward_type === 'group_contribution') {
+        const key = request.reward_id;
+        if (!grouped[key]) {
+          const contributors = groupContributions
+            .filter(gc => gc.reward_id === request.reward_id)
+            .map(gc => {
+              const profile = familyMembers.find(m => m.id === gc.profile_id);
+              return {
+                id: gc.profile_id,
+                display_name: profile?.display_name || 'Unknown',
+                color: profile?.color || 'sky',
+                points_contributed: gc.points_contributed
+              };
+            });
+
+          grouped[key] = {
+            id: key,
+            reward_id: request.reward_id,
+            reward_title: request.reward?.title || 'Unknown Reward',
+            reward_type: request.reward?.reward_type || 'group_contribution',
+            points_cost: request.points_cost,
+            status: request.status,
+            created_at: request.created_at,
+            approval_note: request.approval_note,
+            contributors,
+            requests: [request]
+          };
+        } else {
+          grouped[key].requests.push(request);
+        }
+      }
+    });
+    
+    return Object.values(grouped);
+  };
+
+  const individualRequests = rewardRequests.filter(req => req.reward?.reward_type !== 'group_contribution');
+  const groupedRewardRequests = groupedRequests();
+
   // Filter requests by selected member
-  const filteredRequests = selectedMember === 'all' 
-    ? rewardRequests 
-    : rewardRequests.filter(req => req.requested_by === selectedMember);
+  const filteredIndividualRequests = selectedMember === 'all' 
+    ? individualRequests 
+    : individualRequests.filter(req => req.requested_by === selectedMember);
 
-  // Fetch family members for filter
+  const filteredGroupedRequests = selectedMember === 'all'
+    ? groupedRewardRequests
+    : groupedRewardRequests.filter(gr => 
+        gr.contributors.some(c => c.id === selectedMember) || 
+        gr.requests.some(r => r.requested_by === selectedMember)
+      );
+
+  // Fetch family members and group contributions
   useEffect(() => {
-    const fetchFamilyMembers = async () => {
+    const fetchData = async () => {
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, display_name, role')
-          .order('display_name');
+        const [membersResponse, contributionsResponse] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('id, display_name, role, color')
+            .order('display_name'),
+          supabase
+            .from('group_contributions')
+            .select('*')
+        ]);
         
-        if (error) throw error;
-        setFamilyMembers(data || []);
+        if (membersResponse.error) throw membersResponse.error;
+        if (contributionsResponse.error) throw contributionsResponse.error;
+        
+        setFamilyMembers(membersResponse.data || []);
+        setGroupContributions(contributionsResponse.data || []);
       } catch (error) {
-        console.error('Error fetching family members:', error);
+        console.error('Error fetching data:', error);
       }
     };
 
-    fetchFamilyMembers();
+    fetchData();
   }, []);
 
   const handleApprove = async () => {
-    if (!selectedRequest) return;
-    
-    setIsApproving(true);
-    try {
-      await approveRewardRequest(selectedRequest.id, note || undefined);
-      setSelectedRequest(null);
-      setNote('');
-    } finally {
-      setIsApproving(false);
+    if (selectedRequest) {
+      setIsApproving(true);
+      try {
+        await approveRewardRequest(selectedRequest.id, note || undefined);
+        setSelectedRequest(null);
+        setNote('');
+      } finally {
+        setIsApproving(false);
+      }
+    } else if (selectedGroupedRequest) {
+      setIsApproving(true);
+      try {
+        // Approve all requests in the group
+        await Promise.all(
+          selectedGroupedRequest.requests.map(req => 
+            approveRewardRequest(req.id, note || undefined)
+          )
+        );
+        setSelectedGroupedRequest(null);
+        setNote('');
+      } finally {
+        setIsApproving(false);
+      }
     }
   };
 
   const handleDeny = async () => {
-    if (!selectedRequest) return;
-    
-    setIsDenying(true);
-    try {
-      await denyRewardRequest(selectedRequest.id, note || undefined);
-      setSelectedRequest(null);
-      setNote('');
-    } finally {
-      setIsDenying(false);
+    if (selectedRequest) {
+      setIsDenying(true);
+      try {
+        await denyRewardRequest(selectedRequest.id, note || undefined);
+        setSelectedRequest(null);
+        setNote('');
+      } finally {
+        setIsDenying(false);
+      }
+    } else if (selectedGroupedRequest) {
+      setIsDenying(true);
+      try {
+        // Deny all requests in the group
+        await Promise.all(
+          selectedGroupedRequest.requests.map(req => 
+            denyRewardRequest(req.id, note || undefined)
+          )
+        );
+        setSelectedGroupedRequest(null);
+        setNote('');
+      } finally {
+        setIsDenying(false);
+      }
     }
   };
 
   const handleRevoke = async () => {
-    if (!selectedRequest) return;
-    
-    setIsRevoking(true);
-    try {
-      await revokeRewardRequest(selectedRequest.id, note || undefined);
-      setSelectedRequest(null);
-      setNote('');
-    } finally {
-      setIsRevoking(false);
+    if (selectedRequest) {
+      setIsRevoking(true);
+      try {
+        await revokeRewardRequest(selectedRequest.id, note || undefined);
+        setSelectedRequest(null);
+        setNote('');
+      } finally {
+        setIsRevoking(false);
+      }
+    } else if (selectedGroupedRequest) {
+      setIsRevoking(true);
+      try {
+        // Revoke all requests in the group
+        await Promise.all(
+          selectedGroupedRequest.requests.map(req => 
+            revokeRewardRequest(req.id, note || undefined)
+          )
+        );
+        setSelectedGroupedRequest(null);
+        setNote('');
+      } finally {
+        setIsRevoking(false);
+      }
     }
   };
 
   const handleMarkClaimed = async () => {
-    if (!selectedRequest) return;
-    
-    setIsClaiming(true);
-    try {
-      await markRewardClaimed(selectedRequest.id);
-      setSelectedRequest(null);
-      setNote('');
-    } finally {
-      setIsClaiming(false);
+    if (selectedRequest) {
+      setIsClaiming(true);
+      try {
+        await markRewardClaimed(selectedRequest.id);
+        setSelectedRequest(null);
+        setNote('');
+      } finally {
+        setIsClaiming(false);
+      }
+    } else if (selectedGroupedRequest) {
+      setIsClaiming(true);
+      try {
+        // Mark all requests in the group as claimed
+        await Promise.all(
+          selectedGroupedRequest.requests.map(req => 
+            markRewardClaimed(req.id)
+          )
+        );
+        setSelectedGroupedRequest(null);
+        setNote('');
+      } finally {
+        setIsClaiming(false);
+      }
     }
   };
 
@@ -120,7 +254,7 @@ export function ApprovalQueue() {
     }
   };
 
-  if (rewardRequests.length === 0) {
+  if (filteredIndividualRequests.length === 0 && filteredGroupedRequests.length === 0) {
     return (
       <div className="text-center py-8">
         <Clock className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -155,13 +289,230 @@ export function ApprovalQueue() {
           </div>
           <Badge variant="secondary" className="flex items-center gap-1">
             <Clock className="w-4 h-4" />
-            {filteredRequests.filter(req => req.status === 'pending').length} pending
+            {filteredIndividualRequests.filter(req => req.status === 'pending').length + 
+             filteredGroupedRequests.filter(gr => gr.status === 'pending').length} pending
           </Badge>
         </div>
       </div>
 
       <div className="space-y-2">
-        {filteredRequests.map((request) => {
+        {/* Group contribution requests */}
+        {filteredGroupedRequests.map((groupedRequest) => (
+          <Card key={groupedRequest.id} className="relative">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3">
+                    <OverlappingAvatarGroup 
+                      members={groupedRequest.contributors}
+                      size="sm"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-medium text-sm truncate">
+                        {groupedRequest.reward_title}
+                      </h4>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>Group contribution</span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Coins className="w-3 h-3" />
+                          {groupedRequest.points_cost}
+                        </span>
+                        <span>•</span>
+                        <span>{format(new Date(groupedRequest.created_at), 'MMM d')}</span>
+                        <span>•</span>
+                        <span>{groupedRequest.contributors.length} contributors</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Badge className={getStatusColor(groupedRequest.status)} variant="secondary">
+                    {groupedRequest.status}
+                  </Badge>
+
+                  {groupedRequest.status === 'pending' && (
+                    <div className="flex gap-1">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            onClick={() => setSelectedGroupedRequest(groupedRequest)}
+                          >
+                            <Check className="w-3 h-3 mr-1" />
+                            Approve
+                          </Button>
+                        </DialogTrigger>
+                      
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Approve Group Reward Request</DialogTitle>
+                          <DialogDescription>
+                            Approve the group contribution reward "{groupedRequest.reward_title}" for {groupedRequest.contributors.length} contributors?
+                            This will mark all contributions as approved.
+                          </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="approval-note">Note (optional)</Label>
+                            <Textarea
+                              id="approval-note"
+                              placeholder="Add a note about this approval..."
+                              value={note}
+                              onChange={(e) => setNote(e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setSelectedGroupedRequest(null)}>
+                            Cancel
+                          </Button>
+                          <Button onClick={handleApprove} disabled={isApproving}>
+                            {isApproving ? 'Approving...' : 'Approve'}
+                          </Button>
+                        </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setSelectedGroupedRequest(groupedRequest)}
+                          >
+                            <X className="w-3 h-3 mr-1" />
+                            Deny
+                          </Button>
+                        </DialogTrigger>
+                      
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Deny Group Reward Request</DialogTitle>
+                          <DialogDescription>
+                            Deny the group contribution reward "{groupedRequest.reward_title}"?
+                          </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="denial-note">Reason (optional)</Label>
+                            <Textarea
+                              id="denial-note"
+                              placeholder="Explain why this request was denied..."
+                              value={note}
+                              onChange={(e) => setNote(e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setSelectedGroupedRequest(null)}>
+                            Cancel
+                          </Button>
+                          <Button variant="destructive" onClick={handleDeny} disabled={isDenying}>
+                            {isDenying ? 'Denying...' : 'Deny'}
+                          </Button>
+                        </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  )}
+
+                  {groupedRequest.status === 'approved' && (
+                    <div className="flex gap-1">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            onClick={() => setSelectedGroupedRequest(groupedRequest)}
+                          >
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Mark Claimed
+                          </Button>
+                        </DialogTrigger>
+                        
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Mark as Claimed</DialogTitle>
+                            <DialogDescription>
+                              Mark the group reward "{groupedRequest.reward_title}" as claimed?
+                            </DialogDescription>
+                          </DialogHeader>
+
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setSelectedGroupedRequest(null)}>
+                              Cancel
+                            </Button>
+                            <Button onClick={handleMarkClaimed} disabled={isClaiming}>
+                              {isClaiming ? 'Marking...' : 'Mark Claimed'}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => setSelectedGroupedRequest(groupedRequest)}
+                          >
+                            <RotateCcw className="w-3 h-3 mr-1" />
+                            Revoke
+                          </Button>
+                        </DialogTrigger>
+                        
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Revoke Group Reward</DialogTitle>
+                            <DialogDescription>
+                              Revoke the group reward "{groupedRequest.reward_title}" and refund {groupedRequest.points_cost} points?
+                            </DialogDescription>
+                          </DialogHeader>
+
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor="revoke-note">Reason (optional)</Label>
+                              <Textarea
+                                id="revoke-note"
+                                placeholder="Explain why this reward was revoked..."
+                                value={note}
+                                onChange={(e) => setNote(e.target.value)}
+                              />
+                            </div>
+                          </div>
+
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setSelectedGroupedRequest(null)}>
+                              Cancel
+                            </Button>
+                            <Button variant="destructive" onClick={handleRevoke} disabled={isRevoking}>
+                              {isRevoking ? 'Revoking...' : 'Revoke & Refund'}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  )}
+
+                </div>
+              </div>
+
+              {groupedRequest.approval_note && (
+                <div className="mt-3 p-2 bg-muted rounded text-xs">
+                  <span className="font-medium">Note:</span> {groupedRequest.approval_note}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+
+        {/* Individual reward requests */}
+        {filteredIndividualRequests.map((request) => {
           const currentBalance = getPointsBalance(request.requested_by);
           const canAfford = currentBalance >= request.points_cost;
 
@@ -171,26 +522,11 @@ export function ApprovalQueue() {
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3">
-                      {/* Show overlapping avatars for group rewards or single avatar for individual */}
-                      {request.reward?.reward_type === 'group_contribution' && request.reward?.assigned_to?.length ? (
-                        <OverlappingAvatarGroup 
-                          members={request.reward.assigned_to.map(id => {
-                            const profile = familyMembers.find(m => m.id === id);
-                            return {
-                              id: id,
-                              display_name: profile?.display_name || 'Unknown',
-                              color: 'sky' // You could add color to familyMembers if needed
-                            };
-                          })}
-                          size="sm"
-                        />
-                      ) : (
-                        <UserAvatar 
-                          name={request.requestor?.display_name || 'Unknown User'}
-                          color={request.requestor?.color || 'sky'}
-                          size="sm"
-                        />
-                      )}
+                      <UserAvatar 
+                        name={request.requestor?.display_name || 'Unknown User'}
+                        color={request.requestor?.color || 'sky'}
+                        size="sm"
+                      />
                       <div className="min-w-0 flex-1">
                         <h4 className="font-medium text-sm truncate">
                           {request.reward?.title || 'Unknown Reward'}
