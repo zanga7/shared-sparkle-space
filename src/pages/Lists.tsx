@@ -10,7 +10,7 @@ import {
   Search, 
   Hash
 } from 'lucide-react';
-import { InlineListCard } from '@/components/lists/InlineListCard';
+import { CompactInlineListCard } from '@/components/lists/CompactInlineListCard';
 import { CreateListDialog } from '@/components/lists/CreateListDialog';
 import { EditListDialog } from '@/components/lists/EditListDialog';
 import { CategoryManager } from '@/components/lists/CategoryManager';
@@ -26,7 +26,6 @@ interface List {
   id: string;
   name: string;
   description?: string;
-  list_type: string;
   is_archived: boolean;
   created_at: string;
   updated_at: string;
@@ -387,7 +386,7 @@ const Lists = () => {
         {/* Lists Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredLists.map((list) => (
-            <InlineListCard
+            <CompactInlineListCard
               key={list.id}
               list={list}
               profile={profile!}

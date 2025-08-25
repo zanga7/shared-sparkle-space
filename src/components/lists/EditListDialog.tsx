@@ -29,7 +29,6 @@ interface EditListDialogProps {
     id: string;
     name: string;
     description?: string;
-    list_type: string;
     category_id?: string;
     family_id: string;
   };
@@ -47,7 +46,6 @@ export function EditListDialog({
   const { toast } = useToast();
   const [name, setName] = useState(list.name);
   const [description, setDescription] = useState(list.description || '');
-  const [listType, setListType] = useState(list.list_type);
   const [categoryId, setCategoryId] = useState(list.category_id || '');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,7 +54,6 @@ export function EditListDialog({
     if (open) {
       setName(list.name);
       setDescription(list.description || '');
-      setListType(list.list_type);
       setCategoryId(list.category_id || '');
       fetchCategories();
     }
@@ -108,7 +105,6 @@ export function EditListDialog({
         .update({
           name: name.trim(),
           description: description.trim() || null,
-          list_type: listType,
           category_id: categoryId === 'none' ? null : categoryId || null,
           updated_at: new Date().toISOString()
         })
@@ -168,21 +164,6 @@ export function EditListDialog({
               placeholder="Enter list description"
               rows={3}
             />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="type" className="text-sm font-medium">
-              List Type
-            </label>
-            <Select value={listType} onValueChange={setListType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select list type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="shopping">Shopping</SelectItem>
-                <SelectItem value="camping">Camping</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
           
           {/* Category Selection */}

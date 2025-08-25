@@ -505,7 +505,6 @@ export type Database = {
           family_id: string
           id: string
           is_archived: boolean
-          list_type: string
           name: string
           sort_order: number
           updated_at: string
@@ -518,7 +517,6 @@ export type Database = {
           family_id: string
           id?: string
           is_archived?: boolean
-          list_type?: string
           name: string
           sort_order?: number
           updated_at?: string
@@ -531,7 +529,6 @@ export type Database = {
           family_id?: string
           id?: string
           is_archived?: boolean
-          list_type?: string
           name?: string
           sort_order?: number
           updated_at?: string

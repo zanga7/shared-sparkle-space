@@ -1,37 +1,33 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Plus, 
-  MoreVertical, 
+  MoreHorizontal, 
   Trash2, 
-  Edit3, 
-  Calendar,
-  Hash,
-  User,
-  FileText,
+  Edit, 
+  Users,
   ChevronDown,
-  ChevronRight,
   ChevronUp,
   Settings,
-  ShoppingCart,
-  Tent,
-  List as ListIcon
+  Copy,
+  Archive,
+  ArchiveRestore,
+  ListTodo
 } from 'lucide-react';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface Profile {
@@ -49,13 +45,14 @@ interface ListItem {
   notes?: string;
   quantity: number;
   category?: string;
-  due_date?: string;
   is_completed: boolean;
   completed_at?: string;
   completed_by?: string;
   sort_order: number;
   assignees?: {
-    profile: Profile;
+    id: string;
+    display_name: string;
+    color: string;
   }[];
 }
 
@@ -74,7 +71,7 @@ interface List {
   assignees_count?: number;
 }
 
-interface InlineListCardProps {
+interface CompactInlineListCardProps {
   list: List;
   profile: Profile;
   onEditList: (list: List) => void;
@@ -84,7 +81,7 @@ interface InlineListCardProps {
   onListUpdated: () => void;
 }
 
-export function InlineListCard({ 
+export function CompactInlineListCard({ 
   list, 
   profile, 
   onEditList,
@@ -92,18 +89,18 @@ export function InlineListCard({
   onArchiveList,
   onDeleteList,
   onListUpdated
-}: InlineListCardProps) {
+}: CompactInlineListCardProps) {
   const { toast } = useToast();
   const [items, setItems] = useState<ListItem[]>([]);
   const [familyMembers, setFamilyMembers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [newItemText, setNewItemText] = useState('');
   const [editingItem, setEditingItem] = useState<string | null>(null);
-  const [editText, setEditText] = useState('');
-  const [showCompleted, setShowCompleted] = useState(false);
+  const [editingValue, setEditingValue] = useState('');
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [assigningItem, setAssigningItem] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(false);
-  const newItemInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchItems();
@@ -118,21 +115,22 @@ export function InlineListCard({
         .select(`
           *,
           assignees:list_item_assignees(
-            profile:profiles(id, display_name, role, color)
+            profile:profiles(id, display_name, color)
           )
         `)
         .eq('list_id', list.id)
         .order('sort_order', { ascending: true });
 
       if (error) throw error;
-      setItems((data || []) as unknown as ListItem[]);
+      
+      const processedItems = (data || []).map(item => ({
+        ...item,
+        assignees: item.assignees?.map((a: any) => a.profile) || []
+      }));
+      
+      setItems(processedItems as ListItem[]);
     } catch (error) {
       console.error('Error fetching items:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load list items',
-        variant: 'destructive'
-      });
     } finally {
       setLoading(false);
     }
@@ -192,6 +190,7 @@ export function InlineListCard({
     if (!text.trim()) return;
 
     try {
+      setAdding(true);
       const lines = text.split('\n').filter(line => line.trim());
       const maxSortOrder = Math.max(...items.map(item => item.sort_order), -1);
       
@@ -215,13 +214,13 @@ export function InlineListCard({
 
       if (error) throw error;
 
-      // Update items state directly instead of refetching
+      // Update items state directly (AJAX approach)
       if (data) {
-        const newItemsWithDefaults = data.map(item => ({
+        const newItemsWithAssignees = data.map(item => ({
           ...item,
-          assignees: [] as { profile: Profile }[]
+          assignees: [] as any[]
         }));
-        setItems(prev => [...prev, ...newItemsWithDefaults]);
+        setItems(prev => [...prev, ...newItemsWithAssignees]);
       }
 
       setNewItemText('');
@@ -233,12 +232,13 @@ export function InlineListCard({
         description: 'Failed to add items',
         variant: 'destructive'
       });
+    } finally {
+      setAdding(false);
     }
   };
 
-  const toggleItemComplete = async (item: ListItem) => {
+  const toggleItemComplete = async (itemId: string, newCompleted: boolean) => {
     try {
-      const newCompleted = !item.is_completed;
       const { error } = await supabase
         .from('list_items')
         .update({
@@ -246,20 +246,20 @@ export function InlineListCard({
           completed_at: newCompleted ? new Date().toISOString() : null,
           completed_by: newCompleted ? profile.id : null
         })
-        .eq('id', item.id);
+        .eq('id', itemId);
 
       if (error) throw error;
       
-      // Update items state directly instead of refetching
-      setItems(prev => prev.map(prevItem => 
-        prevItem.id === item.id 
+      // Update items state directly (AJAX approach)
+      setItems(prev => prev.map(item => 
+        item.id === itemId 
           ? {
-              ...prevItem,
+              ...item,
               is_completed: newCompleted,
               completed_at: newCompleted ? new Date().toISOString() : null,
               completed_by: newCompleted ? profile.id : null
             }
-          : prevItem
+          : item
       ));
       
       onListUpdated();
@@ -281,7 +281,12 @@ export function InlineListCard({
         .eq('id', itemId);
 
       if (error) throw error;
-      await fetchItems();
+      
+      // Update items state directly (AJAX approach)
+      setItems(prev => prev.map(item => 
+        item.id === itemId ? { ...item, ...updates } : item
+      ));
+      
       onListUpdated();
     } catch (error) {
       console.error('Error updating item:', error);
@@ -301,7 +306,10 @@ export function InlineListCard({
         .eq('id', itemId);
 
       if (error) throw error;
-      await fetchItems();
+      
+      // Update items state directly (AJAX approach)
+      setItems(prev => prev.filter(item => item.id !== itemId));
+      
       onListUpdated();
     } catch (error) {
       console.error('Error deleting item:', error);
@@ -313,61 +321,30 @@ export function InlineListCard({
     }
   };
 
-  const updateAssignees = async (itemId: string, selectedAssignees: string[]) => {
-    try {
-      // Remove existing assignments
-      await supabase
-        .from('list_item_assignees')
-        .delete()
-        .eq('list_item_id', itemId);
-
-      // Add new assignments
-      if (selectedAssignees.length > 0) {
-        const assignments = selectedAssignees.map(profileId => ({
-          list_item_id: itemId,
-          profile_id: profileId,
-          assigned_by: profile.id
-        }));
-
-        await supabase
-          .from('list_item_assignees')
-          .insert(assignments);
-      }
-
-      await fetchItems();
-      setAssigningItem(null);
-      onListUpdated();
-    } catch (error) {
-      console.error('Error updating assignments:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update assignments',
-        variant: 'destructive'
-      });
+  const handleSaveEdit = async () => {
+    if (editingItem && editingValue.trim()) {
+      await updateItem(editingItem, { name: editingValue.trim() });
     }
+    setEditingItem(null);
+    setEditingValue('');
   };
 
-  const getListIcon = () => {
-    return <ListIcon className="h-4 w-4 text-primary" />;
-  };
-
-  const activeItems = items.filter(item => !item.is_completed);
-  const completedItems = items.filter(item => item.is_completed);
-  const displayItems = expanded ? items : activeItems.slice(0, 3);
+  const completedCount = items.filter(item => item.is_completed).length;
+  const progressPercentage = items.length > 0 ? Math.round((completedCount / items.length) * 100) : 0;
 
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2 flex-1">
-            {getListIcon()}
+            <ListTodo className="h-4 w-4 text-primary" />
             <CardTitle className="text-lg truncate">{list.name}</CardTitle>
           </div>
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreVertical className="h-4 w-4" />
+                  <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -376,15 +353,28 @@ export function InlineListCard({
                   Edit List
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onDuplicateList(list)}>
+                  <Copy className="h-4 w-4 mr-2" />
                   Duplicate
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onArchiveList(list)}>
-                  {list.is_archived ? 'Restore' : 'Archive'}
+                  {list.is_archived ? (
+                    <>
+                      <ArchiveRestore className="h-4 w-4 mr-2" />
+                      Restore
+                    </>
+                  ) : (
+                    <>
+                      <Archive className="h-4 w-4 mr-2" />
+                      Archive
+                    </>
+                  )}
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => onDeleteList(list)}
                   className="text-destructive"
                 >
+                  <Trash2 className="h-4 w-4 mr-2" />
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -396,200 +386,166 @@ export function InlineListCard({
         )}
       </CardHeader>
 
-      <CardContent className="space-y-3">
-        {/* Quick Add */}
-        <div className="flex gap-2">
-          <Input
-            ref={newItemInputRef}
-            placeholder="Add item..."
-            value={newItemText}
-            onChange={(e) => setNewItemText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                addItems(newItemText);
-              }
-            }}
-            className="flex-1 h-8"
-          />
-          <Button 
-            onClick={() => addItems(newItemText)}
-            disabled={!newItemText.trim()}
-            size="sm"
-            className="h-8 px-2"
-          >
-            <Plus className="h-3 w-3" />
-          </Button>
-        </div>
-
-        {/* Items List */}
-        <div className="space-y-2">
-          {displayItems.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center gap-2 p-2 border rounded-md bg-card/50"
-            >
-              <Checkbox
+      <CardContent className="pt-0 pb-3">
+        {/* Items list */}
+        <div className="space-y-1 mb-3">
+          {items.slice(0, isExpanded ? items.length : 10).map((item) => (
+            <div key={item.id} className="flex items-center gap-2 py-1 group hover:bg-muted/50 rounded-sm px-1 -mx-1">
+              <Checkbox 
+                id={`item-${item.id}`}
                 checked={item.is_completed}
-                onCheckedChange={() => toggleItemComplete(item)}
-                className="h-4 w-4"
+                onCheckedChange={() => toggleItemComplete(item.id, !item.is_completed)}
+                className="flex-shrink-0 h-4 w-4"
               />
-              
               <div className="flex-1 min-w-0">
                 {editingItem === item.id ? (
                   <Input
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
+                    value={editingValue}
+                    onChange={(e) => setEditingValue(e.target.value)}
+                    onBlur={handleSaveEdit}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        updateItem(item.id, { name: editText });
-                        setEditingItem(null);
-                      }
+                      if (e.key === 'Enter') handleSaveEdit();
                       if (e.key === 'Escape') {
                         setEditingItem(null);
+                        setEditingValue('');
                       }
                     }}
-                    onBlur={() => {
-                      updateItem(item.id, { name: editText });
-                      setEditingItem(null);
-                    }}
+                    className="h-7 text-sm border-none px-1 focus:ring-1"
                     autoFocus
-                    className="h-6 text-sm"
                   />
                 ) : (
-                  <div
+                  <span
                     className={cn(
-                      "cursor-pointer text-sm",
-                      item.is_completed && "line-through text-muted-foreground"
+                      "text-sm cursor-pointer block truncate py-1 px-1 rounded hover:bg-accent/50",
+                      item.is_completed ? "line-through text-muted-foreground" : ""
                     )}
                     onClick={() => {
                       setEditingItem(item.id);
-                      setEditText(item.name);
+                      setEditingValue(item.name);
                     }}
                   >
-                    <div className="flex items-center gap-1 flex-wrap">
-                      <span>{item.name}</span>
-                      {item.quantity > 1 && (
-                        <Badge variant="outline" className="text-xs h-4 px-1">
-                          x{item.quantity}
-                        </Badge>
-                      )}
-                      {item.category && (
-                        <Badge variant="secondary" className="text-xs h-4 px-1">
-                          {item.category}
-                        </Badge>
-                      )}
-                    </div>
-                    {item.notes && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {item.notes}
-                      </div>
+                    {item.quantity && item.quantity > 1 && (
+                      <span className="font-medium mr-1 text-xs">({item.quantity})</span>
                     )}
-                  </div>
+                    {item.name}
+                    {item.category && (
+                      <span className="text-xs text-muted-foreground ml-1">
+                        [{item.category}]
+                      </span>
+                    )}
+                  </span>
                 )}
               </div>
-
+              
               {item.assignees && item.assignees.length > 0 && (
                 <div className="flex -space-x-1">
-                  {item.assignees.slice(0, 2).map((assignee) => (
+                  {item.assignees.slice(0, 2).map((assignee, index) => (
                     <UserAvatar
-                      key={assignee.profile.id}
-                      name={assignee.profile.display_name}
-                      color={assignee.profile.color}
+                      key={assignee.id}
+                      name={assignee.display_name}
+                      color={assignee.color}
                       size="sm"
-                      className="border border-background"
+                      className="border border-background h-5 w-5 text-xs"
                     />
                   ))}
                   {item.assignees.length > 2 && (
-                    <UserAvatar
-                      name={`+${item.assignees.length - 2}`}
-                      size="sm"
-                      className="border border-background bg-muted text-muted-foreground"
-                    />
+                    <div className="h-5 w-5 rounded-full bg-muted border border-background flex items-center justify-center">
+                      <span className="text-xs text-muted-foreground">
+                        +{item.assignees.length - 2}
+                      </span>
+                    </div>
                   )}
                 </div>
               )}
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                    <MoreVertical className="h-3 w-3" />
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <MoreHorizontal className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setAssigningItem(item.id)}>
-                    <User className="h-3 w-3 mr-2" />
+                  <DropdownMenuItem onClick={() => {
+                    setEditingItem(item.id);
+                    setEditingValue(item.name);
+                  }}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      setAssigningItem(item.id);
+                      setShowAssignDialog(true);
+                    }}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
                     Assign
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => deleteItem(item.id)} className="text-destructive">
-                    <Trash2 className="h-3 w-3 mr-2" />
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => deleteItem(item.id)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           ))}
-
-          {/* Expand/Collapse */}
-          {(activeItems.length > 3 || completedItems.length > 0) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setExpanded(!expanded)}
-              className="w-full h-8 text-xs"
-            >
-              {expanded ? (
-                <>
-                  <ChevronUp className="h-3 w-3 mr-1" />
-                  Show Less
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="h-3 w-3 mr-1" />
-                  Show {activeItems.length > 3 ? `${activeItems.length - 3} more` : ''}
-                  {completedItems.length > 0 && ` + ${completedItems.length} completed`}
-                </>
-              )}
-            </Button>
-          )}
         </div>
 
-        {/* Progress Bar */}
-        {items.length > 0 && (
-          <div className="pt-2">
-            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-              <span>Progress</span>
-              <span>{completedItems.length} of {items.length} done</span>
-            </div>
-            <div className="w-full bg-muted rounded-full h-1.5">
-              <div 
-                className="bg-primary rounded-full h-1.5 transition-all"
-                style={{ 
-                  width: `${items.length ? (completedItems.length / items.length) * 100 : 0}%` 
-                }}
-              />
-            </div>
-          </div>
+        {/* Quick add input */}
+        <div className="flex gap-2 border-t pt-2">
+          <Plus className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+          <Input
+            placeholder="Add task"
+            value={newItemText}
+            onChange={(e) => setNewItemText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && newItemText.trim()) {
+                addItems(newItemText);
+              }
+            }}
+            className="flex-1 h-8 text-sm border-none px-1 focus:ring-1"
+            disabled={adding}
+          />
+        </div>
+
+        {/* Show/Hide button */}
+        {items.length > 10 && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="w-full mt-2 h-7 text-xs"
+          >
+            {isExpanded ? (
+              <>
+                <ChevronUp className="h-3 w-3 mr-1" />
+                Show Less
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-3 w-3 mr-1" />
+                Show {items.length - 10} More
+              </>
+            )}
+          </Button>
         )}
 
-        {/* Assignment Dialog */}
-        {assigningItem && (
-          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-background border rounded-lg p-4 max-w-sm w-full">
-              <h3 className="font-medium mb-3">Assign to</h3>
-              <MultiSelectAssignees
-                familyMembers={familyMembers}
-                selectedAssignees={
-                  items.find(item => item.id === assigningItem)?.assignees?.map(a => a.profile.id) || []
-                }
-                onAssigneesChange={(assignees) => updateAssignees(assigningItem, assignees)}
-              />
-              <div className="flex gap-2 mt-4">
-                <Button size="sm" onClick={() => setAssigningItem(null)}>
-                  Done
-                </Button>
-              </div>
+        {/* Progress indicator */}
+        {items.length > 0 && (
+          <div className="mt-2 space-y-1">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{completedCount} of {items.length} complete</span>
+              <span>{progressPercentage}%</span>
             </div>
+            <Progress value={progressPercentage} className="h-1" />
           </div>
         )}
       </CardContent>

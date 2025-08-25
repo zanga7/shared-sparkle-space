@@ -385,7 +385,6 @@ export function ListDetailDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {list.name}
-            <Badge variant="outline">{list.list_type}</Badge>
           </DialogTitle>
         </DialogHeader>
 
