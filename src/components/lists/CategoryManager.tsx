@@ -37,6 +37,7 @@ interface CategoryManagerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   familyId: string;
+  onCategoryUpdated?: () => void;
 }
 
 const colorOptions = [
@@ -57,7 +58,7 @@ const iconOptions = [
   'Baby', 'PawPrint', 'Flower', 'Book', 'Gamepad2', 'Headphones'
 ];
 
-export function CategoryManager({ open, onOpenChange, familyId }: CategoryManagerProps) {
+export function CategoryManager({ open, onOpenChange, familyId, onCategoryUpdated }: CategoryManagerProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -156,6 +157,7 @@ export function CategoryManager({ open, onOpenChange, familyId }: CategoryManage
         setNewCategory({ name: '', color: 'sky', icon: 'Tag' });
       }
       fetchCategories();
+      onCategoryUpdated?.();
       
       toast({
         title: 'Category created',
@@ -191,6 +193,7 @@ export function CategoryManager({ open, onOpenChange, familyId }: CategoryManage
 
       fetchCategories();
       fetchArchivedCategories();
+      onCategoryUpdated?.();
       
       toast({
         title: 'Category archived',
@@ -217,6 +220,7 @@ export function CategoryManager({ open, onOpenChange, familyId }: CategoryManage
 
       fetchCategories();
       fetchArchivedCategories();
+      onCategoryUpdated?.();
       
       toast({
         title: 'Category restored',
@@ -247,6 +251,7 @@ export function CategoryManager({ open, onOpenChange, familyId }: CategoryManage
 
       setEditingCategory(null);
       fetchCategories();
+      onCategoryUpdated?.();
       
       toast({
         title: 'Category updated',
@@ -273,6 +278,7 @@ export function CategoryManager({ open, onOpenChange, familyId }: CategoryManage
 
       fetchCategories();
       fetchArchivedCategories();
+      onCategoryUpdated?.();
       
       toast({
         title: 'Category deleted',

@@ -15,6 +15,13 @@ import { CreateListDialog } from '@/components/lists/CreateListDialog';
 import { EditListDialog } from '@/components/lists/EditListDialog';
 import { CategoryManager } from '@/components/lists/CategoryManager';
 
+interface Category {
+  id: string;
+  name: string;
+  color: string;
+  icon?: string;
+}
+
 interface List {
   id: string;
   name: string;
@@ -46,6 +53,7 @@ const Lists = () => {
   const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [lists, setLists] = useState<List[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -62,6 +70,7 @@ const Lists = () => {
   useEffect(() => {
     if (profile) {
       fetchLists();
+      fetchCategories();
     }
   }, [profile]);
 
@@ -99,11 +108,12 @@ const Lists = () => {
     try {
       setLoading(true);
       
-      // Fetch lists with item counts
+      // Fetch lists with item counts and category info
       const { data: listsData, error } = await supabase
         .from('lists')
         .select(`
           *,
+          category:categories(id, name, color, icon),
           list_items(
             id,
             is_completed,
@@ -148,25 +158,38 @@ const Lists = () => {
     }
   };
 
+  const fetchCategories = async () => {
+    if (!profile) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('family_id', profile.family_id)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
   const filteredLists = lists.filter(list => {
     // Apply search filter
     if (searchQuery && !list.name.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
 
-    // Apply type filter
-    switch (selectedFilter) {
-      case 'shopping':
-        return list.list_type === 'shopping' && !list.is_archived;
-      case 'camping':
-        return list.list_type === 'camping' && !list.is_archived;
-      case 'custom':
-        return list.list_type === 'custom' && !list.is_archived;
-      case 'archived':
-        return list.is_archived;
-      case 'all':
-      default:
-        return !list.is_archived;
+    // Apply category filter
+    if (selectedFilter === 'archived') {
+      return list.is_archived;
+    } else if (selectedFilter === 'all') {
+      return !list.is_archived;
+    } else {
+      // Filter by category ID
+      return !list.is_archived && list.category_id === selectedFilter;
     }
   });
 
@@ -176,6 +199,11 @@ const Lists = () => {
   };
 
   const handleListUpdated = () => {
+    fetchLists();
+  };
+
+  const handleCategoryUpdated = () => {
+    fetchCategories();
     fetchLists();
   };
 
@@ -190,7 +218,7 @@ const Lists = () => {
           family_id: profile.family_id,
           name: `${list.name} (Copy)`,
           description: list.description,
-          list_type: list.list_type,
+          category_id: list.category_id,
           created_by: profile.id
         })
         .select()
@@ -345,11 +373,13 @@ const Lists = () => {
 
         {/* Tabs */}
         <Tabs value={selectedFilter} onValueChange={setSelectedFilter} className="mb-6">
-          <TabsList className="grid w-full grid-cols-5 h-auto">
+          <TabsList className="grid w-full h-auto" style={{ gridTemplateColumns: `repeat(${categories.length + 2}, 1fr)` }}>
             <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
-            <TabsTrigger value="shopping" className="flex-1">Shopping</TabsTrigger>
-            <TabsTrigger value="camping" className="flex-1">Camping</TabsTrigger>
-            <TabsTrigger value="custom" className="flex-1">Custom</TabsTrigger>
+            {categories.map((category) => (
+              <TabsTrigger key={category.id} value={category.id} className="flex-1">
+                {category.name}
+              </TabsTrigger>
+            ))}
             <TabsTrigger value="archived" className="flex-1">Archived</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -411,6 +441,7 @@ const Lists = () => {
         open={isCategoryManagerOpen}
         onOpenChange={setIsCategoryManagerOpen}
         familyId={profile?.family_id || ''}
+        onCategoryUpdated={handleCategoryUpdated}
       />
     </div>
   );

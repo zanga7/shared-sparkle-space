@@ -209,14 +209,23 @@ export function InlineListCard({
         };
       });
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('list_items')
-        .insert(newItems);
+        .insert(newItems)
+        .select('*');
 
       if (error) throw error;
 
+      // Update items state directly instead of refetching
+      if (data) {
+        const newItemsWithDefaults = data.map(item => ({
+          ...item,
+          assignees: [] as { profile: Profile }[]
+        }));
+        setItems(prev => [...prev, ...newItemsWithDefaults]);
+      }
+
       setNewItemText('');
-      await fetchItems();
       onListUpdated();
     } catch (error) {
       console.error('Error adding items:', error);
@@ -230,17 +239,30 @@ export function InlineListCard({
 
   const toggleItemComplete = async (item: ListItem) => {
     try {
+      const newCompleted = !item.is_completed;
       const { error } = await supabase
         .from('list_items')
         .update({
-          is_completed: !item.is_completed,
-          completed_at: !item.is_completed ? new Date().toISOString() : null,
-          completed_by: !item.is_completed ? profile.id : null
+          is_completed: newCompleted,
+          completed_at: newCompleted ? new Date().toISOString() : null,
+          completed_by: newCompleted ? profile.id : null
         })
         .eq('id', item.id);
 
       if (error) throw error;
-      await fetchItems();
+      
+      // Update items state directly instead of refetching
+      setItems(prev => prev.map(prevItem => 
+        prevItem.id === item.id 
+          ? {
+              ...prevItem,
+              is_completed: newCompleted,
+              completed_at: newCompleted ? new Date().toISOString() : null,
+              completed_by: newCompleted ? profile.id : null
+            }
+          : prevItem
+      ));
+      
       onListUpdated();
     } catch (error) {
       console.error('Error toggling item:', error);

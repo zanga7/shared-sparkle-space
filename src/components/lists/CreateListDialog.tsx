@@ -20,7 +20,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ShoppingCart, Tent, List as ListIcon } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
 interface Category {
@@ -35,12 +34,6 @@ interface Profile {
   family_id: string;
 }
 
-interface Template {
-  id: string;
-  name: string;
-  list_type: string;
-  template_items: any;
-}
 
 interface CreateListDialogProps {
   open: boolean;
@@ -57,37 +50,20 @@ export function CreateListDialog({
 }: CreateListDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [templates, setTemplates] = useState<Template[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    list_type: 'custom' as string,
     category_id: '' as string
   });
 
   useEffect(() => {
     if (open) {
-      fetchTemplates();
       fetchCategories();
     }
   }, [open]);
 
-  const fetchTemplates = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('list_templates')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-      setTemplates((data || []) as Template[]);
-    } catch (error) {
-      console.error('Error fetching templates:', error);
-    }
-  };
 
   const fetchCategories = async () => {
     try {
@@ -138,7 +114,6 @@ export function CreateListDialog({
           family_id: profile.family_id,
           name: formData.name.trim(),
           description: formData.description.trim() || null,
-          list_type: formData.list_type,
           category_id: formData.category_id === 'none' ? null : formData.category_id || null,
           created_by: profile.id
         })
@@ -147,37 +122,6 @@ export function CreateListDialog({
 
       if (listError) throw listError;
 
-      // Apply template if selected
-      if (selectedTemplate) {
-        const template = templates.find(t => t.id === selectedTemplate);
-        if (template && template.template_items) {
-          const items: any[] = [];
-          let sortOrder = 0;
-
-          // Flatten template items into list items
-          template.template_items.forEach((section: any) => {
-            if (section.items) {
-              section.items.forEach((itemName: string) => {
-                items.push({
-                  list_id: newList.id,
-                  name: itemName,
-                  category: section.category || section.name,
-                  sort_order: sortOrder++,
-                  created_by: profile.id
-                });
-              });
-            }
-          });
-
-          if (items.length > 0) {
-            const { error: itemsError } = await supabase
-              .from('list_items')
-              .insert(items);
-
-            if (itemsError) throw itemsError;
-          }
-        }
-      }
 
       toast({
         title: 'List created',
@@ -188,10 +132,9 @@ export function CreateListDialog({
       setFormData({
         name: '',
         description: '',
-        list_type: 'custom',
         category_id: ''
       });
-      setSelectedTemplate(null);
+      
       
       onListCreated();
       onOpenChange(false);
@@ -207,27 +150,7 @@ export function CreateListDialog({
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'shopping':
-        return <ShoppingCart className="h-4 w-4" />;
-      case 'camping':
-        return <Tent className="h-4 w-4" />;
-      default:
-        return <ListIcon className="h-4 w-4" />;
-    }
-  };
 
-  const handleTypeChange = (type: string) => {
-    setFormData(prev => ({ ...prev, list_type: type }));
-    // Auto-select first template of the same type
-    const typeTemplates = templates.filter(t => t.list_type === type);
-    if (typeTemplates.length > 0) {
-      setSelectedTemplate(typeTemplates[0].id);
-    } else {
-      setSelectedTemplate(null);
-    }
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -263,34 +186,6 @@ export function CreateListDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>List Type</Label>
-            <Select value={formData.list_type} onValueChange={handleTypeChange}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="shopping">
-                  <div className="flex items-center gap-2">
-                    <ShoppingCart className="h-4 w-4" />
-                    Shopping
-                  </div>
-                </SelectItem>
-                <SelectItem value="camping">
-                  <div className="flex items-center gap-2">
-                    <Tent className="h-4 w-4" />
-                    Camping
-                  </div>
-                </SelectItem>
-                <SelectItem value="custom">
-                  <div className="flex items-center gap-2">
-                    <ListIcon className="h-4 w-4" />
-                    Custom
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
           {/* Category Selection */}
           {categories.length > 0 && (
@@ -320,46 +215,6 @@ export function CreateListDialog({
             </div>
           )}
 
-          {/* Templates */}
-          {templates.filter(t => t.list_type === formData.list_type).length > 0 && (
-            <div className="space-y-2">
-              <Label>Apply Template (Optional)</Label>
-              <div className="grid grid-cols-1 gap-2">
-                {templates
-                  .filter(t => t.list_type === formData.list_type)
-                  .map(template => (
-                    <div
-                      key={template.id}
-                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                        selectedTemplate === template.id
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                      onClick={() => setSelectedTemplate(
-                        selectedTemplate === template.id ? null : template.id
-                      )}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        {getTypeIcon(template.list_type)}
-                        <span className="font-medium">{template.name}</span>
-                      </div>
-                      <div className="flex flex-wrap gap-1 text-xs">
-                        {template.template_items.slice(0, 3).map((section: any, idx: number) => (
-                          <Badge key={idx} variant="outline" className="text-xs">
-                            {section.name}
-                          </Badge>
-                        ))}
-                        {template.template_items.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{template.template_items.length - 3} more
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
 
           <div className="flex justify-end gap-3 pt-4">
             <Button
