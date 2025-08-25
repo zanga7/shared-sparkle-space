@@ -410,7 +410,7 @@ const Lists = () => {
       <CategoryManager
         open={isCategoryManagerOpen}
         onOpenChange={setIsCategoryManagerOpen}
-        familyId={profile!.family_id}
+        familyId={profile?.family_id || ''}
       />
     </div>
   );

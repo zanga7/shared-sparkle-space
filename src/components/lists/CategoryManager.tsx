@@ -16,11 +16,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, MoreVertical, Edit3, Trash2 } from 'lucide-react';
+import { Plus, MoreVertical, Edit3, Trash2, Copy, Archive, RotateCcw } from 'lucide-react';
 import * as Icons from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Category {
   id: string;
@@ -57,8 +59,11 @@ const iconOptions = [
 
 export function CategoryManager({ open, onOpenChange, familyId }: CategoryManagerProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
+  const [archivedCategories, setArchivedCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [newCategory, setNewCategory] = useState({
     name: '',
     color: 'sky',
@@ -67,12 +72,15 @@ export function CategoryManager({ open, onOpenChange, familyId }: CategoryManage
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   useEffect(() => {
-    if (open) {
+    if (open && familyId) {
       fetchCategories();
+      fetchArchivedCategories();
     }
   }, [open, familyId]);
 
   const fetchCategories = async () => {
+    if (!familyId) return;
+    
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -96,37 +104,129 @@ export function CategoryManager({ open, onOpenChange, familyId }: CategoryManage
     }
   };
 
-  const createCategory = async () => {
-    if (!newCategory.name.trim()) return;
+  const fetchArchivedCategories = async () => {
+    if (!familyId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('family_id', familyId)
+        .eq('is_active', false)
+        .order('sort_order');
+
+      if (error) throw error;
+      setArchivedCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching archived categories:', error);
+    }
+  };
+
+  const createCategory = async (categoryData = newCategory, isFromDuplicate = false) => {
+    if (!categoryData.name.trim() || !familyId) return;
 
     try {
+      // Get current user's profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (!profile) {
+        throw new Error('User profile not found');
+      }
+
       const maxSortOrder = Math.max(...categories.map(c => c.sort_order), -1);
       
       const { error } = await supabase
         .from('categories')
         .insert({
           family_id: familyId,
-          name: newCategory.name.trim(),
-          color: newCategory.color,
-          icon: newCategory.icon,
+          name: categoryData.name.trim(),
+          color: categoryData.color,
+          icon: categoryData.icon,
           sort_order: maxSortOrder + 1,
-          created_by: (await supabase.from('profiles').select('id').eq('family_id', familyId).eq('role', 'parent').single()).data?.id
+          created_by: profile.id
         });
 
       if (error) throw error;
 
-      setNewCategory({ name: '', color: 'sky', icon: 'Tag' });
+      if (!isFromDuplicate) {
+        setNewCategory({ name: '', color: 'sky', icon: 'Tag' });
+      }
       fetchCategories();
       
       toast({
         title: 'Category created',
-        description: 'New category has been added'
+        description: isFromDuplicate ? 'Category duplicated successfully' : 'New category has been added'
       });
     } catch (error) {
       console.error('Error creating category:', error);
       toast({
         title: 'Error',
         description: 'Failed to create category',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const duplicateCategory = async (category: Category) => {
+    const duplicatedCategory = {
+      name: `${category.name} (Copy)`,
+      color: category.color,
+      icon: category.icon
+    };
+    await createCategory(duplicatedCategory, true);
+  };
+
+  const archiveCategory = async (categoryId: string) => {
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .update({ is_active: false })
+        .eq('id', categoryId);
+
+      if (error) throw error;
+
+      fetchCategories();
+      fetchArchivedCategories();
+      
+      toast({
+        title: 'Category archived',
+        description: 'Category has been archived'
+      });
+    } catch (error) {
+      console.error('Error archiving category:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to archive category',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const restoreCategory = async (categoryId: string) => {
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .update({ is_active: true })
+        .eq('id', categoryId);
+
+      if (error) throw error;
+
+      fetchCategories();
+      fetchArchivedCategories();
+      
+      toast({
+        title: 'Category restored',
+        description: 'Category has been restored from archive'
+      });
+    } catch (error) {
+      console.error('Error restoring category:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to restore category',
         variant: 'destructive'
       });
     }
@@ -166,16 +266,17 @@ export function CategoryManager({ open, onOpenChange, familyId }: CategoryManage
     try {
       const { error } = await supabase
         .from('categories')
-        .update({ is_active: false })
+        .delete()
         .eq('id', categoryId);
 
       if (error) throw error;
 
       fetchCategories();
+      fetchArchivedCategories();
       
       toast({
         title: 'Category deleted',
-        description: 'Category has been removed'
+        description: 'Category has been permanently deleted'
       });
     } catch (error) {
       console.error('Error deleting category:', error);
@@ -258,57 +359,131 @@ export function CategoryManager({ open, onOpenChange, familyId }: CategoryManage
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={createCategory} disabled={!newCategory.name.trim()} className="w-full">
+            <Button onClick={() => createCategory()} disabled={!newCategory.name.trim()} className="w-full">
               <Plus className="h-4 w-4 mr-2" />
               Add Category
             </Button>
           </div>
 
-          {/* Categories List */}
+          {/* Categories List with Tabs */}
           <div className="flex-1 overflow-y-auto space-y-2">
-            <h3 className="font-medium">Existing Categories ({categories.length})</h3>
-            {categories.map(category => (
-              <div key={category.id} className="flex items-center justify-between p-3 border rounded-lg">
-                {editingCategory?.id === category.id ? (
-                  <div className="flex items-center gap-3 flex-1">
-                    <Input
-                      value={editingCategory.name}
-                      onChange={(e) => setEditingCategory(prev => prev ? { ...prev, name: e.target.value } : null)}
-                      className="flex-1"
-                    />
-                    <Select 
-                      value={editingCategory.color} 
-                      onValueChange={(value) => setEditingCategory(prev => prev ? { ...prev, color: value } : null)}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {colorOptions.map(color => (
-                          <SelectItem key={color.value} value={color.value}>
-                            <div className="flex items-center gap-2">
-                              <div className={`w-3 h-3 rounded-full ${color.class.split(' ')[0]}`} />
-                              {color.label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button size="sm" onClick={() => updateCategory(editingCategory)}>
-                      Save
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditingCategory(null)}>
-                      Cancel
-                    </Button>
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium">Categories</h3>
+              <div className="flex gap-2">
+                <Button
+                  variant={!showArchived ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowArchived(false)}
+                >
+                  Active ({categories.length})
+                </Button>
+                <Button
+                  variant={showArchived ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowArchived(true)}
+                >
+                  Archived ({archivedCategories.length})
+                </Button>
+              </div>
+            </div>
+
+            {!showArchived ? (
+              // Active Categories
+              <div className="space-y-2">
+                {categories.map(category => (
+                  <div key={category.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    {editingCategory?.id === category.id ? (
+                      <div className="flex items-center gap-3 flex-1">
+                        <Input
+                          value={editingCategory.name}
+                          onChange={(e) => setEditingCategory(prev => prev ? { ...prev, name: e.target.value } : null)}
+                          className="flex-1"
+                        />
+                        <Select 
+                          value={editingCategory.color} 
+                          onValueChange={(value) => setEditingCategory(prev => prev ? { ...prev, color: value } : null)}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {colorOptions.map(color => (
+                              <SelectItem key={color.value} value={color.value}>
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-3 h-3 rounded-full ${color.class.split(' ')[0]}`} />
+                                  {color.label}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" onClick={() => updateCategory(editingCategory)}>
+                          Save
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingCategory(null)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-3">
+                          {renderIcon(category.icon || 'Tag')}
+                          <span className="font-medium">{category.name}</span>
+                          <Badge variant="outline" className={getColorClass(category.color)}>
+                            {category.color}
+                          </Badge>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setEditingCategory(category)}>
+                              <Edit3 className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => duplicateCategory(category)}>
+                              <Copy className="h-4 w-4 mr-2" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => archiveCategory(category.id)}>
+                              <Archive className="h-4 w-4 mr-2" />
+                              Archive
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => deleteCategory(category.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </>
+                    )}
                   </div>
-                ) : (
-                  <>
+                ))}
+                {categories.length === 0 && !loading && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No active categories. Create your first category above.
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Archived Categories
+              <div className="space-y-2">
+                {archivedCategories.map(category => (
+                  <div key={category.id} className="flex items-center justify-between p-3 border rounded-lg opacity-60">
                     <div className="flex items-center gap-3">
                       {renderIcon(category.icon || 'Tag')}
                       <span className="font-medium">{category.name}</span>
                       <Badge variant="outline" className={getColorClass(category.color)}>
                         {category.color}
                       </Badge>
+                      <Badge variant="secondary">Archived</Badge>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -317,26 +492,31 @@ export function CategoryManager({ open, onOpenChange, familyId }: CategoryManage
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setEditingCategory(category)}>
-                          <Edit3 className="h-4 w-4 mr-2" />
-                          Edit
+                        <DropdownMenuItem onClick={() => restoreCategory(category.id)}>
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          Restore
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => duplicateCategory(category)}>
+                          <Copy className="h-4 w-4 mr-2" />
+                          Duplicate
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem 
                           onClick={() => deleteCategory(category.id)}
                           className="text-destructive"
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
+                          Delete Permanently
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </>
+                  </div>
+                ))}
+                {archivedCategories.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No archived categories.
+                  </div>
                 )}
-              </div>
-            ))}
-            {categories.length === 0 && !loading && (
-              <div className="text-center py-8 text-muted-foreground">
-                No categories yet. Create your first category above.
               </div>
             )}
           </div>

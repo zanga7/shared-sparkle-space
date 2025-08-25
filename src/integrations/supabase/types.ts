@@ -498,6 +498,7 @@ export type Database = {
       }
       lists: {
         Row: {
+          category_id: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -510,6 +511,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category_id?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -522,6 +524,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category_id?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -533,7 +536,15 @@ export type Database = {
           sort_order?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "lists_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       points_ledger: {
         Row: {
