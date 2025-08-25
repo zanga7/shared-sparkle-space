@@ -8,6 +8,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { UserAvatar } from '@/components/ui/user-avatar';
+import { OverlappingAvatarGroup } from '@/components/ui/overlapping-avatar-group';
 import { Loader2, Gift, Users, User, Crown, Coins, Clock, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,6 +36,8 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [groupContributions, setGroupContributions] = useState<GroupContribution[]>([]);
   const [claimedRewards, setClaimedRewards] = useState<any[]>([]);
+  const [showClaimDialog, setShowClaimDialog] = useState(false);
+  const [selectedRewardForClaim, setSelectedRewardForClaim] = useState<Reward | null>(null);
 
   // Fetch user profile and family members for parent view
   useEffect(() => {
@@ -91,6 +96,10 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
   // Get available rewards for current context
   const availableRewards = rewards.filter((reward: Reward) => {
     if (!reward.is_active) return false;
+    
+    // For "everyone" view (no specific member selected), show all rewards
+    if (!selectedMemberId && !selectedChildId) return true;
+    
     if (!currentProfileId) return false;
     // If assigned_to is null, reward is available to all
     if (!reward.assigned_to) return true;
@@ -158,12 +167,13 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
     );
   }
 
-  const handleRequestReward = async (rewardId: string) => {
-    if (!currentProfileId) return;
+  const handleRequestReward = async (rewardId: string, profileId?: string) => {
+    const requestorId = profileId || currentProfileId;
+    if (!requestorId) return;
     
     setRequestingIds(prev => new Set(prev).add(rewardId));
     try {
-      await requestReward(rewardId, currentProfileId);
+      await requestReward(rewardId, requestorId);
     } finally {
       setRequestingIds(prev => {
         const next = new Set(prev);
@@ -171,6 +181,25 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
         return next;
       });
     }
+  };
+
+  const handleRewardClaim = (reward: Reward) => {
+    setSelectedRewardForClaim(reward);
+    setShowClaimDialog(true);
+  };
+
+  const handleClaimForProfile = async (profileId: string) => {
+    if (!selectedRewardForClaim) return;
+    
+    await handleRequestReward(selectedRewardForClaim.id, profileId);
+    setShowClaimDialog(false);
+    setSelectedRewardForClaim(null);
+  };
+
+  // Get eligible profiles for a reward
+  const getEligibleProfiles = (reward: Reward) => {
+    if (!reward.assigned_to) return allProfiles;
+    return allProfiles.filter(profile => reward.assigned_to!.includes(profile.id));
   };
 
   const handleCancelRequest = async (requestId: string) => {
@@ -440,43 +469,39 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
     );
   }
 
-  // For parent dashboard - show rewards they can claim
+  // For parent dashboard - show all rewards with claimable avatars
   if (isParentView && !isChildView) {
-    const userBalance = getPointsBalance(userProfile.id);
-
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Crown className="w-6 h-6 text-yellow-500" />
-            <h2 className="text-2xl font-bold">Available Rewards</h2>
-          </div>
-          <div className="flex items-center gap-2 text-lg font-semibold">
-            <span>Your Balance:</span>
-            <div className="flex items-center gap-1 text-primary">
-              <Gift className="w-5 h-5" />
-              {userBalance} points
-            </div>
+            <Users className="w-6 h-6 text-primary" />
+            <h2 className="text-2xl font-bold">All Family Rewards</h2>
           </div>
         </div>
 
         {availableRewards.length === 0 ? (
-          <Alert>
-            <Gift className="w-4 h-4" />
-            <AlertDescription>
-              No rewards are currently available for you. Check back later or earn more points!
-            </AlertDescription>
-          </Alert>
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-8">
+              <Gift className="w-12 h-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium text-muted-foreground mb-2">No Rewards Available</h3>
+              <p className="text-sm text-muted-foreground text-center">
+                No rewards are currently available for your family.
+              </p>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {availableRewards.map((reward) => {
+              const eligibleProfiles = getEligibleProfiles(reward);
+              
               if (reward.reward_type === 'group_contribution') {
                 const rewardContributions = groupContributions.filter(c => c.reward_id === reward.id);
                 return (
                   <GroupContributionCard
                     key={reward.id}
                     reward={reward}
-                    userBalance={userBalance}
+                    userBalance={0}
                     profileId={userProfile.id}
                     contributions={rewardContributions}
                     onContribute={(amount) => handleGroupContribution(reward.id, amount)}
@@ -486,19 +511,101 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
               }
               
               return (
-                <RewardCard
-                  key={reward.id}
-                  reward={reward}
-                  userBalance={userBalance}
-                  canRequest={true}
-                  onRequest={() => handleRequestReward(reward.id)}
-                  isRequesting={requestingIds.has(reward.id)}
-                />
+                <Card key={reward.id} className="overflow-hidden">
+                  {reward.image_url && (
+                    <div className="aspect-video w-full bg-muted overflow-hidden">
+                      <img 
+                        src={reward.image_url} 
+                        alt={reward.title} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <CardTitle className="text-lg">{reward.title}</CardTitle>
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        {reward.cost_points} pts
+                      </Badge>
+                    </div>
+                    {reward.description && (
+                      <CardDescription className="text-sm">
+                        {reward.description}
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">Available to:</span>
+                        <OverlappingAvatarGroup
+                          members={eligibleProfiles}
+                          maxDisplay={3}
+                          size="sm"
+                        />
+                      </div>
+                      <Button 
+                        onClick={() => handleRewardClaim(reward)}
+                        size="sm"
+                        disabled={requestingIds.has(reward.id)}
+                      >
+                        {requestingIds.has(reward.id) ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          'Claim'
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               );
             })}
           </div>
         )}
 
+        {/* Claim Dialog */}
+        <Dialog open={showClaimDialog} onOpenChange={setShowClaimDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Who is claiming this reward?</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                Select who should receive: <span className="font-medium">{selectedRewardForClaim?.title}</span>
+              </div>
+              <div className="grid gap-2">
+                {selectedRewardForClaim && getEligibleProfiles(selectedRewardForClaim).map((profile) => {
+                  const balance = getPointsBalance(profile.id);
+                  const canAfford = balance >= (selectedRewardForClaim?.cost_points || 0);
+                  
+                  return (
+                    <Button
+                      key={profile.id}
+                      variant="outline"
+                      className="justify-start h-auto p-4"
+                      onClick={() => handleClaimForProfile(profile.id)}
+                      disabled={!canAfford}
+                    >
+                      <div className="flex items-center gap-3 w-full">
+                        <UserAvatar 
+                          name={profile.display_name}
+                          color={profile.color}
+                          size="sm"
+                        />
+                        <div className="flex-1 text-left">
+                          <div className="font-medium">{profile.display_name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {balance} points {!canAfford && '(Insufficient)'}
+                          </div>
+                        </div>
+                      </div>
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
