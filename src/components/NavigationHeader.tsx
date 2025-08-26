@@ -86,7 +86,7 @@ export function NavigationHeader({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {/* TODO: Open member switch dialog */}}
+                onClick={() => onMemberSwitch && onMemberSwitch(null)}
                 className="h-9 px-3 font-medium"
               >
                 <ArrowLeftRight className="mr-2 h-4 w-4" />

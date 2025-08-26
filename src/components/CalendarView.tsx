@@ -64,6 +64,9 @@ interface CalendarViewProps {
   onCreateTask?: (date: Date) => void;
   onEditTask?: (task: Task) => void;
   familyId?: string;
+  dashboardMode?: boolean;
+  activeMemberId?: string | null;
+  onTaskComplete?: (task: Task) => Promise<void>;
 }
 
 interface TaskFilters {
@@ -81,7 +84,10 @@ export const CalendarView = ({
   onTaskUpdated, 
   onCreateTask, 
   onEditTask,
-  familyId 
+  familyId,
+  dashboardMode = false,
+  activeMemberId,
+  onTaskComplete
 }: CalendarViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('today');
@@ -399,6 +405,14 @@ export const CalendarView = ({
   // Handle task completion
   const completeTask = async (task: Task, event: React.MouseEvent) => {
     event.stopPropagation();
+    
+    // Use dashboard mode completion handler if available
+    if (dashboardMode && onTaskComplete) {
+      await onTaskComplete(task);
+      return;
+    }
+    
+    // Fallback to regular completion for non-dashboard mode
     if (!profile) return;
     
     try {

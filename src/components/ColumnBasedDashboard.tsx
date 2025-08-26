@@ -39,6 +39,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautif
 import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
 import { MemberSwitchDialog } from '@/components/dashboard/MemberSwitchDialog';
+import { MemberSelectorDialog } from '@/components/dashboard/MemberSelectorDialog';
 
 const ColumnBasedDashboard = () => {
   const { user, signOut } = useAuth();
@@ -88,13 +89,34 @@ const ColumnBasedDashboard = () => {
     onSuccess: () => void;
   } | null>(null);
   
+  const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
+  const [showMemberSelector, setShowMemberSelector] = useState(false);
+  
   const {
-    activeMemberId,
     switchToMember,
     authenticateMemberPin,
     canPerformAction,
     isAuthenticating
   } = useDashboardAuth();
+
+  // Update activeMemberId from hook
+  useEffect(() => {
+    const { activeMemberId: hookActiveMemberId } = useDashboardAuth();
+    setActiveMemberId(hookActiveMemberId);
+  }, []);
+
+  // Handle member switching
+  const handleMemberSwitch = (memberId: string | null) => {
+    if (memberId === null) {
+      setShowMemberSelector(true);
+    } else {
+      const member = familyMembers.find(m => m.id === memberId);
+      if (member) {
+        switchToMember(memberId);
+        setActiveMemberId(memberId);
+      }
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -885,7 +907,7 @@ const ColumnBasedDashboard = () => {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         activeMemberId={activeMemberId}
-        onMemberSwitch={switchToMember}
+        onMemberSwitch={handleMemberSwitch}
         dashboardMode={dashboardMode}
       />
 
@@ -1117,6 +1139,9 @@ const ColumnBasedDashboard = () => {
                 onTaskUpdated={fetchUserData}
                 onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
                 familyId={profile.family_id}
+                dashboardMode={dashboardMode}
+                activeMemberId={activeMemberId}
+                onTaskComplete={completeTask}
               />
             </div>
           </TabsContent>
@@ -1220,6 +1245,21 @@ const ColumnBasedDashboard = () => {
             setSwitchDialogOpen(false);
           }}
           action={pendingAction.type === 'complete_task' ? 'complete this task' : 'perform this action'}
+        />
+      )}
+
+      {/* Dashboard Member Selector Dialog */}
+      {showMemberSelector && (
+        <MemberSelectorDialog
+          open={showMemberSelector}
+          onOpenChange={setShowMemberSelector}
+          members={familyMembers}
+          currentMemberId={activeMemberId}
+          onSelect={(memberId, member) => {
+            switchToMember(memberId);
+            setActiveMemberId(memberId);
+            setShowMemberSelector(false);
+          }}
         />
       )}
     </div>

@@ -27,12 +27,14 @@ import {
   Calendar,
   Gift,
   ClipboardCheck,
-  Monitor
+  Monitor,
+  Smartphone
 } from "lucide-react";
 
 const adminMenuItems = [
   { title: "Dashboard", url: "/admin", icon: Home, exact: true },
   { title: "Family Members", url: "/admin/members", icon: Users },
+  { title: "Dashboard Mode", url: "/admin/dashboard", icon: Smartphone },
   { title: "Rotating Tasks", url: "/admin/rotating-tasks", icon: RotateCcw },
   { title: "Rewards", url: "/admin/rewards", icon: Gift },
   { title: "Reward Approvals", url: "/admin/reward-approvals", icon: ClipboardCheck },
