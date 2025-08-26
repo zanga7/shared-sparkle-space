@@ -773,6 +773,7 @@ const ColumnBasedDashboard = () => {
                   task.assignees?.some(a => a.profile_id === selectedMemberFilter)
                 ) : tasks}
                 familyMembers={selectedMemberFilter ? familyMembers.filter(m => m.id === selectedMemberFilter) : familyMembers}
+                profile={profile}
                 onTaskUpdated={fetchUserData}
                 onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
                 familyId={profile.family_id}
@@ -810,6 +811,7 @@ const ColumnBasedDashboard = () => {
           onOpenChange={(open) => !open && setEditingTask(null)}
           task={editingTask}
           familyMembers={familyMembers}
+          profile={profile}
           onTaskUpdated={fetchUserData}
         />
       )}

@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, AlertTriangle } from 'lucide-react';
+import { CalendarIcon, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,16 +15,18 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Task, Profile } from '@/types/task';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
+import { Switch } from '@/components/ui/switch';
 
 interface EditTaskDialogProps {
   task: Task;
   familyMembers: Profile[];
+  profile?: Profile;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onTaskUpdated: () => void;
 }
 
-export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTaskUpdated }: EditTaskDialogProps) => {
+export const EditTaskDialog = ({ task, familyMembers, profile, open, onOpenChange, onTaskUpdated }: EditTaskDialogProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [editScope, setEditScope] = useState<'single' | 'series'>('single');
@@ -39,6 +41,7 @@ export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTask
   });
 
   const isRecurringTask = !!task.series_id;
+  const isCompleted = task.task_completions && task.task_completions.length > 0;
 
   useEffect(() => {
     if (task) {
@@ -160,6 +163,102 @@ export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTask
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleTaskCompletion = async () => {
+    if (!profile) return;
+    
+    try {
+      if (isCompleted) {
+        // Uncomplete task
+        const userCompletion = task.task_completions?.find(completion => completion.completed_by === profile.id);
+        if (!userCompletion) return;
+
+        const { error } = await supabase
+          .from('task_completions')
+          .delete()
+          .eq('id', userCompletion.id);
+
+        if (error) throw error;
+
+        // Remove points
+        const assignees = task.assignees?.map(a => a.profile) || 
+                         (task.assigned_profile ? [task.assigned_profile] : [profile]);
+
+        const pointUpdates = assignees.map(async (recipient) => {
+          const currentProfile = familyMembers.find(m => m.id === recipient.id);
+          if (currentProfile) {
+            return supabase
+              .from('profiles')
+              .update({
+                total_points: currentProfile.total_points - task.points
+              })
+              .eq('id', recipient.id);
+          }
+        });
+
+        await Promise.all(pointUpdates.filter(Boolean));
+
+        toast({
+          title: 'Task Uncompleted',
+          description: `${task.points} points removed`,
+        });
+      } else {
+        // Complete task
+        const { error } = await supabase
+          .from('task_completions')
+          .insert({
+            task_id: task.id,
+            completed_by: profile.id,
+            points_earned: task.points
+          });
+
+        if (error) throw error;
+
+        // Award points
+        const assignees = task.assignees?.map(a => a.profile) || 
+                         (task.assigned_profile ? [task.assigned_profile] : []);
+        const pointRecipients = assignees.length > 0 ? assignees : [profile];
+
+        const pointUpdates = pointRecipients.map(async (recipient) => {
+          const currentProfile = familyMembers.find(m => m.id === recipient.id);
+          if (currentProfile) {
+            return supabase
+              .from('profiles')
+              .update({
+                total_points: currentProfile.total_points + task.points
+              })
+              .eq('id', recipient.id);
+          }
+        });
+
+        await Promise.all(pointUpdates.filter(Boolean));
+
+        let toastMessage;
+        if (pointRecipients.length === 1 && pointRecipients[0].id === profile.id) {
+          toastMessage = `You earned ${task.points} points!`;
+        } else if (pointRecipients.length === 1) {
+          toastMessage = `${pointRecipients[0].display_name} earned ${task.points} points!`;
+        } else {
+          const names = pointRecipients.map(p => p.display_name).join(', ');
+          toastMessage = `${task.points} points awarded to: ${names}`;
+        }
+
+        toast({
+          title: 'Task Completed!',
+          description: toastMessage,
+        });
+      }
+
+      onTaskUpdated();
+    } catch (error) {
+      console.error('Error toggling task completion:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update task completion',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -302,6 +401,32 @@ export const EditTaskDialog = ({ task, familyMembers, open, onOpenChange, onTask
               </Popover>
             </div>
           )}
+
+          {/* Task Completion Toggle */}
+          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+            <div className="flex items-center space-x-3">
+              <CheckCircle2 className={cn(
+                "h-5 w-5",
+                isCompleted ? "text-green-500" : "text-muted-foreground"
+              )} />
+              <div>
+                <Label className="text-sm font-medium">
+                  {isCompleted ? 'Task Completed' : 'Mark as Complete'}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {isCompleted 
+                    ? `${task.points} points have been awarded` 
+                    : `Complete this task to earn ${task.points} points`
+                  }
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={isCompleted}
+              onCheckedChange={toggleTaskCompletion}
+              disabled={!profile}
+            />
+          </div>
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

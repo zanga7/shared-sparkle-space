@@ -59,6 +59,7 @@ import { EventDialog } from '@/components/EventDialog';
 interface CalendarViewProps {
   tasks: Task[];
   familyMembers: Profile[];
+  profile?: Profile;
   onTaskUpdated: () => void;
   onCreateTask?: (date: Date) => void;
   onEditTask?: (task: Task) => void;
@@ -76,6 +77,7 @@ type ViewMode = 'today' | 'week' | 'month';
 export const CalendarView = ({ 
   tasks, 
   familyMembers, 
+  profile,
   onTaskUpdated, 
   onCreateTask, 
   onEditTask,
@@ -351,6 +353,161 @@ export const CalendarView = ({
     setIsEventDialogOpen(true);
   };
 
+  // Handle task completion
+  const completeTask = async (task: Task, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!profile) return;
+    
+    try {
+      // Get all assignees for this task (including both old and new format)
+      const assignees = task.assignees?.map(a => a.profile) || 
+                       (task.assigned_profile ? [task.assigned_profile] : []);
+      
+      // If no specific assignees, anyone can complete it and only they get points
+      const pointRecipients = assignees.length > 0 ? assignees : [profile];
+      
+      // Create task completion record
+      const { error } = await supabase
+        .from('task_completions')
+        .insert({
+          task_id: task.id,
+          completed_by: profile.id,
+          points_earned: task.points
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // Award points to all assignees (or just the completer if no assignees)
+      const pointUpdates = pointRecipients.map(async (recipient) => {
+        const currentProfile = familyMembers.find(m => m.id === recipient.id);
+        if (currentProfile) {
+          return supabase
+            .from('profiles')
+            .update({
+              total_points: currentProfile.total_points + task.points
+            })
+            .eq('id', recipient.id);
+        }
+      });
+
+      const updateResults = await Promise.all(pointUpdates.filter(Boolean));
+      
+      // Check for errors in point updates
+      const updateErrors = updateResults.filter(result => result?.error);
+      if (updateErrors.length > 0) {
+        throw new Error('Failed to update some points');
+      }
+
+      // Create toast message based on point distribution
+      let toastMessage;
+      if (pointRecipients.length === 1 && pointRecipients[0].id === profile.id) {
+        toastMessage = `You earned ${task.points} points!`;
+      } else if (pointRecipients.length === 1) {
+        toastMessage = `${pointRecipients[0].display_name} earned ${task.points} points!`;
+      } else {
+        const names = pointRecipients.map(p => p.display_name).join(', ');
+        toastMessage = `${task.points} points awarded to: ${names}`;
+      }
+
+      toast({
+        title: 'Task Completed!',
+        description: toastMessage,
+      });
+
+      onTaskUpdated();
+    } catch (error) {
+      console.error('Error completing task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to complete task',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const uncompleteTask = async (task: Task, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!profile || !task.task_completions || task.task_completions.length === 0) return;
+    
+    try {
+      // Find the completion record by the current user
+      const userCompletion = task.task_completions.find(completion => completion.completed_by === profile.id);
+      
+      if (!userCompletion) {
+        return;
+      }
+
+      // Get all assignees who received points
+      const assignees = task.assignees?.map(a => a.profile) || 
+                       (task.assigned_profile ? [task.assigned_profile] : [profile]);
+
+      // Remove the specific task completion record
+      const { error } = await supabase
+        .from('task_completions')
+        .delete()
+        .eq('id', userCompletion.id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Remove points from all assignees who received them
+      const pointUpdates = assignees.map(async (recipient) => {
+        const currentProfile = familyMembers.find(m => m.id === recipient.id);
+        if (currentProfile) {
+          return supabase
+            .from('profiles')
+            .update({
+              total_points: currentProfile.total_points - task.points
+            })
+            .eq('id', recipient.id);
+        }
+      });
+
+      const updateResults = await Promise.all(pointUpdates.filter(Boolean));
+      
+      // Check for errors in point updates
+      const updateErrors = updateResults.filter(result => result?.error);
+      if (updateErrors.length > 0) {
+        throw new Error('Failed to update some points');
+      }
+
+      // Create toast message based on point removal
+      let toastMessage;
+      if (assignees.length === 1) {
+        toastMessage = `${task.points} points removed`;
+      } else {
+        const names = assignees.map(p => p.display_name).join(', ');
+        toastMessage = `${task.points} points removed from: ${names}`;
+      }
+
+      toast({
+        title: 'Task Uncompleted',
+        description: toastMessage,
+      });
+
+      onTaskUpdated();
+    } catch (error) {
+      console.error('Error uncompleting task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to uncomplete task',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleTaskToggle = (task: Task, event: React.MouseEvent) => {
+    const isCompleted = task.task_completions && task.task_completions.length > 0;
+    if (isCompleted) {
+      uncompleteTask(task, event);
+    } else {
+      completeTask(task, event);
+    }
+  };
+
   // Handle task click to edit directly
   const handleTaskClick = (task: Task, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -370,13 +527,12 @@ export const CalendarView = ({
     return (
       <Draggable key={task.id} draggableId={task.id} index={index}>
         {(provided, snapshot) => (
-          <div
+            <div
             ref={provided.innerRef}
             {...provided.draggableProps}
             {...provided.dragHandleProps}
-            onClick={(e) => handleTaskClick(task, e)}
             className={cn(
-              "p-2 mb-1 rounded-md border text-xs transition-all hover:shadow-md group",
+              "p-2 mb-1 rounded-md border text-xs transition-all hover:shadow-md group relative",
               onEditTask ? "cursor-pointer hover:ring-2 hover:ring-primary/20" : "cursor-move",
               memberColors.bgSoft,
               memberColors.border,
@@ -386,8 +542,18 @@ export const CalendarView = ({
             )}
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1 min-w-0">
-                {isCompleted && <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />}
+              <div className="flex items-center gap-1 min-w-0" onClick={(e) => handleTaskClick(task, e)}>
+                <button
+                  onClick={(e) => handleTaskToggle(task, e)}
+                  className={cn(
+                    "h-3 w-3 flex-shrink-0 rounded-full border transition-colors hover:scale-110",
+                    isCompleted 
+                      ? "bg-green-500 border-green-500 text-white" 
+                      : "border-gray-300 hover:border-green-400"
+                  )}
+                >
+                  {isCompleted && <CheckCircle2 className="h-3 w-3" />}
+                </button>
                 {isOverdue && <Clock className="h-3 w-3 text-red-500 flex-shrink-0" />}
                 <span className="truncate">{task.title}</span>
                 {onEditTask && <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity" />}
