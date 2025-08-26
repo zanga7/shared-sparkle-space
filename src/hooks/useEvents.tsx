@@ -14,7 +14,7 @@ export const useEvents = (familyId?: string) => {
     }
 
     try {
-      // First fetch events
+      // First get events
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
         .select('*')
@@ -23,38 +23,52 @@ export const useEvents = (familyId?: string) => {
 
       if (eventsError) throw eventsError;
 
-      // Then fetch attendees for all events with a simpler approach
-      const eventsWithAttendees = [];
-      
-      for (const event of eventsData || []) {
-        // Get attendees for this event
-        const { data: attendees } = await supabase
+      if (!eventsData || eventsData.length === 0) {
+        setEvents([]);
+        return;
+      }
+
+      // Get event IDs for batch queries
+      const eventIds = eventsData.map(event => event.id);
+
+      // Optimized: fetch attendees and profiles in parallel for all events
+      const [attendeesResponse, profilesResponse] = await Promise.all([
+        supabase
           .from('event_attendees')
           .select('*')
-          .eq('event_id', event.id);
+          .in('event_id', eventIds),
         
-        // Get profile info for each attendee
-        const attendeesWithProfiles = [];
-        for (const attendee of attendees || []) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id, display_name, role, color')
-            .eq('id', attendee.profile_id)
-            .single();
-          
-          if (profile) {
-            attendeesWithProfiles.push({
-              ...attendee,
-              profile
-            });
-          }
+        supabase
+          .from('profiles')
+          .select('id, display_name, role, color')
+          .eq('family_id', familyId)
+      ]);
+
+      const { data: attendeesData, error: attendeesError } = attendeesResponse;
+      const { data: profilesData, error: profilesError } = profilesResponse;
+
+      if (attendeesError) throw attendeesError;
+      if (profilesError) throw profilesError;
+
+      // Create lookup maps for O(1) access
+      const profilesMap = new Map((profilesData || []).map(p => [p.id, p]));
+      const attendeesByEvent = new Map<string, any[]>();
+
+      // Group attendees by event ID
+      (attendeesData || []).forEach(attendee => {
+        const eventAttendees = attendeesByEvent.get(attendee.event_id) || [];
+        const profile = profilesMap.get(attendee.profile_id);
+        if (profile) {
+          eventAttendees.push({ ...attendee, profile });
+          attendeesByEvent.set(attendee.event_id, eventAttendees);
         }
-        
-        eventsWithAttendees.push({
-          ...event,
-          attendees: attendeesWithProfiles
-        });
-      }
+      });
+
+      // Combine events with their attendees
+      const eventsWithAttendees = eventsData.map(event => ({
+        ...event,
+        attendees: attendeesByEvent.get(event.id) || []
+      }));
       
       setEvents(eventsWithAttendees);
     } catch (error) {
