@@ -1177,10 +1177,13 @@ const ColumnBasedDashboard = () => {
                                             
                                             return (
                                               <AccordionItem key={group} value={`${member.id}-${group}`} className="border rounded-md">
-                                                <AccordionTrigger className="px-3 py-2 hover:no-underline">
-                                                  <div className="flex items-center gap-2 flex-1">
-                                                    <IconComponent className="h-4 w-4 text-muted-foreground" />
-                                                    <span className="text-sm font-medium">{getTaskGroupTitle(group)}</span>
+                                               <AccordionTrigger className={cn(
+                                                 "px-3 py-2 hover:no-underline",
+                                                 "bg-gradient-to-r from-primary/20 to-primary/10 border-b border-primary/20"
+                                               )}>
+                                                   <div className="flex items-center gap-2 flex-1">
+                                                     <IconComponent className="h-4 w-4 text-primary" />
+                                                     <span className="text-sm font-semibold text-primary">{getTaskGroupTitle(group)}</span>
                                                     <div className="flex items-center gap-2 ml-auto mr-2">
                                                       <span className="text-xs text-muted-foreground">
                                                         {completedGroupTasks.length}/{groupTasks.length}
@@ -1201,46 +1204,55 @@ const ColumnBasedDashboard = () => {
                                                            "space-y-2 min-h-[60px] transition-colors",
                                                            snapshot.isDraggingOver && "bg-accent/50 rounded-lg"
                                                          )}
-                                                       >
-                                                         {groupTasks.map((task, index) => {
-                                                           // Calculate the global index for drag and drop
-                                                           const globalIndex = memberTasks.findIndex(t => t.id === task.id);
-                                                           return (
-                                                             <Draggable key={task.id} draggableId={task.id} index={globalIndex}>
-                                                               {(provided, snapshot) => (
-                                                                 <div
-                                                                   ref={provided.innerRef}
-                                                                   {...provided.draggableProps}
-                                                                   {...provided.dragHandleProps}
-                                                                   className={cn(
-                                                                     snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50"
-                                                                   )}
-                                                                 >
-                                                                   <EnhancedTaskItem
-                                                                     task={task}
-                                                                     allTasks={tasks}
-                                                                     familyMembers={familyMembers}
-                                                                     onToggle={(task) => {
-                                                                       if (activeMemberId !== member.id) {
-                                                                         toast({
-                                                                           title: 'Access Denied',
-                                                                           description: 'You can only complete tasks from your own task column.',
-                                                                           variant: 'destructive'
-                                                                         });
-                                                                         return;
-                                                                       }
-                                                                       handleTaskToggle(task);
-                                                                     }}
-                                                                     onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                                                     onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
-                                                                     showActions={profile.role === 'parent' && !snapshot.isDragging}
-                                                                   />
-                                                                 </div>
-                                                               )}
-                                                             </Draggable>
-                                                           );
-                                                         })}
-                                                         {provided.placeholder}
+                                                        >
+                                                          {groupTasks.length === 0 ? (
+                                                            <div className="text-center py-4 text-muted-foreground">
+                                                              <p className="text-xs">
+                                                                {snapshot.isDraggingOver ? 'Drop task here' : 'No tasks in this group'}
+                                                              </p>
+                                                            </div>
+                                                          ) : (
+                                                            groupTasks.map((task, index) => {
+                                                              // Calculate the global index for drag and drop
+                                                              const globalIndex = memberTasks.findIndex(t => t.id === task.id);
+                                                              return (
+                                                                <Draggable key={task.id} draggableId={task.id} index={globalIndex}>
+                                                                  {(provided, snapshot) => (
+                                                                    <div
+                                                                      ref={provided.innerRef}
+                                                                      {...provided.draggableProps}
+                                                                      {...provided.dragHandleProps}
+                                                                      className={cn(
+                                                                        "transition-all duration-200",
+                                                                        snapshot.isDragging && "shadow-xl rotate-2 scale-105 z-50 ring-2 ring-primary/30"
+                                                                      )}
+                                                                    >
+                                                                      <EnhancedTaskItem
+                                                                        task={task}
+                                                                        allTasks={tasks}
+                                                                        familyMembers={familyMembers}
+                                                                        onToggle={(task) => {
+                                                                          if (activeMemberId !== member.id) {
+                                                                            toast({
+                                                                              title: 'Access Denied',
+                                                                              description: 'You can only complete tasks from your own task column.',
+                                                                              variant: 'destructive'
+                                                                            });
+                                                                            return;
+                                                                          }
+                                                                          handleTaskToggle(task);
+                                                                        }}
+                                                                        onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                                                                        onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
+                                                                        showActions={profile.role === 'parent' && !snapshot.isDragging}
+                                                                      />
+                                                                    </div>
+                                                                  )}
+                                                                </Draggable>
+                                                              );
+                                                            })
+                                                          )}
+                                                          {provided.placeholder}
                                                          
                                                          {/* Add Task Button for this group */}
                                                          {profile.role === 'parent' && (

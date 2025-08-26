@@ -38,6 +38,12 @@ export const EditTaskDialog = ({ task, familyMembers, profile, open, onOpenChang
     assigned_to: 'unassigned',
     assignees: [] as string[],
     due_date: null as Date | null,
+    task_group: 'general' as string,
+    is_repeating: false,
+    recurring_frequency: 'daily' as string,
+    recurring_interval: 1,
+    recurring_days_of_week: [] as number[],
+    recurring_end_date: null as Date | null,
   });
 
   const isRecurringTask = !!task.series_id;
@@ -56,6 +62,12 @@ export const EditTaskDialog = ({ task, familyMembers, profile, open, onOpenChang
         assigned_to: task.assigned_to || 'unassigned',
         assignees: currentAssignees,
         due_date: task.due_date ? new Date(task.due_date) : null,
+        task_group: (task as any).task_group || 'general',
+        is_repeating: task.is_repeating || false,
+        recurring_frequency: task.recurring_frequency || 'daily',
+        recurring_interval: task.recurring_interval || 1,
+        recurring_days_of_week: task.recurring_days_of_week || [],
+        recurring_end_date: task.recurring_end_date ? new Date(task.recurring_end_date) : null,
       });
     }
   }, [task]);
@@ -362,14 +374,29 @@ export const EditTaskDialog = ({ task, familyMembers, profile, open, onOpenChang
             </div>
 
             <div className="space-y-2">
-              <Label>Assign to</Label>
-              <MultiSelectAssignees
-                familyMembers={familyMembers}
-                selectedAssignees={formData.assignees}
-                onAssigneesChange={(assignees) => setFormData({ ...formData, assignees })}
-                placeholder="Select assignees..."
-              />
+              <Label>Task Group</Label>
+              <Select value={formData.task_group || 'general'} onValueChange={(value) => setFormData({ ...formData, task_group: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select group" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="morning">🌅 Morning</SelectItem>
+                  <SelectItem value="midday">☀️ Midday</SelectItem>
+                  <SelectItem value="afternoon">🌆 Afternoon</SelectItem>
+                  <SelectItem value="general">📋 General</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Assign to</Label>
+            <MultiSelectAssignees
+              familyMembers={familyMembers}
+              selectedAssignees={formData.assignees}
+              onAssigneesChange={(assignees) => setFormData({ ...formData, assignees })}
+              placeholder="Select assignees..."
+            />
           </div>
 
           {/* Only show due date for single task edits or non-recurring tasks */}
@@ -399,6 +426,78 @@ export const EditTaskDialog = ({ task, familyMembers, profile, open, onOpenChang
                   />
                 </PopoverContent>
               </Popover>
+            </div>
+          )}
+
+          {/* Recurring Task Settings - only for new recurring tasks or series edits */}
+          {(!isRecurringTask || editScope === 'series') && (
+            <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="is-repeating">Make this a recurring task</Label>
+                <Switch
+                  id="is-repeating"
+                  checked={formData.is_repeating}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_repeating: checked })}
+                />
+              </div>
+              
+              {formData.is_repeating && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Frequency</Label>
+                      <Select value={formData.recurring_frequency} onValueChange={(value) => setFormData({ ...formData, recurring_frequency: value })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Every</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="30"
+                        value={formData.recurring_interval}
+                        onChange={(e) => setFormData({ ...formData, recurring_interval: parseInt(e.target.value) || 1 })}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>End Date (Optional)</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !formData.recurring_end_date && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formData.recurring_end_date ? format(formData.recurring_end_date, "PPP") : "No end date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={formData.recurring_end_date}
+                          onSelect={(date) => setFormData({ ...formData, recurring_end_date: date || null })}
+                          initialFocus
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
