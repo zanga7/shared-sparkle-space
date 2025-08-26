@@ -1309,6 +1309,10 @@ export type Database = {
           security_status: string
         }[]
       }
+      get_current_user_family_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_current_user_family_id_safe: {
         Args: Record<PropertyKey, never>
         Returns: string
