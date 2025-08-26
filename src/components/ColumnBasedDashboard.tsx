@@ -44,6 +44,7 @@ const ColumnBasedDashboard = () => {
   const [familyMembers, setFamilyMembers] = useState<Profile[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
   const [viewingSeries, setViewingSeries] = useState<any>(null);
@@ -72,7 +73,94 @@ const ColumnBasedDashboard = () => {
 
       if (profileError) {
         console.error('Profile error:', profileError);
-        return;
+        
+        // If profile not found, try to create it
+        if (profileError.code === 'PGRST116') {
+          console.log('Profile not found, attempting to create...');
+          const { data: createResult, error: createError } = await supabase
+            .rpc('fix_my_missing_profile');
+          
+          if (createError) {
+            console.error('Failed to create profile:', createError);
+            setProfileError('Failed to create profile. Please try signing out and back in.');
+            return;
+          }
+          
+          if (createResult && typeof createResult === 'object' && 'success' in createResult && createResult.success) {
+            console.log('Profile created successfully, retrying fetch...');
+            // Retry fetching the profile
+            const { data: retryProfileData, error: retryError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('user_id', user?.id)
+              .single();
+            
+            if (retryError) {
+              console.error('Retry profile fetch failed:', retryError);
+              setProfileError('Profile creation succeeded but fetch failed. Please refresh the page.');
+              return;
+            }
+            
+            setProfile(retryProfileData);
+            // Set profileData for use in the rest of the function
+            setProfile(retryProfileData);
+            
+            // Fetch family members for this new profile
+            const { data: membersData, error: membersError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('family_id', retryProfileData.family_id)
+              .eq('status', 'active')
+              .order('sort_order', { ascending: true })
+              .order('created_at', { ascending: true });
+
+            if (membersError) {
+              console.error('Members error:', membersError);
+            } else {
+              setFamilyMembers(membersData || []);
+            }
+
+            // Fetch family tasks
+            const { data: tasksData, error: tasksError } = await supabase
+              .from('tasks')
+              .select(`
+                id,
+                title,
+                description,
+                points,
+                is_repeating,
+                due_date,
+                assigned_to,
+                created_by,
+                recurring_frequency,
+                recurring_interval,
+                recurring_days_of_week,
+                recurring_end_date,
+                series_id,
+                assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
+                assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
+                task_completions(id, completed_at, completed_by)
+              `)
+              .eq('family_id', retryProfileData.family_id);
+
+            if (tasksError) {
+              console.error('Tasks error:', tasksError);
+            } else {
+              setTasks(tasksData || []);
+            }
+            
+            setLoading(false);
+            return;
+          } else {
+            setProfileError('Failed to create missing profile. Please contact support.');
+            return;
+          }
+        } else {
+          setProfileError('Failed to load profile. Please try refreshing the page.');
+          return;
+        }
+      } else {
+        setProfile(profileData);
       }
 
       setProfile(profileData);
