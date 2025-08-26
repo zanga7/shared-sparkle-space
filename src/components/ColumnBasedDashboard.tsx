@@ -289,14 +289,25 @@ const ColumnBasedDashboard = () => {
       const assignees = task.assignees?.map(a => a.profile) || 
                        (task.assigned_profile ? [task.assigned_profile] : []);
       
+      // Check if current profile is allowed to complete this task
+      const isAssignee = assignees.some(assignee => assignee.id === profile.id);
+      if (assignees.length > 0 && !isAssignee) {
+        toast({
+          title: 'Cannot Complete Task',
+          description: 'Only assigned members can complete this task.',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
       // Determine point recipients based on completion rule
       let pointRecipients;
       if (task.completion_rule === 'any_one' && assignees.length > 1) {
         // "Any one" rule: only the completer gets points
         pointRecipients = [profile];
       } else {
-        // "Everyone" rule or single assignee: all assignees get points (or just completer if no assignees)
-        pointRecipients = assignees.length > 0 ? assignees : [profile];
+        // "Everyone" rule or single assignee: only the completer gets points
+        pointRecipients = [profile];
       }
       
       // Create task completion record
@@ -374,9 +385,18 @@ const ColumnBasedDashboard = () => {
         return;
       }
 
-      // Get all assignees who received points
-      const assignees = task.assignees?.map(a => a.profile) || 
-                       (task.assigned_profile ? [task.assigned_profile] : [profile]);
+      // Get all assignees who received points based on completion rule
+      let assignees;
+      const allAssignees = task.assignees?.map(a => a.profile) || 
+                          (task.assigned_profile ? [task.assigned_profile] : []);
+      
+      if (task.completion_rule === 'any_one' && allAssignees.length > 1) {
+        // For "any_one" tasks, only the completer received points
+        assignees = [profile];
+      } else {
+        // For "everyone" tasks or single assignee, only the completer received points
+        assignees = [profile];
+      }
 
       // Remove the specific task completion record
       const { error } = await supabase
@@ -409,9 +429,18 @@ const ColumnBasedDashboard = () => {
         throw new Error('Failed to update some points');
       }
 
+      // Create toast message based on point removal
+      let toastMessage;
+      if (assignees.length === 1) {
+        toastMessage = `${task.points} points removed`;
+      } else {
+        const names = assignees.map(p => p.display_name).join(', ');
+        toastMessage = `${task.points} points removed from: ${names}`;
+      }
+
       toast({
         title: 'Task Uncompleted',
-        description: `${task.points} points removed`,
+        description: toastMessage,
       });
 
       fetchUserData();

@@ -154,21 +154,74 @@ export const AddTaskDialog = ({
           throw error;
         }
 
-        // For "everyone" completion rule OR single assignee, create task assignees as usual
-        // For "any_one" with multiple assignees, we still create assignees but completion logic differs
+        // Handle task assignment based on completion rule
         if (formData.assignees.length > 0 && taskResult) {
-          const assigneeData = formData.assignees.map(assigneeProfileId => ({
-            task_id: taskResult.id,
-            profile_id: assigneeProfileId,
-            assigned_by: profileId
-          }));
+          if (formData.completion_rule === 'everyone' && formData.assignees.length > 1) {
+            // For "everyone" rule with multiple assignees: create separate task instances for each
+            const additionalTasks = [];
+            for (let i = 1; i < formData.assignees.length; i++) {
+              const duplicateTaskData = {
+                ...taskData,
+                assigned_to: formData.assignees[i], // Single assignee per instance
+              };
+              additionalTasks.push(duplicateTaskData);
+            }
 
-          const { error: assigneeError } = await supabase
-            .from('task_assignees')
-            .insert(assigneeData);
+            // Insert additional task instances
+            if (additionalTasks.length > 0) {
+              const { data: additionalTaskResults, error: additionalError } = await supabase
+                .from('tasks')
+                .insert(additionalTasks)
+                .select('id');
 
-          if (assigneeError) {
-            throw assigneeError;
+              if (additionalError) {
+                throw additionalError;
+              }
+
+              // Create single assignee for each task instance (including the original)
+              const allTaskIds = [taskResult.id, ...(additionalTaskResults?.map(t => t.id) || [])];
+              const assigneeData = allTaskIds.map((taskId, index) => ({
+                task_id: taskId,
+                profile_id: formData.assignees[index],
+                assigned_by: profileId
+              }));
+
+              const { error: assigneeError } = await supabase
+                .from('task_assignees')
+                .insert(assigneeData);
+
+              if (assigneeError) {
+                throw assigneeError;
+              }
+            } else {
+              // Single assignee for the original task
+              const { error: assigneeError } = await supabase
+                .from('task_assignees')
+                .insert({
+                  task_id: taskResult.id,
+                  profile_id: formData.assignees[0],
+                  assigned_by: profileId
+                });
+
+              if (assigneeError) {
+                throw assigneeError;
+              }
+            }
+          } else {
+            // For "any_one" rule or single assignee: create assignees for shared task
+            const assigneeData = formData.assignees.map(assigneeProfileId => ({
+              task_id: taskResult.id,
+              profile_id: assigneeProfileId,
+              assigned_by: profileId
+            }));
+
+            const { error: assigneeError } = await supabase
+              .from('task_assignees')
+              .insert(assigneeData);
+
+            if (assigneeError) {
+              throw assigneeError;
+            }
           }
         }
 
