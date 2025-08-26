@@ -64,7 +64,9 @@ const ColumnBasedDashboard = () => {
 
   const fetchUserData = async () => {
     try {
-      // Fetch current user profile
+      console.log('Fetching user data for user:', user?.id, 'email:', user?.email);
+      
+      // Fetch current user profile with explicit user_id matching
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -73,6 +75,17 @@ const ColumnBasedDashboard = () => {
 
       if (profileError) {
         console.error('Profile error:', profileError);
+        console.log('Looking for existing profile with email:', user?.email);
+        
+        // Check if there's a profile that might be disconnected
+        const { data: existingProfiles, error: searchError } = await supabase
+          .from('profiles')
+          .select('*, families(name)')
+          .limit(10);
+          
+        if (!searchError && existingProfiles) {
+          console.log('Found existing profiles:', existingProfiles);
+        }
         
         // If profile not found, try to create it
         if (profileError.code === 'PGRST116') {
@@ -101,8 +114,6 @@ const ColumnBasedDashboard = () => {
               return;
             }
             
-            setProfile(retryProfileData);
-            // Set profileData for use in the rest of the function
             setProfile(retryProfileData);
             
             // Fetch family members for this new profile
