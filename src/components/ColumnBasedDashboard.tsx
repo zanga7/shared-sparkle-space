@@ -659,17 +659,29 @@ const ColumnBasedDashboard = () => {
     
     console.log('Drag end - source:', source.droppableId, 'destination:', destination.droppableId);
     
-    // Parse droppable IDs - simplified to only handle member assignment
+    // Parse droppable IDs to handle both member columns and group containers
     const parseDroppableId = (id: string) => {
-      if (id === 'unassigned') return { memberId: null };
+      if (id === 'unassigned') return { memberId: null, group: null };
       
-      // Validate that it's a proper UUID (36 characters)
+      // Check if it's a member ID only (36 characters UUID)
       if (id.length === 36) {
-        return { memberId: id };
+        return { memberId: id, group: null };
+      }
+      
+      // Check if it's a member-group combination (UUID-group format)
+      const parts = id.split('-');
+      if (parts.length >= 6) { // UUID has 5 parts when split by -, plus group makes 6
+        const memberId = parts.slice(0, 5).join('-'); // Reconstruct UUID
+        const group = parts.slice(5).join('-'); // Get group name (could have dashes)
+        
+        // Validate that it's a proper UUID (36 characters)
+        if (memberId.length === 36) {
+          return { memberId, group };
+        }
       }
       
       console.error('Invalid droppable ID:', id);
-      return { memberId: null };
+      return { memberId: null, group: null };
     };
     
     const sourceInfo = parseDroppableId(source.droppableId);
@@ -678,6 +690,9 @@ const ColumnBasedDashboard = () => {
     console.log('Parsed source:', sourceInfo, 'destination:', destInfo);
     
     try {
+      const updateData: any = {};
+      let needsUpdate = false;
+      
       // Handle member assignment change
       if (sourceInfo.memberId !== destInfo.memberId) {
         // First, remove existing task assignees
@@ -689,7 +704,8 @@ const ColumnBasedDashboard = () => {
         if (deleteError) throw deleteError;
 
         // Update the main task assignment for backward compatibility
-        const updateData = { assigned_to: destInfo.memberId };
+        updateData.assigned_to = destInfo.memberId;
+        needsUpdate = true;
 
         // If assigning to a specific member, create new task_assignee record
         if (destInfo.memberId) {
@@ -703,6 +719,17 @@ const ColumnBasedDashboard = () => {
 
           if (insertError) throw insertError;
         }
+      }
+      
+      // Handle task group change
+      if (destInfo.group && destInfo.group !== sourceInfo.group) {
+        // Set due date based on group
+        const newDueDate = getGroupDueDate(destInfo.group as TaskGroup);
+        updateData.due_date = newDueDate;
+        needsUpdate = true;
+      }
+      
+      if (needsUpdate) {
         console.log('Update data:', updateData);
 
         // Update the task with all changes
@@ -717,9 +744,18 @@ const ColumnBasedDashboard = () => {
         }
 
         const assignedMember = familyMembers.find(m => m.id === destInfo.memberId);
-        const toastMessage = destInfo.memberId 
-          ? `Task assigned to ${assignedMember?.display_name || 'member'}`
-          : 'Task moved to unassigned pool';
+        let toastMessage = '';
+        
+        if (sourceInfo.memberId !== destInfo.memberId) {
+          toastMessage = destInfo.memberId 
+            ? `Task assigned to ${assignedMember?.display_name || 'member'}`
+            : 'Task moved to unassigned pool';
+        }
+        
+        if (destInfo.group && destInfo.group !== sourceInfo.group) {
+          const groupMessage = `moved to ${getTaskGroupTitle(destInfo.group as TaskGroup)}`;
+          toastMessage = toastMessage ? `${toastMessage} and ${groupMessage}` : `Task ${groupMessage}`;
+        }
 
         toast({
           title: 'Task updated',
@@ -736,6 +772,32 @@ const ColumnBasedDashboard = () => {
         description: 'Failed to update task. Please try again.',
         variant: 'destructive',
       });
+    }
+  };
+
+  // Helper function to get due date based on task group
+  const getGroupDueDate = (group: TaskGroup): string | null => {
+    const today = new Date();
+    
+    switch (group) {
+      case 'morning':
+        // Set to 11 AM today
+        const morning = new Date(today);
+        morning.setHours(11, 0, 0, 0);
+        return morning.toISOString();
+      case 'midday':
+        // Set to 3 PM today  
+        const midday = new Date(today);
+        midday.setHours(15, 0, 0, 0);
+        return midday.toISOString();
+      case 'afternoon':
+        // Set to 11:59 PM today
+        const afternoon = new Date(today);
+        afternoon.setHours(23, 59, 0, 0);
+        return afternoon.toISOString();
+      case 'general':
+      default:
+        return null; // No specific due date for general tasks
     }
   };
 
