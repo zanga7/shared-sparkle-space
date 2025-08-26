@@ -303,23 +303,66 @@ export const CalendarView = ({
   const handleDragEnd = async (result: any) => {
     if (!result.destination) return;
 
-    const taskId = result.draggableId;
+    const itemId = result.draggableId;
     const newDate = result.destination.droppableId;
+    const isEvent = itemId.startsWith('event-');
     
     try {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ due_date: new Date(newDate).toISOString() })
-        .eq('id', taskId);
+      if (isEvent) {
+        // Handle event drag and drop
+        const eventId = itemId.replace('event-', '');
+        const event = events.find(e => e.id === eventId);
+        
+        if (!event) return;
+        
+        // Calculate the new dates maintaining the event duration
+        const originalStart = new Date(event.start_date);
+        const originalEnd = new Date(event.end_date);
+        const duration = originalEnd.getTime() - originalStart.getTime();
+        
+        const newStartDate = new Date(newDate);
+        // If it's an all-day event, keep the time as start of day
+        if (event.is_all_day) {
+          newStartDate.setHours(0, 0, 0, 0);
+        } else {
+          // Preserve the original time
+          newStartDate.setHours(originalStart.getHours(), originalStart.getMinutes(), originalStart.getSeconds());
+        }
+        
+        const newEndDate = new Date(newStartDate.getTime() + duration);
+        
+        const { error } = await supabase
+          .from('events')
+          .update({ 
+            start_date: newStartDate.toISOString(),
+            end_date: newEndDate.toISOString()
+          })
+          .eq('id', eventId);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: 'Task Rescheduled',
-        description: `Task moved to ${format(new Date(newDate), 'MMM d')}`,
-      });
+        await refreshEvents();
 
-      onTaskUpdated();
+        toast({
+          title: 'Event Rescheduled',
+          description: `${event.title} moved to ${format(newStartDate, 'MMM d')}`,
+        });
+      } else {
+        // Handle task drag and drop (existing logic)
+        const { error } = await supabase
+          .from('tasks')
+          .update({ due_date: new Date(newDate).toISOString() })
+          .eq('id', itemId);
+
+        if (error) throw error;
+
+        toast({
+          title: 'Task Rescheduled',
+          description: `Task moved to ${format(new Date(newDate), 'MMM d')}`,
+        });
+
+        onTaskUpdated();
+      }
     } catch (error) {
       console.error('Error rescheduling task:', error);
       toast({
@@ -832,13 +875,20 @@ export const CalendarView = ({
                             {/* Tasks */}
                             {memberTasks.map((task, index) => renderTask(task, index))}
                             
-                            {/* Events */}
-                            {memberEvents.map((event) => (
-                              <div 
-                                key={event.id}
-                                className="group p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs hover:shadow-md cursor-pointer transition-all"
-                                onClick={() => handleEditEvent(event)}
-                              >
+                             {/* Events */}
+                             {memberEvents.map((event, eventIndex) => (
+                               <Draggable key={`event-${event.id}`} draggableId={`event-${event.id}`} index={memberTasks.length + eventIndex}>
+                                 {(provided, snapshot) => (
+                                   <div
+                                     ref={provided.innerRef}
+                                     {...provided.draggableProps}
+                                     {...provided.dragHandleProps}
+                                     className={cn(
+                                       "group p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs hover:shadow-md cursor-move transition-all",
+                                       snapshot.isDragging && "shadow-lg rotate-1"
+                                     )}
+                                     onClick={() => handleEditEvent(event)}
+                                   >
                                 <div className="flex items-center justify-between">
                                   <span className="font-medium text-purple-700">{event.title}</span>
                                   <div className="flex items-center gap-1">
@@ -861,11 +911,13 @@ export const CalendarView = ({
                                       {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
                                     </p>
                                   </div>
-                                )}
-                              </div>
-                            ))}
-                            
-                            {provided.placeholder}
+                                 )}
+                               </div>
+                                 )}
+                               </Draggable>
+                             ))}
+                             
+                             {provided.placeholder}
                             
                             {/* Add New Event Button */}
                             <div className="pt-2 border-t border-muted/30">
@@ -956,23 +1008,28 @@ export const CalendarView = ({
                         <div className="space-y-1">
                           {dayTasks.map((task, index) => renderTask(task, index))}
                           
-                          {/* Events */}
-                          {dayEvents.map((event) => (
-                            <div 
-                              key={`${event.id}-${format(day, 'yyyy-MM-dd')}`}
-                              className={cn(
-                                "group p-2 mb-1 text-xs hover:shadow-md cursor-pointer transition-all border",
-                                "bg-purple-50 border-purple-200 text-purple-700",
-                                event.isMultiDay && !event.isFirstDay && !event.isLastDay && "rounded-none border-l-0 border-r-0",
-                                event.isMultiDay && event.isFirstDay && "rounded-r-none border-r-0",
-                                event.isMultiDay && event.isLastDay && "rounded-l-none border-l-0",
-                                !event.isMultiDay && "rounded-md"
-                              )}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditEvent(event);
-                              }}
-                            >
+                           {/* Events */}
+                           {dayEvents.map((event, eventIndex) => (
+                             <Draggable key={`event-${event.id}-${format(day, 'yyyy-MM-dd')}`} draggableId={`event-${event.id}`} index={dayTasks.length + eventIndex}>
+                               {(provided, snapshot) => (
+                                 <div
+                                   ref={provided.innerRef}
+                                   {...provided.draggableProps}
+                                   {...provided.dragHandleProps}
+                                   className={cn(
+                                     "group p-2 mb-1 text-xs hover:shadow-md cursor-move transition-all border",
+                                     "bg-purple-50 border-purple-200 text-purple-700",
+                                     event.isMultiDay && !event.isFirstDay && !event.isLastDay && "rounded-none border-l-0 border-r-0",
+                                     event.isMultiDay && event.isFirstDay && "rounded-r-none border-r-0",
+                                     event.isMultiDay && event.isLastDay && "rounded-l-none border-l-0",
+                                     !event.isMultiDay && "rounded-md",
+                                     snapshot.isDragging && "shadow-lg rotate-1"
+                                   )}
+                                   onClick={(e) => {
+                                     e.stopPropagation();
+                                     handleEditEvent(event);
+                                   }}
+                                 >
                               <div className="flex items-center justify-between">
                                 <span className="font-medium truncate">
                                   {event.isMultiDay && !event.isFirstDay ? `↳ ${event.title}` : event.title}
@@ -1007,11 +1064,13 @@ export const CalendarView = ({
                                   </span>
                                 </div>
                               )}
-                            </div>
-                          ))}
-                          
-                          {provided.placeholder}
-                        </div>
+                             </div>
+                               )}
+                             </Draggable>
+                           ))}
+                           
+                           {provided.placeholder}
+                         </div>
 
                         {/* Add Event Button - Always show for days with tasks too */}
                         <div className="mt-2 pt-2 border-t border-muted/50">
