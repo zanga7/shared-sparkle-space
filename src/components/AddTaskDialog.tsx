@@ -8,7 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { CalendarIcon, Plus, Repeat, Users, User } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CalendarIcon, Plus, Repeat, Users, User, Sun, Clock3, Moon, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -68,6 +69,7 @@ export const AddTaskDialog = ({
     repetition_count: null as number | null,
     monthly_type: 'date' as 'date' | 'weekday',
     monthly_weekday_ordinal: 1,
+    task_group: preselectedTaskGroup || 'general',
   });
 
   // Update due_date when selectedDate changes
@@ -98,37 +100,79 @@ export const AddTaskDialog = ({
     }
   }, [preselectedMemberId]);
 
-  // Handle preselected task group (set default due date based on group)
+  // Handle preselected task group
   useEffect(() => {
-    if (preselectedTaskGroup && !selectedDate) {
-      const now = new Date();
-      let defaultDueDate = new Date();
+    if (preselectedTaskGroup) {
+      setFormData(prev => ({ 
+        ...prev, 
+        task_group: preselectedTaskGroup
+      }));
       
-      switch (preselectedTaskGroup) {
-        case 'morning':
-          defaultDueDate.setHours(10, 0, 0, 0); // 10 AM
-          break;
-        case 'midday':
-          defaultDueDate.setHours(13, 0, 0, 0); // 1 PM
-          break;
-        case 'afternoon':
-          defaultDueDate.setHours(18, 0, 0, 0); // 6 PM
-          break;
-        case 'general':
-        default:
-          defaultDueDate = null;
-          break;
-      }
-      
-      if (defaultDueDate) {
-        setFormData(prev => ({ 
-          ...prev, 
-          due_date: defaultDueDate,
-          start_date: defaultDueDate.toISOString()
-        }));
+      if (!selectedDate) {
+        const now = new Date();
+        let defaultDueDate = new Date();
+        
+        switch (preselectedTaskGroup) {
+          case 'morning':
+            defaultDueDate.setHours(10, 0, 0, 0); // 10 AM
+            break;
+          case 'midday':
+            defaultDueDate.setHours(13, 0, 0, 0); // 1 PM
+            break;
+          case 'afternoon':
+            defaultDueDate.setHours(18, 0, 0, 0); // 6 PM
+            break;
+          case 'general':
+          default:
+            defaultDueDate = null;
+            break;
+        }
+        
+        if (defaultDueDate) {
+          setFormData(prev => ({ 
+            ...prev, 
+            due_date: defaultDueDate,
+            start_date: defaultDueDate.toISOString()
+          }));
+        }
       }
     }
   }, [preselectedTaskGroup, selectedDate]);
+
+  // Helper function to get task group time based on selection
+  const getTaskGroupDueDate = (group: string) => {
+    if (group === 'general') return null;
+    
+    const now = new Date();
+    const dueDate = new Date();
+    
+    switch (group) {
+      case 'morning':
+        dueDate.setHours(10, 0, 0, 0);
+        break;
+      case 'midday':
+        dueDate.setHours(13, 0, 0, 0);
+        break;
+      case 'afternoon':
+        dueDate.setHours(18, 0, 0, 0);
+        break;
+      default:
+        return null;
+    }
+    
+    return dueDate;
+  };
+
+  // Update due date when task group changes
+  const handleTaskGroupChange = (group: string) => {
+    const newDueDate = getTaskGroupDueDate(group);
+    setFormData(prev => ({
+      ...prev,
+      task_group: group,
+      due_date: selectedDate || newDueDate,
+      start_date: (selectedDate || newDueDate || new Date()).toISOString()
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,6 +327,7 @@ export const AddTaskDialog = ({
         repetition_count: null,
         monthly_type: 'date',
         monthly_weekday_ordinal: 1,
+        task_group: preselectedTaskGroup || 'general',
       });
 
       setOpen(false);
@@ -382,6 +427,41 @@ export const AddTaskDialog = ({
                 placeholder="Select assignees..."
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Task Group</Label>
+            <Select value={formData.task_group} onValueChange={handleTaskGroupChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select task group" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="morning">
+                  <div className="flex items-center gap-2">
+                    <Sun className="h-4 w-4" />
+                    Morning (until 11 AM)
+                  </div>
+                </SelectItem>
+                <SelectItem value="midday">
+                  <div className="flex items-center gap-2">
+                    <Clock3 className="h-4 w-4" />
+                    Midday (11 AM - 3 PM)
+                  </div>
+                </SelectItem>
+                <SelectItem value="afternoon">
+                  <div className="flex items-center gap-2">
+                    <Moon className="h-4 w-4" />
+                    Afternoon (3 PM onwards)
+                  </div>
+                </SelectItem>
+                <SelectItem value="general">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    General (any time)
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Completion Rule - only show when multiple assignees */}

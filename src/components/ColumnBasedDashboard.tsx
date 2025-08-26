@@ -641,7 +641,7 @@ const ColumnBasedDashboard = () => {
     }
   };
 
-  // Handle drag end for task assignment
+  // Handle drag end for task assignment and group changes
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
@@ -656,56 +656,116 @@ const ColumnBasedDashboard = () => {
     }
 
     const taskId = draggableId;
-    const newAssigneeId = destination.droppableId === 'unassigned' ? null : destination.droppableId;
-
+    
+    // Parse droppable IDs to handle both member assignment and group changes
+    const parseDroppableId = (id: string) => {
+      if (id === 'unassigned') return { type: 'member', memberId: null, group: null };
+      if (id.includes('-')) {
+        const [memberId, group] = id.split('-');
+        return { type: 'group', memberId, group };
+      }
+      return { type: 'member', memberId: id, group: null };
+    };
+    
+    const sourceInfo = parseDroppableId(source.droppableId);
+    const destInfo = parseDroppableId(destination.droppableId);
+    
     try {
-      // First, remove existing task assignees
-      const { error: deleteError } = await supabase
-        .from('task_assignees')
-        .delete()
-        .eq('task_id', taskId);
-
-      if (deleteError) throw deleteError;
-
-      // Update the main task assignment for backward compatibility
-      const { error: updateError } = await supabase
-        .from('tasks')
-        .update({ assigned_to: newAssigneeId })
-        .eq('id', taskId);
-
-      if (updateError) throw updateError;
-
-      // If assigning to a specific member, create new task_assignee record
-      if (newAssigneeId) {
-        const { error: insertError } = await supabase
+      let updateData: any = {};
+      let toastMessage = '';
+      
+      // Handle member assignment change
+      if (sourceInfo.memberId !== destInfo.memberId) {
+        // First, remove existing task assignees
+        const { error: deleteError } = await supabase
           .from('task_assignees')
-          .insert({
-            task_id: taskId,
-            profile_id: newAssigneeId,
-            assigned_by: profile.id
-          });
+          .delete()
+          .eq('task_id', taskId);
 
-        if (insertError) throw insertError;
+        if (deleteError) throw deleteError;
 
-        const assignedMember = familyMembers.find(m => m.id === newAssigneeId);
+        updateData.assigned_to = destInfo.memberId;
+
+        // If assigning to a specific member, create new task_assignee record
+        if (destInfo.memberId) {
+          const { error: insertError } = await supabase
+            .from('task_assignees')
+            .insert({
+              task_id: taskId,
+              profile_id: destInfo.memberId,
+              assigned_by: profile.id
+            });
+
+          if (insertError) throw insertError;
+
+          const assignedMember = familyMembers.find(m => m.id === destInfo.memberId);
+          toastMessage = `Task assigned to ${assignedMember?.display_name || 'member'}`;
+        } else {
+          toastMessage = 'Task moved to unassigned pool';
+        }
+      }
+      
+      // Handle group/time change
+      if (destInfo.group && sourceInfo.group !== destInfo.group) {
+        const getGroupDueDate = (group: string) => {
+          const now = new Date();
+          const dueDate = new Date();
+          
+          switch (group) {
+            case 'morning':
+              dueDate.setHours(10, 0, 0, 0);
+              break;
+            case 'midday':
+              dueDate.setHours(13, 0, 0, 0);
+              break;
+            case 'afternoon':
+              dueDate.setHours(18, 0, 0, 0);
+              break;
+            default:
+              return null;
+          }
+          
+          return dueDate;
+        };
+        
+        const newDueDate = getGroupDueDate(destInfo.group);
+        if (newDueDate) {
+          updateData.due_date = newDueDate.toISOString();
+        } else if (destInfo.group === 'general') {
+          updateData.due_date = null;
+        }
+        
+        if (toastMessage) {
+          toastMessage += ` and moved to ${destInfo.group} group`;
+        } else {
+          toastMessage = `Task moved to ${destInfo.group} group`;
+        }
+      }
+
+      // Update the task with all changes
+      if (Object.keys(updateData).length > 0) {
+        const { error: updateError } = await supabase
+          .from('tasks')
+          .update(updateData)
+          .eq('id', taskId);
+
+        if (updateError) throw updateError;
+      }
+
+      if (toastMessage) {
         toast({
-          title: 'Task reassigned',
-          description: `Task assigned to ${assignedMember?.display_name || 'member'}`,
-        });
-      } else {
-        toast({
-          title: 'Task unassigned',
-          description: 'Task moved to unassigned pool',
+          title: 'Task updated',
+          description: toastMessage,
         });
       }
 
       // Refresh data to show updated assignments
       fetchUserData();
     } catch (error) {
-      console.error('Error updating task assignment:', error);
+      console.error('Error updating task:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update task assignment. Please try again.',
+        description: 'Failed to update task. Please try again.',
         variant: 'destructive',
       });
     }
@@ -1048,23 +1108,14 @@ const ColumnBasedDashboard = () => {
                             </div>
                          </CardHeader>
 
-                         <Droppable droppableId={member.id}>
-                           {(provided, snapshot) => (
-                             <CardContent 
-                               className={cn(
-                                 "space-y-3 transition-colors",
-                                 snapshot.isDraggingOver && "bg-accent/50"
-                               )}
-                               ref={provided.innerRef}
-                               {...provided.droppableProps}
-                             >
-                                {memberTasks.length === 0 ? (
-                                  <div className="text-center py-6 sm:py-8 text-muted-foreground min-h-[100px]">
-                                    <Clock className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
-                                    <p className="text-xs sm:text-sm px-2">
-                                      {snapshot.isDraggingOver ? 'Drop task here to assign' : 'No tasks assigned'}
-                                    </p>
-                                  </div>
+                          <CardContent className="space-y-3">
+                                 {memberTasks.length === 0 ? (
+                                   <div className="text-center py-6 sm:py-8 text-muted-foreground min-h-[100px]">
+                                     <Clock className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
+                                     <p className="text-xs sm:text-sm px-2">
+                                       No tasks assigned
+                                     </p>
+                                   </div>
                                 ) : (
                                   (() => {
                                     const taskGroups = groupTasksByTime(memberTasks);
@@ -1101,63 +1152,84 @@ const ColumnBasedDashboard = () => {
                                                     </div>
                                                   </div>
                                                 </AccordionTrigger>
-                                                <AccordionContent className="px-3 pb-3 pt-1">
-                                                  <div className="space-y-2">
-                                                    {groupTasks.map((task, index) => {
-                                                      // Calculate the global index for drag and drop
-                                                      const globalIndex = memberTasks.findIndex(t => t.id === task.id);
-                                                      return (
-                                                        <Draggable key={task.id} draggableId={task.id} index={globalIndex}>
-                                                          {(provided, snapshot) => (
-                                                            <div
-                                                              ref={provided.innerRef}
-                                                              {...provided.draggableProps}
-                                                              {...provided.dragHandleProps}
-                                                              className={cn(
-                                                                snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50"
-                                                              )}
-                                                            >
-                                                              <EnhancedTaskItem
-                                                                task={task}
-                                                                allTasks={tasks}
-                                                                familyMembers={familyMembers}
-                                                                onToggle={handleTaskToggle}
-                                                                onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                                                onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
-                                                                showActions={profile.role === 'parent' && !snapshot.isDragging}
-                                                              />
-                                                            </div>
-                                                          )}
-                                                        </Draggable>
-                                                      );
-                                                    })}
-                                                    
-                                                    {/* Add Task Button for this group */}
-                                                    {profile.role === 'parent' && (
-                                                      <AddButton
-                                                        className={cn(
-                                                          "w-full mt-2",
-                                                          getMemberColorClasses(member.color).border,
-                                                          getMemberColorClasses(member.color).text
-                                                        )}
-                                                        text={`Add ${getTaskGroupTitle(group)} Task`}
-                                                        onClick={() => handleAddTaskForMember(member.id, group)}
-                                                      />
-                                                    )}
-                                                  </div>
-                                                </AccordionContent>
+                                                 <AccordionContent className="px-3 pb-3 pt-1">
+                                                   <Droppable droppableId={`${member.id}-${group}`}>
+                                                     {(provided, snapshot) => (
+                                                       <div
+                                                         ref={provided.innerRef}
+                                                         {...provided.droppableProps}
+                                                         className={cn(
+                                                           "space-y-2 min-h-[60px] transition-colors",
+                                                           snapshot.isDraggingOver && "bg-accent/50 rounded-lg"
+                                                         )}
+                                                       >
+                                                         {groupTasks.map((task, index) => {
+                                                           // Calculate the global index for drag and drop
+                                                           const globalIndex = memberTasks.findIndex(t => t.id === task.id);
+                                                           return (
+                                                             <Draggable key={task.id} draggableId={task.id} index={globalIndex}>
+                                                               {(provided, snapshot) => (
+                                                                 <div
+                                                                   ref={provided.innerRef}
+                                                                   {...provided.draggableProps}
+                                                                   {...provided.dragHandleProps}
+                                                                   className={cn(
+                                                                     snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50"
+                                                                   )}
+                                                                 >
+                                                                   <EnhancedTaskItem
+                                                                     task={task}
+                                                                     allTasks={tasks}
+                                                                     familyMembers={familyMembers}
+                                                                     onToggle={(task) => {
+                                                                       if (activeMemberId !== member.id) {
+                                                                         toast({
+                                                                           title: 'Access Denied',
+                                                                           description: 'You can only complete tasks from your own task column.',
+                                                                           variant: 'destructive'
+                                                                         });
+                                                                         return;
+                                                                       }
+                                                                       handleTaskToggle(task);
+                                                                     }}
+                                                                     onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                                                                     onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
+                                                                     showActions={profile.role === 'parent' && !snapshot.isDragging}
+                                                                   />
+                                                                 </div>
+                                                               )}
+                                                             </Draggable>
+                                                           );
+                                                         })}
+                                                         {provided.placeholder}
+                                                         
+                                                         {/* Add Task Button for this group */}
+                                                         {profile.role === 'parent' && (
+                                                           <div className="pt-2 border-t border-dashed">
+                                                             <AddButton
+                                                               className={cn(
+                                                                 "w-full text-xs",
+                                                                 getMemberColorClasses(member.color).border,
+                                                                 getMemberColorClasses(member.color).text
+                                                               )}
+                                                               text={`Add ${getTaskGroupTitle(group)} Task`}
+                                                               onClick={() => handleAddTaskForMember(member.id, group)}
+                                                             />
+                                                           </div>
+                                                         )}
+                                                       </div>
+                                                     )}
+                                                   </Droppable>
+                                                 </AccordionContent>
                                               </AccordionItem>
                                             );
                                           })}
-                                        </Accordion>
-                                        {provided.placeholder}
-                                      </div>
-                                    );
-                                  })()
-                                )}
-                             </CardContent>
-                           )}
-                         </Droppable>
+                                         </Accordion>
+                                       </div>
+                                     );
+                                   })()
+                                 )}
+                          </CardContent>
                        </Card>
                      );
                    })}
