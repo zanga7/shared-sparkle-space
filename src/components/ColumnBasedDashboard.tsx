@@ -657,23 +657,27 @@ const ColumnBasedDashboard = () => {
 
     const taskId = draggableId;
     
-    // Parse droppable IDs to handle both member assignment and group changes
+    console.log('Drag end - source:', source.droppableId, 'destination:', destination.droppableId);
+    
+    // Parse droppable IDs - simplified to only handle member assignment
     const parseDroppableId = (id: string) => {
-      if (id === 'unassigned') return { type: 'member', memberId: null, group: null };
-      if (id.includes('-')) {
-        const [memberId, group] = id.split('-');
-        return { type: 'group', memberId, group };
+      if (id === 'unassigned') return { memberId: null };
+      
+      // Validate that it's a proper UUID (36 characters)
+      if (id.length === 36) {
+        return { memberId: id };
       }
-      return { type: 'member', memberId: id, group: null };
+      
+      console.error('Invalid droppable ID:', id);
+      return { memberId: null };
     };
     
     const sourceInfo = parseDroppableId(source.droppableId);
     const destInfo = parseDroppableId(destination.droppableId);
     
+    console.log('Parsed source:', sourceInfo, 'destination:', destInfo);
+    
     try {
-      let updateData: any = {};
-      let toastMessage = '';
-      
       // Handle member assignment change
       if (sourceInfo.memberId !== destInfo.memberId) {
         // First, remove existing task assignees
@@ -684,7 +688,8 @@ const ColumnBasedDashboard = () => {
 
         if (deleteError) throw deleteError;
 
-        updateData.assigned_to = destInfo.memberId;
+        // Update the main task assignment for backward compatibility
+        const updateData = { assigned_to: destInfo.memberId };
 
         // If assigning to a specific member, create new task_assignee record
         if (destInfo.memberId) {
@@ -693,74 +698,37 @@ const ColumnBasedDashboard = () => {
             .insert({
               task_id: taskId,
               profile_id: destInfo.memberId,
-              assigned_by: profile.id
+              assigned_by: profile?.id
             });
 
           if (insertError) throw insertError;
+        }
+        console.log('Update data:', updateData);
 
-          const assignedMember = familyMembers.find(m => m.id === destInfo.memberId);
-          toastMessage = `Task assigned to ${assignedMember?.display_name || 'member'}`;
-        } else {
-          toastMessage = 'Task moved to unassigned pool';
-        }
-      }
-      
-      // Handle group/time change
-      if (destInfo.group && sourceInfo.group !== destInfo.group) {
-        const getGroupDueDate = (group: string) => {
-          const now = new Date();
-          const dueDate = new Date();
-          
-          switch (group) {
-            case 'morning':
-              dueDate.setHours(10, 0, 0, 0);
-              break;
-            case 'midday':
-              dueDate.setHours(13, 0, 0, 0);
-              break;
-            case 'afternoon':
-              dueDate.setHours(18, 0, 0, 0);
-              break;
-            default:
-              return null;
-          }
-          
-          return dueDate;
-        };
-        
-        const newDueDate = getGroupDueDate(destInfo.group);
-        if (newDueDate) {
-          updateData.due_date = newDueDate.toISOString();
-        } else if (destInfo.group === 'general') {
-          updateData.due_date = null;
-        }
-        
-        if (toastMessage) {
-          toastMessage += ` and moved to ${destInfo.group} group`;
-        } else {
-          toastMessage = `Task moved to ${destInfo.group} group`;
-        }
-      }
-
-      // Update the task with all changes
-      if (Object.keys(updateData).length > 0) {
+        // Update the task with all changes
         const { error: updateError } = await supabase
           .from('tasks')
           .update(updateData)
           .eq('id', taskId);
 
-        if (updateError) throw updateError;
-      }
+        if (updateError) {
+          console.error('Database update error:', updateError);
+          throw updateError;
+        }
 
-      if (toastMessage) {
+        const assignedMember = familyMembers.find(m => m.id === destInfo.memberId);
+        const toastMessage = destInfo.memberId 
+          ? `Task assigned to ${assignedMember?.display_name || 'member'}`
+          : 'Task moved to unassigned pool';
+
         toast({
           title: 'Task updated',
           description: toastMessage,
         });
-      }
 
-      // Refresh data to show updated assignments
-      fetchUserData();
+        // Refresh data to show updated assignments
+        fetchUserData();
+      }
     } catch (error) {
       console.error('Error updating task:', error);
       toast({
@@ -1108,23 +1076,32 @@ const ColumnBasedDashboard = () => {
                             </div>
                          </CardHeader>
 
-                          <CardContent className="space-y-3">
-                                 {memberTasks.length === 0 ? (
-                                   <div className="text-center py-6 sm:py-8 text-muted-foreground min-h-[100px]">
-                                     <Clock className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
-                                     <p className="text-xs sm:text-sm px-2">
-                                       No tasks assigned
-                                     </p>
-                                   </div>
-                                ) : (
-                                  (() => {
-                                    const taskGroups = groupTasksByTime(memberTasks);
-                                    const defaultOpenGroups = (['morning', 'midday', 'afternoon', 'general'] as TaskGroup[])
-                                      .filter(group => shouldGroupBeOpenByDefault(group) || taskGroups[group].length > 0)
-                                      .map(group => `${member.id}-${group}`);
-                                    
-                                    return (
-                                      <div className="min-h-[100px]">
+                          <Droppable droppableId={member.id}>
+                            {(provided, snapshot) => (
+                              <CardContent 
+                                className={cn(
+                                  "space-y-3 transition-colors",
+                                  snapshot.isDraggingOver && "bg-accent/50"
+                                )}
+                                ref={provided.innerRef}
+                                {...provided.droppableProps}
+                              >
+                                  {memberTasks.length === 0 ? (
+                                    <div className="text-center py-6 sm:py-8 text-muted-foreground min-h-[100px]">
+                                      <Clock className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
+                                      <p className="text-xs sm:text-sm px-2">
+                                        {snapshot.isDraggingOver ? 'Drop task here to assign' : 'No tasks assigned'}
+                                      </p>
+                                    </div>
+                                 ) : (
+                                   (() => {
+                                     const taskGroups = groupTasksByTime(memberTasks);
+                                     const defaultOpenGroups = (['morning', 'midday', 'afternoon', 'general'] as TaskGroup[])
+                                       .filter(group => shouldGroupBeOpenByDefault(group) || taskGroups[group].length > 0)
+                                       .map(group => `${member.id}-${group}`);
+                                     
+                                     return (
+                                       <div className="min-h-[100px]">
                                         <Accordion type="multiple" defaultValue={defaultOpenGroups} className="space-y-1 mb-4">
                                           {(['morning', 'midday', 'afternoon', 'general'] as TaskGroup[]).map(group => {
                                             const groupTasks = taskGroups[group];
@@ -1227,9 +1204,11 @@ const ColumnBasedDashboard = () => {
                                          </Accordion>
                                        </div>
                                      );
-                                   })()
-                                 )}
-                          </CardContent>
+                                    })()
+                                  )}
+                              </CardContent>
+                            )}
+                          </Droppable>
                        </Card>
                      );
                    })}
