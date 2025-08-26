@@ -57,7 +57,7 @@ export function useRewards() {
 
       // Fetch rewards and profiles in parallel
       const [rewardsData, profilesData] = await Promise.all([
-        supabase.from('rewards').select('id, title, description, cost_points').in('id', rewardIds),
+        supabase.from('rewards').select('id, title, description, cost_points, reward_type').in('id', rewardIds),
         supabase.from('profiles').select('id, display_name, color').in('id', profileIds)
       ]);
 
