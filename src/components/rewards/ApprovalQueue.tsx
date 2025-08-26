@@ -60,32 +60,33 @@ export function ApprovalQueue() {
       if (request.reward?.reward_type === 'group_contribution') {
         const key = request.reward_id;
         if (!grouped[key]) {
-          const contributors = groupContributions
-            .filter(gc => gc.reward_id === request.reward_id)
-            .map(gc => {
-              const profile = familyMembers.find(m => m.id === gc.profile_id);
-              return {
-                id: gc.profile_id,
-                display_name: profile?.display_name || 'Unknown',
-                color: profile?.color || 'sky',
-                points_contributed: gc.points_contributed
-              };
-            });
+          // Get contributors from the reward requestors
+          const allRequestsForReward = rewardRequests.filter(r => 
+            r.reward_id === request.reward_id && r.reward?.reward_type === 'group_contribution'
+          );
+          
+          const contributors = allRequestsForReward.map(req => {
+            const profile = familyMembers.find(m => m.id === req.requested_by);
+            return {
+              id: req.requested_by,
+              display_name: req.requestor?.display_name || profile?.display_name || 'Unknown',
+              color: req.requestor?.color || profile?.color || 'sky',
+              points_contributed: req.points_cost
+            };
+          });
 
           grouped[key] = {
             id: key,
             reward_id: request.reward_id,
             reward_title: request.reward?.title || 'Unknown Reward',
             reward_type: request.reward?.reward_type || 'group_contribution',
-            points_cost: request.points_cost,
+            points_cost: allRequestsForReward.reduce((total, req) => total + req.points_cost, 0),
             status: request.status,
             created_at: request.created_at,
             approval_note: request.approval_note,
             contributors,
-            requests: [request]
+            requests: allRequestsForReward
           };
-        } else {
-          grouped[key].requests.push(request);
         }
       }
     });
