@@ -24,7 +24,11 @@ interface Profile {
   updated_at: string;
 }
 
-interface FamilyMember extends Profile {}
+interface FamilyMember extends Profile {
+  require_pin_to_complete_tasks?: boolean;
+  require_pin_for_list_deletes?: boolean;
+  calendar_edit_permission?: string;
+}
 
 interface AdminContextType {
   profile: Profile | null;

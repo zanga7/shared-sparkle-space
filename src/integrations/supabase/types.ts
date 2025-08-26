@@ -201,6 +201,47 @@ export type Database = {
           },
         ]
       }
+      dashboard_sessions: {
+        Row: {
+          active_member_id: string
+          created_at: string
+          device_id: string
+          id: string
+          last_activity: string
+          pin_cache_expires: string | null
+          session_start: string
+          updated_at: string
+        }
+        Insert: {
+          active_member_id: string
+          created_at?: string
+          device_id: string
+          id?: string
+          last_activity?: string
+          pin_cache_expires?: string | null
+          session_start?: string
+          updated_at?: string
+        }
+        Update: {
+          active_member_id?: string
+          created_at?: string
+          device_id?: string
+          id?: string
+          last_activity?: string
+          pin_cache_expires?: string | null
+          session_start?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_sessions_active_member_id_fkey"
+            columns: ["active_member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_attendees: {
         Row: {
           added_at: string
@@ -371,7 +412,9 @@ export type Database = {
       }
       household_settings: {
         Row: {
+          auto_return_timeout_minutes: number | null
           created_at: string
+          dashboard_mode_enabled: boolean | null
           family_id: string
           id: string
           pin_attempts_limit: number
@@ -381,7 +424,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_return_timeout_minutes?: number | null
           created_at?: string
+          dashboard_mode_enabled?: boolean | null
           family_id: string
           id?: string
           pin_attempts_limit?: number
@@ -391,7 +436,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_return_timeout_minutes?: number | null
           created_at?: string
+          dashboard_mode_enabled?: boolean | null
           family_id?: string
           id?: string
           pin_attempts_limit?: number
@@ -633,6 +680,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          calendar_edit_permission: string | null
           can_add_for_parents: boolean
           can_add_for_self: boolean
           can_add_for_siblings: boolean
@@ -644,6 +692,8 @@ export type Database = {
           id: string
           pin_hash: string | null
           pin_locked_until: string | null
+          require_pin_for_list_deletes: boolean | null
+          require_pin_to_complete_tasks: boolean | null
           role: Database["public"]["Enums"]["user_role"]
           sort_order: number | null
           status: string
@@ -655,6 +705,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          calendar_edit_permission?: string | null
           can_add_for_parents?: boolean
           can_add_for_self?: boolean
           can_add_for_siblings?: boolean
@@ -666,6 +717,8 @@ export type Database = {
           id?: string
           pin_hash?: string | null
           pin_locked_until?: string | null
+          require_pin_for_list_deletes?: boolean | null
+          require_pin_to_complete_tasks?: boolean | null
           role?: Database["public"]["Enums"]["user_role"]
           sort_order?: number | null
           status?: string
@@ -677,6 +730,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          calendar_edit_permission?: string | null
           can_add_for_parents?: boolean
           can_add_for_self?: boolean
           can_add_for_siblings?: boolean
@@ -688,6 +742,8 @@ export type Database = {
           id?: string
           pin_hash?: string | null
           pin_locked_until?: string | null
+          require_pin_for_list_deletes?: boolean | null
+          require_pin_to_complete_tasks?: boolean | null
           role?: Database["public"]["Enums"]["user_role"]
           sort_order?: number | null
           status?: string
@@ -1292,8 +1348,16 @@ export type Database = {
         Args: { pin_attempt: string; profile_id_param: string }
         Returns: Json
       }
+      authenticate_member_pin_dashboard: {
+        Args: { pin_attempt: string; profile_id_param: string }
+        Returns: Json
+      }
       can_access_calendar_integration: {
         Args: { integration_profile_id: string }
+        Returns: boolean
+      }
+      check_member_pin_cache: {
+        Args: { device_id_param?: string; profile_id_param: string }
         Returns: boolean
       }
       check_profile_status: {

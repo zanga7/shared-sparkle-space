@@ -36,6 +36,9 @@ import { useRecurringTasks } from '@/hooks/useRecurringTasks';
 import { useRotatingTasks } from '@/hooks/useRotatingTasks';
 import { Task, Profile } from '@/types/task';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { useDashboardAuth } from '@/hooks/useDashboardAuth';
+import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
+import { MemberSwitchDialog } from '@/components/dashboard/MemberSwitchDialog';
 
 const ColumnBasedDashboard = () => {
   const { user, signOut } = useAuth();
@@ -55,6 +58,43 @@ const ColumnBasedDashboard = () => {
   const [activeTab, setActiveTab] = useState('columns');
   const { taskSeries } = useRecurringTasks(profile?.family_id);
   const { rotatingTasks, refreshRotatingTasks } = useRotatingTasks(profile?.family_id);
+  
+  // Dashboard mode state  
+  const [dashboardMode, setDashboardMode] = useState(false);
+  
+  // Load dashboard mode setting
+  useEffect(() => {
+    const loadDashboardMode = async () => {
+      if (profile?.family_id) {
+        const { data } = await supabase
+          .from('household_settings')
+          .select('dashboard_mode_enabled')
+          .eq('family_id', profile.family_id)
+          .single();
+        
+        if (data) {
+          setDashboardMode(data.dashboard_mode_enabled || false);
+        }
+      }
+    };
+    loadDashboardMode();
+  }, [profile?.family_id]);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
+  const [switchDialogOpen, setSwitchDialogOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{
+    type: 'complete_task' | 'delete_list_item';
+    taskId?: string;
+    requiredMemberId?: string;
+    onSuccess: () => void;
+  } | null>(null);
+  
+  const {
+    activeMemberId,
+    switchToMember,
+    authenticateMemberPin,
+    canPerformAction,
+    isAuthenticating
+  } = useDashboardAuth();
 
   useEffect(() => {
     if (user) {
@@ -247,6 +287,72 @@ const ColumnBasedDashboard = () => {
     if (!profile) return;
     
     try {
+      // Dashboard Mode: Check member identity and PIN requirements
+      if (dashboardMode) {
+        // Get all assignees for this task
+        const assignees = task.assignees?.map(a => a.profile) || 
+                         (task.assigned_profile ? [task.assigned_profile] : []);
+        
+        // Determine the required member (task assignee)
+        const requiredMemberId = assignees.length > 0 ? assignees[0].id : null;
+        
+        // Check if active member matches required member
+        if (requiredMemberId && activeMemberId !== requiredMemberId) {
+          // Show switch dialog
+          setPendingAction({
+            type: 'complete_task',
+            taskId: task.id,
+            requiredMemberId,
+            onSuccess: () => executeTaskCompletion(task)
+          });
+          setSwitchDialogOpen(true);
+          return;
+        }
+        
+        // Check PIN requirements for the active member (or assignee)
+        const memberToCheck = activeMemberId || requiredMemberId;
+        if (memberToCheck) {
+          const { canProceed, needsPin, profile: memberProfile } = await canPerformAction(memberToCheck, 'task_completion');
+          
+          if (needsPin) {
+            // Show PIN dialog
+            setPendingAction({
+              type: 'complete_task',
+              taskId: task.id,
+              requiredMemberId: memberToCheck,
+              onSuccess: () => executeTaskCompletion(task)
+            });
+            setPinDialogOpen(true);
+            return;
+          }
+          
+          if (!canProceed) {
+            toast({
+              title: 'Cannot Complete Task',
+              description: 'Permission denied for this action.',
+              variant: 'destructive'
+            });
+            return;
+          }
+        }
+      }
+      
+      // Regular mode or dashboard mode with permissions granted
+      await executeTaskCompletion(task);
+    } catch (error) {
+      console.error('Error in completeTask:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to complete task',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const executeTaskCompletion = async (task: Task) => {
+    if (!profile) return;
+    
+    try {
       // Check if this is a rotating task
       if (task.id.startsWith('rotating-')) {
         const rotatingTaskId = task.id.replace('rotating-', '');
@@ -289,8 +395,12 @@ const ColumnBasedDashboard = () => {
       const assignees = task.assignees?.map(a => a.profile) || 
                        (task.assigned_profile ? [task.assigned_profile] : []);
       
-      // Check if current profile is allowed to complete this task
-      const isAssignee = assignees.some(assignee => assignee.id === profile.id);
+      // In dashboard mode, use the active member as the completer if they're the assignee
+      const completerId = dashboardMode && activeMemberId ? activeMemberId : profile.id;
+      const completerProfile = familyMembers.find(m => m.id === completerId) || profile;
+      
+      // Check if completer is allowed to complete this task
+      const isAssignee = assignees.some(assignee => assignee.id === completerId);
       if (assignees.length > 0 && !isAssignee) {
         toast({
           title: 'Cannot Complete Task',
@@ -304,10 +414,10 @@ const ColumnBasedDashboard = () => {
       let pointRecipients;
       if (task.completion_rule === 'any_one' && assignees.length > 1) {
         // "Any one" rule: only the completer gets points
-        pointRecipients = [profile];
+        pointRecipients = [completerProfile];
       } else {
         // "Everyone" rule or single assignee: only the completer gets points
-        pointRecipients = [profile];
+        pointRecipients = [completerProfile];
       }
       
       // Create task completion record
@@ -315,7 +425,7 @@ const ColumnBasedDashboard = () => {
         .from('task_completions')
         .insert({
           task_id: task.id,
-          completed_by: profile.id,
+          completed_by: completerId,
           points_earned: task.points
         });
 
@@ -348,9 +458,11 @@ const ColumnBasedDashboard = () => {
       let toastMessage;
       if (task.completion_rule === 'any_one' && assignees.length > 1) {
         const assigneeNames = assignees.map(a => a.display_name).join(', ');
-        toastMessage = `Task completed for everyone! ${profile.display_name} earned ${task.points} points. Assignees: ${assigneeNames}`;
-      } else if (pointRecipients.length === 1 && pointRecipients[0].id === profile.id) {
-        toastMessage = `You earned ${task.points} points!`;
+        toastMessage = `Task completed for everyone! ${completerProfile.display_name} earned ${task.points} points. Assignees: ${assigneeNames}`;
+      } else if (pointRecipients.length === 1 && pointRecipients[0].id === completerProfile.id) {
+        toastMessage = dashboardMode && completerProfile.id !== profile.id 
+          ? `${completerProfile.display_name} earned ${task.points} points!`
+          : `You earned ${task.points} points!`;
       } else if (pointRecipients.length === 1) {
         toastMessage = `${pointRecipients[0].display_name} earned ${task.points} points!`;
       } else {
@@ -772,6 +884,9 @@ const ColumnBasedDashboard = () => {
         onSettingsClick={handleSettingsClick}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        activeMemberId={activeMemberId}
+        onMemberSwitch={switchToMember}
+        dashboardMode={dashboardMode}
       />
 
       {/* Main Content */}
@@ -1068,6 +1183,45 @@ const ColumnBasedDashboard = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dashboard PIN Authentication Dialog */}
+      {pinDialogOpen && pendingAction && (
+        <MemberPinDialog
+          open={pinDialogOpen}
+          onOpenChange={setPinDialogOpen}
+          member={familyMembers.find(m => m.id === pendingAction.requiredMemberId) || familyMembers[0]}
+          onSuccess={() => {
+            if (pendingAction) {
+              pendingAction.onSuccess();
+              setPendingAction(null);
+            }
+            setPinDialogOpen(false);
+          }}
+          onAuthenticate={(pin) => authenticateMemberPin(pendingAction.requiredMemberId || '', pin)}
+          isAuthenticating={isAuthenticating}
+          action={pendingAction.type === 'complete_task' ? 'complete this task' : 'perform this action'}
+        />
+      )}
+
+      {/* Dashboard Member Switch Dialog */}
+      {switchDialogOpen && pendingAction && (
+        <MemberSwitchDialog
+          open={switchDialogOpen}
+          onOpenChange={setSwitchDialogOpen}
+          members={familyMembers}
+          currentMemberId={activeMemberId}
+          requiredMemberId={pendingAction.requiredMemberId || ''}
+          onSwitch={(memberId, member) => {
+            switchToMember(memberId);
+            if (pendingAction) {
+              pendingAction.onSuccess();
+              setPendingAction(null);
+            }
+            setSwitchDialogOpen(false);
+          }}
+          action={pendingAction.type === 'complete_task' ? 'complete this task' : 'perform this action'}
+        />
+      )}
     </div>
   );
 };
