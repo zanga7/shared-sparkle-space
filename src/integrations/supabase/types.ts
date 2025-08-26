@@ -1594,7 +1594,28 @@ export type Database = {
         Args: { profile_id_param: string }
         Returns: number
       }
-      get_safe_calendar_integrations: {
+      get_token_encryption_status: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_user_calendar_integrations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          calendar_id: string
+          created_at: string
+          expires_at: string
+          has_access_token: boolean
+          has_refresh_token: boolean
+          id: string
+          integration_type: string
+          is_active: boolean
+          is_token_expired: boolean
+          last_token_refresh: string
+          token_refresh_count: number
+          updated_at: string
+        }[]
+      }
+      get_user_calendar_integrations_metadata: {
         Args: Record<PropertyKey, never>
         Returns: {
           calendar_id: string
@@ -1614,27 +1635,6 @@ export type Database = {
           security_flags: Json
           token_refresh_count: number
           token_status: string
-          updated_at: string
-        }[]
-      }
-      get_token_encryption_status: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      get_user_calendar_integrations: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          calendar_id: string
-          created_at: string
-          expires_at: string
-          has_access_token: boolean
-          has_refresh_token: boolean
-          id: string
-          integration_type: string
-          is_active: boolean
-          is_token_expired: boolean
-          last_token_refresh: string
-          token_refresh_count: number
           updated_at: string
         }[]
       }
