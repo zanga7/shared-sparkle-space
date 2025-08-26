@@ -18,6 +18,7 @@ import CalendarSettings from "./pages/admin/CalendarSettings";
 import RewardsManagement from "./pages/admin/RewardsManagement";
 import RewardApprovals from "./pages/admin/RewardApprovals";
 import { ScreenSaverManagement } from "./pages/admin/ScreenSaverManagement";
+import { ScreenSaverPreview } from "./pages/ScreenSaverPreview";
 
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/child-auth" element={<ChildAuth />} />
             <Route path="/rewards" element={<Rewards />} />
             <Route path="/lists" element={<Lists />} />
+            <Route path="/screensaver-preview" element={<ScreenSaverPreview />} />
             
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />

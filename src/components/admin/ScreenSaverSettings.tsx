@@ -18,7 +18,9 @@ import {
   ExternalLink,
   Settings,
   Image as ImageIcon,
-  Sparkles
+  Sparkles,
+  Play,
+  Timer
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -202,6 +204,7 @@ export const ScreenSaverSettings = () => {
         family_id: profile?.family_id,
         is_enabled: settings.is_enabled,
         display_duration: settings.display_duration,
+        timeout_minutes: settings.timeout_minutes,
         transition_effect: settings.transition_effect,
         show_clock: settings.show_clock,
         show_weather: settings.show_weather,
@@ -463,6 +466,27 @@ export const ScreenSaverSettings = () => {
             </div>
 
             <div className="space-y-2">
+              <Label>Screen Saver Timeout (minutes)</Label>
+              <div className="px-3">
+                <Slider
+                  value={[settings.timeout_minutes]}
+                  onValueChange={([value]) =>
+                    setSettings(prev => ({ ...prev, timeout_minutes: value }))
+                  }
+                  max={60}
+                  min={2}
+                  step={1}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-sm text-muted-foreground mt-1">
+                  <span>2min</span>
+                  <span>{settings.timeout_minutes}min</span>
+                  <span>60min</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <Label>Transition Effect</Label>
               <Select
                 value={settings.transition_effect}
@@ -536,10 +560,16 @@ export const ScreenSaverSettings = () => {
             </div>
           </div>
 
-          <Button onClick={saveSettings} className="w-full">
-            <Settings className="h-4 w-4 mr-2" />
-            Save Settings
-          </Button>
+          <div className="flex gap-3">
+            <Button onClick={saveSettings} className="flex-1">
+              <Settings className="h-4 w-4 mr-2" />
+              Save Settings
+            </Button>
+            <Button variant="outline" onClick={() => window.open('/screensaver-preview', '_blank', 'fullscreen=yes')}>
+              <Play className="h-4 w-4 mr-2" />
+              Test
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

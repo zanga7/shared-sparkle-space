@@ -901,6 +901,7 @@ export type Database = {
           is_enabled: boolean
           show_clock: boolean
           show_weather: boolean
+          timeout_minutes: number
           transition_effect: string
           updated_at: string
         }
@@ -917,6 +918,7 @@ export type Database = {
           is_enabled?: boolean
           show_clock?: boolean
           show_weather?: boolean
+          timeout_minutes?: number
           transition_effect?: string
           updated_at?: string
         }
@@ -933,6 +935,7 @@ export type Database = {
           is_enabled?: boolean
           show_clock?: boolean
           show_weather?: boolean
+          timeout_minutes?: number
           transition_effect?: string
           updated_at?: string
         }
