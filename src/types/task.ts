@@ -13,6 +13,7 @@ export interface Task {
   recurring_days_of_week: number[] | null;
   recurring_end_date: string | null;
   series_id: string | null;
+  completion_rule: 'any_one' | 'everyone'; // New field for completion behavior
   assigned_profile?: {
     id: string;
     display_name: string;

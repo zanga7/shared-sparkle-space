@@ -143,6 +143,7 @@ const ColumnBasedDashboard = () => {
                 due_date,
                 assigned_to,
                 created_by,
+                completion_rule,
                 recurring_frequency,
                 recurring_interval,
                 recurring_days_of_week,
@@ -157,7 +158,12 @@ const ColumnBasedDashboard = () => {
             if (tasksError) {
               console.error('Tasks error:', tasksError);
             } else {
-              setTasks(tasksData || []);
+              // Type assertion to handle completion_rule from database
+              const typedTasks = (tasksData || []).map(task => ({
+                ...task,
+                completion_rule: (task.completion_rule || 'everyone') as 'any_one' | 'everyone'
+              }));
+              setTasks(typedTasks);
             }
             
             setLoading(false);
@@ -203,6 +209,7 @@ const ColumnBasedDashboard = () => {
           due_date,
           assigned_to,
           created_by,
+          completion_rule,
           recurring_frequency,
           recurring_interval,
           recurring_days_of_week,
@@ -217,7 +224,12 @@ const ColumnBasedDashboard = () => {
       if (tasksError) {
         console.error('Tasks error:', tasksError);
       } else {
-        setTasks(tasksData || []);
+        // Type assertion to handle completion_rule from database
+        const typedTasks = (tasksData || []).map(task => ({
+          ...task,
+          completion_rule: (task.completion_rule || 'everyone') as 'any_one' | 'everyone'
+        }));
+        setTasks(typedTasks);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -277,8 +289,15 @@ const ColumnBasedDashboard = () => {
       const assignees = task.assignees?.map(a => a.profile) || 
                        (task.assigned_profile ? [task.assigned_profile] : []);
       
-      // If no specific assignees, anyone can complete it and only they get points
-      const pointRecipients = assignees.length > 0 ? assignees : [profile];
+      // Determine point recipients based on completion rule
+      let pointRecipients;
+      if (task.completion_rule === 'any_one' && assignees.length > 1) {
+        // "Any one" rule: only the completer gets points
+        pointRecipients = [profile];
+      } else {
+        // "Everyone" rule or single assignee: all assignees get points (or just completer if no assignees)
+        pointRecipients = assignees.length > 0 ? assignees : [profile];
+      }
       
       // Create task completion record
       const { error } = await supabase
@@ -314,9 +333,12 @@ const ColumnBasedDashboard = () => {
         throw new Error('Failed to update some points');
       }
 
-      // Create toast message based on point distribution
+      // Create toast message based on completion rule and point distribution
       let toastMessage;
-      if (pointRecipients.length === 1 && pointRecipients[0].id === profile.id) {
+      if (task.completion_rule === 'any_one' && assignees.length > 1) {
+        const assigneeNames = assignees.map(a => a.display_name).join(', ');
+        toastMessage = `Task completed for everyone! ${profile.display_name} earned ${task.points} points. Assignees: ${assigneeNames}`;
+      } else if (pointRecipients.length === 1 && pointRecipients[0].id === profile.id) {
         toastMessage = `You earned ${task.points} points!`;
       } else if (pointRecipients.length === 1) {
         toastMessage = `${pointRecipients[0].display_name} earned ${task.points} points!`;
@@ -563,6 +585,7 @@ const ColumnBasedDashboard = () => {
             due_date: null,
             created_by: rotatingTask.created_by,
             is_repeating: false,
+            completion_rule: 'everyone', // Rotating tasks default to everyone
             recurring_frequency: null,
             recurring_interval: null,
             recurring_days_of_week: null,

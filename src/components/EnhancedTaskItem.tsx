@@ -205,9 +205,13 @@ export const EnhancedTaskItem = ({
               {task.points} pts
               {(() => {
                 const assignees = task.assignees?.map(a => a.profile) || 
-                               (task.assigned_profile ? [task.assigned_profile] : []);
+                                (task.assigned_profile ? [task.assigned_profile] : []);
                 if (assignees.length > 1) {
-                  return <span className="text-muted-foreground ml-1">→ all</span>;
+                  if (task.completion_rule === 'any_one') {
+                    return <span className="text-muted-foreground ml-1">→ first</span>;
+                  } else {
+                    return <span className="text-muted-foreground ml-1">→ each</span>;
+                  }
                 }
                 return null;
               })()}
@@ -251,7 +255,15 @@ export const EnhancedTaskItem = ({
             {isCompleted && (
               <Badge variant="default" className="text-xs py-0 h-5 bg-green-500">
                 <CheckCircle2 className="h-2.5 w-2.5 mr-1" />
-                Done
+                {(() => {
+                  if (task.completion_rule === 'any_one' && task.task_completions?.length) {
+                    // Show who completed it for "any_one" tasks
+                    const completion = task.task_completions[0];
+                    const completer = familyMembers.find(m => m.id === completion.completed_by);
+                    return `Completed by ${completer?.display_name || 'someone'}`;
+                  }
+                  return 'Done';
+                })()}
               </Badge>
             )}
           </div>

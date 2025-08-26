@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Plus, Repeat } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { CalendarIcon, Plus, Repeat, Users, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -56,6 +57,7 @@ export const AddTaskDialog = ({
     assignees: [] as string[],
     due_date: selectedDate || null,
     is_repeating: false,
+    completion_rule: 'everyone' as 'any_one' | 'everyone',
     recurring_frequency: 'weekly',
     recurring_interval: 1,
     recurring_days_of_week: [] as number[],
@@ -137,6 +139,7 @@ export const AddTaskDialog = ({
           assigned_to: formData.assignees.length === 1 ? formData.assignees[0] : null, // For backward compatibility
           due_date: formData.due_date?.toISOString() || null,
           is_repeating: false,
+          completion_rule: formData.completion_rule,
           family_id: familyId,
           created_by: profileId
         };
@@ -151,7 +154,8 @@ export const AddTaskDialog = ({
           throw error;
         }
 
-        // Insert task assignees if any are selected
+        // For "everyone" completion rule OR single assignee, create task assignees as usual
+        // For "any_one" with multiple assignees, we still create assignees but completion logic differs
         if (formData.assignees.length > 0 && taskResult) {
           const assigneeData = formData.assignees.map(assigneeProfileId => ({
             task_id: taskResult.id,
@@ -183,6 +187,7 @@ export const AddTaskDialog = ({
         assignees: [],
         due_date: selectedDate || null,
         is_repeating: false,
+        completion_rule: 'everyone',
         recurring_frequency: 'weekly',
         recurring_interval: 1,
         recurring_days_of_week: [],
@@ -231,7 +236,11 @@ export const AddTaskDialog = ({
                   .filter(m => formData.assignees.includes(m.id))
                   .map(m => m.display_name)
                   .join(', ');
-                return ` When completed, all assigned members (${selectedNames}) will receive ${formData.points} points each.`;
+                if (formData.completion_rule === 'any_one') {
+                  return ` Completion: First person to finish completes it for everyone. The finisher receives ${formData.points} points.`;
+                } else {
+                  return ` Completion: Each person (${selectedNames}) must complete their own instance and receives ${formData.points} points.`;
+                }
               } else if (formData.assignees.length === 1) {
                 const assignee = familyMembers.find(m => m.id === formData.assignees[0]);
                 return ` When completed, ${assignee?.display_name} will receive ${formData.points} points.`;
@@ -287,6 +296,45 @@ export const AddTaskDialog = ({
               />
             </div>
           </div>
+
+          {/* Completion Rule - only show when multiple assignees */}
+          {formData.assignees.length > 1 && (
+            <div className="space-y-3">
+              <Label>Completion Rule</Label>
+              <RadioGroup 
+                value={formData.completion_rule} 
+                onValueChange={(value: 'any_one' | 'everyone') => 
+                  setFormData({ ...formData, completion_rule: value })
+                }
+                className="grid grid-cols-2 gap-4"
+              >
+                <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted/30 cursor-pointer">
+                  <RadioGroupItem value="any_one" id="any_one" />
+                  <div className="flex-1">
+                    <Label htmlFor="any_one" className="cursor-pointer flex items-center gap-2 font-medium">
+                      <User className="h-4 w-4" />
+                      Any one
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      First person to complete it finishes for everyone
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted/30 cursor-pointer">
+                  <RadioGroupItem value="everyone" id="everyone" />
+                  <div className="flex-1">
+                    <Label htmlFor="everyone" className="cursor-pointer flex items-center gap-2 font-medium">
+                      <Users className="h-4 w-4" />
+                      Everyone
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Each person must complete their own instance
+                    </p>
+                  </div>
+                </div>
+              </RadioGroup>
+            </div>
+          )}
 
           {!formData.is_repeating && (
             <div className="space-y-2">
