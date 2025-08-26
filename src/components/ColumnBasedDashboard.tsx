@@ -93,17 +93,17 @@ const ColumnBasedDashboard = () => {
   const [showMemberSelector, setShowMemberSelector] = useState(false);
   
   const {
+    activeMemberId: hookActiveMemberId,
     switchToMember,
     authenticateMemberPin,
     canPerformAction,
     isAuthenticating
   } = useDashboardAuth();
 
-  // Update activeMemberId from hook
+  // Update local state when hook value changes
   useEffect(() => {
-    const { activeMemberId: hookActiveMemberId } = useDashboardAuth();
     setActiveMemberId(hookActiveMemberId);
-  }, []);
+  }, [hookActiveMemberId]);
 
   // Handle member switching
   const handleMemberSwitch = (memberId: string | null) => {
