@@ -129,8 +129,9 @@ export const EnhancedTaskItem = ({
         onEdit && "hover:bg-muted/20"
       )}
       onClick={onEdit ? (e) => {
-        // Don't trigger if clicking on buttons or interactive elements
-        if ((e.target as HTMLElement).closest('button')) return;
+        // Don't trigger if clicking on buttons, interactive elements, or drag handle
+        const target = e.target as HTMLElement;
+        if (target.closest('button') || target.closest('[data-drag-handle]')) return;
         onEdit(task);
       } : undefined}
     >

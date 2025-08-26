@@ -1091,7 +1091,7 @@ const ColumnBasedDashboard = () => {
           </TabsList>
 
           <TabsContent value="columns" className="mt-4 sm:mt-6">
-            <DragDropContext onDragEnd={handleDragEnd}>
+            <DragDropContext onDragEnd={handleDragEnd} onDragStart={() => console.log('Drag started')}>
               <div className="w-full overflow-x-auto touch-pan-x">
                 <div className="flex gap-3 sm:gap-4 pb-4" style={{ minWidth: 'fit-content' }}>
                    {/* Family member columns - filtered if a member is selected */}
@@ -1219,7 +1219,9 @@ const ColumnBasedDashboard = () => {
                                                                // Use group-specific index instead of global index for stability
                                                                return (
                                                                  <Draggable key={task.id} draggableId={task.id} index={index}>
-                                                                   {(provided, snapshot) => (
+                                                                   {(provided, snapshot) => {
+                                                                     console.log('Rendering draggable:', task.id, 'index:', index);
+                                                                     return (
                                                                      <div
                                                                        ref={provided.innerRef}
                                                                        {...provided.draggableProps}
@@ -1228,44 +1230,48 @@ const ColumnBasedDashboard = () => {
                                                                          snapshot.isDragging && "shadow-xl rotate-2 scale-105 z-50 ring-2 ring-primary/30"
                                                                        )}
                                                                      >
-                                                                       {/* Drag Handle */}
+                                                                       {/* Drag Handle - moved to bottom right */}
                                                                        <div
                                                                          {...provided.dragHandleProps}
-                                                                         className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing z-10 bg-background/80 backdrop-blur-sm rounded p-1 border border-border/50"
+                                                                         data-drag-handle="true"
+                                                                         className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing z-20 bg-background/90 backdrop-blur-sm rounded p-1.5 border border-border/50 shadow-sm"
+                                                                         onClick={(e) => e.stopPropagation()}
+                                                                         onMouseDown={(e) => e.stopPropagation()}
                                                                        >
-                                                                         <svg width="12" height="12" viewBox="0 0 12 12" className="text-muted-foreground">
-                                                                           <circle cx="2" cy="2" r="1" fill="currentColor"/>
-                                                                           <circle cx="6" cy="2" r="1" fill="currentColor"/>
-                                                                           <circle cx="10" cy="2" r="1" fill="currentColor"/>
-                                                                           <circle cx="2" cy="6" r="1" fill="currentColor"/>
-                                                                           <circle cx="6" cy="6" r="1" fill="currentColor"/>
-                                                                           <circle cx="10" cy="6" r="1" fill="currentColor"/>
-                                                                           <circle cx="2" cy="10" r="1" fill="currentColor"/>
-                                                                           <circle cx="6" cy="10" r="1" fill="currentColor"/>
-                                                                           <circle cx="10" cy="10" r="1" fill="currentColor"/>
+                                                                         <svg width="10" height="10" viewBox="0 0 10 10" className="text-muted-foreground pointer-events-none">
+                                                                           <circle cx="2" cy="2" r="0.8" fill="currentColor"/>
+                                                                           <circle cx="5" cy="2" r="0.8" fill="currentColor"/>
+                                                                           <circle cx="8" cy="2" r="0.8" fill="currentColor"/>
+                                                                           <circle cx="2" cy="5" r="0.8" fill="currentColor"/>
+                                                                           <circle cx="5" cy="5" r="0.8" fill="currentColor"/>
+                                                                           <circle cx="8" cy="5" r="0.8" fill="currentColor"/>
+                                                                           <circle cx="2" cy="8" r="0.8" fill="currentColor"/>
+                                                                           <circle cx="5" cy="8" r="0.8" fill="currentColor"/>
+                                                                           <circle cx="8" cy="8" r="0.8" fill="currentColor"/>
                                                                          </svg>
                                                                        </div>
-                                                                      <EnhancedTaskItem
-                                                                        task={task}
-                                                                        allTasks={tasks}
-                                                                        familyMembers={familyMembers}
-                                                                        onToggle={(task) => {
-                                                                          if (activeMemberId !== member.id) {
-                                                                            toast({
-                                                                              title: 'Access Denied',
-                                                                              description: 'You can only complete tasks from your own task column.',
-                                                                              variant: 'destructive'
-                                                                            });
-                                                                            return;
-                                                                          }
-                                                                          handleTaskToggle(task);
-                                                                        }}
-                                                                        onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                                                        onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
-                                                                        showActions={profile.role === 'parent' && !snapshot.isDragging}
-                                                                      />
-                                                                    </div>
-                                                                  )}
+                                                                       <EnhancedTaskItem
+                                                                         task={task}
+                                                                         allTasks={tasks}
+                                                                         familyMembers={familyMembers}
+                                                                         onToggle={(task) => {
+                                                                           if (activeMemberId !== member.id) {
+                                                                             toast({
+                                                                               title: 'Access Denied',
+                                                                               description: 'You can only complete tasks from your own task column.',
+                                                                               variant: 'destructive'
+                                                                             });
+                                                                             return;
+                                                                           }
+                                                                           handleTaskToggle(task);
+                                                                         }}
+                                                                         onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                                                                         onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
+                                                                         showActions={profile.role === 'parent' && !snapshot.isDragging}
+                                                                       />
+                                                                     </div>
+                                                                   );
+                                                                   }}
                                                                 </Draggable>
                                                               );
                                                             })
