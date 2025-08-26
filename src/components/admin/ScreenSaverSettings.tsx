@@ -41,6 +41,7 @@ interface ScreenSaverSettings {
   id?: string;
   is_enabled: boolean;
   display_duration: number;
+  timeout_minutes: number;
   transition_effect: string;
   show_clock: boolean;
   show_weather: boolean;
@@ -64,6 +65,7 @@ export const ScreenSaverSettings = () => {
   const [settings, setSettings] = useState<ScreenSaverSettings>({
     is_enabled: true,
     display_duration: 30,
+    timeout_minutes: 5,
     transition_effect: 'fade',
     show_clock: true,
     show_weather: false,
@@ -130,6 +132,7 @@ export const ScreenSaverSettings = () => {
           id: data.id,
           is_enabled: data.is_enabled,
           display_duration: data.display_duration,
+          timeout_minutes: data.timeout_minutes || 5,
           transition_effect: data.transition_effect,
           show_clock: data.show_clock,
           show_weather: data.show_weather,
