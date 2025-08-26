@@ -1248,6 +1248,10 @@ export type Database = {
           severity: string
         }[]
       }
+      get_calendar_security_final_status: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_calendar_security_status: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -1359,6 +1363,29 @@ export type Database = {
       get_profile_points_balance: {
         Args: { profile_id_param: string }
         Returns: number
+      }
+      get_safe_calendar_integrations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          calendar_id: string
+          created_at: string
+          created_ip: unknown
+          expires_at: string
+          has_access_token: boolean
+          has_refresh_token: boolean
+          id: string
+          integration_type: string
+          is_active: boolean
+          is_expired: boolean
+          last_access_ip: unknown
+          last_token_refresh: string
+          profile_id: string
+          refresh_token_status: string
+          security_flags: Json
+          token_refresh_count: number
+          token_status: string
+          updated_at: string
+        }[]
       }
       get_token_encryption_status: {
         Args: Record<PropertyKey, never>
