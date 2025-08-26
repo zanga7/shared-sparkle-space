@@ -823,7 +823,7 @@ export const CalendarView = ({
                                 </span>
                                 <div className="flex items-center gap-1 shrink-0">
                                   <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600">
-                                    {event.isMultiDay ? (event.isFirstDay ? 'Start' : event.isLastDay ? 'End' : 'Multi') : 'Event'}
+                                    {event.isMultiDay ? 'Multi' : 'Event'}
                                   </Badge>
                                   <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-purple-600" />
                                 </div>
