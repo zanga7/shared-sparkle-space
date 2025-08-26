@@ -447,7 +447,7 @@ const ColumnBasedDashboard = () => {
         .from('task_completions')
         .insert({
           task_id: task.id,
-          completed_by: completerId,
+          completed_by: profile.id, // Always use authenticated user ID for RLS
           points_earned: task.points
         });
 
