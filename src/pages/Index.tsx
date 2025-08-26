@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import ColumnBasedDashboard from '@/components/ColumnBasedDashboard';
+import { AdminProvider } from '@/contexts/AdminContext';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -27,7 +28,11 @@ const Index = () => {
     return null; // Will redirect to auth
   }
 
-  return <ColumnBasedDashboard />;
+  return (
+    <AdminProvider>
+      <ColumnBasedDashboard />
+    </AdminProvider>
+  );
 };
 
 export default Index;
