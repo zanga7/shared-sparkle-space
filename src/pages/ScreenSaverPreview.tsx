@@ -33,10 +33,13 @@ export const ScreenSaverPreview = () => {
   const [images, setImages] = useState<ScreenSaverImage[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadSettings();
-    loadImages();
+    if (user) {
+      loadSettings();
+      loadImages();
+    }
   }, [user]);
 
   useEffect(() => {
@@ -57,6 +60,7 @@ export const ScreenSaverPreview = () => {
     }
   }, [images.length, settings?.display_duration]);
 
+  // Add ESC key listener to close preview
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -77,43 +81,18 @@ export const ScreenSaverPreview = () => {
         .single();
 
       if (profile) {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('screensaver_settings')
           .select('*')
           .eq('family_id', profile.family_id)
-          .maybeSingle();
+          .single();
 
         if (data) {
           setSettings(data);
-        } else {
-          // Use default settings if none found
-          setSettings({
-            is_enabled: true,
-            display_duration: 10,
-            timeout_minutes: 5,
-            transition_effect: 'fade',
-            show_clock: true,
-            show_weather: false,
-            brightness: 75,
-            google_photos_connected: false,
-            custom_images_enabled: true,
-          });
         }
       }
     } catch (error) {
       console.error('Error loading settings:', error);
-      // Fallback to default settings
-      setSettings({
-        is_enabled: true,
-        display_duration: 10,
-        timeout_minutes: 5,
-        transition_effect: 'fade',
-        show_clock: true,
-        show_weather: false,
-        brightness: 75,
-        google_photos_connected: false,
-        custom_images_enabled: true,
-      });
     }
   };
 
@@ -133,21 +112,36 @@ export const ScreenSaverPreview = () => {
           .eq('is_active', true)
           .order('sort_order', { ascending: true });
 
+        console.log('Loaded images:', data); // Debug log
         if (data) {
           setImages(data);
         }
       }
     } catch (error) {
       console.error('Error loading images:', error);
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black flex items-center justify-center text-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Loading screen saver...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!settings || images.length === 0) {
     return (
       <div className="fixed inset-0 bg-black flex items-center justify-center text-white">
         <div className="text-center">
           <h2 className="text-2xl mb-4">No Images Available</h2>
-          <p className="text-muted-foreground">Upload some images to see the screen saver preview</p>
+          <p className="text-muted-foreground mb-4">Upload some images in the admin panel to see the screen saver preview</p>
+          <p className="text-sm text-gray-400">Press ESC or click to close</p>
         </div>
       </div>
     );
@@ -155,42 +149,45 @@ export const ScreenSaverPreview = () => {
 
   const currentImage = images[currentImageIndex];
   const transitionClass = {
-    fade: 'transition-opacity duration-1000 ease-in-out',
-    slide: 'transition-transform duration-1000 ease-in-out',
-    zoom: 'transition-all duration-1000 ease-in-out',
-    dissolve: 'transition-all duration-2000 ease-in-out'
-  }[settings.transition_effect] || 'transition-opacity duration-1000 ease-in-out';
+    fade: 'transition-opacity duration-1000',
+    slide: 'transition-transform duration-1000', 
+    zoom: 'transition-all duration-1000',
+    dissolve: 'transition-all duration-2000'
+  }[settings.transition_effect] || 'transition-opacity duration-1000';
 
   return (
     <div 
-      className="fixed inset-0 bg-black overflow-hidden cursor-none"
+      className="fixed inset-0 bg-black overflow-hidden cursor-pointer"
       style={{ filter: `brightness(${settings.brightness}%)` }}
+      onClick={() => window.close()}
     >
-      {/* Background Image */}
-      <div className="relative w-full h-full">
-        <div className="absolute inset-0">
-          <img
-            key={currentImageIndex}
-            src={`${supabase.storage.from('screensaver-images').getPublicUrl(currentImage.file_path).data.publicUrl}`}
-            alt={currentImage.name}
-            className={`w-full h-full object-cover object-center ${transitionClass}`}
-            style={{
-              minWidth: '100vw',
-              minHeight: '100vh',
-            }}
-          />
-        </div>
+      {/* Background Image - Full screen cover */}
+      <div className="absolute inset-0">
+        <img
+          key={currentImageIndex}
+          src={`${supabase.storage.from('screensaver-images').getPublicUrl(currentImage.file_path).data.publicUrl}`}
+          alt={currentImage.name}
+          className={`absolute inset-0 w-full h-full ${transitionClass}`}
+          style={{ 
+            objectFit: 'cover',
+            objectPosition: 'center'
+          }}
+          onError={(e) => {
+            console.error('Image failed to load:', currentImage.file_path);
+            console.log('Image URL:', e.currentTarget.src);
+          }}
+        />
         
-        {/* Overlay Content */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/30" />
         
         {/* Clock */}
         {settings.show_clock && (
-          <div className="absolute top-8 right-8 text-white">
-            <div className="text-6xl font-light">
+          <div className="absolute top-8 right-8 text-white text-right">
+            <div className="text-6xl font-light tracking-wide">
               {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
-            <div className="text-xl text-white/80 text-center">
+            <div className="text-xl text-white/80 mt-2">
               {currentTime.toLocaleDateString([], { 
                 weekday: 'long', 
                 month: 'long', 
@@ -203,14 +200,17 @@ export const ScreenSaverPreview = () => {
         {/* Weather placeholder */}
         {settings.show_weather && (
           <div className="absolute bottom-8 left-8 text-white">
-            <div className="text-2xl">72°F</div>
-            <div className="text-sm text-white/80">Partly Cloudy</div>
+            <div className="text-3xl font-light">72°F</div>
+            <div className="text-lg text-white/80">Partly Cloudy</div>
           </div>
         )}
         
-        {/* Exit hint */}
-        <div className="absolute bottom-4 right-4 text-white/60 text-sm">
-          Press ESC to exit preview
+        {/* Image counter and controls */}
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white/60 text-sm text-center">
+          <div className="mb-2">
+            {currentImageIndex + 1} of {images.length} • {currentImage.name}
+          </div>
+          <div>Press ESC or click anywhere to exit preview</div>
         </div>
       </div>
     </div>
