@@ -315,7 +315,7 @@ const ColumnBasedDashboard = () => {
         const assignees = task.assignees?.map(a => a.profile) || 
                          (task.assigned_profile ? [task.assigned_profile] : []);
         
-        // Check if active member is one of the assignees (for team tasks)
+        // For team tasks, ensure the acting member can only complete tasks on their own list
         if (assignees.length > 0 && activeMemberId) {
           const isAssignedMember = assignees.some(assignee => assignee.id === activeMemberId);
           
@@ -328,6 +328,16 @@ const ColumnBasedDashboard = () => {
               onSuccess: () => executeTaskCompletion(task)
             });
             setSwitchDialogOpen(true);
+            return;
+          }
+          
+          // If viewing a specific member's tasks, only allow that member to complete them
+          if (selectedMemberFilter && selectedMemberFilter !== activeMemberId) {
+            toast({
+              title: 'Cannot Complete Task',
+              description: 'You can only complete tasks on your own task list.',
+              variant: 'destructive'
+            });
             return;
           }
         }
@@ -448,7 +458,7 @@ const ColumnBasedDashboard = () => {
         .from('task_completions')
         .insert({
           task_id: task.id,
-          completed_by: profile.id, // Always use authenticated user ID for RLS
+           completed_by: dashboardMode && activeMemberId ? activeMemberId : profile.id, // Use acting member in dashboard mode
           points_earned: task.points
         });
 
