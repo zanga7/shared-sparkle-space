@@ -1208,6 +1208,31 @@ export type Database = {
           refresh_token: string
         }[]
       }
+      get_family_profiles_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          avatar_url: string
+          can_add_for_parents: boolean
+          can_add_for_self: boolean
+          can_add_for_siblings: boolean
+          color: string
+          created_at: string
+          display_name: string
+          failed_pin_attempts: number
+          family_id: string
+          has_pin_set: boolean
+          id: string
+          pin_locked_until: string
+          role: string
+          sort_order: number
+          status: string
+          streak_count: number
+          theme: Json
+          total_points: number
+          updated_at: string
+          user_id: string
+        }[]
+      }
       get_family_profiles_secure: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1254,6 +1279,24 @@ export type Database = {
           is_active: boolean
           is_token_expired: boolean
           last_token_refresh: string
+          token_refresh_count: number
+          updated_at: string
+        }[]
+      }
+      get_user_calendar_integrations_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          calendar_id: string
+          created_at: string
+          expires_at: string
+          has_access_token: boolean
+          has_refresh_token: boolean
+          id: string
+          integration_type: string
+          is_active: boolean
+          is_token_expired: boolean
+          last_token_refresh: string
+          profile_id: string
           token_refresh_count: number
           updated_at: string
         }[]
