@@ -624,8 +624,16 @@ export const CalendarView = ({
                     task.assignees?.some(a => a.profile_id === member.id)
                   );
                    const memberEvents = events.filter(event => {
-                     const eventDate = new Date(event.start_date);
-                     const isEventOnThisDate = format(eventDate, 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd');
+                     const eventStartDate = new Date(event.start_date);
+                     const eventEndDate = new Date(event.end_date);
+                     
+                     // Check if current date falls within the event's date range
+                     const currentDateKey = format(currentDate, 'yyyy-MM-dd');
+                     const startDateKey = format(eventStartDate, 'yyyy-MM-dd');
+                     const endDateKey = format(eventEndDate, 'yyyy-MM-dd');
+                     
+                     const isEventOnThisDate = currentDateKey >= startDateKey && currentDateKey <= endDateKey;
+                     
                      // Show events if member is specifically assigned OR if no attendees are assigned (show for all)
                      const isEventForThisMember = !event.attendees || event.attendees.length === 0 || 
                        event.attendees?.some((a: any) => a.profile_id === member.id);
