@@ -623,21 +623,11 @@ export const CalendarView = ({
                     task.assigned_to === member.id || 
                     task.assignees?.some(a => a.profile_id === member.id)
                   );
-                   const memberEvents = events.filter(event => {
-                     const eventStartDate = new Date(event.start_date);
-                     const eventEndDate = new Date(event.end_date);
-                     
-                     // Check if current date falls within the event's date range
-                     const currentDateKey = format(currentDate, 'yyyy-MM-dd');
-                     const startDateKey = format(eventStartDate, 'yyyy-MM-dd');
-                     const endDateKey = format(eventEndDate, 'yyyy-MM-dd');
-                     
-                     const isEventOnThisDate = currentDateKey >= startDateKey && currentDateKey <= endDateKey;
-                     
+                   const memberEvents = (eventsByDate[dateKey] || []).filter(event => {
                      // Show events if member is specifically assigned OR if no attendees are assigned (show for all)
                      const isEventForThisMember = !event.attendees || event.attendees.length === 0 || 
                        event.attendees?.some((a: any) => a.profile_id === member.id);
-                     return isEventOnThisDate && isEventForThisMember;
+                     return isEventForThisMember;
                    });
                   const memberColors = getMemberColors(member);
 
@@ -686,9 +676,9 @@ export const CalendarView = ({
                                 <div className="flex items-center justify-between">
                                   <span className="font-medium text-purple-700">{event.title}</span>
                                   <div className="flex items-center gap-1">
-                                    <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600">
-                                      Event
-                                    </Badge>
+                                   <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600">
+                                     {event.isMultiDay ? 'Multi' : 'Event'}
+                                   </Badge>
                                     <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-purple-600" />
                                   </div>
                                 </div>
