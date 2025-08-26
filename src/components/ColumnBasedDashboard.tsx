@@ -6,10 +6,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { getMemberColorClasses } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, CheckCircle, Clock, Edit, Trash2, Calendar, List, Users, Gift, Settings } from 'lucide-react';
+import { Plus, CheckCircle, Clock, Edit, Trash2, Calendar, List, Users, Gift, Settings, Sun, Clock3, Moon, FileText } from 'lucide-react';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { AddButton } from '@/components/ui/add-button';
 import { format } from 'date-fns';
@@ -57,6 +59,7 @@ const ColumnBasedDashboard = () => {
   const [selectedMemberForTask, setSelectedMemberForTask] = useState<string | null>(null);
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('columns');
+  const [selectedTaskGroup, setSelectedTaskGroup] = useState<string | null>(null);
   const { taskSeries } = useRecurringTasks(profile?.family_id);
   const { rotatingTasks, refreshRotatingTasks } = useRotatingTasks(profile?.family_id);
   
@@ -790,14 +793,77 @@ const ColumnBasedDashboard = () => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const handleAddTaskForMember = (memberId: string) => {
+  // Time-based task grouping
+  type TaskGroup = 'morning' | 'midday' | 'afternoon' | 'general';
+  
+  const getTaskGroup = (task: Task): TaskGroup => {
+    if (!task.due_date) return 'general';
+    
+    const dueDate = new Date(task.due_date);
+    const hour = dueDate.getHours();
+    
+    if (hour >= 0 && hour < 11) return 'morning';
+    if (hour >= 11 && hour < 15) return 'midday';
+    if (hour >= 15 && hour < 24) return 'afternoon';
+    return 'general';
+  };
+  
+  const getTaskGroupIcon = (group: TaskGroup) => {
+    switch (group) {
+      case 'morning': return Sun;
+      case 'midday': return Clock3;
+      case 'afternoon': return Moon;
+      case 'general': return FileText;
+    }
+  };
+  
+  const getTaskGroupTitle = (group: TaskGroup) => {
+    switch (group) {
+      case 'morning': return 'Morning';
+      case 'midday': return 'Midday';
+      case 'afternoon': return 'Afternoon';
+      case 'general': return 'General';
+    }
+  };
+  
+  const shouldGroupBeOpenByDefault = (group: TaskGroup): boolean => {
+    const now = new Date();
+    const hour = now.getHours();
+    
+    switch (group) {
+      case 'morning': return hour >= 6 && hour < 12;
+      case 'midday': return hour >= 11 && hour < 16;
+      case 'afternoon': return hour >= 15 || hour < 6;
+      case 'general': return true; // Always open
+    }
+  };
+  
+  const groupTasksByTime = (tasks: Task[]) => {
+    const groups: Record<TaskGroup, Task[]> = {
+      morning: [],
+      midday: [],
+      afternoon: [],
+      general: []
+    };
+    
+    tasks.forEach(task => {
+      const group = getTaskGroup(task);
+      groups[group].push(task);
+    });
+    
+    return groups;
+  };
+
+  const handleAddTaskForMember = (memberId: string, group?: TaskGroup) => {
     setSelectedMemberForTask(memberId);
+    setSelectedTaskGroup(group || null);
     setIsAddDialogOpen(true);
   };
 
   const handleDialogClose = () => {
     setIsAddDialogOpen(false);
     setSelectedMemberForTask(null);
+    setSelectedTaskGroup(null);
   };
 
   const handleSettingsClick = () => {
@@ -992,55 +1058,103 @@ const ColumnBasedDashboard = () => {
                                ref={provided.innerRef}
                                {...provided.droppableProps}
                              >
-                                <div className="space-y-2 sm:space-y-3 mb-4 min-h-[100px]">
-                                  {memberTasks.length === 0 ? (
-                                    <div className="text-center py-6 sm:py-8 text-muted-foreground">
-                                      <Clock className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
-                                      <p className="text-xs sm:text-sm px-2">
-                                        {snapshot.isDraggingOver ? 'Drop task here to assign' : 'No tasks assigned'}
-                                      </p>
-                                   </div>
-                                 ) : (
-                                   memberTasks.map((task, index) => (
-                                     <Draggable key={task.id} draggableId={task.id} index={index}>
-                                       {(provided, snapshot) => (
-                                         <div
-                                           ref={provided.innerRef}
-                                           {...provided.draggableProps}
-                                           {...provided.dragHandleProps}
-                                           className={cn(
-                                             snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50"
-                                           )}
-                                         >
-                                           <EnhancedTaskItem
-                                             task={task}
-                                             allTasks={tasks}
-                                             familyMembers={familyMembers}
-                                             onToggle={handleTaskToggle}
-                                             onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                             onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
-                                             showActions={profile.role === 'parent' && !snapshot.isDragging}
-                                           />
-                                         </div>
-                                       )}
-                                     </Draggable>
-                                   ))
-                                 )}
-                                 {provided.placeholder}
-                               </div>
-                               
-                               {/* Add Task Button */}
-                               {profile.role === 'parent' && (
-                                  <AddButton
-                                    className={cn(
-                                      "w-full",
-                                      getMemberColorClasses(member.color).border,
-                                      getMemberColorClasses(member.color).text
-                                    )}
-                                    text="Add Task"
-                                    onClick={() => handleAddTaskForMember(member.id)}
-                                  />
-                               )}
+                                {memberTasks.length === 0 ? (
+                                  <div className="text-center py-6 sm:py-8 text-muted-foreground min-h-[100px]">
+                                    <Clock className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
+                                    <p className="text-xs sm:text-sm px-2">
+                                      {snapshot.isDraggingOver ? 'Drop task here to assign' : 'No tasks assigned'}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  (() => {
+                                    const taskGroups = groupTasksByTime(memberTasks);
+                                    const defaultOpenGroups = (['morning', 'midday', 'afternoon', 'general'] as TaskGroup[])
+                                      .filter(group => shouldGroupBeOpenByDefault(group) || taskGroups[group].length > 0)
+                                      .map(group => `${member.id}-${group}`);
+                                    
+                                    return (
+                                      <div className="min-h-[100px]">
+                                        <Accordion type="multiple" defaultValue={defaultOpenGroups} className="space-y-1 mb-4">
+                                          {(['morning', 'midday', 'afternoon', 'general'] as TaskGroup[]).map(group => {
+                                            const groupTasks = taskGroups[group];
+                                            if (groupTasks.length === 0 && profile.role !== 'parent') return null;
+                                            
+                                            const completedGroupTasks = groupTasks.filter(task => 
+                                              task.task_completions && task.task_completions.length > 0
+                                            );
+                                            const progress = groupTasks.length > 0 ? (completedGroupTasks.length / groupTasks.length) * 100 : 0;
+                                            const IconComponent = getTaskGroupIcon(group);
+                                            
+                                            return (
+                                              <AccordionItem key={group} value={`${member.id}-${group}`} className="border rounded-md">
+                                                <AccordionTrigger className="px-3 py-2 hover:no-underline">
+                                                  <div className="flex items-center gap-2 flex-1">
+                                                    <IconComponent className="h-4 w-4 text-muted-foreground" />
+                                                    <span className="text-sm font-medium">{getTaskGroupTitle(group)}</span>
+                                                    <div className="flex items-center gap-2 ml-auto mr-2">
+                                                      <span className="text-xs text-muted-foreground">
+                                                        {completedGroupTasks.length}/{groupTasks.length}
+                                                      </span>
+                                                      {groupTasks.length > 0 && (
+                                                        <Progress value={progress} className="w-12 h-1" />
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="px-3 pb-3 pt-1">
+                                                  <div className="space-y-2">
+                                                    {groupTasks.map((task, index) => {
+                                                      // Calculate the global index for drag and drop
+                                                      const globalIndex = memberTasks.findIndex(t => t.id === task.id);
+                                                      return (
+                                                        <Draggable key={task.id} draggableId={task.id} index={globalIndex}>
+                                                          {(provided, snapshot) => (
+                                                            <div
+                                                              ref={provided.innerRef}
+                                                              {...provided.draggableProps}
+                                                              {...provided.dragHandleProps}
+                                                              className={cn(
+                                                                snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50"
+                                                              )}
+                                                            >
+                                                              <EnhancedTaskItem
+                                                                task={task}
+                                                                allTasks={tasks}
+                                                                familyMembers={familyMembers}
+                                                                onToggle={handleTaskToggle}
+                                                                onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                                                                onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
+                                                                showActions={profile.role === 'parent' && !snapshot.isDragging}
+                                                              />
+                                                            </div>
+                                                          )}
+                                                        </Draggable>
+                                                      );
+                                                    })}
+                                                    
+                                                    {/* Add Task Button for this group */}
+                                                    {profile.role === 'parent' && (
+                                                      <AddButton
+                                                        className={cn(
+                                                          "w-full mt-2",
+                                                          getMemberColorClasses(member.color).border,
+                                                          getMemberColorClasses(member.color).text
+                                                        )}
+                                                        text={`Add ${getTaskGroupTitle(group)} Task`}
+                                                        onClick={() => handleAddTaskForMember(member.id, group)}
+                                                      />
+                                                    )}
+                                                  </div>
+                                                </AccordionContent>
+                                              </AccordionItem>
+                                            );
+                                          })}
+                                        </Accordion>
+                                        {provided.placeholder}
+                                      </div>
+                                    );
+                                  })()
+                                )}
                              </CardContent>
                            )}
                          </Droppable>
@@ -1178,6 +1292,7 @@ const ColumnBasedDashboard = () => {
           onTaskCreated={fetchUserData}
           selectedDate={selectedDate}
           preselectedMemberId={selectedMemberForTask}
+          preselectedTaskGroup={selectedTaskGroup}
         />
       )}
 

@@ -27,6 +27,7 @@ interface AddTaskDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   preselectedMemberId?: string | null;
+  preselectedTaskGroup?: string | null;
 }
 
 export const AddTaskDialog = ({ 
@@ -37,7 +38,8 @@ export const AddTaskDialog = ({
   selectedDate, 
   open: externalOpen, 
   onOpenChange: externalOnOpenChange,
-  preselectedMemberId
+  preselectedMemberId,
+  preselectedTaskGroup
 }: AddTaskDialogProps) => {
   const { toast } = useToast();
   const { createTaskSeries } = useRecurringTasks(familyId);
@@ -95,6 +97,38 @@ export const AddTaskDialog = ({
       }));
     }
   }, [preselectedMemberId]);
+
+  // Handle preselected task group (set default due date based on group)
+  useEffect(() => {
+    if (preselectedTaskGroup && !selectedDate) {
+      const now = new Date();
+      let defaultDueDate = new Date();
+      
+      switch (preselectedTaskGroup) {
+        case 'morning':
+          defaultDueDate.setHours(10, 0, 0, 0); // 10 AM
+          break;
+        case 'midday':
+          defaultDueDate.setHours(13, 0, 0, 0); // 1 PM
+          break;
+        case 'afternoon':
+          defaultDueDate.setHours(18, 0, 0, 0); // 6 PM
+          break;
+        case 'general':
+        default:
+          defaultDueDate = null;
+          break;
+      }
+      
+      if (defaultDueDate) {
+        setFormData(prev => ({ 
+          ...prev, 
+          due_date: defaultDueDate,
+          start_date: defaultDueDate.toISOString()
+        }));
+      }
+    }
+  }, [preselectedTaskGroup, selectedDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
