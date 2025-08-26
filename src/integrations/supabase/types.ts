@@ -399,13 +399,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "list_item_assignees_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_safe"
-            referencedColumns: ["id"]
-          },
         ]
       }
       list_items: {
@@ -835,24 +828,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "task_assignees_assigned_by_fkey"
-            columns: ["assigned_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_safe"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "task_assignees_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_assignees_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_safe"
             referencedColumns: ["id"]
           },
           {
@@ -901,24 +880,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "task_completions_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_safe"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "task_completions_completed_by_fkey"
             columns: ["completed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_completions_completed_by_fkey"
-            columns: ["completed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_safe"
             referencedColumns: ["id"]
           },
           {
@@ -1072,13 +1037,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "profiles_safe"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "tasks_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
@@ -1090,13 +1048,6 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_safe"
             referencedColumns: ["id"]
           },
           {
@@ -1117,131 +1068,7 @@ export type Database = {
       }
     }
     Views: {
-      calendar_integrations_safe: {
-        Row: {
-          calendar_id: string | null
-          created_at: string | null
-          expires_at: string | null
-          has_access_token: boolean | null
-          has_refresh_token: boolean | null
-          id: string | null
-          integration_type: string | null
-          is_active: boolean | null
-          is_token_expired: boolean | null
-          last_token_refresh: string | null
-          profile_id: string | null
-          token_refresh_count: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          calendar_id?: string | null
-          created_at?: string | null
-          expires_at?: string | null
-          has_access_token?: never
-          has_refresh_token?: never
-          id?: string | null
-          integration_type?: string | null
-          is_active?: boolean | null
-          is_token_expired?: never
-          last_token_refresh?: string | null
-          profile_id?: string | null
-          token_refresh_count?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          calendar_id?: string | null
-          created_at?: string | null
-          expires_at?: string | null
-          has_access_token?: never
-          has_refresh_token?: never
-          id?: string | null
-          integration_type?: string | null
-          is_active?: boolean | null
-          is_token_expired?: never
-          last_token_refresh?: string | null
-          profile_id?: string | null
-          token_refresh_count?: number | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      profiles_safe: {
-        Row: {
-          avatar_url: string | null
-          can_add_for_parents: boolean | null
-          can_add_for_self: boolean | null
-          can_add_for_siblings: boolean | null
-          color: string | null
-          created_at: string | null
-          display_name: string | null
-          failed_pin_attempts: number | null
-          family_id: string | null
-          has_pin_set: boolean | null
-          id: string | null
-          pin_locked_until: string | null
-          role: Database["public"]["Enums"]["user_role"] | null
-          sort_order: number | null
-          status: string | null
-          streak_count: number | null
-          theme: Json | null
-          total_points: number | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          can_add_for_parents?: boolean | null
-          can_add_for_self?: boolean | null
-          can_add_for_siblings?: boolean | null
-          color?: string | null
-          created_at?: string | null
-          display_name?: string | null
-          failed_pin_attempts?: never
-          family_id?: string | null
-          has_pin_set?: never
-          id?: string | null
-          pin_locked_until?: never
-          role?: Database["public"]["Enums"]["user_role"] | null
-          sort_order?: number | null
-          status?: string | null
-          streak_count?: number | null
-          theme?: Json | null
-          total_points?: number | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          can_add_for_parents?: boolean | null
-          can_add_for_self?: boolean | null
-          can_add_for_siblings?: boolean | null
-          color?: string | null
-          created_at?: string | null
-          display_name?: string | null
-          failed_pin_attempts?: never
-          family_id?: string | null
-          has_pin_set?: never
-          id?: string | null
-          pin_locked_until?: never
-          role?: Database["public"]["Enums"]["user_role"] | null
-          sort_order?: number | null
-          status?: string | null
-          streak_count?: number | null
-          theme?: Json | null
-          total_points?: number | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_family_id_fkey"
-            columns: ["family_id"]
-            isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       approve_reward_request: {
@@ -1381,6 +1208,31 @@ export type Database = {
           refresh_token: string
         }[]
       }
+      get_family_profiles_secure: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          avatar_url: string
+          can_add_for_parents: boolean
+          can_add_for_self: boolean
+          can_add_for_siblings: boolean
+          color: string
+          created_at: string
+          display_name: string
+          failed_pin_attempts: number
+          family_id: string
+          has_pin_set: boolean
+          id: string
+          pin_locked_until: string
+          role: Database["public"]["Enums"]["user_role"]
+          sort_order: number
+          status: string
+          streak_count: number
+          theme: Json
+          total_points: number
+          updated_at: string
+          user_id: string
+        }[]
+      }
       get_profile_points_balance: {
         Args: { profile_id_param: string }
         Returns: number
@@ -1390,6 +1242,23 @@ export type Database = {
         Returns: Json
       }
       get_user_calendar_integrations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          calendar_id: string
+          created_at: string
+          expires_at: string
+          has_access_token: boolean
+          has_refresh_token: boolean
+          id: string
+          integration_type: string
+          is_active: boolean
+          is_token_expired: boolean
+          last_token_refresh: string
+          token_refresh_count: number
+          updated_at: string
+        }[]
+      }
+      get_user_calendar_integrations_secure: {
         Args: Record<PropertyKey, never>
         Returns: {
           calendar_id: string
@@ -1465,6 +1334,15 @@ export type Database = {
         Args: { new_pin: string; profile_id_param: string }
         Returns: Json
       }
+      store_calendar_tokens_secure: {
+        Args: {
+          access_token_param: string
+          expires_at_param?: string
+          integration_id_param: string
+          refresh_token_param?: string
+        }
+        Returns: Json
+      }
       store_encrypted_calendar_tokens: {
         Args: {
           access_token_param: string
@@ -1484,6 +1362,10 @@ export type Database = {
           reward_type_param?: string
           title_param: string
         }
+        Returns: Json
+      }
+      validate_and_cleanup_tokens: {
+        Args: Record<PropertyKey, never>
         Returns: Json
       }
       validate_calendar_token_access: {
