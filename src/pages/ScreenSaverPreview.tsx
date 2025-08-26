@@ -34,12 +34,27 @@ export const ScreenSaverPreview = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      loadSettings();
-      loadImages();
-    }
+    // Wait for auth to initialize
+    const checkAuth = async () => {
+      if (user) {
+        setAuthChecked(true);
+        loadSettings();
+        loadImages();
+      } else {
+        // If no user after a short delay, try to load the session
+        setTimeout(() => {
+          setAuthChecked(true);
+          if (!user) {
+            setLoading(false);
+          }
+        }, 2000);
+      }
+    };
+    
+    checkAuth();
   }, [user]);
 
   useEffect(() => {
@@ -151,6 +166,18 @@ export const ScreenSaverPreview = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
           <p>Loading screen saver...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (authChecked && !user) {
+    return (
+      <div className="fixed inset-0 bg-black flex items-center justify-center text-white">
+        <div className="text-center">
+          <h2 className="text-2xl mb-4">Authentication Required</h2>
+          <p className="text-muted-foreground mb-4">Please log in to view the screen saver preview</p>
+          <p className="text-sm text-gray-400">Press ESC or click to close</p>
         </div>
       </div>
     );
