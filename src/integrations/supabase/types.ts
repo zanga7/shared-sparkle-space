@@ -1149,6 +1149,10 @@ export type Database = {
         Args: { integration_profile_id: string }
         Returns: boolean
       }
+      check_profile_status: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       check_token_access_rate_limit: {
         Args: {
           integration_id: string
@@ -1177,6 +1181,10 @@ export type Database = {
           integration_type_param: string
           refresh_token_param?: string
         }
+        Returns: Json
+      }
+      create_missing_profile_for_user: {
+        Args: { user_id_param: string }
         Returns: Json
       }
       create_secure_calendar_integration: {
@@ -1224,6 +1232,10 @@ export type Database = {
       encrypt_oauth_token: {
         Args: { token_type?: string; token_value: string }
         Returns: string
+      }
+      fix_my_missing_profile: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       get_calendar_integration_safe: {
         Args: { integration_id: string }

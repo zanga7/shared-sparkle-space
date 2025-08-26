@@ -520,14 +520,88 @@ const ColumnBasedDashboard = () => {
   }
 
   if (!profile) {
+    const handleFixProfile = async () => {
+      try {
+        const { data, error } = await supabase.rpc('fix_my_missing_profile');
+        
+        if (error) {
+          console.error('Error fixing profile:', error);
+          toast({
+            title: "Error",
+            description: "Failed to create profile. Please try signing out and back in.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (data && typeof data === 'object' && 'success' in data && data.success) {
+          toast({
+            title: "Success",
+            description: "Profile created successfully! Refreshing...",
+          });
+          // Refresh the page to reload with new profile
+          window.location.reload();
+        } else {
+          const errorMessage = data && typeof data === 'object' && 'error' in data 
+            ? String(data.error) 
+            : "Failed to create profile";
+          toast({
+            title: "Error",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Profile fix error:', error);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred. Please try again.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    const handleForceSignOut = async () => {
+      try {
+        // Clear local storage first
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Try to sign out from Supabase
+        await supabase.auth.signOut({ scope: 'local' });
+        
+        // Force reload to clear any cached state
+        window.location.href = '/auth';
+      } catch (error) {
+        console.error('Sign out error:', error);
+        // Even if signOut fails, clear local state and redirect
+        window.location.href = '/auth';
+      }
+    };
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
-            <div className="text-center">
+            <div className="text-center space-y-4">
               <div className="text-lg font-semibold">Profile Not Found</div>
-              <p className="text-muted-foreground mt-2">There was an issue loading your profile.</p>
-              <Button onClick={() => signOut()} className="mt-4">Sign Out</Button>
+              <p className="text-muted-foreground">
+                Your account exists but your profile is missing. This can happen if there was an issue during account creation.
+              </p>
+              
+              <div className="space-y-3">
+                <Button onClick={handleFixProfile} className="w-full">
+                  Create Missing Profile
+                </Button>
+                
+                <Button onClick={handleForceSignOut} variant="outline" className="w-full">
+                  Sign Out & Try Again
+                </Button>
+              </div>
+              
+              <p className="text-xs text-muted-foreground">
+                If the problem persists, try signing out and creating a new account.
+              </p>
             </div>
           </CardContent>
         </Card>
