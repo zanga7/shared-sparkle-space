@@ -330,6 +330,16 @@ const ColumnBasedDashboard = () => {
             setSwitchDialogOpen(true);
             return;
           }
+          
+          // For team tasks, only allow completion when viewing the acting member's own column
+          if (selectedMemberFilter && selectedMemberFilter !== activeMemberId) {
+            toast({
+              title: 'Cannot Complete Task',
+              description: 'You can only complete tasks from your own task column.',
+              variant: 'destructive'
+            });
+            return;
+          }
         }
         
         // Check PIN requirements for the active member
