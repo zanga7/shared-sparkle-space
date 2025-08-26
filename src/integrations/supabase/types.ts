@@ -1113,6 +1113,16 @@ export type Database = {
         }
         Returns: Json
       }
+      create_secure_calendar_integration: {
+        Args: {
+          access_token_param: string
+          calendar_id_param: string
+          expires_at_param?: string
+          integration_type_param: string
+          refresh_token_param?: string
+        }
+        Returns: Json
+      }
       decrypt_oauth_token: {
         Args: {
           encrypted_data: string
@@ -1122,6 +1132,10 @@ export type Database = {
         Returns: string
       }
       delete_calendar_integration: {
+        Args: { integration_id_param: string }
+        Returns: Json
+      }
+      delete_calendar_integration_secure: {
         Args: { integration_id_param: string }
         Returns: Json
       }
@@ -1168,6 +1182,10 @@ export type Database = {
           severity: string
         }[]
       }
+      get_calendar_security_status: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_calendar_security_summary: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1197,6 +1215,16 @@ export type Database = {
           expires_at: string
           is_expired: boolean
           refresh_token: string
+        }[]
+      }
+      get_calendar_tokens_ultra_secure: {
+        Args: { integration_id_param: string; requesting_context?: string }
+        Returns: {
+          access_token: string
+          expires_at: string
+          is_expired: boolean
+          refresh_token: string
+          security_status: string
         }[]
       }
       get_decrypted_calendar_tokens: {
@@ -1347,6 +1375,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      log_calendar_token_access_enhanced: {
+        Args: {
+          action_param: string
+          additional_context?: Json
+          error_message_param?: string
+          integration_id_param: string
+          success_param?: boolean
+        }
+        Returns: undefined
+      }
       log_sensitive_access: {
         Args: {
           p_action: string
@@ -1392,6 +1430,15 @@ export type Database = {
           expires_at_param?: string
           integration_id_param: string
           refresh_token_param?: string
+        }
+        Returns: Json
+      }
+      update_calendar_integration_secure: {
+        Args: {
+          calendar_id_param?: string
+          integration_id_param: string
+          integration_type_param?: string
+          is_active_param?: boolean
         }
         Returns: Json
       }
