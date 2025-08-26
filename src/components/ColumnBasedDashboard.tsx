@@ -315,7 +315,7 @@ const ColumnBasedDashboard = () => {
         const assignees = task.assignees?.map(a => a.profile) || 
                          (task.assigned_profile ? [task.assigned_profile] : []);
         
-        // For team tasks, ensure the acting member can only complete tasks on their own list
+        // Check if active member is one of the assignees (for team tasks)
         if (assignees.length > 0 && activeMemberId) {
           const isAssignedMember = assignees.some(assignee => assignee.id === activeMemberId);
           
@@ -330,19 +330,6 @@ const ColumnBasedDashboard = () => {
             setSwitchDialogOpen(true);
             return;
           }
-          
-           // Only restrict completion for single-assignee tasks when not on the assignee's list
-           if (selectedMemberFilter && assignees.length === 1) {
-             const singleAssignee = assignees[0];
-             if (singleAssignee.id !== activeMemberId) {
-               toast({
-                 title: 'Cannot Complete Task',
-                 description: 'You can only complete single-assignee tasks when acting as the assigned member.',
-                 variant: 'destructive'
-               });
-               return;
-             }
-           }
         }
         
         // Check PIN requirements for the active member
