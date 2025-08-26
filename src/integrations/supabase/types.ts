@@ -1068,11 +1068,77 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      calendar_integrations_safe: {
+        Row: {
+          calendar_id: string | null
+          created_at: string | null
+          created_ip: unknown | null
+          expires_at: string | null
+          has_access_token: boolean | null
+          has_refresh_token: boolean | null
+          id: string | null
+          integration_type: string | null
+          is_active: boolean | null
+          is_expired: boolean | null
+          last_access_ip: unknown | null
+          last_token_refresh: string | null
+          profile_id: string | null
+          refresh_token_status: string | null
+          security_flags: Json | null
+          token_refresh_count: number | null
+          token_status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          calendar_id?: string | null
+          created_at?: string | null
+          created_ip?: unknown | null
+          expires_at?: string | null
+          has_access_token?: never
+          has_refresh_token?: never
+          id?: string | null
+          integration_type?: string | null
+          is_active?: boolean | null
+          is_expired?: never
+          last_access_ip?: unknown | null
+          last_token_refresh?: string | null
+          profile_id?: string | null
+          refresh_token_status?: never
+          security_flags?: Json | null
+          token_refresh_count?: number | null
+          token_status?: never
+          updated_at?: string | null
+        }
+        Update: {
+          calendar_id?: string | null
+          created_at?: string | null
+          created_ip?: unknown | null
+          expires_at?: string | null
+          has_access_token?: never
+          has_refresh_token?: never
+          id?: string | null
+          integration_type?: string | null
+          is_active?: boolean | null
+          is_expired?: never
+          last_access_ip?: unknown | null
+          last_token_refresh?: string | null
+          profile_id?: string | null
+          refresh_token_status?: never
+          security_flags?: Json | null
+          token_refresh_count?: number | null
+          token_status?: never
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       approve_reward_request: {
         Args: { approval_note_param?: string; request_id_param: string }
+        Returns: Json
+      }
+      audit_calendar_token_security: {
+        Args: Record<PropertyKey, never>
         Returns: Json
       }
       authenticate_child_pin: {
