@@ -20,6 +20,7 @@ import RewardApprovals from "./pages/admin/RewardApprovals";
 import { ScreenSaverManagement } from "./pages/admin/ScreenSaverManagement";
 import { ScreenSaverPreview } from "./pages/ScreenSaverPreview";
 import DashboardMode from "./pages/admin/DashboardMode";
+import Permissions from "./pages/admin/Permissions";
 
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="rewards" element={<RewardsManagement />} />
             <Route path="reward-approvals" element={<RewardApprovals />} />
             <Route path="dashboard" element={<DashboardMode />} />
+            <Route path="permissions" element={<Permissions />} />
             <Route path="screensaver" element={<ScreenSaverManagement />} />
           </Route>
             <Route path="*" element={<NotFound />} />
