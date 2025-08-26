@@ -94,8 +94,11 @@ export function ApprovalQueue() {
     return Object.values(grouped);
   };
 
-  const individualRequests = rewardRequests.filter(req => req.reward?.reward_type !== 'group_contribution');
   const groupedRewardRequests = groupedRequests();
+  const groupedRewardIds = new Set(groupedRewardRequests.map(gr => gr.reward_id));
+  const individualRequests = rewardRequests.filter(req => 
+    req.reward?.reward_type !== 'group_contribution' && !groupedRewardIds.has(req.reward_id)
+  );
 
   // Filter requests by selected member
   const filteredIndividualRequests = selectedMember === 'all' 
