@@ -315,24 +315,25 @@ const ColumnBasedDashboard = () => {
         const assignees = task.assignees?.map(a => a.profile) || 
                          (task.assigned_profile ? [task.assigned_profile] : []);
         
-        // Determine the required member (task assignee)
-        const requiredMemberId = assignees.length > 0 ? assignees[0].id : null;
-        
-        // Check if active member matches required member
-        if (requiredMemberId && activeMemberId !== requiredMemberId) {
-          // Show switch dialog
-          setPendingAction({
-            type: 'complete_task',
-            taskId: task.id,
-            requiredMemberId,
-            onSuccess: () => executeTaskCompletion(task)
-          });
-          setSwitchDialogOpen(true);
-          return;
+        // Check if active member is one of the assignees (for team tasks)
+        if (assignees.length > 0 && activeMemberId) {
+          const isAssignedMember = assignees.some(assignee => assignee.id === activeMemberId);
+          
+          if (!isAssignedMember) {
+            // Show switch dialog to select an assigned member
+            setPendingAction({
+              type: 'complete_task',
+              taskId: task.id,
+              requiredMemberId: assignees[0].id, // Default to first assignee for switch dialog
+              onSuccess: () => executeTaskCompletion(task)
+            });
+            setSwitchDialogOpen(true);
+            return;
+          }
         }
         
-        // Check PIN requirements for the active member (or assignee)
-        const memberToCheck = activeMemberId || requiredMemberId;
+        // Check PIN requirements for the active member
+        const memberToCheck = activeMemberId;
         if (memberToCheck) {
           const { canProceed, needsPin, profile: memberProfile } = await canPerformAction(memberToCheck, 'task_completion');
           
