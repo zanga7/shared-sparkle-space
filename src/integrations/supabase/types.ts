@@ -399,6 +399,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "list_item_assignees_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       list_items: {
@@ -828,10 +835,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "task_assignees_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "task_assignees_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignees_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
             referencedColumns: ["id"]
           },
           {
@@ -880,10 +901,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "task_completions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "task_completions_completed_by_fkey"
             columns: ["completed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_completions_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
             referencedColumns: ["id"]
           },
           {
@@ -1037,6 +1072,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tasks_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
@@ -1048,6 +1090,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
             referencedColumns: ["id"]
           },
           {
@@ -1068,7 +1117,131 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      calendar_integrations_safe: {
+        Row: {
+          calendar_id: string | null
+          created_at: string | null
+          expires_at: string | null
+          has_access_token: boolean | null
+          has_refresh_token: boolean | null
+          id: string | null
+          integration_type: string | null
+          is_active: boolean | null
+          is_token_expired: boolean | null
+          last_token_refresh: string | null
+          profile_id: string | null
+          token_refresh_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          calendar_id?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          has_access_token?: never
+          has_refresh_token?: never
+          id?: string | null
+          integration_type?: string | null
+          is_active?: boolean | null
+          is_token_expired?: never
+          last_token_refresh?: string | null
+          profile_id?: string | null
+          token_refresh_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          calendar_id?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          has_access_token?: never
+          has_refresh_token?: never
+          id?: string | null
+          integration_type?: string | null
+          is_active?: boolean | null
+          is_token_expired?: never
+          last_token_refresh?: string | null
+          profile_id?: string | null
+          token_refresh_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profiles_safe: {
+        Row: {
+          avatar_url: string | null
+          can_add_for_parents: boolean | null
+          can_add_for_self: boolean | null
+          can_add_for_siblings: boolean | null
+          color: string | null
+          created_at: string | null
+          display_name: string | null
+          failed_pin_attempts: number | null
+          family_id: string | null
+          has_pin_set: boolean | null
+          id: string | null
+          pin_locked_until: string | null
+          role: Database["public"]["Enums"]["user_role"] | null
+          sort_order: number | null
+          status: string | null
+          streak_count: number | null
+          theme: Json | null
+          total_points: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          can_add_for_parents?: boolean | null
+          can_add_for_self?: boolean | null
+          can_add_for_siblings?: boolean | null
+          color?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          failed_pin_attempts?: never
+          family_id?: string | null
+          has_pin_set?: never
+          id?: string | null
+          pin_locked_until?: never
+          role?: Database["public"]["Enums"]["user_role"] | null
+          sort_order?: number | null
+          status?: string | null
+          streak_count?: number | null
+          theme?: Json | null
+          total_points?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          can_add_for_parents?: boolean | null
+          can_add_for_self?: boolean | null
+          can_add_for_siblings?: boolean | null
+          color?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          failed_pin_attempts?: never
+          family_id?: string | null
+          has_pin_set?: never
+          id?: string | null
+          pin_locked_until?: never
+          role?: Database["public"]["Enums"]["user_role"] | null
+          sort_order?: number | null
+          status?: string | null
+          streak_count?: number | null
+          theme?: Json | null
+          total_points?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       approve_reward_request: {
@@ -1190,6 +1363,15 @@ export type Database = {
           refresh_token: string
         }[]
       }
+      get_calendar_tokens_secure: {
+        Args: { integration_id_param: string }
+        Returns: {
+          access_token: string
+          expires_at: string
+          is_expired: boolean
+          refresh_token: string
+        }[]
+      }
       get_decrypted_calendar_tokens: {
         Args: { integration_id_param: string }
         Returns: {
@@ -1249,6 +1431,16 @@ export type Database = {
           p_action: string
           p_error_message?: string
           p_integration_id: string
+          p_success?: boolean
+        }
+        Returns: undefined
+      }
+      log_sensitive_access: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_entity_id: string
+          p_entity_type: string
           p_success?: boolean
         }
         Returns: undefined
