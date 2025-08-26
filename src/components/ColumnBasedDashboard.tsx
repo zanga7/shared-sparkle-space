@@ -331,15 +331,18 @@ const ColumnBasedDashboard = () => {
             return;
           }
           
-          // If viewing a specific member's tasks, only allow that member to complete them
-          if (selectedMemberFilter && selectedMemberFilter !== activeMemberId) {
-            toast({
-              title: 'Cannot Complete Task',
-              description: 'You can only complete tasks on your own task list.',
-              variant: 'destructive'
-            });
-            return;
-          }
+           // Only restrict completion for single-assignee tasks when not on the assignee's list
+           if (selectedMemberFilter && assignees.length === 1) {
+             const singleAssignee = assignees[0];
+             if (singleAssignee.id !== activeMemberId) {
+               toast({
+                 title: 'Cannot Complete Task',
+                 description: 'You can only complete single-assignee tasks when acting as the assigned member.',
+                 variant: 'destructive'
+               });
+               return;
+             }
+           }
         }
         
         // Check PIN requirements for the active member
