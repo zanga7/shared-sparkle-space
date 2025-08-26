@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Button } from "./button"
 import { Input } from "./input"
+import { Textarea } from "./textarea"
 import { Plus, Undo2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -14,9 +15,10 @@ interface EnhancedListInputProps {
   existingItems?: string[]
   preventDuplicates?: boolean
   className?: string
+  multiline?: boolean
 }
 
-export const EnhancedListInput = React.forwardRef<HTMLInputElement, EnhancedListInputProps>(
+export const EnhancedListInput = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, EnhancedListInputProps>(
   ({ 
     value, 
     onChange, 
@@ -25,6 +27,7 @@ export const EnhancedListInput = React.forwardRef<HTMLInputElement, EnhancedList
     disabled = false,
     existingItems = [],
     preventDuplicates = true,
+    multiline = false,
     className,
     ...props 
   }, ref) => {
@@ -32,7 +35,7 @@ export const EnhancedListInput = React.forwardRef<HTMLInputElement, EnhancedList
     const [isAdding, setIsAdding] = React.useState(false)
     const [lastBulkAdd, setLastBulkAdd] = React.useState<string[]>([])
     const [showUndo, setShowUndo] = React.useState(false)
-    const inputRef = React.useRef<HTMLInputElement>(null)
+    const inputRef = React.useRef<HTMLInputElement | HTMLTextAreaElement>(null)
     
     React.useImperativeHandle(ref, () => inputRef.current!)
 
@@ -136,14 +139,14 @@ export const EnhancedListInput = React.forwardRef<HTMLInputElement, EnhancedList
       }
     }
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && (!multiline || e.ctrlKey || e.metaKey)) {
         e.preventDefault()
         handleAdd()
       }
     }
 
-    const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const handlePaste = (e: React.ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       // Let the default paste behavior happen first
       setTimeout(() => {
         const pastedText = e.clipboardData.getData('text')
@@ -168,17 +171,31 @@ export const EnhancedListInput = React.forwardRef<HTMLInputElement, EnhancedList
     return (
       <div className={cn("space-y-2", className)}>
         <div className="flex gap-2">
-          <Input
-            ref={inputRef}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            placeholder={placeholder}
-            disabled={disabled || isAdding}
-            className="flex-1"
-            {...props}
-          />
+          {multiline ? (
+            <Textarea
+              ref={inputRef as React.Ref<HTMLTextAreaElement>}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              placeholder={placeholder}
+              disabled={disabled || isAdding}
+              className="flex-1 min-h-[80px] resize-y"
+              {...props}
+            />
+          ) : (
+            <Input
+              ref={inputRef as React.Ref<HTMLInputElement>}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              placeholder={placeholder}
+              disabled={disabled || isAdding}
+              className="flex-1"
+              {...props}
+            />
+          )}
           <Button 
             onClick={handleAdd}
             disabled={!value.trim() || isAdding}
@@ -199,7 +216,7 @@ export const EnhancedListInput = React.forwardRef<HTMLInputElement, EnhancedList
           )}
         </div>
         <div className="text-xs text-muted-foreground">
-          Enter to add. Paste multiple lines to bulk add.
+          {multiline ? "Ctrl/Cmd+Enter to add. Paste multiple lines to bulk add." : "Enter to add. Paste multiple lines to bulk add."}
         </div>
       </div>
     )

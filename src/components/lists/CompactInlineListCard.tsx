@@ -540,6 +540,7 @@ export function CompactInlineListCard({
             disabled={adding}
             existingItems={items.map(item => item.name)}
             preventDuplicates={true}
+            multiline={true}
             className="mb-0"
           />
         </div>
