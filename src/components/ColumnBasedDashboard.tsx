@@ -448,7 +448,7 @@ const ColumnBasedDashboard = () => {
         .from('task_completions')
         .insert({
           task_id: task.id,
-           completed_by: dashboardMode && activeMemberId ? activeMemberId : profile.id, // Use acting member in dashboard mode
+           completed_by: profile.id, // Must use authenticated user's profile for RLS
           points_earned: task.points
         });
 
