@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,9 +24,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
+import { useAdminContext } from '@/contexts/AdminContext';
 import { cn } from '@/lib/utils';
-import { Profile } from '@/types/task';
 
 interface ScreenSaverImage {
   id: string;
@@ -62,8 +61,7 @@ interface GooglePhotosAlbum {
 
 export const ScreenSaverSettings = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { profile, loading: profileLoading } = useAdminContext();
   const [settings, setSettings] = useState<ScreenSaverSettings>({
     is_enabled: true,
     display_duration: 30,
@@ -81,80 +79,38 @@ export const ScreenSaverSettings = () => {
   const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      fetchUserProfile();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (profile?.family_id) {
+    if (profile?.family_id && !profileLoading) {
       loadSettings();
       loadImages();
     }
-  }, [profile?.family_id]);
-
-  const fetchUserProfile = async () => {
-    try {
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (profileError) {
-        console.error('Profile error:', profileError);
-        return;
-      }
-
-      setProfile(profileData);
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load user profile',
-        variant: 'destructive',
-      });
-    }
-  };
+  }, [profile?.family_id, profileLoading]);
 
   const loadSettings = async () => {
+    if (!profile?.family_id) return;
+    
     try {
       const { data, error } = await supabase
         .from('screensaver_settings')
         .select('*')
-        .eq('family_id', profile?.family_id)
-        .single();
+        .eq('family_id', profile.family_id)
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') { // Not found error
-        throw error;
-      }
-
+      if (error) throw error;
+      
       if (data) {
-        setSettings({
-          id: data.id,
-          is_enabled: data.is_enabled,
-          display_duration: data.display_duration,
-          timeout_minutes: data.timeout_minutes || 5,
-          transition_effect: data.transition_effect,
-          show_clock: data.show_clock,
-          show_weather: data.show_weather,
-          brightness: data.brightness,
-          google_photos_connected: data.google_photos_connected,
-          google_photos_album_id: data.google_photos_album_id,
-          custom_images_enabled: data.custom_images_enabled,
-        });
-
-        // Load Google Photos albums if connected
+        setSettings(data);
+        
+        // If Google Photos is connected, fetch albums
         if (data.google_photos_connected) {
-          loadGoogleAlbums();
+          fetchGooglePhotosAlbums();
         }
       }
     } catch (error) {
       console.error('Error loading settings:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load screen saver settings',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load screen saver settings",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
@@ -162,11 +118,13 @@ export const ScreenSaverSettings = () => {
   };
 
   const loadImages = async () => {
+    if (!profile?.family_id) return;
+    
     try {
       const { data, error } = await supabase
         .from('screensaver_images')
         .select('*')
-        .eq('family_id', profile?.family_id)
+        .eq('family_id', profile.family_id)
         .eq('is_active', true)
         .order('sort_order', { ascending: true });
 
@@ -177,12 +135,14 @@ export const ScreenSaverSettings = () => {
     }
   };
 
-  const loadGoogleAlbums = async () => {
+  const fetchGooglePhotosAlbums = async () => {
+    if (!profile?.family_id) return;
+    
     try {
       const { data, error } = await supabase.functions.invoke('google-photos-auth', {
         body: {
           action: 'get_albums',
-          family_id: profile?.family_id,
+          family_id: profile.family_id,
         },
       });
 
@@ -199,9 +159,11 @@ export const ScreenSaverSettings = () => {
   };
 
   const saveSettings = async () => {
+    if (!profile?.family_id) return;
+    
     try {
       const settingsData = {
-        family_id: profile?.family_id,
+        family_id: profile.family_id,
         is_enabled: settings.is_enabled,
         display_duration: settings.display_duration,
         timeout_minutes: settings.timeout_minutes,
@@ -212,7 +174,7 @@ export const ScreenSaverSettings = () => {
         google_photos_connected: settings.google_photos_connected,
         google_photos_album_id: settings.google_photos_album_id,
         custom_images_enabled: settings.custom_images_enabled,
-        created_by: profile?.id,
+        created_by: profile.id,
       };
 
       if (settings.id) {
@@ -246,12 +208,14 @@ export const ScreenSaverSettings = () => {
   };
 
   const connectGooglePhotos = async () => {
+    if (!profile?.family_id) return;
+    
     setConnecting(true);
     try {
       const { data, error } = await supabase.functions.invoke('google-photos-auth', {
         body: {
           action: 'get_auth_url',
-          family_id: profile?.family_id,
+          family_id: profile.family_id,
         },
       });
 
@@ -265,14 +229,14 @@ export const ScreenSaverSettings = () => {
         const { data: integration } = await supabase
           .from('google_photos_integrations')
           .select('id')
-          .eq('family_id', profile?.family_id)
+          .eq('family_id', profile.family_id)
           .eq('is_active', true)
           .single();
 
         if (integration) {
           clearInterval(pollInterval);
           setSettings(prev => ({ ...prev, google_photos_connected: true }));
-          loadGoogleAlbums();
+          fetchGooglePhotosAlbums();
           toast({
             title: 'Success',
             description: 'Google Photos connected successfully',
@@ -300,7 +264,7 @@ export const ScreenSaverSettings = () => {
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0 || !profile?.family_id) return;
 
     for (const file of Array.from(files)) {
       try {
@@ -326,7 +290,7 @@ export const ScreenSaverSettings = () => {
 
         const fileExt = file.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `${profile?.family_id}/${fileName}`;
+        const filePath = `${profile.family_id}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('screensaver-images')
@@ -338,12 +302,12 @@ export const ScreenSaverSettings = () => {
         const { error: dbError } = await supabase
           .from('screensaver_images')
           .insert([{
-            family_id: profile?.family_id,
+            family_id: profile.family_id,
             name: file.name,
             file_path: filePath,
             file_size: file.size,
             mime_type: file.type,
-            uploaded_by: profile?.id,
+            uploaded_by: profile.id,
             sort_order: images.length,
           }]);
 
@@ -366,10 +330,6 @@ export const ScreenSaverSettings = () => {
     loadImages();
     // Reset input
     event.target.value = '';
-  };
-
-  const handleImageUpload = async (file: File) => {
-    // This function is replaced by handleFileSelect above
   };
 
   const deleteImage = async (imageId: string, filePath: string) => {
@@ -404,7 +364,7 @@ export const ScreenSaverSettings = () => {
     }
   };
 
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <Card>
         <CardContent className="p-6">
@@ -730,3 +690,6 @@ export const ScreenSaverSettings = () => {
     </div>
   );
 };
+
+// Memoize the component to prevent unnecessary re-renders
+export default React.memo(ScreenSaverSettings);

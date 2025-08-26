@@ -1,4 +1,4 @@
-import { ScreenSaverSettings } from '@/components/admin/ScreenSaverSettings';
+import ScreenSaverSettings from '@/components/admin/ScreenSaverSettings';
 
 export const ScreenSaverManagement = () => {
   return (
