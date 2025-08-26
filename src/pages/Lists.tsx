@@ -192,17 +192,31 @@ const Lists = () => {
     }
   });
 
-  const handleListCreated = () => {
-    fetchLists();
+  const handleListCreated = (newList: List) => {
+    // Add new list to state without refetching
+    setLists(prev => [newList, ...prev]);
     setIsCreateDialogOpen(false);
   };
 
-  const handleListUpdated = () => {
-    fetchLists();
+  const handleListUpdated = (updatedList: List) => {
+    // Update specific list in state without refetching
+    setLists(prev => prev.map(list => 
+      list.id === updatedList.id ? updatedList : list
+    ));
+  };
+
+  const handleListItemsUpdated = (listId: string, itemsCount: number, completedCount: number, assigneesCount: number) => {
+    // Update list counts without refetching
+    setLists(prev => prev.map(list => 
+      list.id === listId 
+        ? { ...list, items_count: itemsCount, completed_count: completedCount, assignees_count: assigneesCount }
+        : list
+    ));
   };
 
   const handleCategoryUpdated = () => {
     fetchCategories();
+    // Only refetch lists if we need category info updated
     fetchLists();
   };
 
@@ -257,7 +271,14 @@ const Lists = () => {
         description: 'List has been successfully duplicated'
       });
 
-      fetchLists();
+      // Add duplicated list to state without refetching
+      const duplicatedList = {
+        ...newList,
+        items_count: items?.length || 0,
+        completed_count: 0,
+        assignees_count: 0
+      };
+      setLists(prev => [duplicatedList, ...prev]);
     } catch (error) {
       console.error('Error duplicating list:', error);
       toast({
@@ -282,7 +303,10 @@ const Lists = () => {
         description: `List has been ${list.is_archived ? 'restored' : 'archived'} successfully`
       });
 
-      fetchLists();
+      // Update list in state without refetching
+      setLists(prev => prev.map(l => 
+        l.id === list.id ? { ...l, is_archived: !l.is_archived } : l
+      ));
     } catch (error) {
       console.error('Error archiving list:', error);
       toast({
@@ -311,7 +335,8 @@ const Lists = () => {
         description: 'List has been permanently deleted'
       });
 
-      fetchLists();
+      // Remove list from state without refetching
+      setLists(prev => prev.filter(l => l.id !== list.id));
     } catch (error) {
       console.error('Error deleting list:', error);
       toast({
@@ -395,6 +420,7 @@ const Lists = () => {
               onArchiveList={archiveList}
               onDeleteList={deleteList}
               onListUpdated={handleListUpdated}
+              onListItemsUpdated={handleListItemsUpdated}
             />
           ))}
         </div>

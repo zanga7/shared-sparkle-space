@@ -34,7 +34,7 @@ interface EditListDialogProps {
   };
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onListUpdated: () => void;
+  onListUpdated: (updatedList: any) => void;
 }
 
 export function EditListDialog({ 
@@ -117,7 +117,15 @@ export function EditListDialog({
         description: 'List has been updated successfully'
       });
 
-      onListUpdated();
+      // Pass updated list data to parent
+      const updatedList = {
+        ...list,
+        name: name.trim(),
+        description: description.trim() || null,
+        category_id: categoryId === 'none' ? null : categoryId || null,
+        updated_at: new Date().toISOString()
+      };
+      onListUpdated(updatedList);
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating list:', error);

@@ -80,7 +80,8 @@ interface CompactInlineListCardProps {
   onDuplicateList: (list: List) => void;
   onArchiveList: (list: List) => void;
   onDeleteList: (list: List) => void;
-  onListUpdated: () => void;
+  onListUpdated: (updatedList: List) => void;
+  onListItemsUpdated: (listId: string, itemsCount: number, completedCount: number, assigneesCount: number) => void;
 }
 
 export function CompactInlineListCard({ 
@@ -90,7 +91,8 @@ export function CompactInlineListCard({
   onDuplicateList,
   onArchiveList,
   onDeleteList,
-  onListUpdated
+  onListUpdated,
+  onListItemsUpdated
 }: CompactInlineListCardProps) {
   const { toast } = useToast();
   const [items, setItems] = useState<ListItem[]>([]);
@@ -226,7 +228,17 @@ export function CompactInlineListCard({
       }
 
       setNewItemText('');
-      onListUpdated();
+      
+      // Update parent counts
+      const newItemsCount = items.length + (data?.length || 0);
+      const completedCount = items.filter(item => item.is_completed).length;
+      const assigneeIds = new Set();
+      items.forEach(item => {
+        item.assignees?.forEach((assignee: any) => {
+          assigneeIds.add(assignee.id);
+        });
+      });
+      onListItemsUpdated(list.id, newItemsCount, completedCount, assigneeIds.size);
     } catch (error) {
       console.error('Error adding items:', error);
       toast({
@@ -264,7 +276,11 @@ export function CompactInlineListCard({
           : item
       ));
       
-      onListUpdated();
+      // Update parent counts
+      const completedCount = items.filter(item => 
+        item.id === itemId ? newCompleted : item.is_completed
+      ).length;
+      onListItemsUpdated(list.id, items.length, completedCount, 0); // assignees count unchanged
     } catch (error) {
       console.error('Error toggling item:', error);
       toast({
@@ -289,7 +305,7 @@ export function CompactInlineListCard({
         item.id === itemId ? { ...item, ...updates } : item
       ));
       
-      onListUpdated();
+      // Update parent counts if needed (item names don't affect counts)
     } catch (error) {
       console.error('Error updating item:', error);
       toast({
@@ -310,9 +326,21 @@ export function CompactInlineListCard({
       if (error) throw error;
       
       // Update items state directly (AJAX approach)
+      const itemToDelete = items.find(item => item.id === itemId);
       setItems(prev => prev.filter(item => item.id !== itemId));
       
-      onListUpdated();
+      // Update parent counts
+      const newItemsCount = items.length - 1;
+      const completedCount = items.filter(item => 
+        item.id !== itemId && item.is_completed
+      ).length;
+      const assigneeIds = new Set();
+      items.filter(item => item.id !== itemId).forEach(item => {
+        item.assignees?.forEach((assignee: any) => {
+          assigneeIds.add(assignee.id);
+        });
+      });
+      onListItemsUpdated(list.id, newItemsCount, completedCount, assigneeIds.size);
     } catch (error) {
       console.error('Error deleting item:', error);
       toast({
@@ -606,7 +634,7 @@ export function CompactInlineListCard({
 
                     setShowAssignDialog(false);
                     setAssigningItem(null);
-                    onListUpdated();
+                    // Don't trigger parent update for assignee changes
                   } catch (error) {
                     console.error('Error updating assignments:', error);
                     toast({

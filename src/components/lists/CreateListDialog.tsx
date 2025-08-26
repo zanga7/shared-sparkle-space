@@ -38,7 +38,7 @@ interface Profile {
 interface CreateListDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onListCreated: () => void;
+  onListCreated: (newList: any) => void;
   profile: Profile;
 }
 
@@ -136,7 +136,14 @@ export function CreateListDialog({
       });
       
       
-      onListCreated();
+      // Pass the new list with default counts to parent
+      const newListWithCounts = {
+        ...newList,
+        items_count: 0,
+        completed_count: 0,
+        assignees_count: 0
+      };
+      onListCreated(newListWithCounts);
       onOpenChange(false);
     } catch (error) {
       console.error('Error creating list:', error);
