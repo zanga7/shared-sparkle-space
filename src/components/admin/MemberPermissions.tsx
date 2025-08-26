@@ -83,9 +83,13 @@ export function MemberPermissions() {
                     </div>
                     <Switch
                       checked={member.require_pin_to_complete_tasks || false}
-                      onCheckedChange={(checked) => 
-                        updateMemberPermissions(member.id, 'require_pin_to_complete_tasks', checked)
-                      }
+                      onCheckedChange={(checked) => {
+                        if (checked && !member.pin_hash) {
+                          toast.error('Please set a PIN for this member first');
+                          return;
+                        }
+                        updateMemberPermissions(member.id, 'require_pin_to_complete_tasks', checked);
+                      }}
                       disabled={saving}
                     />
                   </div>
@@ -100,9 +104,13 @@ export function MemberPermissions() {
                     </div>
                     <Switch
                       checked={member.require_pin_for_list_deletes || false}
-                      onCheckedChange={(checked) => 
-                        updateMemberPermissions(member.id, 'require_pin_for_list_deletes', checked)
-                      }
+                      onCheckedChange={(checked) => {
+                        if (checked && !member.pin_hash) {
+                          toast.error('Please set a PIN for this member first');
+                          return;
+                        }
+                        updateMemberPermissions(member.id, 'require_pin_for_list_deletes', checked);
+                      }}
                       disabled={saving}
                     />
                   </div>

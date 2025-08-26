@@ -166,8 +166,13 @@ export const useDashboardAuth = () => {
         : profile.require_pin_for_list_deletes;
 
       // If no PIN required, can proceed
-      if (!requiresPin || !profile.pin_hash) {
+      if (!requiresPin) {
         return { canProceed: true, needsPin: false, profile };
+      }
+      
+      // If PIN is required but not set, still require PIN authentication
+      if (!profile.pin_hash) {
+        return { canProceed: false, needsPin: true, profile };
       }
 
       // Check if PIN is cached
