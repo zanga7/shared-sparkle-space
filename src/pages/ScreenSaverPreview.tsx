@@ -51,7 +51,7 @@ export const ScreenSaverPreview = () => {
   }, []);
 
   useEffect(() => {
-    if (images.length > 0 && settings) {
+    if (images.length > 0 && settings?.display_duration) {
       const interval = setInterval(() => {
         setCurrentImageIndex((prev) => (prev + 1) % images.length);
       }, settings.display_duration * 1000);
@@ -85,14 +85,35 @@ export const ScreenSaverPreview = () => {
           .from('screensaver_settings')
           .select('*')
           .eq('family_id', profile.family_id)
-          .single();
+          .maybeSingle(); // Use maybeSingle to handle no results
 
-        if (data) {
-          setSettings(data);
-        }
+        // Use retrieved settings or defaults
+        setSettings(data || {
+          is_enabled: true,
+          display_duration: 30,
+          timeout_minutes: 5,
+          transition_effect: 'fade',
+          show_clock: true,
+          show_weather: false,
+          brightness: 75,
+          google_photos_connected: false,
+          custom_images_enabled: true,
+        });
       }
     } catch (error) {
       console.error('Error loading settings:', error);
+      // Set default settings if there's an error
+      setSettings({
+        is_enabled: true,
+        display_duration: 30,
+        timeout_minutes: 5,
+        transition_effect: 'fade',
+        show_clock: true,
+        show_weather: false,
+        brightness: 75,
+        google_photos_connected: false,
+        custom_images_enabled: true,
+      });
     }
   };
 
@@ -135,7 +156,7 @@ export const ScreenSaverPreview = () => {
     );
   }
 
-  if (!settings || images.length === 0) {
+  if (images.length === 0) {
     return (
       <div className="fixed inset-0 bg-black flex items-center justify-center text-white">
         <div className="text-center">
@@ -153,12 +174,12 @@ export const ScreenSaverPreview = () => {
     slide: 'transition-transform duration-1000', 
     zoom: 'transition-all duration-1000',
     dissolve: 'transition-all duration-2000'
-  }[settings.transition_effect] || 'transition-opacity duration-1000';
+  }[settings?.transition_effect || 'fade'] || 'transition-opacity duration-1000';
 
   return (
     <div 
       className="fixed inset-0 bg-black overflow-hidden cursor-pointer"
-      style={{ filter: `brightness(${settings.brightness}%)` }}
+      style={{ filter: `brightness(${settings?.brightness || 75}%)` }}
       onClick={() => window.close()}
     >
       {/* Background Image - Full screen cover */}
@@ -182,7 +203,7 @@ export const ScreenSaverPreview = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/30" />
         
         {/* Clock */}
-        {settings.show_clock && (
+        {settings?.show_clock && (
           <div className="absolute top-8 right-8 text-white text-right">
             <div className="text-6xl font-light tracking-wide">
               {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -198,7 +219,7 @@ export const ScreenSaverPreview = () => {
         )}
         
         {/* Weather placeholder */}
-        {settings.show_weather && (
+        {settings?.show_weather && (
           <div className="absolute bottom-8 left-8 text-white">
             <div className="text-3xl font-light">72°F</div>
             <div className="text-lg text-white/80">Partly Cloudy</div>
