@@ -57,6 +57,17 @@ export const ScreenSaverPreview = () => {
     }
   }, [images.length, settings?.display_duration]);
 
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        window.close();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
+
   const loadSettings = async () => {
     try {
       const { data: profile } = await supabase
@@ -66,18 +77,43 @@ export const ScreenSaverPreview = () => {
         .single();
 
       if (profile) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('screensaver_settings')
           .select('*')
           .eq('family_id', profile.family_id)
-          .single();
+          .maybeSingle();
 
         if (data) {
           setSettings(data);
+        } else {
+          // Use default settings if none found
+          setSettings({
+            is_enabled: true,
+            display_duration: 10,
+            timeout_minutes: 5,
+            transition_effect: 'fade',
+            show_clock: true,
+            show_weather: false,
+            brightness: 75,
+            google_photos_connected: false,
+            custom_images_enabled: true,
+          });
         }
       }
     } catch (error) {
       console.error('Error loading settings:', error);
+      // Fallback to default settings
+      setSettings({
+        is_enabled: true,
+        display_duration: 10,
+        timeout_minutes: 5,
+        transition_effect: 'fade',
+        show_clock: true,
+        show_weather: false,
+        brightness: 75,
+        google_photos_connected: false,
+        custom_images_enabled: true,
+      });
     }
   };
 
@@ -119,25 +155,31 @@ export const ScreenSaverPreview = () => {
 
   const currentImage = images[currentImageIndex];
   const transitionClass = {
-    fade: 'transition-opacity duration-1000',
-    slide: 'transition-transform duration-1000',
-    zoom: 'transition-all duration-1000',
-    dissolve: 'transition-all duration-2000'
-  }[settings.transition_effect] || 'transition-opacity duration-1000';
+    fade: 'transition-opacity duration-1000 ease-in-out',
+    slide: 'transition-transform duration-1000 ease-in-out',
+    zoom: 'transition-all duration-1000 ease-in-out',
+    dissolve: 'transition-all duration-2000 ease-in-out'
+  }[settings.transition_effect] || 'transition-opacity duration-1000 ease-in-out';
 
   return (
     <div 
-      className="fixed inset-0 bg-black overflow-hidden"
+      className="fixed inset-0 bg-black overflow-hidden cursor-none"
       style={{ filter: `brightness(${settings.brightness}%)` }}
     >
       {/* Background Image */}
       <div className="relative w-full h-full">
-        <img
-          key={currentImageIndex}
-          src={`${supabase.storage.from('screensaver-images').getPublicUrl(currentImage.file_path).data.publicUrl}`}
-          alt={currentImage.name}
-          className={`w-full h-full object-cover ${transitionClass}`}
-        />
+        <div className="absolute inset-0">
+          <img
+            key={currentImageIndex}
+            src={`${supabase.storage.from('screensaver-images').getPublicUrl(currentImage.file_path).data.publicUrl}`}
+            alt={currentImage.name}
+            className={`w-full h-full object-cover object-center ${transitionClass}`}
+            style={{
+              minWidth: '100vw',
+              minHeight: '100vh',
+            }}
+          />
+        </div>
         
         {/* Overlay Content */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
