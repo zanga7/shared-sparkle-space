@@ -1179,11 +1179,13 @@ const ColumnBasedDashboard = () => {
                                               <AccordionItem key={group} value={`${member.id}-${group}`} className="border rounded-md">
                                                <AccordionTrigger className={cn(
                                                  "px-3 py-2 hover:no-underline",
-                                                 "bg-gradient-to-r from-primary/20 to-primary/10 border-b border-primary/20"
+                                                 getMemberColorClasses(member.color).bg,
+                                                 getMemberColorClasses(member.color).border,
+                                                 "border-b"
                                                )}>
                                                    <div className="flex items-center gap-2 flex-1">
-                                                     <IconComponent className="h-4 w-4 text-primary" />
-                                                     <span className="text-sm font-semibold text-primary">{getTaskGroupTitle(group)}</span>
+                                                     <IconComponent className={cn("h-4 w-4", getMemberColorClasses(member.color).text)} />
+                                                     <span className={cn("text-sm font-semibold", getMemberColorClasses(member.color).text)}>{getTaskGroupTitle(group)}</span>
                                                     <div className="flex items-center gap-2 ml-auto mr-2">
                                                       <span className="text-xs text-muted-foreground">
                                                         {completedGroupTasks.length}/{groupTasks.length}
