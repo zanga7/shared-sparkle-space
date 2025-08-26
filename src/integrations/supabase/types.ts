@@ -1482,22 +1482,22 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           avatar_url: string
+          calendar_edit_permission: string
           can_add_for_parents: boolean
           can_add_for_self: boolean
           can_add_for_siblings: boolean
           color: string
           created_at: string
           display_name: string
-          failed_pin_attempts: number
           family_id: string
-          has_pin_set: boolean
+          has_pin: boolean
           id: string
-          pin_locked_until: string
-          role: string
+          require_pin_for_list_deletes: boolean
+          require_pin_to_complete_tasks: boolean
+          role: Database["public"]["Enums"]["user_role"]
           sort_order: number
           status: string
           streak_count: number
-          theme: Json
           total_points: number
           updated_at: string
           user_id: string
