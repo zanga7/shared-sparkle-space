@@ -726,6 +726,7 @@ const ColumnBasedDashboard = () => {
         // Set due date based on group
         const newDueDate = getGroupDueDate(destInfo.group as TaskGroup);
         updateData.due_date = newDueDate;
+        updateData.task_group = destInfo.group; // Add task_group field update
         needsUpdate = true;
       }
       
@@ -1214,21 +1215,36 @@ const ColumnBasedDashboard = () => {
                                                               </p>
                                                             </div>
                                                           ) : (
-                                                            groupTasks.map((task, index) => {
-                                                              // Calculate the global index for drag and drop
-                                                              const globalIndex = memberTasks.findIndex(t => t.id === task.id);
-                                                              return (
-                                                                <Draggable key={task.id} draggableId={task.id} index={globalIndex}>
-                                                                  {(provided, snapshot) => (
-                                                                    <div
-                                                                      ref={provided.innerRef}
-                                                                      {...provided.draggableProps}
-                                                                      {...provided.dragHandleProps}
-                                                                      className={cn(
-                                                                        "transition-all duration-200",
-                                                                        snapshot.isDragging && "shadow-xl rotate-2 scale-105 z-50 ring-2 ring-primary/30"
-                                                                      )}
-                                                                    >
+                                                             groupTasks.map((task, index) => {
+                                                               // Use group-specific index instead of global index for stability
+                                                               return (
+                                                                 <Draggable key={task.id} draggableId={task.id} index={index}>
+                                                                   {(provided, snapshot) => (
+                                                                     <div
+                                                                       ref={provided.innerRef}
+                                                                       {...provided.draggableProps}
+                                                                       className={cn(
+                                                                         "transition-all duration-200 group relative",
+                                                                         snapshot.isDragging && "shadow-xl rotate-2 scale-105 z-50 ring-2 ring-primary/30"
+                                                                       )}
+                                                                     >
+                                                                       {/* Drag Handle */}
+                                                                       <div
+                                                                         {...provided.dragHandleProps}
+                                                                         className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing z-10 bg-background/80 backdrop-blur-sm rounded p-1 border border-border/50"
+                                                                       >
+                                                                         <svg width="12" height="12" viewBox="0 0 12 12" className="text-muted-foreground">
+                                                                           <circle cx="2" cy="2" r="1" fill="currentColor"/>
+                                                                           <circle cx="6" cy="2" r="1" fill="currentColor"/>
+                                                                           <circle cx="10" cy="2" r="1" fill="currentColor"/>
+                                                                           <circle cx="2" cy="6" r="1" fill="currentColor"/>
+                                                                           <circle cx="6" cy="6" r="1" fill="currentColor"/>
+                                                                           <circle cx="10" cy="6" r="1" fill="currentColor"/>
+                                                                           <circle cx="2" cy="10" r="1" fill="currentColor"/>
+                                                                           <circle cx="6" cy="10" r="1" fill="currentColor"/>
+                                                                           <circle cx="10" cy="10" r="1" fill="currentColor"/>
+                                                                         </svg>
+                                                                       </div>
                                                                       <EnhancedTaskItem
                                                                         task={task}
                                                                         allTasks={tasks}
