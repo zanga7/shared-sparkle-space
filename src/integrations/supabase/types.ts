@@ -1227,6 +1227,10 @@ export type Database = {
           security_status: string
         }[]
       }
+      get_current_user_family_id_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_decrypted_calendar_tokens: {
         Args: { integration_id_param: string }
         Returns: {
@@ -1364,6 +1368,10 @@ export type Database = {
       }
       is_parent_in_same_family: {
         Args: { target_profile_id: string }
+        Returns: boolean
+      }
+      is_same_family_safe: {
+        Args: { target_family_id: string }
         Returns: boolean
       }
       log_calendar_token_access: {
