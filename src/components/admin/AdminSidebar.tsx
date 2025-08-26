@@ -26,7 +26,8 @@ import {
   RotateCcw,
   Calendar,
   Gift,
-  ClipboardCheck
+  ClipboardCheck,
+  Monitor
 } from "lucide-react";
 
 const adminMenuItems = [
@@ -36,6 +37,7 @@ const adminMenuItems = [
   { title: "Rewards", url: "/admin/rewards", icon: Gift },
   { title: "Reward Approvals", url: "/admin/reward-approvals", icon: ClipboardCheck },
   { title: "Calendar Settings", url: "/admin/calendar-settings", icon: Calendar },
+  { title: "Screen Saver", url: "/admin/screensaver", icon: Monitor },
   { title: "Permissions", url: "/admin/permissions", icon: Shield },
   { title: "Categories", url: "/admin/categories", icon: Database },
   { title: "Theme Management", url: "/admin/themes", icon: Palette },

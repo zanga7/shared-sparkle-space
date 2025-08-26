@@ -288,6 +288,54 @@ export type Database = {
         }
         Relationships: []
       }
+      google_photos_integrations: {
+        Row: {
+          access_token: string
+          album_id: string | null
+          album_name: string | null
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          family_id: string
+          id: string
+          is_active: boolean
+          last_sync_at: string | null
+          refresh_token: string | null
+          sync_count: number
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          album_id?: string | null
+          album_name?: string | null
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          family_id: string
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          refresh_token?: string | null
+          sync_count?: number
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          album_id?: string | null
+          album_name?: string | null
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          family_id?: string
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          refresh_token?: string | null
+          sync_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       group_contributions: {
         Row: {
           contributed_at: string
@@ -794,6 +842,99 @@ export type Database = {
           points?: number
           updated_at?: string
           weekly_days?: number[] | null
+        }
+        Relationships: []
+      }
+      screensaver_images: {
+        Row: {
+          created_at: string
+          family_id: string
+          file_path: string
+          file_size: number
+          id: string
+          is_active: boolean
+          mime_type: string
+          name: string
+          sort_order: number
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          file_path: string
+          file_size: number
+          id?: string
+          is_active?: boolean
+          mime_type: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          is_active?: boolean
+          mime_type?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
+      screensaver_settings: {
+        Row: {
+          brightness: number
+          created_at: string
+          created_by: string
+          custom_images_enabled: boolean
+          display_duration: number
+          family_id: string
+          google_photos_album_id: string | null
+          google_photos_connected: boolean
+          id: string
+          is_enabled: boolean
+          show_clock: boolean
+          show_weather: boolean
+          transition_effect: string
+          updated_at: string
+        }
+        Insert: {
+          brightness?: number
+          created_at?: string
+          created_by: string
+          custom_images_enabled?: boolean
+          display_duration?: number
+          family_id: string
+          google_photos_album_id?: string | null
+          google_photos_connected?: boolean
+          id?: string
+          is_enabled?: boolean
+          show_clock?: boolean
+          show_weather?: boolean
+          transition_effect?: string
+          updated_at?: string
+        }
+        Update: {
+          brightness?: number
+          created_at?: string
+          created_by?: string
+          custom_images_enabled?: boolean
+          display_duration?: number
+          family_id?: string
+          google_photos_album_id?: string | null
+          google_photos_connected?: boolean
+          id?: string
+          is_enabled?: boolean
+          show_clock?: boolean
+          show_weather?: boolean
+          transition_effect?: string
+          updated_at?: string
         }
         Relationships: []
       }
