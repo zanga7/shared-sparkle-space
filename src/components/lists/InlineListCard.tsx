@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
+import { EnhancedListInput } from '@/components/ui/enhanced-list-input';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -97,6 +98,7 @@ export function InlineListCard({
   const [items, setItems] = useState<ListItem[]>([]);
   const [familyMembers, setFamilyMembers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [newItemText, setNewItemText] = useState('');
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -191,6 +193,7 @@ export function InlineListCard({
   const addItems = async (text: string) => {
     if (!text.trim()) return;
 
+    setAdding(true);
     try {
       const lines = text.split('\n').filter(line => line.trim());
       const maxSortOrder = Math.max(...items.map(item => item.sort_order), -1);
@@ -233,6 +236,8 @@ export function InlineListCard({
         description: 'Failed to add items',
         variant: 'destructive'
       });
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -398,29 +403,17 @@ export function InlineListCard({
 
       <CardContent className="space-y-3">
         {/* Quick Add */}
-        <div className="flex gap-2">
-          <Input
-            ref={newItemInputRef}
-            placeholder="Add item..."
-            value={newItemText}
-            onChange={(e) => setNewItemText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                addItems(newItemText);
-              }
-            }}
-            className="flex-1 h-8"
-          />
-          <Button 
-            onClick={() => addItems(newItemText)}
-            disabled={!newItemText.trim()}
-            size="sm"
-            className="h-8 px-2"
-          >
-            <Plus className="h-3 w-3" />
-          </Button>
-        </div>
+        <EnhancedListInput
+          ref={newItemInputRef}
+          value={newItemText}
+          onChange={setNewItemText}
+          onAddItems={addItems}
+          placeholder="Add an item..."
+          disabled={adding}
+          existingItems={items.map(item => item.name)}
+          preventDuplicates={true}
+          className="mb-2"
+        />
 
         {/* Items List */}
         <div className="space-y-2">

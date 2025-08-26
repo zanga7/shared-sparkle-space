@@ -31,6 +31,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
+import { EnhancedListInput } from '@/components/ui/enhanced-list-input';
 
 interface Profile {
   id: string;
@@ -530,19 +531,16 @@ export function CompactInlineListCard({
         </div>
 
         {/* Quick add input */}
-        <div className="flex gap-2 border-t pt-2">
-          <Plus className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
-          <Input
-            placeholder="Add task"
+        <div className="border-t pt-2">
+          <EnhancedListInput
             value={newItemText}
-            onChange={(e) => setNewItemText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && newItemText.trim()) {
-                addItems(newItemText);
-              }
-            }}
-            className="flex-1 h-8 text-sm border-none px-1 focus:ring-1"
+            onChange={setNewItemText}
+            onAddItems={addItems}
+            placeholder="Add an item..."
             disabled={adding}
+            existingItems={items.map(item => item.name)}
+            preventDuplicates={true}
+            className="mb-0"
           />
         </div>
 
