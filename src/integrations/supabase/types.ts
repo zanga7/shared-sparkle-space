@@ -1188,6 +1188,7 @@ export type Database = {
           recurring_frequency: string | null
           recurring_interval: number | null
           series_id: string | null
+          task_group: string | null
           title: string
           updated_at: string
         }
@@ -1208,6 +1209,7 @@ export type Database = {
           recurring_frequency?: string | null
           recurring_interval?: number | null
           series_id?: string | null
+          task_group?: string | null
           title: string
           updated_at?: string
         }
@@ -1228,6 +1230,7 @@ export type Database = {
           recurring_frequency?: string | null
           recurring_interval?: number | null
           series_id?: string | null
+          task_group?: string | null
           title?: string
           updated_at?: string
         }
