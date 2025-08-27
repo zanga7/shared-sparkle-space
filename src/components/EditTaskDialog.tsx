@@ -30,6 +30,7 @@ interface EditTaskDialogProps {
 export const EditTaskDialog = ({ task, familyMembers, profile, open, onOpenChange, onTaskUpdated }: EditTaskDialogProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [seriesLoading, setSeriesLoading] = useState(false);
   const [editScope, setEditScope] = useState<'single' | 'series'>('single');
   
   const [formData, setFormData] = useState({
@@ -68,7 +69,7 @@ export const EditTaskDialog = ({ task, familyMembers, profile, open, onOpenChang
         assignees: currentAssignees,
         due_date: task.due_date ? new Date(task.due_date) : null,
         task_group: (task as any).task_group || 'general',
-        is_repeating: task.is_repeating || false,
+        is_repeating: !!task.series_id, // Set true if task has series_id
         recurring_frequency: 'weekly',
         recurring_interval: 1,
         recurring_days_of_week: [],
@@ -78,8 +79,50 @@ export const EditTaskDialog = ({ task, familyMembers, profile, open, onOpenChang
         monthly_type: 'date',
         monthly_weekday_ordinal: 1,
       });
+
+      // Fetch series data if this is a recurring task
+      if (task.series_id) {
+        fetchSeriesData(task.series_id);
+      }
     }
   }, [task]);
+
+  const fetchSeriesData = async (seriesId: string) => {
+    setSeriesLoading(true);
+    try {
+      const { data: series, error } = await supabase
+        .from('task_series')
+        .select('*')
+        .eq('id', seriesId)
+        .single();
+
+      if (error) throw error;
+
+      if (series) {
+        setFormData(prev => ({
+          ...prev,
+          is_repeating: true,
+          recurring_frequency: series.recurring_frequency,
+          recurring_interval: series.recurring_interval,
+          recurring_days_of_week: series.recurring_days_of_week || [],
+          recurring_end_date: series.recurring_end_date || '',
+          start_date: series.start_date || '',
+          repetition_count: series.repetition_count || 0,
+          monthly_type: (series.monthly_type || 'date') as 'date' | 'weekday',
+          monthly_weekday_ordinal: series.monthly_weekday_ordinal || 1,
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching series data:', error);
+      toast({
+        title: 'Warning',
+        description: 'Could not load recurring settings. Using defaults.',
+        variant: 'destructive'
+      });
+    } finally {
+      setSeriesLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -447,14 +490,22 @@ export const EditTaskDialog = ({ task, familyMembers, profile, open, onOpenChang
                   id="is-repeating"
                   checked={formData.is_repeating}
                   onCheckedChange={(checked) => setFormData({ ...formData, is_repeating: checked })}
+                  disabled={isRecurringTask && editScope === 'series'} // Disable for series edits since it's already recurring
                 />
               </div>
               
               {formData.is_repeating && (
-                <RecurringOptionsForm
-                  formData={formData}
-                  onChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
-                />
+                <>
+                  {seriesLoading && (
+                    <div className="text-sm text-muted-foreground">Loading recurring settings...</div>
+                  )}
+                  {!seriesLoading && (
+                    <RecurringOptionsForm
+                      formData={formData}
+                      onChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
+                    />
+                  )}
+                </>
               )}
             </div>
           )}
