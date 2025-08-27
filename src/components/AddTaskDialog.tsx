@@ -4,20 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, Plus, Repeat, Users, User, Sun, Clock3, Moon, FileText } from 'lucide-react';
+import { CalendarIcon, Plus, Users, User, Sun, Clock3, Moon, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useRecurringTasksSimplified } from '@/hooks/useRecurringTasksSimplified';
 import { Profile } from '@/types/task';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
-import { RecurringOptionsForm } from '@/components/RecurringOptionsForm';
 
 interface AddTaskDialogProps {
   familyMembers: Profile[];
@@ -43,290 +40,101 @@ export const AddTaskDialog = ({
   preselectedTaskGroup
 }: AddTaskDialogProps) => {
   const { toast } = useToast();
-  const { createTaskSeries } = useRecurringTasksSimplified(familyId);
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   
   // Use external open state if provided, otherwise use internal state
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
   const setOpen = externalOnOpenChange || setInternalOpen;
-  
-  // Initialize form data with selectedDate if provided
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     points: 10,
-    assigned_to: 'unassigned',
-    assignees: [] as string[],
-    due_date: selectedDate || null,
-    is_repeating: false,
+    due_date: selectedDate || null as Date | null,
+    assigned_to: preselectedMemberId || null as string | null,
     completion_rule: 'everyone' as 'any_one' | 'everyone',
-    recurring_frequency: 'weekly',
-    recurring_interval: 1,
-    recurring_days_of_week: [] as number[],
-    recurring_end_date: null as Date | null,
-    start_date: (selectedDate || new Date()).toISOString(),
-    repetition_count: null as number | null,
-    monthly_type: 'date' as 'date' | 'weekday',
-    monthly_weekday_ordinal: 1,
-    task_group: preselectedTaskGroup || 'general',
+    assignees: [] as string[],
+    task_group: preselectedTaskGroup || 'general' as string,
   });
 
-  // Update due_date when selectedDate changes
+  // Update form when preselected values change
   useEffect(() => {
-    if (selectedDate) {
-      setFormData(prev => ({ 
-        ...prev, 
-        due_date: selectedDate,
-        start_date: selectedDate.toISOString()
-      }));
-    }
-  }, [selectedDate]);
-
-  // Handle preselected member
-  useEffect(() => {
-    if (preselectedMemberId && preselectedMemberId !== 'unassigned') {
+    if (preselectedMemberId) {
       setFormData(prev => ({ 
         ...prev, 
         assigned_to: preselectedMemberId,
-        assignees: [preselectedMemberId]
-      }));
-    } else if (preselectedMemberId === 'unassigned') {
-      setFormData(prev => ({ 
-        ...prev, 
-        assigned_to: 'unassigned',
-        assignees: []
+        assignees: prev.completion_rule === 'everyone' ? [preselectedMemberId] : []
       }));
     }
-  }, [preselectedMemberId]);
-
-  // Handle preselected task group
-  useEffect(() => {
     if (preselectedTaskGroup) {
-      setFormData(prev => ({ 
-        ...prev, 
-        task_group: preselectedTaskGroup
-      }));
-      
-      if (!selectedDate) {
-        const now = new Date();
-        let defaultDueDate = new Date();
-        
-        switch (preselectedTaskGroup) {
-          case 'morning':
-            defaultDueDate.setHours(10, 0, 0, 0); // 10 AM
-            break;
-          case 'midday':
-            defaultDueDate.setHours(13, 0, 0, 0); // 1 PM
-            break;
-          case 'afternoon':
-            defaultDueDate.setHours(18, 0, 0, 0); // 6 PM
-            break;
-          case 'general':
-          default:
-            defaultDueDate = null;
-            break;
-        }
-        
-        if (defaultDueDate) {
-          setFormData(prev => ({ 
-            ...prev, 
-            due_date: defaultDueDate,
-            start_date: defaultDueDate.toISOString()
-          }));
-        }
-      }
+      setFormData(prev => ({ ...prev, task_group: preselectedTaskGroup }));
     }
-  }, [preselectedTaskGroup, selectedDate]);
+  }, [preselectedMemberId, preselectedTaskGroup]);
 
-  // Helper function to get task group time based on selection
-  const getTaskGroupDueDate = (group: string) => {
-    if (group === 'general') return null;
-    
-    const now = new Date();
-    const dueDate = new Date();
-    
-    switch (group) {
-      case 'morning':
-        dueDate.setHours(10, 0, 0, 0);
-        break;
-      case 'midday':
-        dueDate.setHours(13, 0, 0, 0);
-        break;
-      case 'afternoon':
-        dueDate.setHours(18, 0, 0, 0);
-        break;
-      default:
-        return null;
+  // Update due date when selectedDate changes
+  useEffect(() => {
+    if (selectedDate) {
+      setFormData(prev => ({ ...prev, due_date: selectedDate }));
     }
-    
-    return dueDate;
-  };
-
-  // Update due date when task group changes
-  const handleTaskGroupChange = (group: string) => {
-    const newDueDate = getTaskGroupDueDate(group);
-    setFormData(prev => ({
-      ...prev,
-      task_group: group,
-      due_date: selectedDate || newDueDate,
-      start_date: (selectedDate || newDueDate || new Date()).toISOString()
-    }));
-  };
+  }, [selectedDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Task title is required',
-        variant: 'destructive'
-      });
-      return;
-    }
+    if (!formData.title.trim()) return;
 
     setLoading(true);
-    
     try {
-      if (formData.is_repeating) {
-        // Create recurring task series
-        await createTaskSeries({
-          family_id: familyId,
-          title: formData.title.trim(),
-          description: formData.description.trim() || null,
-          points: formData.points,
-          assigned_to: formData.assigned_to === 'unassigned' ? null : formData.assigned_to,
-          created_by: profileId,
-          recurring_frequency: formData.recurring_frequency,
-          recurring_interval: formData.recurring_interval,
-          recurring_days_of_week: formData.recurring_frequency === 'weekly' 
-            ? formData.recurring_days_of_week : null,
-          recurring_end_date: formData.recurring_end_date?.toISOString() || null,
-          start_date: formData.start_date,
-          repetition_count: formData.repetition_count,
-          remaining_repetitions: formData.repetition_count,
-          monthly_type: formData.monthly_type,
-          monthly_weekday_ordinal: formData.monthly_weekday_ordinal,
-        });
-      } else {
-        // Create single task
-        const taskData = {
-          title: formData.title.trim(),
-          description: formData.description.trim() || null,
-          points: formData.points,
-          assigned_to: formData.assignees.length === 1 ? formData.assignees[0] : null, // For backward compatibility
-          due_date: formData.due_date?.toISOString() || null,
-          is_repeating: false,
-          completion_rule: formData.completion_rule,
-          family_id: familyId,
-          created_by: profileId
-        };
+      // Create single task
+      const taskData = {
+        title: formData.title,
+        description: formData.description || null,
+        points: formData.points,
+        due_date: formData.due_date?.toISOString() || null,
+        assigned_to: formData.assigned_to,
+        created_by: profileId,
+        family_id: familyId,
+        completion_rule: formData.completion_rule,
+        task_group: formData.task_group,
+      };
 
-        const { data: taskResult, error } = await supabase
-          .from('tasks')
-          .insert(taskData)
-          .select('id')
-          .single();
+      const { data: task, error: taskError } = await supabase
+        .from('tasks')
+        .insert(taskData)
+        .select()
+        .single();
 
-        if (error) {
-          throw error;
-        }
+      if (taskError) throw taskError;
 
-        // Handle task assignment based on completion rule
-        if (formData.assignees.length > 0 && taskResult) {
-          if (formData.completion_rule === 'everyone' && formData.assignees.length > 1) {
-            // For "everyone" rule with multiple assignees: create separate task instances for each
-            const additionalTasks = [];
-            for (let i = 1; i < formData.assignees.length; i++) {
-              const duplicateTaskData = {
-                ...taskData,
-                assigned_to: formData.assignees[i], // Single assignee per instance
-              };
-              additionalTasks.push(duplicateTaskData);
-            }
+      // Handle assignees for multi-assignment tasks
+      if (formData.completion_rule === 'everyone' && formData.assignees.length > 0) {
+        const assigneeData = formData.assignees.map(assigneeId => ({
+          task_id: task.id,
+          profile_id: assigneeId,
+          assigned_by: profileId,
+        }));
 
-            // Insert additional task instances
-            if (additionalTasks.length > 0) {
-              const { data: additionalTaskResults, error: additionalError } = await supabase
-                .from('tasks')
-                .insert(additionalTasks)
-                .select('id');
+        const { error: assigneeError } = await supabase
+          .from('task_assignees')
+          .insert(assigneeData);
 
-              if (additionalError) {
-                throw additionalError;
-              }
-
-              // Create single assignee for each task instance (including the original)
-              const allTaskIds = [taskResult.id, ...(additionalTaskResults?.map(t => t.id) || [])];
-              const assigneeData = allTaskIds.map((taskId, index) => ({
-                task_id: taskId,
-                profile_id: formData.assignees[index],
-                assigned_by: profileId
-              }));
-
-              const { error: assigneeError } = await supabase
-                .from('task_assignees')
-                .insert(assigneeData);
-
-              if (assigneeError) {
-                throw assigneeError;
-              }
-            } else {
-              // Single assignee for the original task
-              const { error: assigneeError } = await supabase
-                .from('task_assignees')
-                .insert({
-                  task_id: taskResult.id,
-                  profile_id: formData.assignees[0],
-                  assigned_by: profileId
-                });
-
-              if (assigneeError) {
-                throw assigneeError;
-              }
-            }
-          } else {
-            // For "any_one" rule or single assignee: create assignees for shared task
-            const assigneeData = formData.assignees.map(assigneeProfileId => ({
-              task_id: taskResult.id,
-              profile_id: assigneeProfileId,
-              assigned_by: profileId
-            }));
-
-            const { error: assigneeError } = await supabase
-              .from('task_assignees')
-              .insert(assigneeData);
-
-            if (assigneeError) {
-              throw assigneeError;
-            }
-          }
-        }
-
-        toast({
-          title: 'Success',
-          description: 'Task created successfully!',
-        });
+        if (assigneeError) throw assigneeError;
       }
+
+      toast({
+        title: 'Task created!',
+        description: 'Your task has been created successfully.',
+      });
 
       // Reset form
       setFormData({
         title: '',
         description: '',
         points: 10,
-        assigned_to: 'unassigned',
-        assignees: [],
         due_date: selectedDate || null,
-        is_repeating: false,
+        assigned_to: preselectedMemberId || null,
         completion_rule: 'everyone',
-        recurring_frequency: 'weekly',
-        recurring_interval: 1,
-        recurring_days_of_week: [],
-        recurring_end_date: null,
-        start_date: (selectedDate || new Date()).toISOString(),
-        repetition_count: null,
-        monthly_type: 'date',
-        monthly_weekday_ordinal: 1,
+        assignees: [],
         task_group: preselectedTaskGroup || 'general',
       });
 
@@ -336,247 +144,223 @@ export const AddTaskDialog = ({
       console.error('Error creating task:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create task',
-        variant: 'destructive'
+        description: 'Failed to create task. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleAssigneeToggle = (assigneeId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      assignees: prev.assignees.includes(assigneeId)
+        ? prev.assignees.filter(id => id !== assigneeId)
+        : [...prev.assignees, assigneeId]
+    }));
+  };
+
+  const getTaskGroupIcon = (group: string) => {
+    switch (group) {
+      case 'morning': return <Sun className="h-4 w-4" />;
+      case 'afternoon': return <Clock3 className="h-4 w-4" />;
+      case 'evening': return <Moon className="h-4 w-4" />;
+      default: return <FileText className="h-4 w-4" />;
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {/* Only show trigger if not externally controlled */}
-      {externalOpen === undefined && (
-        <DialogTrigger asChild>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Task
-          </Button>
-        </DialogTrigger>
-      )}
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogTrigger asChild>
+        <Button className="gap-2">
+          <Plus className="h-4 w-4" />
+          Add Task
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {selectedDate ? `Create Task for ${format(selectedDate, 'MMM d, yyyy')}` : 'Create New Task'}
-          </DialogTitle>
+          <DialogTitle>Create New Task</DialogTitle>
           <DialogDescription>
-            Add a new chore or activity for your family.
-            {(() => {
-              if (formData.assignees.length > 1) {
-                const selectedNames = familyMembers
-                  .filter(m => formData.assignees.includes(m.id))
-                  .map(m => m.display_name)
-                  .join(', ');
-                if (formData.completion_rule === 'any_one') {
-                  return ` Completion: First person to finish completes it for everyone. The finisher receives ${formData.points} points.`;
-                } else {
-                  return ` Completion: Each person (${selectedNames}) must complete their own instance and receives ${formData.points} points.`;
-                }
-              } else if (formData.assignees.length === 1) {
-                const assignee = familyMembers.find(m => m.id === formData.assignees[0]);
-                return ` When completed, ${assignee?.display_name} will receive ${formData.points} points.`;
-              } else {
-                return ` When completed, whoever finishes this task will receive ${formData.points} points.`;
-              }
-            })()}
+            Add a new task for your family.
           </DialogDescription>
         </DialogHeader>
+        
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
+          <div>
+            <Label htmlFor="title">Task Title</Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="e.g., Clean bedroom, Take out trash"
+              placeholder="Enter task title"
               required
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+          <div>
+            <Label htmlFor="description">Description (Optional)</Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Additional details about the task..."
+              placeholder="Enter task description"
               rows={3}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="points">Points</Label>
-              <Input
-                id="points"
-                type="number"
-                min="1"
-                max="100"
-                value={formData.points}
-                onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) || 10 })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Assign to</Label>
-              <MultiSelectAssignees
-                familyMembers={familyMembers}
-                selectedAssignees={formData.assignees}
-                onAssigneesChange={(assignees) => setFormData({ ...formData, assignees })}
-                placeholder="Select assignees..."
-              />
-            </div>
+          <div>
+            <Label htmlFor="points">Points</Label>
+            <Input
+              id="points"
+              type="number"
+              value={formData.points}
+              onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) || 0 })}
+              min="0"
+              step="1"
+            />
           </div>
 
-          <div className="space-y-2">
+          <div>
             <Label>Task Group</Label>
-            <Select value={formData.task_group} onValueChange={handleTaskGroupChange}>
+            <Select value={formData.task_group} onValueChange={(value) => setFormData({ ...formData, task_group: value })}>
               <SelectTrigger>
-                <SelectValue placeholder="Select task group" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="general">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    General
+                  </div>
+                </SelectItem>
                 <SelectItem value="morning">
                   <div className="flex items-center gap-2">
                     <Sun className="h-4 w-4" />
-                    Morning (until 11 AM)
-                  </div>
-                </SelectItem>
-                <SelectItem value="midday">
-                  <div className="flex items-center gap-2">
-                    <Clock3 className="h-4 w-4" />
-                    Midday (11 AM - 3 PM)
+                    Morning
                   </div>
                 </SelectItem>
                 <SelectItem value="afternoon">
                   <div className="flex items-center gap-2">
-                    <Moon className="h-4 w-4" />
-                    Afternoon (3 PM onwards)
+                    <Clock3 className="h-4 w-4" />
+                    Afternoon
                   </div>
                 </SelectItem>
-                <SelectItem value="general">
+                <SelectItem value="evening">
                   <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    General (any time)
+                    <Moon className="h-4 w-4" />
+                    Evening
                   </div>
                 </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {/* Completion Rule - only show when multiple assignees */}
-          {formData.assignees.length > 1 && (
-            <div className="space-y-3">
-              <Label>Completion Rule</Label>
-              <RadioGroup 
-                value={formData.completion_rule} 
-                onValueChange={(value: 'any_one' | 'everyone') => 
-                  setFormData({ ...formData, completion_rule: value })
-                }
-                className="grid grid-cols-2 gap-4"
+          <div>
+            <Label>Due Date (Optional)</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !formData.due_date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formData.due_date ? format(formData.due_date, "PPP") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={formData.due_date || undefined}
+                  onSelect={(date) => setFormData({ ...formData, due_date: date || null })}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            {formData.due_date && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setFormData({ ...formData, due_date: null })}
+                className="mt-1"
               >
-                <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted/30 cursor-pointer">
-                  <RadioGroupItem value="any_one" id="any_one" />
-                  <div className="flex-1">
-                    <Label htmlFor="any_one" className="cursor-pointer flex items-center gap-2 font-medium">
-                      <User className="h-4 w-4" />
-                      Any one
-                    </Label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      First person to complete it finishes for everyone
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted/30 cursor-pointer">
-                  <RadioGroupItem value="everyone" id="everyone" />
-                  <div className="flex-1">
-                    <Label htmlFor="everyone" className="cursor-pointer flex items-center gap-2 font-medium">
-                      <Users className="h-4 w-4" />
-                      Everyone
-                    </Label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Each person must complete their own instance
-                    </p>
-                  </div>
-                </div>
-              </RadioGroup>
-            </div>
-          )}
-
-          {!formData.is_repeating && (
-            <div className="space-y-2">
-              <Label>Due Date (Optional)</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !formData.due_date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.due_date ? format(formData.due_date, "PPP") : "No due date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.due_date}
-                    onSelect={(date) => setFormData({ ...formData, due_date: date || null })}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          )}
-
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="repeating"
-              checked={formData.is_repeating}
-              onCheckedChange={(checked) => setFormData({ ...formData, is_repeating: checked })}
-            />
-            <Label htmlFor="repeating">Repeating task</Label>
+                Clear date
+              </Button>
+            )}
           </div>
 
-          {/* Enhanced Recurring Options */}
-          {formData.is_repeating && (
-            <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Repeat className="h-4 w-4" />
-                Recurring Options
+          <div>
+            <Label>Completion Type</Label>
+            <RadioGroup
+              value={formData.completion_rule}
+              onValueChange={(value) => setFormData({ 
+                ...formData, 
+                completion_rule: value as 'any_one' | 'everyone',
+                assignees: value === 'any_one' ? [] : formData.assignees
+              })}
+              className="flex space-x-4 mt-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="any_one" id="any_one" />
+                <Label htmlFor="any_one" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Any One Person
+                </Label>
               </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="everyone" id="everyone" />
+                <Label htmlFor="everyone" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Everyone Assigned
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
 
-              <RecurringOptionsForm
-                formData={{
-                  recurring_frequency: formData.recurring_frequency,
-                  recurring_interval: formData.recurring_interval,
-                  recurring_days_of_week: formData.recurring_days_of_week,
-                  recurring_end_date: formData.recurring_end_date?.toISOString() || '',
-                  start_date: formData.start_date,
-                  repetition_count: formData.repetition_count,
-                  monthly_type: formData.monthly_type,
-                  monthly_weekday_ordinal: formData.monthly_weekday_ordinal,
-                }}
-                onChange={(field, value) => {
-                  if (field === 'recurring_end_date') {
-                    setFormData(prev => ({ ...prev, recurring_end_date: value ? new Date(value) : null }));
-                  } else {
-                    setFormData(prev => ({ ...prev, [field]: value }));
-                  }
-                }}
-                selectedDate={formData.due_date}
+          {formData.completion_rule === 'any_one' && (
+            <div>
+              <Label>Assigned To</Label>
+              <Select value={formData.assigned_to || ''} onValueChange={(value) => setFormData({ ...formData, assigned_to: value || null })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select family member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {familyMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.display_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {formData.completion_rule === 'everyone' && (
+            <div>
+              <Label>Assign To (select multiple)</Label>
+              <MultiSelectAssignees
+                familyMembers={familyMembers}
+                selectedAssignees={formData.assignees}
+                onAssigneesChange={(assignees) => setFormData({ ...formData, assignees })}
               />
             </div>
           )}
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <div className="flex gap-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={loading}
+              className="flex-1"
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !formData.title.trim()} className="flex-1">
               {loading ? 'Creating...' : 'Create Task'}
             </Button>
           </div>

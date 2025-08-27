@@ -847,60 +847,6 @@ export type Database = {
         }
         Relationships: []
       }
-      rotating_tasks: {
-        Row: {
-          cadence: string
-          created_at: string
-          created_by: string
-          current_member_index: number
-          description: string | null
-          family_id: string
-          id: string
-          is_active: boolean
-          is_paused: boolean
-          member_order: string[]
-          monthly_day: number | null
-          name: string
-          points: number
-          updated_at: string
-          weekly_days: number[] | null
-        }
-        Insert: {
-          cadence: string
-          created_at?: string
-          created_by: string
-          current_member_index?: number
-          description?: string | null
-          family_id: string
-          id?: string
-          is_active?: boolean
-          is_paused?: boolean
-          member_order: string[]
-          monthly_day?: number | null
-          name: string
-          points?: number
-          updated_at?: string
-          weekly_days?: number[] | null
-        }
-        Update: {
-          cadence?: string
-          created_at?: string
-          created_by?: string
-          current_member_index?: number
-          description?: string | null
-          family_id?: string
-          id?: string
-          is_active?: boolean
-          is_paused?: boolean
-          member_order?: string[]
-          monthly_day?: number | null
-          name?: string
-          points?: number
-          updated_at?: string
-          weekly_days?: number[] | null
-        }
-        Relationships: []
-      }
       screensaver_images: {
         Row: {
           created_at: string
@@ -1095,138 +1041,6 @@ export type Database = {
           },
         ]
       }
-      task_generation_logs: {
-        Row: {
-          created_at: string | null
-          duration_ms: number | null
-          error_message: string | null
-          family_id: string | null
-          id: string
-          inserted_count: number | null
-          series_id: string | null
-          skipped_count: number | null
-          window_end: string
-          window_start: string
-        }
-        Insert: {
-          created_at?: string | null
-          duration_ms?: number | null
-          error_message?: string | null
-          family_id?: string | null
-          id?: string
-          inserted_count?: number | null
-          series_id?: string | null
-          skipped_count?: number | null
-          window_end: string
-          window_start: string
-        }
-        Update: {
-          created_at?: string | null
-          duration_ms?: number | null
-          error_message?: string | null
-          family_id?: string | null
-          id?: string
-          inserted_count?: number | null
-          series_id?: string | null
-          skipped_count?: number | null
-          window_end?: string
-          window_start?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_generation_logs_family_id_fkey"
-            columns: ["family_id"]
-            isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_generation_logs_series_id_fkey"
-            columns: ["series_id"]
-            isOneToOne: false
-            referencedRelation: "task_series"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      task_series: {
-        Row: {
-          assigned_to: string | null
-          created_at: string
-          created_by: string
-          description: string | null
-          family_id: string
-          id: string
-          is_active: boolean
-          last_generated_date: string | null
-          last_generated_through: string | null
-          monthly_type: string | null
-          monthly_weekday_ordinal: number | null
-          next_due_date: string | null
-          points: number
-          recurring_days_of_week: number[] | null
-          recurring_end_date: string | null
-          recurring_frequency: string
-          recurring_interval: number
-          remaining_repetitions: number | null
-          repetition_count: number | null
-          skip_next_occurrence: boolean | null
-          start_date: string | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          assigned_to?: string | null
-          created_at?: string
-          created_by: string
-          description?: string | null
-          family_id: string
-          id?: string
-          is_active?: boolean
-          last_generated_date?: string | null
-          last_generated_through?: string | null
-          monthly_type?: string | null
-          monthly_weekday_ordinal?: number | null
-          next_due_date?: string | null
-          points?: number
-          recurring_days_of_week?: number[] | null
-          recurring_end_date?: string | null
-          recurring_frequency: string
-          recurring_interval?: number
-          remaining_repetitions?: number | null
-          repetition_count?: number | null
-          skip_next_occurrence?: boolean | null
-          start_date?: string | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          assigned_to?: string | null
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          family_id?: string
-          id?: string
-          is_active?: boolean
-          last_generated_date?: string | null
-          last_generated_through?: string | null
-          monthly_type?: string | null
-          monthly_weekday_ordinal?: number | null
-          next_due_date?: string | null
-          points?: number
-          recurring_days_of_week?: number[] | null
-          recurring_end_date?: string | null
-          recurring_frequency?: string
-          recurring_interval?: number
-          remaining_repetitions?: number | null
-          repetition_count?: number | null
-          skip_next_occurrence?: boolean | null
-          start_date?: string | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       tasks: {
         Row: {
           assigned_to: string | null
@@ -1238,9 +1052,7 @@ export type Database = {
           due_date: string | null
           family_id: string
           id: string
-          is_repeating: boolean
           points: number
-          series_id: string | null
           task_group: string | null
           title: string
           updated_at: string
@@ -1255,9 +1067,7 @@ export type Database = {
           due_date?: string | null
           family_id: string
           id?: string
-          is_repeating?: boolean
           points?: number
-          series_id?: string | null
           task_group?: string | null
           title: string
           updated_at?: string
@@ -1272,9 +1082,7 @@ export type Database = {
           due_date?: string | null
           family_id?: string
           id?: string
-          is_repeating?: boolean
           points?: number
-          series_id?: string | null
           task_group?: string | null
           title?: string
           updated_at?: string
@@ -1308,13 +1116,6 @@ export type Database = {
             referencedRelation: "families"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "tasks_series_id_fkey"
-            columns: ["series_id"]
-            isOneToOne: false
-            referencedRelation: "task_series"
-            referencedColumns: ["id"]
-          },
         ]
       }
     }
@@ -1337,10 +1138,6 @@ export type Database = {
       authenticate_member_pin_dashboard: {
         Args: { pin_attempt: string; profile_id_param: string }
         Returns: Json
-      }
-      calculate_next_due_date: {
-        Args: { series: Database["public"]["Tables"]["task_series"]["Row"] }
-        Returns: string
       }
       can_access_calendar_integration: {
         Args: { integration_profile_id: string }
