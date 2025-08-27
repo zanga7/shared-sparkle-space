@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useRecurringTasks } from '@/hooks/useRecurringTasks';
+import { useRecurringTaskInstances } from '@/hooks/useRecurringTaskInstances';
 import { useRotatingTasks } from '@/hooks/useRotatingTasks';
 import { Task, Profile } from '@/types/task';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
@@ -61,6 +62,20 @@ const ColumnBasedDashboard = () => {
   const [activeTab, setActiveTab] = useState('columns');
   const [selectedTaskGroup, setSelectedTaskGroup] = useState<string | null>(null);
   const { taskSeries } = useRecurringTasks(profile?.family_id);
+  
+  // Dynamic recurring task instances for current month
+  const currentDate = new Date();
+  const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+  
+  const { 
+    instances: recurringInstances, 
+    completeInstance,
+    loading: recurringLoading 
+  } = useRecurringTaskInstances(profile?.family_id, { 
+    start: monthStart, 
+    end: monthEnd 
+  });
   const { rotatingTasks, refreshRotatingTasks } = useRotatingTasks(profile?.family_id);
   
   // Dashboard mode state  
@@ -426,6 +441,37 @@ const ColumnBasedDashboard = () => {
           await Promise.all([fetchUserData(), refreshRotatingTasks()]);
           return;
         }
+      }
+
+      // Check if this is a generated recurring instance
+      const isGeneratedInstance = 'isGenerated' in task && task.isGenerated;
+      
+      if (isGeneratedInstance) {
+        // Handle recurring task instance completion
+        const completerId = dashboardMode && activeMemberId ? activeMemberId : profile.id;
+        await completeInstance(
+          task.id,
+          completerId,
+          (task as any).instanceDate,
+          task.series_id!
+        );
+        
+        // Award points to the completer
+        const completerProfile = familyMembers.find(m => m.id === completerId) || profile;
+        await supabase
+          .from('profiles')
+          .update({
+            total_points: completerProfile.total_points + task.points
+          })
+          .eq('id', completerId);
+          
+        toast({
+          title: 'Recurring Task Completed!',
+          description: `${completerProfile.display_name} earned ${task.points} points!`,
+        });
+        
+        await fetchUserData();
+        return;
       }
 
       // Regular task completion logic
