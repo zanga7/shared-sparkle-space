@@ -11,13 +11,13 @@ import { useTaskGeneration } from './useTaskGeneration';
  * 3. One source of truth for all tasks
  */
 export const useRecurringTasksSimplified = (familyId?: string, dateRange?: { start: Date; end: Date }) => {
+  const { toast } = useToast();
+  const { generateForDateRange, isGenerating } = useTaskGeneration();
+  
   const [taskSeries, setTaskSeries] = useState<TaskSeries[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dataReady, setDataReady] = useState(false);
   const generatedRef = useRef(false);
-  const { toast } = useToast();
-  const { generateForDateRange, isGenerating } = useTaskGeneration();
 
   // Calculate date range (default to current month)
   const getDateRange = useCallback(() => {
@@ -93,7 +93,7 @@ export const useRecurringTasksSimplified = (familyId?: string, dateRange?: { sta
 
   // Generate missing task instances using the unified edge function
   const generateMissingTasks = useCallback(async () => {
-    if (!familyId || !dataReady || generatedRef.current || isGenerating) return;
+    if (!familyId || generatedRef.current || isGenerating) return;
 
     generatedRef.current = true;
     const range = getDateRange();
@@ -111,12 +111,10 @@ export const useRecurringTasksSimplified = (familyId?: string, dateRange?: { sta
     } finally {
       generatedRef.current = false;
     }
-  }, [familyId, dataReady, getDateRange, generateForDateRange, fetchTasks, isGenerating]);
-
-  // Legacy function removed - now handled by unified edge function
+  }, [familyId, getDateRange, generateForDateRange, fetchTasks, isGenerating]);
 
   // Create a new recurring task series
-  const createTaskSeries = async (seriesData: Partial<TaskSeries> & { 
+  const createTaskSeries = useCallback(async (seriesData: Partial<TaskSeries> & { 
     title: string; 
     created_by: string; 
     recurring_frequency: string;
@@ -150,10 +148,10 @@ export const useRecurringTasksSimplified = (familyId?: string, dateRange?: { sta
       });
       throw error;
     }
-  };
+  }, [familyId, fetchTaskSeries, toast]);
 
   // Update task series
-  const updateTaskSeries = async (id: string, updates: Partial<TaskSeries>) => {
+  const updateTaskSeries = useCallback(async (id: string, updates: Partial<TaskSeries>) => {
     try {
       const { error } = await supabase
         .from('task_series')
@@ -176,10 +174,10 @@ export const useRecurringTasksSimplified = (familyId?: string, dateRange?: { sta
       });
       throw error;
     }
-  };
+  }, [fetchTaskSeries, toast]);
 
   // Complete a task
-  const completeTask = async (taskId: string, completedBy: string) => {
+  const completeTask = useCallback(async (taskId: string, completedBy: string) => {
     try {
       const task = tasks.find(t => t.id === taskId);
       if (!task) throw new Error('Task not found');
@@ -207,7 +205,13 @@ export const useRecurringTasksSimplified = (familyId?: string, dateRange?: { sta
         variant: 'destructive',
       });
     }
-  };
+  }, [tasks, fetchTasks, toast]);
+
+  const refresh = useCallback(async () => {
+    generatedRef.current = false;
+    await fetchTaskSeries();
+    await fetchTasks();
+  }, [fetchTaskSeries, fetchTasks]);
 
   // Initialize data
   useEffect(() => {
@@ -215,32 +219,23 @@ export const useRecurringTasksSimplified = (familyId?: string, dateRange?: { sta
 
     const loadData = async () => {
       setLoading(true);
-      setDataReady(false);
       generatedRef.current = false;
       
       try {
         await fetchTaskSeries();
         await fetchTasks();
-        setDataReady(true);
+        
+        // Generate tasks after a short delay to ensure data is loaded
+        setTimeout(() => {
+          generateMissingTasks();
+        }, 500);
       } finally {
         setLoading(false);
       }
     };
 
     loadData();
-  }, [familyId, fetchTaskSeries, fetchTasks]);
-
-  // Generate missing tasks when data is ready (only once per data load)
-  useEffect(() => {
-    if (dataReady && !loading && !generatedRef.current) {
-      // Delay to ensure all data is loaded
-      const timer = setTimeout(() => {
-        generateMissingTasks();
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [dataReady, loading, generateMissingTasks]);
+  }, [familyId, fetchTaskSeries, fetchTasks, generateMissingTasks]);
 
   return {
     taskSeries,
@@ -249,12 +244,6 @@ export const useRecurringTasksSimplified = (familyId?: string, dateRange?: { sta
     createTaskSeries,
     updateTaskSeries,
     completeTask,
-    refresh: async () => {
-      setDataReady(false);
-      generatedRef.current = false;
-      await fetchTaskSeries();
-      await fetchTasks();
-      setDataReady(true);
-    }
+    refresh
   };
 };
