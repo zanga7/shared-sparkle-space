@@ -114,9 +114,16 @@ export const useRecurringTasks = (familyId?: string) => {
       await fetchTaskSeries(); // Refresh the list
     } catch (error) {
       console.error('Error creating task series:', error);
+      
+      // Get more specific error message
+      let errorMessage = 'Failed to create recurring task series';
+      if (error?.message) {
+        errorMessage = `Failed to create recurring task series: ${error.message}`;
+      }
+      
       toast({
         title: 'Error',
-        description: 'Failed to create recurring task series',
+        description: errorMessage,
         variant: 'destructive',
       });
       throw error;
