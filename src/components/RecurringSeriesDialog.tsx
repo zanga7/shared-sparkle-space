@@ -16,7 +16,7 @@ import {
   User
 } from 'lucide-react';
 import { format, addDays, addWeeks, addMonths } from 'date-fns';
-import { useRecurringTasks } from '@/hooks/useRecurringTasks';
+import { useRecurringTasksSimplified } from '@/hooks/useRecurringTasksSimplified';
 import { useToast } from '@/hooks/use-toast';
 import { Profile, Task, TaskSeries } from '@/types/task';
 
@@ -37,7 +37,7 @@ export const RecurringSeriesDialog = ({
   onOpenChange, 
   onSeriesUpdated 
 }: RecurringSeriesDialogProps) => {
-  const { updateTaskSeries, deactivateTaskSeries } = useRecurringTasks(series?.family_id);
+  const { updateTaskSeries } = useRecurringTasksSimplified(series?.family_id);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -88,7 +88,7 @@ export const RecurringSeriesDialog = ({
     setLoading(true);
     try {
       if (series.is_active) {
-        await deactivateTaskSeries(series.id);
+        await updateTaskSeries(series.id, { is_active: false });
         toast({
           title: 'Series Paused',
           description: 'No new tasks will be generated',

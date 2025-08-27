@@ -34,8 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useRecurringTasks } from '@/hooks/useRecurringTasks';
-import { useRecurringTaskInstances } from '@/hooks/useRecurringTaskInstances';
+import { useRecurringTasksSimplified } from '@/hooks/useRecurringTasksSimplified';
 import { useRotatingTasks } from '@/hooks/useRotatingTasks';
 import { Task, Profile } from '@/types/task';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
@@ -61,18 +60,13 @@ const ColumnBasedDashboard = () => {
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('columns');
   const [selectedTaskGroup, setSelectedTaskGroup] = useState<string | null>(null);
-  const { taskSeries } = useRecurringTasks(profile?.family_id);
   
   // Dynamic recurring task instances for current month
   const currentDate = new Date();
   const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
   
-  const { 
-    instances: recurringInstances, 
-    completeInstance,
-    loading: recurringLoading 
-  } = useRecurringTaskInstances(profile?.family_id, { 
+  const { taskSeries, tasks: recurringInstances, loading: recurringLoading, completeTask: completeInstance } = useRecurringTasksSimplified(profile?.family_id, { 
     start: monthStart, 
     end: monthEnd 
   });
@@ -446,12 +440,7 @@ const ColumnBasedDashboard = () => {
       if (isGeneratedInstance) {
         // Handle recurring task instance completion
         const completerId = dashboardMode && activeMemberId ? activeMemberId : profile.id;
-        await completeInstance(
-          task.id,
-          completerId,
-          (task as any).instanceDate,
-          task.series_id!
-        );
+        await completeInstance(task.id, completerId);
         
         // Award points to the completer
         const completerProfile = familyMembers.find(m => m.id === completerId) || profile;

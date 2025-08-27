@@ -1281,6 +1281,10 @@ export type Database = {
         Args: { pin_attempt: string; profile_id_param: string }
         Returns: Json
       }
+      calculate_next_due_date: {
+        Args: { series: Database["public"]["Tables"]["task_series"]["Row"] }
+        Returns: string
+      }
       can_access_calendar_integration: {
         Args: { integration_profile_id: string }
         Returns: boolean
