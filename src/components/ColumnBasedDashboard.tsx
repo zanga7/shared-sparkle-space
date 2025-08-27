@@ -76,6 +76,11 @@ const ColumnBasedDashboard = () => {
     start: monthStart, 
     end: monthEnd 
   });
+  
+  // Debug logging
+  console.log('ColumnBasedDashboard: profile?.family_id:', profile?.family_id);
+  console.log('ColumnBasedDashboard: recurringInstances:', recurringInstances);
+  console.log('ColumnBasedDashboard: recurringLoading:', recurringLoading);
   const { rotatingTasks, refreshRotatingTasks } = useRotatingTasks(profile?.family_id);
   
   // Dashboard mode state  

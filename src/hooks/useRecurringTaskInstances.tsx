@@ -172,7 +172,12 @@ export const useRecurringTaskInstances = (familyId?: string, dateRange?: { start
   
   // Fetch recurring task series
   const fetchTaskSeries = async () => {
-    if (!familyId) return;
+    if (!familyId) {
+      console.log('useRecurringTaskInstances: No familyId provided');
+      return;
+    }
+    
+    console.log('useRecurringTaskInstances: Fetching task series for family:', familyId);
     
     try {
       const { data, error } = await supabase
@@ -181,24 +186,48 @@ export const useRecurringTaskInstances = (familyId?: string, dateRange?: { start
         .eq('family_id', familyId)
         .eq('is_active', true);
         
-      if (error) throw error;
-      setTaskSeries((data || []).map(item => ({
+      console.log('useRecurringTaskInstances: Query result:', { data, error });
+        
+      if (error) {
+        console.error('useRecurringTaskInstances: Database error:', error);
+        throw error;
+      }
+      
+      const processedData = (data || []).map(item => ({
         ...item,
         monthly_type: item.monthly_type as 'date' | 'weekday' | null
-      })));
+      }));
+      
+      console.log('useRecurringTaskInstances: Processed data:', processedData);
+      setTaskSeries(processedData);
+      
+      // Only show success/info message if there are actually series
+      if (processedData.length > 0) {
+        console.log(`useRecurringTaskInstances: Successfully loaded ${processedData.length} recurring task series`);
+      } else {
+        console.log('useRecurringTaskInstances: No recurring task series found (this is normal)');
+      }
     } catch (error) {
-      console.error('Error fetching task series:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load recurring tasks',
-        variant: 'destructive',
-      });
+      console.error('useRecurringTaskInstances: Error fetching task series:', error);
+      // Only show error toast for actual errors, not empty results
+      if (error.message && !error.message.includes('PGRST116')) {
+        toast({
+          title: 'Error',
+          description: `Failed to load recurring tasks: ${error.message}`,
+          variant: 'destructive',
+        });
+      }
     }
   };
   
   // Fetch task completions for the date range
   const fetchCompletions = async () => {
-    if (!familyId) return;
+    if (!familyId) {
+      console.log('useRecurringTaskInstances: No familyId for completions');
+      return;
+    }
+    
+    console.log('useRecurringTaskInstances: Fetching completions for date range:', effectiveDateRange);
     
     try {
       const { data, error } = await supabase
@@ -211,10 +240,15 @@ export const useRecurringTaskInstances = (familyId?: string, dateRange?: { start
         .lte('completed_at', effectiveDateRange.end.toISOString())
         .not('task.series_id', 'is', null);
         
-      if (error) throw error;
+      console.log('useRecurringTaskInstances: Completions result:', { data, error });
+        
+      if (error) {
+        console.error('useRecurringTaskInstances: Completions error:', error);
+        throw error;
+      }
       setCompletions(data || []);
     } catch (error) {
-      console.error('Error fetching completions:', error);
+      console.error('useRecurringTaskInstances: Error fetching completions:', error);
     }
   };
   
@@ -322,10 +356,14 @@ export const useRecurringTaskInstances = (familyId?: string, dateRange?: { start
   };
   
   useEffect(() => {
+    console.log('useRecurringTaskInstances: Effect triggered with familyId:', familyId, 'dateRange:', effectiveDateRange);
     if (familyId) {
       setLoading(true);
       Promise.all([fetchTaskSeries(), fetchCompletions()])
-        .finally(() => setLoading(false));
+        .finally(() => {
+          console.log('useRecurringTaskInstances: Loading complete');
+          setLoading(false);
+        });
     }
   }, [familyId, effectiveDateRange]);
   
