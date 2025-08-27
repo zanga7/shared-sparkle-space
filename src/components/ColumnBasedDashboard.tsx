@@ -756,20 +756,7 @@ const ColumnBasedDashboard = () => {
       if (needsUpdate) {
         console.log('Update data:', updateData);
 
-        // Update the task with all changes
-        const { error: updateError } = await supabase
-          .from('tasks')
-          .update(updateData)
-          .eq('id', taskId);
-
-        if (updateError) {
-          console.error('Database update error:', updateError);
-          throw updateError;
-        }
-
-        console.log('Task update successful, refreshing data...');
-
-        // Optimistically update local state to provide immediate feedback
+        // Optimistically update local state first for immediate visual feedback
         setTasks(prevTasks => prevTasks.map(task => {
           if (task.id === taskId) {
             return {
@@ -796,6 +783,19 @@ const ColumnBasedDashboard = () => {
           return task;
         }));
 
+        // Update the task in database
+        const { error: updateError } = await supabase
+          .from('tasks')
+          .update(updateData)
+          .eq('id', taskId);
+
+        if (updateError) {
+          console.error('Database update error:', updateError);
+          throw updateError;
+        }
+
+        console.log('Task update successful');
+
         const assignedMember = familyMembers.find(m => m.id === destInfo.memberId);
         let toastMessage = '';
         
@@ -814,14 +814,11 @@ const ColumnBasedDashboard = () => {
           title: 'Task updated successfully',
           description: toastMessage,
         });
-
-        // Refresh data in background to ensure consistency
-        setTimeout(() => refreshTasksOnly(), 100);
       }
     } catch (error) {
       console.error('Error updating task:', error);
-      // Rollback optimistic update on error
-      fetchUserData();
+      // Rollback optimistic update on error by refreshing from database
+      refreshTasksOnly();
       toast({
         title: 'Error',
         description: 'Failed to update task. Changes have been reverted.',
