@@ -1262,7 +1262,57 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      calendar_integrations_safe: {
+        Row: {
+          calendar_id: string | null
+          created_at: string | null
+          expires_at: string | null
+          has_access_token: boolean | null
+          has_refresh_token: boolean | null
+          id: string | null
+          integration_type: string | null
+          is_active: boolean | null
+          is_encrypted: boolean | null
+          is_expired: boolean | null
+          last_token_refresh: string | null
+          profile_id: string | null
+          token_refresh_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          calendar_id?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          has_access_token?: never
+          has_refresh_token?: never
+          id?: string | null
+          integration_type?: string | null
+          is_active?: boolean | null
+          is_encrypted?: never
+          is_expired?: never
+          last_token_refresh?: string | null
+          profile_id?: string | null
+          token_refresh_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          calendar_id?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          has_access_token?: never
+          has_refresh_token?: never
+          id?: string | null
+          integration_type?: string | null
+          is_active?: boolean | null
+          is_encrypted?: never
+          is_expired?: never
+          last_token_refresh?: string | null
+          profile_id?: string | null
+          token_refresh_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       approve_reward_request: {
@@ -1372,6 +1422,10 @@ export type Database = {
       encrypt_calendar_token: {
         Args: { token_value: string }
         Returns: string
+      }
+      encrypt_google_photos_tokens: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       encrypt_oauth_token: {
         Args: { token_type?: string; token_value: string }
@@ -1523,6 +1577,31 @@ export type Database = {
       get_profile_points_balance: {
         Args: { profile_id_param: string }
         Returns: number
+      }
+      get_profile_safe: {
+        Args: { profile_id_param: string }
+        Returns: {
+          avatar_url: string
+          calendar_edit_permission: string
+          can_add_for_parents: boolean
+          can_add_for_self: boolean
+          can_add_for_siblings: boolean
+          color: string
+          created_at: string
+          display_name: string
+          family_id: string
+          has_pin: boolean
+          id: string
+          require_pin_for_list_deletes: boolean
+          require_pin_to_complete_tasks: boolean
+          role: Database["public"]["Enums"]["user_role"]
+          sort_order: number
+          status: string
+          streak_count: number
+          total_points: number
+          updated_at: string
+          user_id: string
+        }[]
       }
       get_token_encryption_status: {
         Args: Record<PropertyKey, never>
@@ -1722,6 +1801,15 @@ export type Database = {
       validate_calendar_token_access: {
         Args: { integration_id: string; requesting_user_id?: string }
         Returns: boolean
+      }
+      validate_token_encryption: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          is_secure: boolean
+          table_name: string
+          total_count: number
+          unencrypted_count: number
+        }[]
       }
       verify_pin: {
         Args: { pin_hash: string; pin_text: string }
