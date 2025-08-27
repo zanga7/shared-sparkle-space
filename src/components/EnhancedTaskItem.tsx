@@ -47,17 +47,55 @@ export const EnhancedTaskItem = ({
 
   // Calculate streak for recurring tasks
   const calculateStreak = () => {
-    return 0; // No recurring tasks anymore
+    if (!task.series_id) return 0;
+    
+    const seriesTasks = allTasks
+      .filter(t => t.series_id === task.series_id && t.due_date)
+      .sort((a, b) => new Date(b.due_date!).getTime() - new Date(a.due_date!).getTime());
+    
+    let streak = 0;
+    for (const t of seriesTasks) {
+      const isTaskCompleted = t.task_completions && t.task_completions.length > 0;
+      const isDue = new Date(t.due_date!) <= new Date();
+      
+      if (isTaskCompleted) {
+        streak++;
+      } else if (isDue) {
+        break;
+      }
+    }
+    return streak;
   };
 
   // Calculate series progress
   const calculateSeriesProgress = () => {
-    return null; // No recurring tasks anymore
+    if (!task.series_id) return null;
+    
+    const seriesTasks = allTasks.filter(t => t.series_id === task.series_id);
+    const completedTasks = seriesTasks.filter(t => t.task_completions?.length);
+    
+    // Find current position in series
+    const sortedTasks = seriesTasks
+      .filter(t => t.due_date)
+      .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
+    
+    const currentIndex = sortedTasks.findIndex(t => t.id === task.id);
+    
+    return {
+      completed: completedTasks.length,
+      total: seriesTasks.length,
+      position: currentIndex + 1,
+      completionRate: seriesTasks.length > 0 ? Math.round((completedTasks.length / seriesTasks.length) * 100) : 0
+    };
   };
 
   // Calculate next due date for recurring tasks  
   const calculateNextDue = () => {
-    return null; // No recurring tasks anymore
+    if (!task.series_id || !task.due_date) return null;
+    
+    // For recurring tasks, we can't calculate next due date from task alone
+    // since recurring fields are now in task_series table
+    return null;
   };
 
   // Get days until due
@@ -177,6 +215,13 @@ export const EnhancedTaskItem = ({
               onClick={onEdit ? () => onEdit(task) : undefined}
             />
 
+            {/* Recurring Badge */}
+            {task.series_id && (
+              <Badge variant="outline" className="text-xs py-0 h-5 flex items-center gap-1">
+                <Repeat className="h-2.5 w-2.5" />
+                {streak > 0 ? `${streak}🔥` : 'Recurring'}
+              </Badge>
+            )}
 
             {/* Due Date */}
             {task.due_date && (
@@ -214,6 +259,21 @@ export const EnhancedTaskItem = ({
             )}
           </div>
 
+          {/* Compact Series Progress */}
+          {seriesProgress && task.series_id && seriesProgress.total > 1 && (
+            <div className="space-y-1 p-2 bg-muted/50 rounded-md">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  Progress
+                </span>
+                <span className="text-muted-foreground">
+                  {seriesProgress.completed}/{seriesProgress.total} ({seriesProgress.completionRate}%)
+                </span>
+              </div>
+              <Progress value={seriesProgress.completionRate} className="h-1.5" />
+            </div>
+          )}
         </div>
       </div>
     </div>

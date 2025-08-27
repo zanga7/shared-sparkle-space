@@ -72,7 +72,7 @@ interface CalendarViewProps {
 interface TaskFilters {
   assignedTo: string | 'all';
   status: 'all' | 'completed' | 'pending' | 'overdue';
-  taskType: 'all' | 'one-time';
+  taskType: 'all' | 'recurring' | 'one-time';
 }
 
 type ViewMode = 'today' | 'week' | 'month';
@@ -155,6 +155,11 @@ export const CalendarView = ({
         if (filters.status === 'overdue' && !isOverdue) return false;
       }
       
+      // Filter by task type
+      if (filters.taskType !== 'all') {
+        if (filters.taskType === 'recurring' && !task.is_repeating) return false;
+        if (filters.taskType === 'one-time' && task.is_repeating) return false;
+      }
       
       return true;
     });
@@ -258,9 +263,25 @@ export const CalendarView = ({
     };
   }, [filteredTasks, currentDate, familyMembers]);
 
-  // Calculate streaks for tasks
+  // Calculate streaks for recurring tasks
   const calculateStreak = (task: Task) => {
-    return 0; // No streaks without recurring functionality
+    if (!task.series_id) return 0;
+    
+    const seriesTasks = tasks.filter(t => t.series_id === task.series_id && t.due_date);
+    const sortedTasks = seriesTasks.sort((a, b) => new Date(b.due_date!).getTime() - new Date(a.due_date!).getTime());
+    
+    let streak = 0;
+    for (const t of sortedTasks) {
+      const isCompleted = t.task_completions && t.task_completions.length > 0;
+      const isDue = new Date(t.due_date!) <= new Date();
+      
+      if (isCompleted) {
+        streak++;
+      } else if (isDue) {
+        break;
+      }
+    }
+    return streak;
   };
 
   // Handle navigation
@@ -738,7 +759,7 @@ export const CalendarView = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  
+                  <SelectItem value="recurring">Recurring</SelectItem>
                   <SelectItem value="one-time">One-time</SelectItem>
                 </SelectContent>
               </Select>
