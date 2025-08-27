@@ -1183,10 +1183,6 @@ export type Database = {
           id: string
           is_repeating: boolean
           points: number
-          recurring_days_of_week: number[] | null
-          recurring_end_date: string | null
-          recurring_frequency: string | null
-          recurring_interval: number | null
           series_id: string | null
           task_group: string | null
           title: string
@@ -1204,10 +1200,6 @@ export type Database = {
           id?: string
           is_repeating?: boolean
           points?: number
-          recurring_days_of_week?: number[] | null
-          recurring_end_date?: string | null
-          recurring_frequency?: string | null
-          recurring_interval?: number | null
           series_id?: string | null
           task_group?: string | null
           title: string
@@ -1225,10 +1217,6 @@ export type Database = {
           id?: string
           is_repeating?: boolean
           points?: number
-          recurring_days_of_week?: number[] | null
-          recurring_end_date?: string | null
-          recurring_frequency?: string | null
-          recurring_interval?: number | null
           series_id?: string | null
           task_group?: string | null
           title?: string
