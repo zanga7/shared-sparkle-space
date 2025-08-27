@@ -14,6 +14,7 @@ export interface Task {
   recurring_end_date: string | null;
   series_id: string | null;
   completion_rule: 'any_one' | 'everyone'; // New field for completion behavior
+  task_group?: string | null; // Task group field for organizing tasks
   assigned_profile?: {
     id: string;
     display_name: string;

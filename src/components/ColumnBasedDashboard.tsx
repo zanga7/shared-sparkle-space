@@ -209,6 +209,7 @@ const ColumnBasedDashboard = () => {
                 assigned_to,
                 created_by,
                 completion_rule,
+                task_group,
                 recurring_frequency,
                 recurring_interval,
                 recurring_days_of_week,
@@ -275,6 +276,7 @@ const ColumnBasedDashboard = () => {
           assigned_to,
           created_by,
           completion_rule,
+          task_group,
           recurring_frequency,
           recurring_interval,
           recurring_days_of_week,
@@ -645,42 +647,63 @@ const ColumnBasedDashboard = () => {
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
+    console.log('Drag operation started:', {
+      taskId: draggableId,
+      source: source.droppableId,
+      destination: destination?.droppableId,
+      sourceIndex: source.index,
+      destinationIndex: destination?.index
+    });
+
     // If dropped outside a droppable area
     if (!destination) {
+      console.log('Drag cancelled - dropped outside droppable area');
       return;
     }
 
     // If dropped in the same position
     if (destination.droppableId === source.droppableId && destination.index === source.index) {
+      console.log('Drag cancelled - same position');
       return;
     }
 
     const taskId = draggableId;
+    const task = tasks.find(t => t.id === taskId);
     
-    console.log('Drag end - source:', source.droppableId, 'destination:', destination.droppableId);
+    if (!task) {
+      console.error('Task not found for drag operation:', taskId);
+      toast({
+        title: 'Error',
+        description: 'Task not found. Please refresh and try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    console.log('Drag end - task found:', task.title, 'source:', source.droppableId, 'destination:', destination.droppableId);
     
     // Parse droppable IDs to handle both member columns and group containers
     const parseDroppableId = (id: string) => {
       if (id === 'unassigned') return { memberId: null, group: null };
       
       // Check if it's a member ID only (36 characters UUID)
-      if (id.length === 36) {
+      if (id.length === 36 && id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
         return { memberId: id, group: null };
       }
       
       // Check if it's a member-group combination (UUID-group format)
       const parts = id.split('-');
-      if (parts.length >= 6) { // UUID has 5 parts when split by -, plus group makes 6
+      if (parts.length >= 6) { // UUID has 5 parts when split by -, plus group makes 6+
         const memberId = parts.slice(0, 5).join('-'); // Reconstruct UUID
         const group = parts.slice(5).join('-'); // Get group name (could have dashes)
         
-        // Validate that it's a proper UUID (36 characters)
-        if (memberId.length === 36) {
+        // Validate that it's a proper UUID format and length
+        if (memberId.length === 36 && memberId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
           return { memberId, group };
         }
       }
       
-      console.error('Invalid droppable ID:', id);
+      console.error('Invalid droppable ID format:', id, 'Expected: UUID or UUID-group');
       return { memberId: null, group: null };
     };
     
@@ -723,10 +746,10 @@ const ColumnBasedDashboard = () => {
       
       // Handle task group change
       if (destInfo.group && destInfo.group !== sourceInfo.group) {
-        // Set due date based on group
-        const newDueDate = getGroupDueDate(destInfo.group as TaskGroup);
-        updateData.due_date = newDueDate;
-        updateData.task_group = destInfo.group; // Add task_group field update
+        console.log('Updating task group from', sourceInfo.group, 'to', destInfo.group);
+        // Set both task_group and due_date for consistency
+        updateData.task_group = destInfo.group;
+        updateData.due_date = getGroupDueDate(destInfo.group as TaskGroup);
         needsUpdate = true;
       }
       
@@ -744,6 +767,35 @@ const ColumnBasedDashboard = () => {
           throw updateError;
         }
 
+        console.log('Task update successful, refreshing data...');
+
+        // Optimistically update local state to provide immediate feedback
+        setTasks(prevTasks => prevTasks.map(task => {
+          if (task.id === taskId) {
+            return {
+              ...task,
+              ...updateData,
+              // Update assignees if member changed
+              ...(destInfo.memberId !== sourceInfo.memberId && {
+                assigned_to: destInfo.memberId,
+                assignees: destInfo.memberId ? [{
+                  id: crypto.randomUUID(),
+                  profile_id: destInfo.memberId,
+                  assigned_at: new Date().toISOString(),
+                  assigned_by: profile?.id || '',
+                  profile: familyMembers.find(m => m.id === destInfo.memberId) || {
+                    id: destInfo.memberId,
+                    display_name: 'Unknown',
+                    role: 'child' as const,
+                    color: 'gray'
+                  }
+                }] : []
+              })
+            };
+          }
+          return task;
+        }));
+
         const assignedMember = familyMembers.find(m => m.id === destInfo.memberId);
         let toastMessage = '';
         
@@ -759,20 +811,66 @@ const ColumnBasedDashboard = () => {
         }
 
         toast({
-          title: 'Task updated',
+          title: 'Task updated successfully',
           description: toastMessage,
         });
 
-        // Refresh data to show updated assignments
-        fetchUserData();
+        // Refresh data in background to ensure consistency
+        setTimeout(() => refreshTasksOnly(), 100);
       }
     } catch (error) {
       console.error('Error updating task:', error);
+      // Rollback optimistic update on error
+      fetchUserData();
       toast({
         title: 'Error',
-        description: 'Failed to update task. Please try again.',
+        description: 'Failed to update task. Changes have been reverted.',
         variant: 'destructive',
       });
+    }
+  };
+
+  // Efficient task refresh without full page reload
+  const refreshTasksOnly = async () => {
+    if (!profile?.family_id) return;
+    
+    try {
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('tasks')
+        .select(`
+          id,
+          title,
+          description,
+          points,
+          is_repeating,
+          due_date,
+          assigned_to,
+          created_by,
+          completion_rule,
+          task_group,
+          recurring_frequency,
+          recurring_interval,
+          recurring_days_of_week,
+          recurring_end_date,
+          series_id,
+          assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
+          assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
+          task_completions(id, completed_at, completed_by)
+        `)
+        .eq('family_id', profile.family_id);
+
+      if (!tasksError && tasksData) {
+        const typedTasks = tasksData.map(task => ({
+          ...task,
+          completion_rule: (task.completion_rule || 'everyone') as 'any_one' | 'everyone'
+        }));
+        setTasks(typedTasks);
+        console.log('Tasks refreshed successfully');
+      } else if (tasksError) {
+        console.error('Error refreshing tasks:', tasksError);
+      }
+    } catch (error) {
+      console.error('Error in refreshTasksOnly:', error);
     }
   };
 
@@ -888,6 +986,15 @@ const ColumnBasedDashboard = () => {
   type TaskGroup = 'morning' | 'midday' | 'afternoon' | 'general';
   
   const getTaskGroup = (task: Task): TaskGroup => {
+    // Priority 1: Use task_group field if explicitly set
+    if (task.task_group) {
+      const validGroups = ['morning', 'midday', 'afternoon', 'general'];
+      if (validGroups.includes(task.task_group)) {
+        return task.task_group as TaskGroup;
+      }
+    }
+    
+    // Priority 2: Fall back to due_date calculation for backwards compatibility
     if (!task.due_date) return 'general';
     
     const dueDate = new Date(task.due_date);
