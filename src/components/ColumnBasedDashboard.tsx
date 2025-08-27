@@ -2,24 +2,18 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { UserAvatar } from '@/components/ui/user-avatar';
-import { getMemberColorClasses } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, CheckCircle, Clock, Edit, Trash2, Calendar, List, Users, Gift, Settings, Sun, Clock3, Moon, FileText } from 'lucide-react';
+import { Plus, CheckCircle, Clock, Calendar, List, Users, Gift, Sun, Clock3, Moon, FileText } from 'lucide-react';
 import { NavigationHeader } from '@/components/NavigationHeader';
-import { AddButton } from '@/components/ui/add-button';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
 import { EditTaskDialog } from '@/components/EditTaskDialog';
 import { CalendarView } from '@/components/CalendarView';
-import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
 import { RewardsGallery } from '@/components/rewards/RewardsGallery';
 import { ChildAuthProvider } from '@/hooks/useChildAuth';
 import Lists from '@/pages/Lists';
@@ -34,11 +28,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Task, Profile } from '@/types/task';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import { useDashboardAuth } from '@/hooks/useDashboardAuth';
-import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
-import { MemberSwitchDialog } from '@/components/dashboard/MemberSwitchDialog';
-import { MemberSelectorDialog } from '@/components/dashboard/MemberSelectorDialog';
 
 const ColumnBasedDashboard = () => {
   const { user, signOut } = useAuth();
@@ -50,24 +39,7 @@ const ColumnBasedDashboard = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
   const [currentTab, setCurrentTab] = useState('today');
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  // Dashboard auth state
-  const {
-    isDashboardMode,
-    activeMember,
-    setActiveMember,
-    isParent,
-    showMemberSelector,
-    setShowMemberSelector,
-    showPinDialog,
-    setShowPinDialog,
-    showMemberSwitch,
-    setShowMemberSwitch,
-    selectedMemberForPin,
-    setSelectedMemberForPin,
-    handleDashboardLogout
-  } = useDashboardAuth();
+  const [selectedMember, setSelectedMember] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProfile();
@@ -107,13 +79,6 @@ const ColumnBasedDashboard = () => {
         .select(`
           *,
           assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
-          assignees:task_assignees(
-            id,
-            profile_id,
-            assigned_at,
-            assigned_by,
-            profile:profiles(id, display_name, role, color)
-          ),
           task_completions(id, completed_at, completed_by)
         `)
         .eq('family_id', familyId)
@@ -121,9 +86,10 @@ const ColumnBasedDashboard = () => {
 
       if (error) throw error;
 
-      const formattedTasks = tasksData?.map(task => ({
+      const formattedTasks: Task[] = tasksData?.map(task => ({
         ...task,
-        completion_rule: task.completion_rule || 'everyone'
+        completion_rule: (task.completion_rule as 'any_one' | 'everyone') || 'everyone',
+        assignees: [], // Simplified for now
       })) || [];
 
       setTasks(formattedTasks);
@@ -141,7 +107,7 @@ const ColumnBasedDashboard = () => {
 
   const handleTaskComplete = async (task: Task) => {
     try {
-      const completerId = activeMember?.id || profile?.id;
+      const completerId = profile?.id;
       if (!completerId) return;
 
       // Add completion
@@ -159,7 +125,7 @@ const ColumnBasedDashboard = () => {
       const { error: pointsError } = await supabase
         .from('profiles')
         .update({ 
-          total_points: (activeMember?.total_points || profile?.total_points || 0) + task.points 
+          total_points: (profile?.total_points || 0) + task.points 
         })
         .eq('id', completerId);
 
@@ -233,7 +199,6 @@ const ColumnBasedDashboard = () => {
     if (profile?.family_id) {
       fetchTasks(profile.family_id);
     }
-    setRefreshKey(prev => prev + 1);
   };
 
   const handleTaskEdited = () => {
@@ -241,11 +206,6 @@ const ColumnBasedDashboard = () => {
       fetchTasks(profile.family_id);
     }
     setEditingTask(null);
-  };
-
-  const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-    // Handle task reordering if needed
   };
 
   const getTasksByStatus = () => {
@@ -282,13 +242,70 @@ const ColumnBasedDashboard = () => {
 
   const tasksByStatus = getTasksByStatus();
 
-  const getTaskGroupIcon = (group: string) => {
-    switch (group) {
-      case 'morning': return <Sun className="h-4 w-4" />;
-      case 'afternoon': return <Clock3 className="h-4 w-4" />;
-      case 'evening': return <Moon className="h-4 w-4" />;
-      default: return <FileText className="h-4 w-4" />;
-    }
+  // Simple TaskItem component for display
+  const SimpleTaskItem = ({ task, onComplete, onEdit, onDelete }: {
+    task: Task;
+    onComplete?: () => void;
+    onEdit?: () => void;
+    onDelete?: () => void;
+  }) => {
+    const isCompleted = task.task_completions && task.task_completions.length > 0;
+    const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !isCompleted;
+    
+    return (
+      <Card className={cn(
+        "p-3",
+        isCompleted && "opacity-60",
+        isOverdue && "border-destructive/50"
+      )}>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <h4 className={cn(
+              "font-medium text-sm",
+              isCompleted && "line-through"
+            )}>
+              {task.title}
+            </h4>
+            {task.description && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {task.description}
+              </p>
+            )}
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="secondary" className="text-xs">
+                {task.points} pts
+              </Badge>
+              {task.due_date && (
+                <Badge variant={isOverdue ? "destructive" : "outline"} className="text-xs">
+                  {format(new Date(task.due_date), 'MMM d')}
+                </Badge>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            {!isCompleted && onComplete && (
+              <Button size="sm" variant="ghost" onClick={onComplete}>
+                <CheckCircle className="h-4 w-4" />
+              </Button>
+            )}
+            {onEdit && (
+              <Button size="sm" variant="ghost" onClick={onEdit}>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </Button>
+            )}
+            {onDelete && (
+              <Button size="sm" variant="ghost" onClick={onDelete}>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </Button>
+            )}
+          </div>
+        </div>
+      </Card>
+    );
   };
 
   if (loading) {
@@ -315,228 +332,167 @@ const ColumnBasedDashboard = () => {
     );
   }
 
-  const displayMember = activeMember || profile;
-
   return (
     <ChildAuthProvider>
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
         <NavigationHeader
-          profile={displayMember}
           familyMembers={familyMembers}
-          isDashboardMode={isDashboardMode}
-          isParent={isParent}
-          onMemberSwitch={isDashboardMode ? () => setShowMemberSwitch(true) : undefined}
-          onLogout={isDashboardMode ? handleDashboardLogout : undefined}
+          selectedMember={selectedMember}
+          onMemberSelect={setSelectedMember}
+          onSettingsClick={() => {}}
+          activeTab={currentTab}
+          onTabChange={setCurrentTab}
         />
         
         <div className="container mx-auto px-4 py-6">
           <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
             <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="today" className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Today
-              </TabsTrigger>
-              <TabsTrigger value="calendar" className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Calendar
-              </TabsTrigger>
-              <TabsTrigger value="lists" className="flex items-center gap-2">
-                <List className="h-4 w-4" />
-                Lists
-              </TabsTrigger>
-              <TabsTrigger value="rewards" className="flex items-center gap-2">
-                <Gift className="h-4 w-4" />
-                Rewards
-              </TabsTrigger>
-              <TabsTrigger value="family" className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Family
-              </TabsTrigger>
+              <TabsTrigger value="today">Today</TabsTrigger>
+              <TabsTrigger value="calendar">Calendar</TabsTrigger>
+              <TabsTrigger value="lists">Lists</TabsTrigger>
+              <TabsTrigger value="rewards">Rewards</TabsTrigger>
+              <TabsTrigger value="family">Family</TabsTrigger>
             </TabsList>
 
             <TabsContent value="today" className="space-y-6 mt-6">
               <div className="flex justify-between items-center">
                 <div>
                   <h1 className="text-3xl font-bold tracking-tight">
-                    Welcome back, {displayMember.display_name}!
+                    Welcome back, {profile.display_name}!
                   </h1>
                   <p className="text-muted-foreground">
-                    You have {displayMember.total_points} points
+                    You have {profile.total_points} points
                   </p>
                 </div>
                 <AddTaskDialog
                   familyMembers={familyMembers}
                   familyId={profile.family_id}
-                  profileId={displayMember.id}
+                  profileId={profile.id}
                   onTaskCreated={handleTaskCreated}
                 />
               </div>
 
-              <DragDropContext onDragEnd={handleDragEnd}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {/* Overdue Tasks */}
-                  <Card className="border-destructive/20">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-destructive flex items-center gap-2">
-                        <Clock className="h-5 w-5" />
-                        Overdue ({tasksByStatus.overdue.length})
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Droppable droppableId="overdue">
-                        {(provided) => (
-                          <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-                            {tasksByStatus.overdue.map((task, index) => (
-                              <Draggable key={task.id} draggableId={task.id} index={index}>
-                                {(provided) => (
-                                  <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                  >
-                                    <EnhancedTaskItem
-                                      task={task}
-                                      onComplete={() => handleTaskComplete(task)}
-                                      onEdit={() => setEditingTask(task)}
-                                      onDelete={() => setDeletingTask(task)}
-                                      familyMembers={familyMembers}
-                                      isOverdue={true}
-                                    />
-                                  </div>
-                                )}
-                              </Draggable>
-                            ))}
-                            {provided.placeholder}
-                          </div>
-                        )}
-                      </Droppable>
-                    </CardContent>
-                  </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Overdue Tasks */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-destructive flex items-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      Overdue ({tasksByStatus.overdue.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {tasksByStatus.overdue.map((task) => (
+                        <SimpleTaskItem
+                          key={task.id}
+                          task={task}
+                          onComplete={() => handleTaskComplete(task)}
+                          onEdit={() => setEditingTask(task)}
+                          onDelete={() => setDeletingTask(task)}
+                        />
+                      ))}
+                      {tasksByStatus.overdue.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No overdue tasks
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  {/* Today's Tasks */}
-                  <Card className="border-warning/20">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-warning flex items-center gap-2">
-                        <Clock className="h-5 w-5" />
-                        Due Today ({tasksByStatus.today.length})
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Droppable droppableId="today">
-                        {(provided) => (
-                          <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-                            {tasksByStatus.today.map((task, index) => (
-                              <Draggable key={task.id} draggableId={task.id} index={index}>
-                                {(provided) => (
-                                  <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                  >
-                                    <EnhancedTaskItem
-                                      task={task}
-                                      onComplete={() => handleTaskComplete(task)}
-                                      onEdit={() => setEditingTask(task)}
-                                      onDelete={() => setDeletingTask(task)}
-                                      familyMembers={familyMembers}
-                                    />
-                                  </div>
-                                )}
-                              </Draggable>
-                            ))}
-                            {provided.placeholder}
-                          </div>
-                        )}
-                      </Droppable>
-                    </CardContent>
-                  </Card>
+                {/* Today's Tasks */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-warning flex items-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      Due Today ({tasksByStatus.today.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {tasksByStatus.today.map((task) => (
+                        <SimpleTaskItem
+                          key={task.id}
+                          task={task}
+                          onComplete={() => handleTaskComplete(task)}
+                          onEdit={() => setEditingTask(task)}
+                          onDelete={() => setDeletingTask(task)}
+                        />
+                      ))}
+                      {tasksByStatus.today.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No tasks due today
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  {/* Upcoming Tasks */}
-                  <Card className="border-primary/20">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-primary flex items-center gap-2">
-                        <Calendar className="h-5 w-5" />
-                        Upcoming ({tasksByStatus.upcoming.length})
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Droppable droppableId="upcoming">
-                        {(provided) => (
-                          <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-                            {tasksByStatus.upcoming.map((task, index) => (
-                              <Draggable key={task.id} draggableId={task.id} index={index}>
-                                {(provided) => (
-                                  <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                  >
-                                    <EnhancedTaskItem
-                                      task={task}
-                                      onComplete={() => handleTaskComplete(task)}
-                                      onEdit={() => setEditingTask(task)}
-                                      onDelete={() => setDeletingTask(task)}
-                                      familyMembers={familyMembers}
-                                    />
-                                  </div>
-                                )}
-                              </Draggable>
-                            ))}
-                            {provided.placeholder}
-                          </div>
-                        )}
-                      </Droppable>
-                    </CardContent>
-                  </Card>
+                {/* Upcoming Tasks */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-primary flex items-center gap-2">
+                      <Calendar className="h-5 w-5" />
+                      Upcoming ({tasksByStatus.upcoming.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {tasksByStatus.upcoming.map((task) => (
+                        <SimpleTaskItem
+                          key={task.id}
+                          task={task}
+                          onComplete={() => handleTaskComplete(task)}
+                          onEdit={() => setEditingTask(task)}
+                          onDelete={() => setDeletingTask(task)}
+                        />
+                      ))}
+                      {tasksByStatus.upcoming.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No upcoming tasks
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  {/* Completed Tasks */}
-                  <Card className="border-success/20">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-success flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5" />
-                        Completed ({tasksByStatus.completed.length})
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Droppable droppableId="completed">
-                        {(provided) => (
-                          <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-                            {tasksByStatus.completed.slice(0, 10).map((task, index) => (
-                              <Draggable key={task.id} draggableId={task.id} index={index}>
-                                {(provided) => (
-                                  <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                  >
-                                    <EnhancedTaskItem
-                                      task={task}
-                                      onEdit={() => setEditingTask(task)}
-                                      onDelete={() => setDeletingTask(task)}
-                                      familyMembers={familyMembers}
-                                      isCompleted={true}
-                                    />
-                                  </div>
-                                )}
-                              </Draggable>
-                            ))}
-                            {provided.placeholder}
-                          </div>
-                        )}
-                      </Droppable>
-                    </CardContent>
-                  </Card>
-                </div>
-              </DragDropContext>
+                {/* Completed Tasks */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-success flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5" />
+                      Completed ({tasksByStatus.completed.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {tasksByStatus.completed.slice(0, 10).map((task) => (
+                        <SimpleTaskItem
+                          key={task.id}
+                          task={task}
+                          onEdit={() => setEditingTask(task)}
+                          onDelete={() => setDeletingTask(task)}
+                        />
+                      ))}
+                      {tasksByStatus.completed.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No completed tasks
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             <TabsContent value="calendar" className="mt-6">
               <CalendarView
-                key={refreshKey}
                 familyMembers={familyMembers}
                 familyId={profile.family_id}
-                profileId={displayMember.id}
-                onTaskCreated={handleTaskCreated}
+                profile={profile}
+                tasks={tasks}
+                onTaskUpdated={handleTaskCreated}
               />
             </TabsContent>
 
@@ -545,7 +501,7 @@ const ColumnBasedDashboard = () => {
             </TabsContent>
 
             <TabsContent value="rewards" className="mt-6">
-              <RewardsGallery profileId={displayMember.id} />
+              <RewardsGallery selectedMemberId={profile.id} />
             </TabsContent>
 
             <TabsContent value="family" className="mt-6">
@@ -564,7 +520,6 @@ const ColumnBasedDashboard = () => {
                           <div className="flex items-center gap-3">
                             <UserAvatar
                               name={member.display_name}
-                              avatarUrl={member.avatar_url}
                               className="h-10 w-10"
                             />
                             <div>
@@ -576,7 +531,7 @@ const ColumnBasedDashboard = () => {
                           </div>
                           <div className="text-right">
                             <p className="font-medium">{member.total_points} points</p>
-                            <Badge variant="secondary" className={getMemberColorClasses(member.color)}>
+                            <Badge variant="secondary">
                               {member.color}
                             </Badge>
                           </div>
@@ -617,41 +572,6 @@ const ColumnBasedDashboard = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
-        {/* Dashboard mode dialogs */}
-        <MemberSelectorDialog
-          open={showMemberSelector}
-          onOpenChange={setShowMemberSelector}
-          familyMembers={familyMembers}
-          onSelectMember={(member) => {
-            setSelectedMemberForPin(member);
-            setShowMemberSelector(false);
-            setShowPinDialog(true);
-          }}
-        />
-
-        <MemberPinDialog
-          open={showPinDialog}
-          onOpenChange={setShowPinDialog}
-          member={selectedMemberForPin}
-          onSuccess={(member) => {
-            setActiveMember(member);
-            setShowPinDialog(false);
-            setSelectedMemberForPin(null);
-          }}
-        />
-
-        <MemberSwitchDialog
-          open={showMemberSwitch}
-          onOpenChange={setShowMemberSwitch}
-          currentMember={activeMember}
-          familyMembers={familyMembers}
-          onSelectMember={(member) => {
-            setSelectedMemberForPin(member);
-            setShowMemberSwitch(false);
-            setShowPinDialog(true);
-          }}
-        />
       </div>
     </ChildAuthProvider>
   );
