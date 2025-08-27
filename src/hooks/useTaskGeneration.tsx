@@ -17,7 +17,8 @@ export const useTaskGeneration = () => {
   const generateTasks = useCallback(async (
     familyId: string, 
     windowStart: Date, 
-    windowEnd: Date
+    windowEnd: Date,
+    retryCount = 0
   ): Promise<GenerationResult | null> => {
     
     // Prevent concurrent generation
@@ -30,7 +31,7 @@ export const useTaskGeneration = () => {
     setIsGenerating(true);
 
     try {
-      console.log(`Generating tasks for family ${familyId} from ${windowStart.toISOString()} to ${windowEnd.toISOString()}`);
+      console.log(`Generating tasks for family ${familyId} from ${windowStart.toISOString()} to ${windowEnd.toISOString()} (attempt ${retryCount + 1})`);
 
       const { data, error } = await supabase.functions.invoke('generate-tasks-unified', {
         body: {
@@ -64,9 +65,28 @@ export const useTaskGeneration = () => {
 
     } catch (error) {
       console.error('Error generating tasks:', error);
+      
+      // Implement exponential backoff for retries (max 3 attempts)
+      if (retryCount < 2) {
+        const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s exponential backoff
+        console.log(`Retrying task generation in ${delay}ms...`);
+        
+        setTimeout(() => {
+          generateTasks(familyId, windowStart, windowEnd, retryCount + 1);
+        }, delay);
+        
+        toast({
+          title: 'Generation Failed - Retrying',
+          description: `Attempt ${retryCount + 1} failed. Retrying in ${delay / 1000}s...`,
+          variant: 'default',
+        });
+        
+        return null;
+      }
+      
       toast({
         title: 'Generation Failed',
-        description: 'Failed to generate recurring tasks. Please try again.',
+        description: `Failed to generate recurring tasks after ${retryCount + 1} attempts. Please check logs.`,
         variant: 'destructive',
       });
       return null;

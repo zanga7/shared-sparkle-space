@@ -100,7 +100,7 @@ serve(async (req) => {
         // Update watermark
         await supabaseClient
           .from('task_series')
-          .update({ last_generated_through: window_end.toISOString().split('T')[0] })
+          .update({ last_generated_through: windowEnd.toISOString().split('T')[0] })
           .eq('id', series.id);
           
       } catch (error) {
