@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Task, TaskSeries } from '@/types/task';
@@ -168,10 +168,10 @@ export const useRecurringTaskInstances = (familyId?: string, dateRange?: { start
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     return { start, end };
-  }, [dateRange]);
+  }, [dateRange?.start?.getTime(), dateRange?.end?.getTime()]); // Use getTime() to avoid object reference issues
   
   // Fetch recurring task series
-  const fetchTaskSeries = async () => {
+  const fetchTaskSeries = useCallback(async () => {
     if (!familyId) {
       console.log('useRecurringTaskInstances: No familyId provided');
       return;
@@ -218,10 +218,10 @@ export const useRecurringTaskInstances = (familyId?: string, dateRange?: { start
         });
       }
     }
-  };
+  }, [familyId]);
   
   // Fetch task completions for the date range
-  const fetchCompletions = async () => {
+  const fetchCompletions = useCallback(async () => {
     if (!familyId) {
       console.log('useRecurringTaskInstances: No familyId for completions');
       return;
@@ -250,7 +250,7 @@ export const useRecurringTaskInstances = (familyId?: string, dateRange?: { start
     } catch (error) {
       console.error('useRecurringTaskInstances: Error fetching completions:', error);
     }
-  };
+  }, [familyId, effectiveDateRange.start.getTime(), effectiveDateRange.end.getTime()]);
   
   // Generate task instances for the date range
   const generatedInstances = useMemo(() => {
@@ -356,7 +356,7 @@ export const useRecurringTaskInstances = (familyId?: string, dateRange?: { start
   };
   
   useEffect(() => {
-    console.log('useRecurringTaskInstances: Effect triggered with familyId:', familyId, 'dateRange:', effectiveDateRange);
+    console.log('useRecurringTaskInstances: Effect triggered with familyId:', familyId);
     if (familyId) {
       setLoading(true);
       Promise.all([fetchTaskSeries(), fetchCompletions()])
@@ -365,7 +365,7 @@ export const useRecurringTaskInstances = (familyId?: string, dateRange?: { start
           setLoading(false);
         });
     }
-  }, [familyId, effectiveDateRange]);
+  }, [familyId]); // Removed effectiveDateRange from dependencies to prevent infinite loop
   
   return {
     instances: generatedInstances,
