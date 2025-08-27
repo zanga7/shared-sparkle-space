@@ -1262,57 +1262,7 @@ export type Database = {
       }
     }
     Views: {
-      calendar_integrations_safe: {
-        Row: {
-          calendar_id: string | null
-          created_at: string | null
-          expires_at: string | null
-          has_access_token: boolean | null
-          has_refresh_token: boolean | null
-          id: string | null
-          integration_type: string | null
-          is_active: boolean | null
-          is_encrypted: boolean | null
-          is_expired: boolean | null
-          last_token_refresh: string | null
-          profile_id: string | null
-          token_refresh_count: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          calendar_id?: string | null
-          created_at?: string | null
-          expires_at?: string | null
-          has_access_token?: never
-          has_refresh_token?: never
-          id?: string | null
-          integration_type?: string | null
-          is_active?: boolean | null
-          is_encrypted?: never
-          is_expired?: never
-          last_token_refresh?: string | null
-          profile_id?: string | null
-          token_refresh_count?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          calendar_id?: string | null
-          created_at?: string | null
-          expires_at?: string | null
-          has_access_token?: never
-          has_refresh_token?: never
-          id?: string | null
-          integration_type?: string | null
-          is_active?: boolean | null
-          is_encrypted?: never
-          is_expired?: never
-          last_token_refresh?: string | null
-          profile_id?: string | null
-          token_refresh_count?: number | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       approve_reward_request: {
@@ -1373,6 +1323,16 @@ export type Database = {
           calendar_id_param: string
           expires_at_param?: string
           integration_type_param: string
+          refresh_token_param?: string
+        }
+        Returns: Json
+      }
+      create_google_photos_integration_secure: {
+        Args: {
+          access_token_param: string
+          album_id_param?: string
+          album_name_param?: string
+          expires_at_param?: string
           refresh_token_param?: string
         }
         Returns: Json
@@ -1445,6 +1405,25 @@ export type Database = {
           integration_type: string
           is_active: boolean
           profile_id: string
+          updated_at: string
+        }[]
+      }
+      get_calendar_integrations_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          calendar_id: string
+          created_at: string
+          expires_at: string
+          has_access_token: boolean
+          has_refresh_token: boolean
+          id: string
+          integration_type: string
+          is_active: boolean
+          is_encrypted: boolean
+          is_expired: boolean
+          last_token_refresh: string
+          profile_id: string
+          token_refresh_count: number
           updated_at: string
         }[]
       }
@@ -1572,6 +1551,14 @@ export type Database = {
           total_points: number
           updated_at: string
           user_id: string
+        }[]
+      }
+      get_google_photos_tokens_for_api: {
+        Args: { integration_id_param: string }
+        Returns: {
+          access_token: string
+          expires_at: string
+          refresh_token: string
         }[]
       }
       get_profile_points_balance: {
