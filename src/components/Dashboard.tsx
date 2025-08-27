@@ -12,7 +12,6 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
 import { EditTaskDialog } from '@/components/EditTaskDialog';
-import { RecurringSeriesDialog } from '@/components/RecurringSeriesDialog';
 import { CalendarView } from '@/components/CalendarView';
 import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
 import {
@@ -25,8 +24,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useRecurringTasksSimplified } from '@/hooks/useRecurringTasksSimplified';
-import { GenerateRotatingTasksButton } from '@/components/GenerateRotatingTasksButton';
 import { Task, Profile } from '@/types/task';
 
 const Dashboard = () => {
@@ -38,10 +35,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
-  const [viewingSeries, setViewingSeries] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const { taskSeries } = useRecurringTasksSimplified(profile?.family_id);
 
   useEffect(() => {
     if (user) {
@@ -85,12 +80,10 @@ const Dashboard = () => {
           title,
           description,
           points,
-          is_repeating,
           due_date,
           assigned_to,
           created_by,
           completion_rule,
-          series_id,
           assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
           assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
           task_completions(id, completed_at, completed_by)
@@ -103,7 +96,8 @@ const Dashboard = () => {
         // Type assertion to handle completion_rule from database
         const typedTasks = (tasksData || []).map(task => ({
           ...task,
-          completion_rule: (task.completion_rule || 'everyone') as 'any_one' | 'everyone'
+          completion_rule: (task.completion_rule || 'everyone') as 'any_one' | 'everyone',
+          assignees: task.assignees || []
         }));
         setTasks(typedTasks);
       }
@@ -409,13 +403,10 @@ const Dashboard = () => {
                       </CardDescription>
                     </div>
                     {profile.role === 'parent' && (
-                      <div className="flex gap-2">
-                        <GenerateRotatingTasksButton onTasksGenerated={fetchUserData} />
-                        <Button onClick={() => setIsAddDialogOpen(true)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Task
-                        </Button>
-                      </div>
+                      <Button onClick={() => setIsAddDialogOpen(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Task
+                      </Button>
                     )}
                   </div>
                 </CardHeader>
@@ -444,74 +435,6 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              {/* Recurring Series Management Card */}
-              {taskSeries && taskSeries.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5" />
-                      Recurring Series
-                    </CardTitle>
-                    <CardDescription>
-                      Manage your recurring task series
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {taskSeries.map((series) => {
-                        const seriesTaskCount = tasks.filter(t => t.series_id === series.id).length;
-                        const completedCount = tasks.filter(t => 
-                          t.series_id === series.id && 
-                          t.task_completions && 
-                          t.task_completions.length > 0
-                        ).length;
-                        const completionRate = seriesTaskCount > 0 ? Math.round((completedCount / seriesTaskCount) * 100) : 0;
-                        
-                        return (
-                          <Card key={series.id} className="border-2 hover:bg-muted/50 transition-colors">
-                            <CardContent className="pt-4">
-                              <div className="space-y-3">
-                                <div className="flex items-start justify-between">
-                                  <h4 className="font-medium truncate">{series.title}</h4>
-                                  <Badge variant={series.is_active ? "default" : "secondary"} className="text-xs">
-                                    {series.is_active ? "Active" : "Paused"}
-                                  </Badge>
-                                </div>
-                                
-                                <div className="text-sm text-muted-foreground">
-                                  Every {series.recurring_interval} {series.recurring_frequency}
-                                  {series.recurring_interval > 1 ? 's' : ''}
-                                </div>
-                                
-                                <div className="grid grid-cols-2 gap-2 text-xs">
-                                  <div className="text-center">
-                                    <div className="font-bold text-lg">{seriesTaskCount}</div>
-                                    <div className="text-muted-foreground">Tasks</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="font-bold text-lg text-green-500">{completionRate}%</div>
-                                    <div className="text-muted-foreground">Complete</div>
-                                  </div>
-                                </div>
-                                
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="w-full"
-                                  onClick={() => setViewingSeries(series)}
-                                >
-                                  <Settings className="h-4 w-4 mr-1" />
-                                  Manage Series
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
 
             </div>
           </TabsContent>
@@ -543,17 +466,6 @@ const Dashboard = () => {
         />
       )}
 
-      {/* Recurring Series Dialog */}
-      {viewingSeries && (
-        <RecurringSeriesDialog
-          series={viewingSeries}
-          tasks={tasks}
-          familyMembers={familyMembers}
-          open={!!viewingSeries}
-          onOpenChange={(open) => !open && setViewingSeries(null)}
-          onSeriesUpdated={fetchUserData}
-        />
-      )}
 
       {/* Add Task Dialog */}
       {isAddDialogOpen && (
