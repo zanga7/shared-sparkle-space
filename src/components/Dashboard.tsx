@@ -25,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useRecurringTasks } from '@/hooks/useRecurringTasks';
+import { useRecurringTasksSimplified } from '@/hooks/useRecurringTasksSimplified';
 import { GenerateRotatingTasksButton } from '@/components/GenerateRotatingTasksButton';
 import { Task, Profile } from '@/types/task';
 
@@ -41,7 +41,7 @@ const Dashboard = () => {
   const [viewingSeries, setViewingSeries] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const { taskSeries } = useRecurringTasks(profile?.family_id);
+  const { taskSeries } = useRecurringTasksSimplified(profile?.family_id);
 
   useEffect(() => {
     if (user) {

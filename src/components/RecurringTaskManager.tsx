@@ -3,8 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, Users, RotateCcw, AlertCircle } from 'lucide-react';
-import { useRecurringTasks } from '@/hooks/useRecurringTasks';
-import { useRecurringTaskInstances } from '@/hooks/useRecurringTaskInstances';
+import { useRecurringTasksSimplified } from '@/hooks/useRecurringTasksSimplified';
 import { format, isToday, isPast } from 'date-fns';
 
 interface RecurringTaskManagerProps {
@@ -18,23 +17,19 @@ export const RecurringTaskManager: React.FC<RecurringTaskManagerProps> = ({
 }) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   
-  const { taskSeries, loading: seriesLoading } = useRecurringTasks(familyId);
-  
-  // Get instances for selected month
+  // Get month boundaries
   const monthStart = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
-  const monthEnd = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0);
+  const monthEnd = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0, 23, 59, 59);
   
   const { 
-    instances, 
-    loading: instancesLoading,
-    completeInstance,
-    refresh
-  } = useRecurringTaskInstances(familyId, { 
+    taskSeries, 
+    tasks: instances, 
+    loading, 
+    completeTask: completeInstance 
+  } = useRecurringTasksSimplified(familyId, { 
     start: monthStart, 
     end: monthEnd 
   });
-
-  const loading = seriesLoading || instancesLoading;
 
   const getInstanceStatus = (instance: any) => {
     const hasCompletions = instance.task_completions && instance.task_completions.length > 0;
@@ -120,7 +115,7 @@ export const RecurringTaskManager: React.FC<RecurringTaskManagerProps> = ({
             </div>
           </CardTitle>
           <CardDescription>
-            Dynamic recurring task instances - generated on demand without creating database clutter
+            NOW USING: Simplified recurring tasks - actual database records, no virtual instances
           </CardDescription>
         </CardHeader>
       </Card>
@@ -167,9 +162,9 @@ export const RecurringTaskManager: React.FC<RecurringTaskManagerProps> = ({
       {/* Generated Instances */}
       <Card>
         <CardHeader>
-          <CardTitle>Generated Task Instances ({instances.length})</CardTitle>
+          <CardTitle>Recurring Tasks ({instances.length})</CardTitle>
           <CardDescription>
-            These tasks are generated dynamically from your recurring rules
+            Real database records generated on-demand for viewing period
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -206,15 +201,9 @@ export const RecurringTaskManager: React.FC<RecurringTaskManagerProps> = ({
                       <Button
                         size="sm"
                         onClick={() => {
-                          // For demo purposes, complete with first family member
                           const completerId = familyMembers[0]?.id;
                           if (completerId) {
-                            completeInstance(
-                              instance.id,
-                              completerId,
-                              (instance as any).instanceDate,
-                              instance.series_id!
-                            );
+                            completeInstance(instance.id, completerId);
                           }
                         }}
                       >
@@ -233,13 +222,13 @@ export const RecurringTaskManager: React.FC<RecurringTaskManagerProps> = ({
       <Card className="border-dashed">
         <CardContent className="pt-6">
           <div className="text-sm text-muted-foreground space-y-2">
-            <h4 className="font-medium text-foreground">New Recurring Task System</h4>
+            <h4 className="font-medium text-foreground">Updated to Simplified System</h4>
             <ul className="space-y-1 list-disc list-inside">
-              <li>Recurring rules stored as single records in task_series table</li>
-              <li>Task instances generated dynamically for calendar/list views</li>
-              <li>Completing one instance doesn't affect the recurrence rule</li>
-              <li>No database clutter from pre-generated future tasks</li>
-              <li>Efficient querying and flexible rule modifications</li>
+              <li>✅ One source of truth: actual task records in database</li>
+              <li>✅ Generate tasks on-demand for current viewing period</li>
+              <li>✅ No complex virtual instances or memory overhead</li>
+              <li>✅ Predictable behavior and easier debugging</li>
+              <li>✅ Standard task operations work seamlessly</li>
             </ul>
           </div>
         </CardContent>
