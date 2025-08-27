@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Event } from '@/types/rotating-tasks';
+
 
 export const useEvents = (familyId?: string) => {
   const [events, setEvents] = useState<Event[]>([]);

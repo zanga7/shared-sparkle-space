@@ -4,20 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, Plus, Repeat, Users, User, Sun, Clock3, Moon, FileText } from 'lucide-react';
+import { CalendarIcon, Plus, Users, User, Sun, Clock3, Moon, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useRecurringTasks } from '@/hooks/useRecurringTasks';
 import { Profile } from '@/types/task';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
-import { RecurringOptionsForm } from '@/components/RecurringOptionsForm';
 
 interface AddTaskDialogProps {
   familyMembers: Profile[];
@@ -43,7 +40,6 @@ export const AddTaskDialog = ({
   preselectedTaskGroup
 }: AddTaskDialogProps) => {
   const { toast } = useToast();
-  const { createTaskSeries } = useRecurringTasks(familyId);
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   
@@ -59,16 +55,7 @@ export const AddTaskDialog = ({
     assigned_to: 'unassigned',
     assignees: [] as string[],
     due_date: selectedDate || null,
-    is_repeating: false,
     completion_rule: 'everyone' as 'any_one' | 'everyone',
-    recurring_frequency: 'weekly',
-    recurring_interval: 1,
-    recurring_days_of_week: [] as number[],
-    recurring_end_date: null as Date | null,
-    start_date: (selectedDate || new Date()).toISOString(),
-    repetition_count: null as number | null,
-    monthly_type: 'date' as 'date' | 'weekday',
-    monthly_weekday_ordinal: 1,
     task_group: preselectedTaskGroup || 'general',
   });
 
@@ -77,8 +64,7 @@ export const AddTaskDialog = ({
     if (selectedDate) {
       setFormData(prev => ({ 
         ...prev, 
-        due_date: selectedDate,
-        start_date: selectedDate.toISOString()
+        due_date: selectedDate
       }));
     }
   }, [selectedDate]);
@@ -109,17 +95,19 @@ export const AddTaskDialog = ({
       }));
       
       if (!selectedDate) {
-        const now = new Date();
-        let defaultDueDate = new Date();
+        let defaultDueDate = null;
         
         switch (preselectedTaskGroup) {
           case 'morning':
+            defaultDueDate = new Date();
             defaultDueDate.setHours(10, 0, 0, 0); // 10 AM
             break;
           case 'midday':
+            defaultDueDate = new Date();
             defaultDueDate.setHours(13, 0, 0, 0); // 1 PM
             break;
           case 'afternoon':
+            defaultDueDate = new Date();
             defaultDueDate.setHours(18, 0, 0, 0); // 6 PM
             break;
           case 'general':
@@ -131,8 +119,7 @@ export const AddTaskDialog = ({
         if (defaultDueDate) {
           setFormData(prev => ({ 
             ...prev, 
-            due_date: defaultDueDate,
-            start_date: defaultDueDate.toISOString()
+            due_date: defaultDueDate
           }));
         }
       }
@@ -143,7 +130,6 @@ export const AddTaskDialog = ({
   const getTaskGroupDueDate = (group: string) => {
     if (group === 'general') return null;
     
-    const now = new Date();
     const dueDate = new Date();
     
     switch (group) {
@@ -169,8 +155,7 @@ export const AddTaskDialog = ({
     setFormData(prev => ({
       ...prev,
       task_group: group,
-      due_date: selectedDate || newDueDate,
-      start_date: (selectedDate || newDueDate || new Date()).toISOString()
+      due_date: selectedDate || newDueDate
     }));
   };
 
@@ -188,108 +173,57 @@ export const AddTaskDialog = ({
     setLoading(true);
     
     try {
-      if (formData.is_repeating) {
-        // Create recurring task series
-        await createTaskSeries({
-          family_id: familyId,
-          title: formData.title.trim(),
-          description: formData.description.trim() || null,
-          points: formData.points,
-          assigned_to: formData.assigned_to === 'unassigned' ? null : formData.assigned_to,
-          created_by: profileId,
-          recurring_frequency: formData.recurring_frequency,
-          recurring_interval: formData.recurring_interval,
-          recurring_days_of_week: formData.recurring_frequency === 'weekly' 
-            ? formData.recurring_days_of_week : null,
-          recurring_end_date: formData.recurring_end_date?.toISOString() || null,
-          start_date: formData.start_date,
-          repetition_count: formData.repetition_count,
-          remaining_repetitions: formData.repetition_count,
-          monthly_type: formData.monthly_type,
-          monthly_weekday_ordinal: formData.monthly_weekday_ordinal,
-        });
-      } else {
-        // Create single task
-        const taskData = {
-          title: formData.title.trim(),
-          description: formData.description.trim() || null,
-          points: formData.points,
-          assigned_to: formData.assignees.length === 1 ? formData.assignees[0] : null, // For backward compatibility
-          due_date: formData.due_date?.toISOString() || null,
-          is_repeating: false,
-          completion_rule: formData.completion_rule,
-          family_id: familyId,
-          created_by: profileId
-        };
+      // Create single task
+      const taskData = {
+        title: formData.title.trim(),
+        description: formData.description.trim() || null,
+        points: formData.points,
+        assigned_to: formData.assignees.length === 1 ? formData.assignees[0] : null, // For backward compatibility
+        due_date: formData.due_date?.toISOString() || null,
+        completion_rule: formData.completion_rule,
+        family_id: familyId,
+        created_by: profileId
+      };
 
-        const { data: taskResult, error } = await supabase
-          .from('tasks')
-          .insert(taskData)
-          .select('id')
-          .single();
+      const { data: taskResult, error } = await supabase
+        .from('tasks')
+        .insert(taskData)
+        .select('id')
+        .single();
 
-        if (error) {
-          throw error;
-        }
+      if (error) {
+        throw error;
+      }
 
-        // Handle task assignment based on completion rule
-        if (formData.assignees.length > 0 && taskResult) {
-          if (formData.completion_rule === 'everyone' && formData.assignees.length > 1) {
-            // For "everyone" rule with multiple assignees: create separate task instances for each
-            const additionalTasks = [];
-            for (let i = 1; i < formData.assignees.length; i++) {
-              const duplicateTaskData = {
-                ...taskData,
-                assigned_to: formData.assignees[i], // Single assignee per instance
-              };
-              additionalTasks.push(duplicateTaskData);
+      // Handle task assignment based on completion rule
+      if (formData.assignees.length > 0 && taskResult) {
+        if (formData.completion_rule === 'everyone' && formData.assignees.length > 1) {
+          // For "everyone" rule with multiple assignees: create separate task instances for each
+          const additionalTasks = [];
+          for (let i = 1; i < formData.assignees.length; i++) {
+            const duplicateTaskData = {
+              ...taskData,
+              assigned_to: formData.assignees[i], // Single assignee per instance
+            };
+            additionalTasks.push(duplicateTaskData);
+          }
+
+          // Insert additional task instances
+          if (additionalTasks.length > 0) {
+            const { data: additionalTaskResults, error: additionalError } = await supabase
+              .from('tasks')
+              .insert(additionalTasks)
+              .select('id');
+
+            if (additionalError) {
+              throw additionalError;
             }
 
-            // Insert additional task instances
-            if (additionalTasks.length > 0) {
-              const { data: additionalTaskResults, error: additionalError } = await supabase
-                .from('tasks')
-                .insert(additionalTasks)
-                .select('id');
-
-              if (additionalError) {
-                throw additionalError;
-              }
-
-              // Create single assignee for each task instance (including the original)
-              const allTaskIds = [taskResult.id, ...(additionalTaskResults?.map(t => t.id) || [])];
-              const assigneeData = allTaskIds.map((taskId, index) => ({
-                task_id: taskId,
-                profile_id: formData.assignees[index],
-                assigned_by: profileId
-              }));
-
-              const { error: assigneeError } = await supabase
-                .from('task_assignees')
-                .insert(assigneeData);
-
-              if (assigneeError) {
-                throw assigneeError;
-              }
-            } else {
-              // Single assignee for the original task
-              const { error: assigneeError } = await supabase
-                .from('task_assignees')
-                .insert({
-                  task_id: taskResult.id,
-                  profile_id: formData.assignees[0],
-                  assigned_by: profileId
-                });
-
-              if (assigneeError) {
-                throw assigneeError;
-              }
-            }
-          } else {
-            // For "any_one" rule or single assignee: create assignees for shared task
-            const assigneeData = formData.assignees.map(assigneeProfileId => ({
-              task_id: taskResult.id,
-              profile_id: assigneeProfileId,
+            // Create single assignee for each task instance (including the original)
+            const allTaskIds = [taskResult.id, ...(additionalTaskResults?.map(t => t.id) || [])];
+            const assigneeData = allTaskIds.map((taskId, index) => ({
+              task_id: taskId,
+              profile_id: formData.assignees[index],
               assigned_by: profileId
             }));
 
@@ -300,14 +234,42 @@ export const AddTaskDialog = ({
             if (assigneeError) {
               throw assigneeError;
             }
+          } else {
+            // Single assignee for the original task
+            const { error: assigneeError } = await supabase
+              .from('task_assignees')
+              .insert({
+                task_id: taskResult.id,
+                profile_id: formData.assignees[0],
+                assigned_by: profileId
+              });
+
+            if (assigneeError) {
+              throw assigneeError;
+            }
+          }
+        } else {
+          // For "any_one" rule or single assignee: create assignees for shared task
+          const assigneeData = formData.assignees.map(assigneeProfileId => ({
+            task_id: taskResult.id,
+            profile_id: assigneeProfileId,
+            assigned_by: profileId
+          }));
+
+          const { error: assigneeError } = await supabase
+            .from('task_assignees')
+            .insert(assigneeData);
+
+          if (assigneeError) {
+            throw assigneeError;
           }
         }
-
-        toast({
-          title: 'Success',
-          description: 'Task created successfully!',
-        });
       }
+
+      toast({
+        title: 'Success',
+        description: 'Task created successfully!',
+      });
 
       // Reset form
       setFormData({
@@ -317,16 +279,7 @@ export const AddTaskDialog = ({
         assigned_to: 'unassigned',
         assignees: [],
         due_date: selectedDate || null,
-        is_repeating: false,
         completion_rule: 'everyone',
-        recurring_frequency: 'weekly',
-        recurring_interval: 1,
-        recurring_days_of_week: [],
-        recurring_end_date: null,
-        start_date: (selectedDate || new Date()).toISOString(),
-        repetition_count: null,
-        monthly_type: 'date',
-        monthly_weekday_ordinal: 1,
         task_group: preselectedTaskGroup || 'general',
       });
 
@@ -503,74 +456,32 @@ export const AddTaskDialog = ({
             </div>
           )}
 
-          {!formData.is_repeating && (
-            <div className="space-y-2">
-              <Label>Due Date (Optional)</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !formData.due_date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.due_date ? format(formData.due_date, "PPP") : "No due date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.due_date}
-                    onSelect={(date) => setFormData({ ...formData, due_date: date || null })}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          )}
-
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="repeating"
-              checked={formData.is_repeating}
-              onCheckedChange={(checked) => setFormData({ ...formData, is_repeating: checked })}
-            />
-            <Label htmlFor="repeating">Repeating task</Label>
+          <div className="space-y-2">
+            <Label>Due Date (Optional)</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !formData.due_date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formData.due_date ? format(formData.due_date, "PPP") : "No due date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={formData.due_date}
+                  onSelect={(date) => setFormData({ ...formData, due_date: date || null })}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
-
-          {/* Enhanced Recurring Options */}
-          {formData.is_repeating && (
-            <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Repeat className="h-4 w-4" />
-                Recurring Options
-              </div>
-
-              <RecurringOptionsForm
-                formData={{
-                  recurring_frequency: formData.recurring_frequency,
-                  recurring_interval: formData.recurring_interval,
-                  recurring_days_of_week: formData.recurring_days_of_week,
-                  recurring_end_date: formData.recurring_end_date?.toISOString() || '',
-                  start_date: formData.start_date,
-                  repetition_count: formData.repetition_count,
-                  monthly_type: formData.monthly_type,
-                  monthly_weekday_ordinal: formData.monthly_weekday_ordinal,
-                }}
-                onChange={(field, value) => {
-                  if (field === 'recurring_end_date') {
-                    setFormData(prev => ({ ...prev, recurring_end_date: value ? new Date(value) : null }));
-                  } else {
-                    setFormData(prev => ({ ...prev, [field]: value }));
-                  }
-                }}
-                selectedDate={formData.due_date}
-              />
-            </div>
-          )}
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>

@@ -18,7 +18,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
 import { EditTaskDialog } from '@/components/EditTaskDialog';
-import { RecurringSeriesDialog } from '@/components/RecurringSeriesDialog';
+
 import { CalendarView } from '@/components/CalendarView';
 import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
 import { RewardsGallery } from '@/components/rewards/RewardsGallery';
@@ -34,8 +34,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useRecurringTasks } from '@/hooks/useRecurringTasks';
-import { useRotatingTasks } from '@/hooks/useRotatingTasks';
 import { Task, Profile } from '@/types/task';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { useDashboardAuth } from '@/hooks/useDashboardAuth';
@@ -53,15 +51,13 @@ const ColumnBasedDashboard = () => {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
-  const [viewingSeries, setViewingSeries] = useState<any>(null);
+  
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedMemberForTask, setSelectedMemberForTask] = useState<string | null>(null);
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('columns');
   const [selectedTaskGroup, setSelectedTaskGroup] = useState<string | null>(null);
-  const { taskSeries } = useRecurringTasks(profile?.family_id);
-  const { rotatingTasks, refreshRotatingTasks } = useRotatingTasks(profile?.family_id);
   
   // Dashboard mode state  
   const [dashboardMode, setDashboardMode] = useState(false);
@@ -204,17 +200,11 @@ const ColumnBasedDashboard = () => {
                 title,
                 description,
                 points,
-                is_repeating,
                 due_date,
                 assigned_to,
                 created_by,
                 completion_rule,
                 task_group,
-                recurring_frequency,
-                recurring_interval,
-                recurring_days_of_week,
-                recurring_end_date,
-                series_id,
                 assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
                 assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
                 task_completions(id, completed_at, completed_by)
@@ -271,17 +261,11 @@ const ColumnBasedDashboard = () => {
           title,
           description,
           points,
-          is_repeating,
           due_date,
           assigned_to,
           created_by,
           completion_rule,
           task_group,
-          recurring_frequency,
-          recurring_interval,
-          recurring_days_of_week,
-          recurring_end_date,
-          series_id,
           assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
           assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
           task_completions(id, completed_at, completed_by)
@@ -391,42 +375,6 @@ const ColumnBasedDashboard = () => {
     if (!profile) return;
     
     try {
-      // Check if this is a rotating task
-      if (task.id.startsWith('rotating-')) {
-        const rotatingTaskId = task.id.replace('rotating-', '');
-        const rotatingTask = rotatingTasks.find(rt => rt.id === rotatingTaskId);
-        
-        if (rotatingTask) {
-          // Advance to next member in rotation
-          const nextIndex = (rotatingTask.current_member_index + 1) % rotatingTask.member_order.length;
-          await supabase
-            .from('rotating_tasks')
-            .update({ current_member_index: nextIndex })
-            .eq('id', rotatingTaskId);
-
-          // Award points to the current member
-          const currentMemberId = rotatingTask.member_order[rotatingTask.current_member_index];
-          const currentMember = familyMembers.find(m => m.id === currentMemberId);
-          
-          if (currentMember) {
-            await supabase
-              .from('profiles')
-              .update({
-                total_points: currentMember.total_points + task.points
-              })
-              .eq('id', currentMemberId);
-
-            toast({
-              title: 'Rotating Task Completed!',
-              description: `${currentMember.display_name} earned ${task.points} points! Next: ${familyMembers.find(m => m.id === rotatingTask.member_order[nextIndex])?.display_name}`,
-            });
-          }
-
-          // Refresh both user data and rotating tasks to reflect the change immediately
-          await Promise.all([fetchUserData(), refreshRotatingTasks()]);
-          return;
-        }
-      }
 
       // Regular task completion logic
       // Get all assignees for this task (including both old and new format)
@@ -947,7 +895,7 @@ const ColumnBasedDashboard = () => {
             assigned_to: currentMemberId,
             due_date: null,
             created_by: rotatingTask.created_by,
-            is_repeating: false,
+            
             completion_rule: 'everyone', // Rotating tasks default to everyone
             recurring_frequency: null,
             recurring_interval: null,
@@ -1560,16 +1508,6 @@ const ColumnBasedDashboard = () => {
         />
       )}
 
-      {viewingSeries && (
-        <RecurringSeriesDialog
-          open={!!viewingSeries}
-          onOpenChange={(open) => !open && setViewingSeries(null)}
-          series={viewingSeries}
-          tasks={tasks}
-          familyMembers={familyMembers}
-          onSeriesUpdated={fetchUserData}
-        />
-      )}
 
       <AlertDialog open={!!deletingTask} onOpenChange={(open) => !open && setDeletingTask(null)}>
         <AlertDialogContent>

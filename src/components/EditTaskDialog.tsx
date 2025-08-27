@@ -46,7 +46,7 @@ export const EditTaskDialog = ({ task, familyMembers, profile, open, onOpenChang
     recurring_end_date: null as Date | null,
   });
 
-  const isRecurringTask = !!task.series_id;
+  const isRecurringTask = false;
   const isCompleted = task.task_completions && task.task_completions.length > 0;
 
   useEffect(() => {
@@ -63,11 +63,6 @@ export const EditTaskDialog = ({ task, familyMembers, profile, open, onOpenChang
         assignees: currentAssignees,
         due_date: task.due_date ? new Date(task.due_date) : null,
         task_group: (task as any).task_group || 'general',
-        is_repeating: task.is_repeating || false,
-        recurring_frequency: task.recurring_frequency || 'daily',
-        recurring_interval: task.recurring_interval || 1,
-        recurring_days_of_week: task.recurring_days_of_week || [],
-        recurring_end_date: task.recurring_end_date ? new Date(task.recurring_end_date) : null,
       });
     }
   }, [task]);

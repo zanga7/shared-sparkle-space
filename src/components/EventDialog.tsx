@@ -12,7 +12,7 @@ import { UserAvatar } from '@/components/ui/user-avatar';
 import { CalendarIcon, Clock, MapPin, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { Profile } from '@/types/task';
-import { Event } from '@/types/rotating-tasks';
+
 import { cn } from '@/lib/utils';
 
 interface EventDialogProps {
