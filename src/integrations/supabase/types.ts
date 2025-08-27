@@ -1095,6 +1095,60 @@ export type Database = {
           },
         ]
       }
+      task_generation_logs: {
+        Row: {
+          created_at: string | null
+          duration_ms: number | null
+          error_message: string | null
+          family_id: string | null
+          id: string
+          inserted_count: number | null
+          series_id: string | null
+          skipped_count: number | null
+          window_end: string
+          window_start: string
+        }
+        Insert: {
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          family_id?: string | null
+          id?: string
+          inserted_count?: number | null
+          series_id?: string | null
+          skipped_count?: number | null
+          window_end: string
+          window_start: string
+        }
+        Update: {
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          family_id?: string | null
+          id?: string
+          inserted_count?: number | null
+          series_id?: string | null
+          skipped_count?: number | null
+          window_end?: string
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_generation_logs_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_generation_logs_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "task_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_series: {
         Row: {
           assigned_to: string | null
@@ -1105,6 +1159,7 @@ export type Database = {
           id: string
           is_active: boolean
           last_generated_date: string | null
+          last_generated_through: string | null
           monthly_type: string | null
           monthly_weekday_ordinal: number | null
           next_due_date: string | null
@@ -1129,6 +1184,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_generated_date?: string | null
+          last_generated_through?: string | null
           monthly_type?: string | null
           monthly_weekday_ordinal?: number | null
           next_due_date?: string | null
@@ -1153,6 +1209,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_generated_date?: string | null
+          last_generated_through?: string | null
           monthly_type?: string | null
           monthly_weekday_ordinal?: number | null
           next_due_date?: string | null

@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { TaskSeries, Task } from '@/types/task';
+import { useTaskGeneration } from './useTaskGeneration';
 
 /**
  * Simplified recurring tasks hook that follows a single pattern:
@@ -13,7 +14,10 @@ export const useRecurringTasksSimplified = (familyId?: string, dateRange?: { sta
   const [taskSeries, setTaskSeries] = useState<TaskSeries[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dataReady, setDataReady] = useState(false);
+  const generatedRef = useRef(false);
   const { toast } = useToast();
+  const { generateForDateRange, isGenerating } = useTaskGeneration();
 
   // Calculate date range (default to current month)
   const getDateRange = useCallback(() => {
@@ -87,129 +91,29 @@ export const useRecurringTasksSimplified = (familyId?: string, dateRange?: { sta
     }
   }, [familyId, getDateRange, toast]);
 
-  // Generate missing task instances for the current date range
+  // Generate missing task instances using the unified edge function
   const generateMissingTasks = useCallback(async () => {
-    if (!familyId || taskSeries.length === 0) return;
+    if (!familyId || !dataReady || generatedRef.current || isGenerating) return;
 
+    generatedRef.current = true;
     const range = getDateRange();
     
     try {
-      for (const series of taskSeries) {
-        await generateTasksForSeries(series, range.start, range.end);
-      }
+      console.log('Triggering unified task generation...');
+      const result = await generateForDateRange(familyId, range.start, range.end);
       
-      // Refresh tasks after generation
-      await fetchTasks();
+      if (result && result.inserted_count > 0) {
+        // Refresh tasks after generation
+        await fetchTasks();
+      }
     } catch (error) {
       console.error('Error generating missing tasks:', error);
+    } finally {
+      generatedRef.current = false;
     }
-  }, [familyId, taskSeries, getDateRange, fetchTasks]);
+  }, [familyId, dataReady, getDateRange, generateForDateRange, fetchTasks, isGenerating]);
 
-  // Generate tasks for a specific series within date range
-  const generateTasksForSeries = async (series: TaskSeries, startDate: Date, endDate: Date) => {
-    const existingTasks = tasks.filter(t => t.series_id === series.id);
-    const existingDates = new Set(
-      existingTasks.map(t => t.due_date?.split('T')[0])
-    );
-
-    let currentDate = new Date(series.start_date || series.created_at);
-    
-    // Ensure we don't go too far back
-    if (currentDate < startDate) {
-      currentDate = new Date(startDate);
-    }
-
-    const tasksToCreate = [];
-    let iterationCount = 0;
-    const maxIterations = 100; // Safety net
-
-    while (currentDate <= endDate && iterationCount < maxIterations) {
-      iterationCount++;
-      
-      // Check if we've reached the end date
-      if (series.recurring_end_date && currentDate > new Date(series.recurring_end_date)) {
-        break;
-      }
-
-      const dateKey = currentDate.toISOString().split('T')[0];
-      
-      // Only create if it doesn't already exist
-      if (!existingDates.has(dateKey)) {
-        tasksToCreate.push({
-          family_id: familyId,
-          title: series.title,
-          description: series.description,
-          points: series.points,
-          assigned_to: series.assigned_to,
-          due_date: new Date(currentDate).toISOString(),
-          created_by: series.created_by,
-          series_id: series.id,
-          is_repeating: true,
-          task_group: 'recurring',
-          completion_rule: 'everyone'
-        });
-      }
-
-      // Calculate next date
-      currentDate = getNextDate(currentDate, series);
-    }
-
-    // Batch insert new tasks
-    if (tasksToCreate.length > 0) {
-      const { error } = await supabase
-        .from('tasks')
-        .insert(tasksToCreate);
-        
-      if (error) {
-        console.error('Error creating recurring tasks:', error);
-        throw error;
-      }
-    }
-  };
-
-  // Calculate next occurrence date
-  const getNextDate = (currentDate: Date, series: TaskSeries): Date => {
-    const next = new Date(currentDate);
-    
-    switch (series.recurring_frequency) {
-      case 'daily':
-        next.setDate(next.getDate() + (series.recurring_interval || 1));
-        break;
-        
-      case 'weekly':
-        if (series.recurring_days_of_week && series.recurring_days_of_week.length > 0) {
-          // Find next occurrence in specified days
-          let daysToAdd = 1;
-          const maxDays = 7 * (series.recurring_interval || 1);
-          
-          while (daysToAdd <= maxDays) {
-            const testDate = new Date(currentDate);
-            testDate.setDate(testDate.getDate() + daysToAdd);
-            
-            if (series.recurring_days_of_week.includes(testDate.getDay())) {
-              return testDate;
-            }
-            daysToAdd++;
-          }
-          
-          // Fallback to interval weeks
-          next.setDate(next.getDate() + (7 * (series.recurring_interval || 1)));
-        } else {
-          next.setDate(next.getDate() + (7 * (series.recurring_interval || 1)));
-        }
-        break;
-        
-      case 'monthly':
-        next.setMonth(next.getMonth() + (series.recurring_interval || 1));
-        break;
-        
-      default:
-        // Fallback to daily
-        next.setDate(next.getDate() + 1);
-    }
-    
-    return next;
-  };
+  // Legacy function removed - now handled by unified edge function
 
   // Create a new recurring task series
   const createTaskSeries = async (seriesData: Partial<TaskSeries> & { 
@@ -311,9 +215,13 @@ export const useRecurringTasksSimplified = (familyId?: string, dateRange?: { sta
 
     const loadData = async () => {
       setLoading(true);
+      setDataReady(false);
+      generatedRef.current = false;
+      
       try {
         await fetchTaskSeries();
         await fetchTasks();
+        setDataReady(true);
       } finally {
         setLoading(false);
       }
@@ -322,23 +230,31 @@ export const useRecurringTasksSimplified = (familyId?: string, dateRange?: { sta
     loadData();
   }, [familyId, fetchTaskSeries, fetchTasks]);
 
-  // Generate missing tasks when series or date range changes
+  // Generate missing tasks when data is ready (only once per data load)
   useEffect(() => {
-    if (!loading && taskSeries.length > 0) {
-      generateMissingTasks();
+    if (dataReady && !loading && !generatedRef.current) {
+      // Delay to ensure all data is loaded
+      const timer = setTimeout(() => {
+        generateMissingTasks();
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
-  }, [taskSeries, generateMissingTasks, loading]);
+  }, [dataReady, loading, generateMissingTasks]);
 
   return {
     taskSeries,
     tasks,
-    loading,
+    loading: loading || isGenerating,
     createTaskSeries,
     updateTaskSeries,
     completeTask,
     refresh: async () => {
+      setDataReady(false);
+      generatedRef.current = false;
       await fetchTaskSeries();
       await fetchTasks();
+      setDataReady(true);
     }
   };
 };
