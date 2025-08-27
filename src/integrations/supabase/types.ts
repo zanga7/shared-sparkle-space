@@ -1408,6 +1408,25 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_calendar_integrations_metadata: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          calendar_id: string
+          created_at: string
+          expires_at: string
+          has_access_token: boolean
+          has_refresh_token: boolean
+          id: string
+          integration_type: string
+          is_active: boolean
+          is_encrypted: boolean
+          is_expired: boolean
+          last_token_refresh: string
+          profile_id: string
+          token_refresh_count: number
+          updated_at: string
+        }[]
+      }
       get_calendar_integrations_safe: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1503,6 +1522,32 @@ export type Database = {
           refresh_token: string
         }[]
       }
+      get_family_profiles_metadata: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          avatar_url: string
+          calendar_edit_permission: string
+          can_add_for_parents: boolean
+          can_add_for_self: boolean
+          can_add_for_siblings: boolean
+          color: string
+          created_at: string
+          display_name: string
+          family_id: string
+          has_pin: boolean
+          id: string
+          is_own_profile: boolean
+          require_pin_for_list_deletes: boolean
+          require_pin_to_complete_tasks: boolean
+          role: Database["public"]["Enums"]["user_role"]
+          sort_order: number
+          status: string
+          streak_count: number
+          total_points: number
+          updated_at: string
+          user_id: string
+        }[]
+      }
       get_family_profiles_safe: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1551,6 +1596,26 @@ export type Database = {
           total_points: number
           updated_at: string
           user_id: string
+        }[]
+      }
+      get_google_photos_integrations_metadata: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          album_id: string
+          album_name: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          family_id: string
+          has_access_token: boolean
+          has_refresh_token: boolean
+          id: string
+          is_active: boolean
+          is_encrypted: boolean
+          is_expired: boolean
+          last_sync_at: string
+          sync_count: number
+          updated_at: string
         }[]
       }
       get_google_photos_tokens_for_api: {
