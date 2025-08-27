@@ -89,13 +89,23 @@ export const EnhancedTaskItem = ({
     };
   };
 
-  // Calculate next due date for recurring tasks  
+  // Calculate next due date for recurring tasks
   const calculateNextDue = () => {
-    if (!task.series_id || !task.due_date) return null;
+    if (!task.series_id || !task.recurring_frequency || !task.due_date) return null;
     
-    // For recurring tasks, we can't calculate next due date from task alone
-    // since recurring fields are now in task_series table
-    return null;
+    const dueDate = new Date(task.due_date);
+    const interval = task.recurring_interval || 1;
+    
+    switch (task.recurring_frequency) {
+      case 'daily':
+        return addDays(dueDate, interval);
+      case 'weekly':
+        return addWeeks(dueDate, interval);
+      case 'monthly':
+        return addMonths(dueDate, interval);
+      default:
+        return null;
+    }
   };
 
   // Get days until due

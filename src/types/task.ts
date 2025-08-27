@@ -8,10 +8,13 @@ export interface Task {
   assigned_to: string | null; // Keep for backward compatibility
   created_by: string;
   is_repeating: boolean;
+  recurring_frequency: string | null;
+  recurring_interval: number | null;
+  recurring_days_of_week: number[] | null;
+  recurring_end_date: string | null;
   series_id: string | null;
   completion_rule: 'any_one' | 'everyone'; // New field for completion behavior
   task_group?: string | null; // Task group field for organizing tasks
-  family_id?: string; // Add family_id to Task interface
   assigned_profile?: {
     id: string;
     display_name: string;

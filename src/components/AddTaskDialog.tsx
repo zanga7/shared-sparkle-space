@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useRecurringTasksSimplified } from '@/hooks/useRecurringTasksSimplified';
+import { useRecurringTasks } from '@/hooks/useRecurringTasks';
 import { Profile } from '@/types/task';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 import { RecurringOptionsForm } from '@/components/RecurringOptionsForm';
@@ -43,7 +43,7 @@ export const AddTaskDialog = ({
   preselectedTaskGroup
 }: AddTaskDialogProps) => {
   const { toast } = useToast();
-  const { createTaskSeries } = useRecurringTasksSimplified(familyId);
+  const { createTaskSeries } = useRecurringTasks(familyId);
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   

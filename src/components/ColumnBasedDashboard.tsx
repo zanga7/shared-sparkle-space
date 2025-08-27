@@ -34,7 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useRecurringTasksSimplified } from '@/hooks/useRecurringTasksSimplified';
+import { useRecurringTasks } from '@/hooks/useRecurringTasks';
 import { useRotatingTasks } from '@/hooks/useRotatingTasks';
 import { Task, Profile } from '@/types/task';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
@@ -60,21 +60,7 @@ const ColumnBasedDashboard = () => {
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('columns');
   const [selectedTaskGroup, setSelectedTaskGroup] = useState<string | null>(null);
-  
-  // Dynamic recurring task instances for current month
-  const currentDate = new Date();
-  const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-  const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-  
-  const { taskSeries, tasks: recurringInstances, loading: recurringLoading, completeTask: completeInstance } = useRecurringTasksSimplified(profile?.family_id, { 
-    start: monthStart, 
-    end: monthEnd 
-  });
-  
-  // Debug logging
-  console.log('ColumnBasedDashboard: profile?.family_id:', profile?.family_id);
-  console.log('ColumnBasedDashboard: recurringInstances:', recurringInstances);
-  console.log('ColumnBasedDashboard: recurringLoading:', recurringLoading);
+  const { taskSeries } = useRecurringTasks(profile?.family_id);
   const { rotatingTasks, refreshRotatingTasks } = useRotatingTasks(profile?.family_id);
   
   // Dashboard mode state  
@@ -224,6 +210,10 @@ const ColumnBasedDashboard = () => {
                 created_by,
                 completion_rule,
                 task_group,
+                recurring_frequency,
+                recurring_interval,
+                recurring_days_of_week,
+                recurring_end_date,
                 series_id,
                 assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
                 assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
@@ -287,6 +277,10 @@ const ColumnBasedDashboard = () => {
           created_by,
           completion_rule,
           task_group,
+          recurring_frequency,
+          recurring_interval,
+          recurring_days_of_week,
+          recurring_end_date,
           series_id,
           assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
           assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
@@ -432,32 +426,6 @@ const ColumnBasedDashboard = () => {
           await Promise.all([fetchUserData(), refreshRotatingTasks()]);
           return;
         }
-      }
-
-      // Check if this is a generated recurring instance
-      const isGeneratedInstance = 'isGenerated' in task && task.isGenerated;
-      
-      if (isGeneratedInstance) {
-        // Handle recurring task instance completion
-        const completerId = dashboardMode && activeMemberId ? activeMemberId : profile.id;
-        await completeInstance(task.id, completerId);
-        
-        // Award points to the completer
-        const completerProfile = familyMembers.find(m => m.id === completerId) || profile;
-        await supabase
-          .from('profiles')
-          .update({
-            total_points: completerProfile.total_points + task.points
-          })
-          .eq('id', completerId);
-          
-        toast({
-          title: 'Recurring Task Completed!',
-          description: `${completerProfile.display_name} earned ${task.points} points!`,
-        });
-        
-        await fetchUserData();
-        return;
       }
 
       // Regular task completion logic
@@ -877,6 +845,10 @@ const ColumnBasedDashboard = () => {
           created_by,
           completion_rule,
           task_group,
+          recurring_frequency,
+          recurring_interval,
+          recurring_days_of_week,
+          recurring_end_date,
           series_id,
           assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
           assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
@@ -977,6 +949,10 @@ const ColumnBasedDashboard = () => {
             created_by: rotatingTask.created_by,
             is_repeating: false,
             completion_rule: 'everyone', // Rotating tasks default to everyone
+            recurring_frequency: null,
+            recurring_interval: null,
+            recurring_days_of_week: null,
+            recurring_end_date: null,
             series_id: null,
             task_completions: [],
             assignees: []
