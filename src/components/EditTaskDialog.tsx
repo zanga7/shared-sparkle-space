@@ -83,6 +83,7 @@ export const EditTaskDialog = ({
         points: formData.points,
         assigned_to: formData.assignees.length === 1 ? formData.assignees[0] : null,
         due_date: formData.due_date?.toISOString() || task.due_date,
+        task_group: formData.task_group, // Include task_group in updates
       };
 
       const { error } = await supabase

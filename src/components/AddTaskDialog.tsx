@@ -181,6 +181,7 @@ export const AddTaskDialog = ({
         assigned_to: formData.assignees.length === 1 ? formData.assignees[0] : null, // For backward compatibility
         due_date: formData.due_date?.toISOString() || null,
         completion_rule: formData.completion_rule,
+        task_group: formData.task_group, // Add the task_group field
         family_id: familyId,
         created_by: profileId
       };
