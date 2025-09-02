@@ -1152,16 +1152,17 @@ const ColumnBasedDashboard = () => {
                                   <span className="truncate">{member.total_points} pts</span>
                                 </div>
                              </div>
-                           </div>
-                            <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
-                              <span>{pendingTasks.length} pending</span>
-                              <span>{completedTasks.length} completed</span>
                             </div>
-                         </CardHeader>
+                             <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
+                               <span>{pendingTasks.length} pending</span>
+                               <span>{completedTasks.length} completed</span>
+                             </div>
+                          </CardHeader>
 
-                          <Droppable droppableId={member.id}>
-                            {(provided, snapshot) => (
-                              <CardContent 
+                           <div className="group">
+                           <Droppable droppableId={member.id}>
+                             {(provided, snapshot) => (
+                               <CardContent
                                 className={cn(
                                   "space-y-3 transition-colors",
                                   snapshot.isDraggingOver && "bg-accent/50"
@@ -1327,14 +1328,32 @@ const ColumnBasedDashboard = () => {
                                             );
                                           })}
                                          </Accordion>
-                                       </div>
-                                     );
-                                    })()
-                                  )}
-                              </CardContent>
-                            )}
-                          </Droppable>
-                       </Card>
+                                        </div>
+                                      );
+                                     })()
+                                   )}
+                                   
+                                   {/* Add Task Button at Member Level */}
+                                   {profile.role === 'parent' && (
+                                     <div className="pt-2 mt-4 border-t border-muted/50">
+                                       <AddButton
+                                         className={cn(
+                                           "w-full text-xs opacity-0 group-hover:opacity-75 transition-opacity",
+                                           getMemberColorClasses(member.color).border,
+                                           getMemberColorClasses(member.color).text
+                                         )}
+                                         text="Add Task"
+                                         showIcon={true}
+                                         onClick={() => handleAddTaskForMember(member.id)}
+                                       />
+                                     </div>
+                                   )}
+                                   
+                               </CardContent>
+                             )}
+                           </Droppable>
+                           </div>
+                        </Card>
                      );
                    })}
 
@@ -1354,17 +1373,17 @@ const ColumnBasedDashboard = () => {
                            </div>
                          </div>
                       </CardHeader>
-                      
-                      <Droppable droppableId="unassigned">
-                        {(provided, snapshot) => (
-                          <CardContent 
-                            className={cn(
-                              "space-y-3 transition-colors",
-                              snapshot.isDraggingOver && "bg-accent/50"
-                            )}
-                            ref={provided.innerRef}
-                            {...provided.droppableProps}
-                          >
+                       <div className="group">
+                       <Droppable droppableId="unassigned">
+                         {(provided, snapshot) => (
+                           <CardContent 
+                             className={cn(
+                               "space-y-3 transition-colors",
+                               snapshot.isDraggingOver && "bg-accent/50"
+                             )}
+                             ref={provided.innerRef}
+                             {...provided.droppableProps}
+                           >
                              <div className="space-y-2 sm:space-y-3 mb-4 min-h-[100px]">
                                {tasksByMember.get('unassigned')?.length === 0 ? (
                                  <div className="text-center py-6 sm:py-8 text-muted-foreground">
@@ -1398,9 +1417,21 @@ const ColumnBasedDashboard = () => {
                                     )}
                                   </Draggable>
                                 )) || []
-                              )}
-                              {provided.placeholder}
-                            </div>
+                               )}
+                               {provided.placeholder}
+                               
+                               {/* Add Task Button for Unassigned */}
+                               {profile.role === 'parent' && (
+                                 <div className="pt-2 mt-4 border-t border-muted/50">
+                                   <AddButton
+                                     className="w-full text-xs opacity-0 group-hover:opacity-75 transition-opacity border-muted text-muted-foreground"
+                                     text="Add Unassigned Task"
+                                     showIcon={true}
+                                     onClick={() => handleAddTaskForMember('unassigned')}
+                                   />
+                                 </div>
+                               )}
+                             </div>
                             
                              {/* Add Task Button */}
                              {profile.role === 'parent' && (
@@ -1412,9 +1443,10 @@ const ColumnBasedDashboard = () => {
                                  />
                                </div>
                              )}
-                          </CardContent>
-                        )}
-                      </Droppable>
+                           </CardContent>
+                         )}
+                       </Droppable>
+                       </div>
                     </Card>
                   )}
                 </div>
