@@ -1,363 +1,233 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Badge } from '@/components/ui/badge';
-import { UserAvatar } from '@/components/ui/user-avatar';
-import { CalendarIcon, Clock, MapPin, X } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Calendar, Clock, MapPin, Users } from 'lucide-react';
 import { format } from 'date-fns';
-import { Profile } from '@/types/task';
-
-import { cn } from '@/lib/utils';
+import { useEvents } from '@/hooks/useEvents';
+import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { CalendarEvent } from '@/types/event';
 
 interface EventDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  familyMembers: Profile[];
-  onSave: (data: {
-    title: string;
-    description?: string | null;
-    location?: string | null;
-    start_date: string;
-    end_date: string;
-    is_all_day: boolean;
-    attendees?: string[];
-  }) => void;
-  onDelete?: () => void;
-  editingEvent?: Event | null;
-  defaultDate?: Date;
+  selectedDate?: Date | null;
+  familyId?: string;
   defaultMember?: string;
+  event?: CalendarEvent | null;
+  familyMembers?: any[];
+  onSave?: (eventData: any) => void;
+  onDelete?: () => void;
+  editingEvent?: CalendarEvent | null;
+  defaultDate?: Date;
 }
 
 export const EventDialog = ({
   open,
   onOpenChange,
-  familyMembers,
+  selectedDate,
+  familyId,
+  defaultMember,
+  event,
+  familyMembers = [],
   onSave,
   onDelete,
   editingEvent,
-  defaultDate,
-  defaultMember
+  defaultDate
 }: EventDialogProps) => {
-  const [title, setTitle] = useState(editingEvent?.title || '');
-  const [description, setDescription] = useState(editingEvent?.description || '');
-  const [location, setLocation] = useState(editingEvent?.location || '');
-  const [startDate, setStartDate] = useState<Date>(
-    editingEvent ? new Date(editingEvent.start_date) : defaultDate || new Date()
-  );
-  const [endDate, setEndDate] = useState<Date>(
-    editingEvent ? new Date(editingEvent.end_date) : 
-    defaultDate ? new Date(defaultDate.getTime() + 60 * 60 * 1000) : 
-    new Date(Date.now() + 60 * 60 * 1000)
-  );
-  const [startTime, setStartTime] = useState(
-    editingEvent ? format(new Date(editingEvent.start_date), 'HH:mm') :
-    format(new Date(), 'HH:mm')
-  );
-  const [endTime, setEndTime] = useState(
-    editingEvent ? format(new Date(editingEvent.end_date), 'HH:mm') :
-    format(new Date(Date.now() + 60 * 60 * 1000), 'HH:mm')
-  );
-  const [isAllDay, setIsAllDay] = useState(editingEvent?.is_all_day || false);
-  const [selectedAttendees, setSelectedAttendees] = useState<string[]>(
-    editingEvent?.attendees?.map(a => a.profile_id) || 
-    (defaultMember ? [defaultMember] : [])
-  );
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    location: '',
+    startDate: new Date(),
+    endDate: new Date(),
+    startTime: '09:00',
+    endTime: '10:00',
+    isAllDay: false,
+    attendees: [] as string[]
+  });
 
-  // Reset form when editing event changes or dialog opens/closes
+  const { toast } = useToast();
+
   useEffect(() => {
-    if (open) {
-      if (editingEvent) {
-        // Populate form with existing event data
-        setTitle(editingEvent.title || '');
-        setDescription(editingEvent.description || '');
-        setLocation(editingEvent.location || '');
-        setStartDate(new Date(editingEvent.start_date));
-        setEndDate(new Date(editingEvent.end_date));
-        setStartTime(format(new Date(editingEvent.start_date), 'HH:mm'));
-        setEndTime(format(new Date(editingEvent.end_date), 'HH:mm'));
-        setIsAllDay(editingEvent.is_all_day || false);
-        setSelectedAttendees(editingEvent.attendees?.map(a => a.profile_id) || []);
-      } else {
-        // Reset form for new event
-        setTitle('');
-        setDescription('');
-        setLocation('');
-        const newStartDate = defaultDate || new Date();
-        const newEndDate = defaultDate ? new Date(defaultDate.getTime() + 60 * 60 * 1000) : new Date(Date.now() + 60 * 60 * 1000);
-        setStartDate(newStartDate);
-        setEndDate(newEndDate);
-        setStartTime(format(newStartDate, 'HH:mm'));
-        setEndTime(format(newEndDate, 'HH:mm'));
-        setIsAllDay(false);
-        setSelectedAttendees(defaultMember ? [defaultMember] : []);
-      }
+    const eventToEdit = editingEvent || event;
+    if (eventToEdit) {
+      setFormData({
+        title: eventToEdit.title || '',
+        description: eventToEdit.description || '',
+        location: eventToEdit.location || '',
+        startDate: eventToEdit.start_date ? new Date(eventToEdit.start_date) : (selectedDate || new Date()),
+        endDate: eventToEdit.end_date ? new Date(eventToEdit.end_date) : (selectedDate || new Date()),
+        startTime: eventToEdit.start_date ? format(new Date(eventToEdit.start_date), 'HH:mm') : '09:00',
+        endTime: eventToEdit.end_date ? format(new Date(eventToEdit.end_date), 'HH:mm') : '10:00',
+        isAllDay: eventToEdit.is_all_day || false,
+        attendees: eventToEdit.attendees?.map((a: any) => a.profile_id) || []
+      });
+    } else {
+      // Reset form for new event
+      const defaultFormDate = selectedDate || defaultDate || new Date();
+      setFormData({
+        title: '',
+        description: '',
+        location: '',
+        startDate: defaultFormDate,
+        endDate: defaultFormDate,
+        startTime: '09:00',
+        endTime: '10:00',
+        isAllDay: false,
+        attendees: []
+      });
     }
-  }, [open, editingEvent, defaultDate, defaultMember]);
-
-  const toggleAttendee = (memberId: string) => {
-    setSelectedAttendees(prev => 
-      prev.includes(memberId)
-        ? prev.filter(id => id !== memberId)
-        : [...prev, memberId]
-    );
-  };
-
-  const removeAttendee = (memberId: string) => {
-    setSelectedAttendees(prev => prev.filter(id => id !== memberId));
-  };
+  }, [event, editingEvent, selectedDate, defaultDate]);
 
   const handleSave = () => {
-    if (!title.trim()) return;
+    if (!formData.title.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter an event title',
+        variant: 'destructive'
+      });
+      return;
+    }
 
-    // Combine date and time
-    const startDateTime = isAllDay 
-      ? new Date(startDate.setHours(0, 0, 0, 0))
-      : new Date(`${format(startDate, 'yyyy-MM-dd')}T${startTime}`);
-    
-    const endDateTime = isAllDay
-      ? new Date(endDate.setHours(23, 59, 59, 999))
-      : new Date(`${format(endDate, 'yyyy-MM-dd')}T${endTime}`);
-
-    const data = {
-      title: title.trim(),
-      description: description.trim() || null,
-      location: location.trim() || null,
-      start_date: startDateTime.toISOString(),
-      end_date: endDateTime.toISOString(),
-      is_all_day: isAllDay,
-      attendees: selectedAttendees,
+    const eventData = {
+      title: formData.title,
+      description: formData.description,
+      location: formData.location,
+      start_date: formData.isAllDay 
+        ? new Date(formData.startDate).toISOString()
+        : new Date(`${format(formData.startDate, 'yyyy-MM-dd')}T${formData.startTime}`).toISOString(),
+      end_date: formData.isAllDay
+        ? new Date(formData.endDate).toISOString()
+        : new Date(`${format(formData.endDate, 'yyyy-MM-dd')}T${formData.endTime}`).toISOString(),
+      is_all_day: formData.isAllDay,
+      attendees: formData.attendees
     };
 
-    onSave(data);
-    onOpenChange(false);
-    
-    // Reset form
-    setTitle('');
-    setDescription('');
-    setLocation('');
-    setStartDate(new Date());
-    setEndDate(new Date(Date.now() + 60 * 60 * 1000));
-    setStartTime(format(new Date(), 'HH:mm'));
-    setEndTime(format(new Date(Date.now() + 60 * 60 * 1000), 'HH:mm'));
-    setIsAllDay(false);
-    setSelectedAttendees([]);
+    onSave?.(eventData);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>
-            {editingEvent ? 'Edit Event' : 'Create New Event'}
+          <DialogTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            {editingEvent || event ? 'Edit Event' : 'Create Event'}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Basic Info */}
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="title">Event Title *</Label>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="title">Event Title</Label>
+            <Input
+              id="title"
+              value={formData.title}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="Enter event title"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Event description (optional)"
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="location">Location</Label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g., Family Movie Night"
+                id="location"
+                value={formData.location}
+                onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                placeholder="Event location (optional)"
+                className="pl-10"
               />
-            </div>
-
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Additional details about this event..."
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="location">Location</Label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Where is this taking place?"
-                  className="pl-10"
-                />
-              </div>
             </div>
           </div>
 
-          {/* Date and Time */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="allDay"
-                checked={isAllDay}
-                onCheckedChange={(checked) => setIsAllDay(checked as boolean)}
-              />
-              <Label htmlFor="allDay">All day event</Label>
-            </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="all-day"
+              checked={formData.isAllDay}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isAllDay: checked }))}
+            />
+            <Label htmlFor="all-day">All day event</Label>
+          </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Start Date</Label>
+              <Input
+                type="date"
+                value={format(formData.startDate, 'yyyy-MM-dd')}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  startDate: new Date(e.target.value) 
+                }))}
+              />
+            </div>
+            <div>
+              <Label>End Date</Label>
+              <Input
+                type="date"
+                value={format(formData.endDate, 'yyyy-MM-dd')}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  endDate: new Date(e.target.value) 
+                }))}
+              />
+            </div>
+          </div>
+
+          {!formData.isAllDay && (
             <div className="grid grid-cols-2 gap-4">
-              {/* Start Date/Time */}
-              <div className="space-y-2">
-                <Label>Start</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !startDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, "PPP") : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={startDate}
-                      onSelect={(date) => date && setStartDate(date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                
-                {!isAllDay && (
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* End Date/Time */}
-              <div className="space-y-2">
-                <Label>End</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !endDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, "PPP") : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={endDate}
-                      onSelect={(date) => date && setEndDate(date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                
-                {!isAllDay && (
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Attendees */}
-          <div className="space-y-4">
-            <Label>Attendees</Label>
-            
-            {/* Selected Attendees */}
-            {selectedAttendees.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {selectedAttendees.map(memberId => {
-                  const member = familyMembers.find(m => m.id === memberId);
-                  if (!member) return null;
-
-                  return (
-                    <Badge key={memberId} variant="secondary" className="px-3 py-1">
-                      <UserAvatar
-                        name={member.display_name}
-                        color={member.color}
-                        size="sm"
-                        className="mr-2"
-                      />
-                      {member.display_name}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeAttendee(memberId)}
-                        className="ml-2 h-4 w-4 p-0 hover:bg-transparent"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </Badge>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Available Members */}
-            <div className="grid grid-cols-2 gap-2">
-              {familyMembers.map(member => (
-                <div key={member.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`attendee-${member.id}`}
-                    checked={selectedAttendees.includes(member.id)}
-                    onCheckedChange={() => toggleAttendee(member.id)}
+              <div>
+                <Label>Start Time</Label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="time"
+                    value={formData.startTime}
+                    onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                    className="pl-10"
                   />
-                  <Label 
-                    htmlFor={`attendee-${member.id}`}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <UserAvatar
-                      name={member.display_name}
-                      color={member.color}
-                      size="sm"
-                    />
-                    {member.display_name}
-                  </Label>
                 </div>
-              ))}
+              </div>
+              <div>
+                <Label>End Time</Label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="time"
+                    value={formData.endTime}
+                    onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Actions */}
-          <div className="flex justify-between pt-4">
-            <div>
-              {editingEvent && onDelete && (
-                <Button 
-                  variant="destructive" 
-                  onClick={() => {
-                    onDelete();
-                    onOpenChange(false);
-                  }}
-                >
+          <div className="flex justify-between">
+            <div className="flex gap-2">
+              {onDelete && (
+                <Button variant="destructive" onClick={onDelete}>
                   Delete Event
                 </Button>
               )}
@@ -366,11 +236,8 @@ export const EventDialog = ({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button 
-                onClick={handleSave}
-                disabled={!title.trim()}
-              >
-                {editingEvent ? 'Update' : 'Create'} Event
+              <Button onClick={handleSave}>
+                {editingEvent || event ? 'Update Event' : 'Create Event'}
               </Button>
             </div>
           </div>

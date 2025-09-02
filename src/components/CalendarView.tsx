@@ -381,7 +381,7 @@ export const CalendarView = ({
 
   // Handle event editing
   const handleEditEvent = (event: CalendarEvent) => {
-    setEditingEvent(event as CalendarEvent);
+    setEditingEvent(event);
     setSelectedEventDate(new Date(event.start_date));
     setDefaultMember('');
     setIsEventDialogOpen(true);

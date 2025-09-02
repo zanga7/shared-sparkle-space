@@ -30,9 +30,10 @@ const CalendarSettings = () => {
   const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [familyMembers, setFamilyMembers] = useState<Profile[]>([]);
-  const [integrations, setIntegrations] = useState<CalendarIntegration[]>([]);
+  // Calendar integrations temporarily removed
+  const [integrations, setIntegrations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deletingIntegration, setDeletingIntegration] = useState<CalendarIntegration | null>(null);
+  const [deletingIntegration, setDeletingIntegration] = useState<any | null>(null);
 
   useEffect(() => {
     if (user) {
