@@ -63,6 +63,11 @@ export const EditTaskDialog = ({ task, familyMembers, profile, open, onOpenChang
         assignees: currentAssignees,
         due_date: task.due_date ? new Date(task.due_date) : null,
         task_group: (task as any).task_group || 'general',
+        is_repeating: false,
+        recurring_frequency: 'daily',
+        recurring_interval: 1,
+        recurring_days_of_week: [],
+        recurring_end_date: null
       });
     }
   }, [task]);

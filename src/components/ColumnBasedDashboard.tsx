@@ -879,39 +879,7 @@ const ColumnBasedDashboard = () => {
       }
     });
 
-    // Add rotating tasks for the current member
-    rotatingTasks.forEach(rotatingTask => {
-      if (!rotatingTask.is_paused && rotatingTask.is_active) {
-        const currentMemberIndex = rotatingTask.current_member_index;
-        const currentMemberId = rotatingTask.member_order[currentMemberIndex];
-        
-        if (currentMemberId) {
-          // Create a virtual task for the rotating task
-          const virtualTask: Task = {
-            id: `rotating-${rotatingTask.id}`,
-            title: `🔄 ${rotatingTask.name}`,
-            description: rotatingTask.description || '',
-            points: rotatingTask.points,
-            assigned_to: currentMemberId,
-            due_date: null,
-            created_by: rotatingTask.created_by,
-            
-            completion_rule: 'everyone', // Rotating tasks default to everyone
-            recurring_frequency: null,
-            recurring_interval: null,
-            recurring_days_of_week: null,
-            recurring_end_date: null,
-            series_id: null,
-            task_completions: [],
-            assignees: []
-          };
-
-          const memberTasks = tasksByMember.get(currentMemberId) || [];
-          memberTasks.push(virtualTask);
-          tasksByMember.set(currentMemberId, memberTasks);
-        }
-      }
-    });
+    // Rotating tasks have been removed
     
     // Filter tasks by selected member if one is chosen
     if (selectedMemberFilter) {
@@ -1260,13 +1228,20 @@ const ColumnBasedDashboard = () => {
                                                            snapshot.isDraggingOver && "bg-accent/50 rounded-lg"
                                                          )}
                                                         >
-                                                          {groupTasks.length === 0 ? (
-                                                            <div className="text-center py-4 text-muted-foreground">
-                                                              <p className="text-xs">
-                                                                {snapshot.isDraggingOver ? 'Drop task here' : 'No tasks in this group'}
-                                                              </p>
-                                                            </div>
-                                                          ) : (
+                                                           {groupTasks.length === 0 ? (
+                                                             <div className="text-center py-4 text-muted-foreground">
+                                                               {snapshot.isDraggingOver ? (
+                                                                 <p className="text-xs">Drop task here</p>
+                                                               ) : (
+                                                                 <div className="space-y-2">
+                                                                   <p className="text-xs">No tasks in this group</p>
+                                                                   <div className="text-xs text-muted-foreground">
+                                                                     Drag tasks here or create new ones
+                                                                   </div>
+                                                                 </div>
+                                                               )}
+                                                             </div>
+                                                           ) : (
                                                              groupTasks.map((task, index) => {
                                                                // Use group-specific index instead of global index for stability
                                                                return (

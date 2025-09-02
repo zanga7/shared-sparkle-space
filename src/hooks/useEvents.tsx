@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { CalendarEvent } from '@/types/event';
 
 
 export const useEvents = (familyId?: string) => {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -171,7 +172,7 @@ export const useEvents = (familyId?: string) => {
     }
   };
 
-  const updateEvent = async (id: string, updates: Partial<Event>, attendees?: string[]) => {
+  const updateEvent = async (id: string, updates: Partial<CalendarEvent>, attendees?: string[]) => {
     try {
       const { error: eventError } = await supabase
         .from('events')

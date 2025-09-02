@@ -55,6 +55,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEvents } from '@/hooks/useEvents';
 import { EventDialog } from '@/components/EventDialog';
+import { CalendarEvent } from '@/types/event';
 
 interface CalendarViewProps {
   tasks: Task[];
@@ -100,7 +101,7 @@ export const CalendarView = ({
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
   const [selectedEventDate, setSelectedEventDate] = useState<Date | null>(null);
   const [defaultMember, setDefaultMember] = useState<string>('');
-  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const { toast } = useToast();
   const { events, createEvent, updateEvent, deleteEvent, refreshEvents } = useEvents(familyId);
 
@@ -157,8 +158,8 @@ export const CalendarView = ({
       
       // Filter by task type
       if (filters.taskType !== 'all') {
-        if (filters.taskType === 'recurring' && !task.is_repeating) return false;
-        if (filters.taskType === 'one-time' && task.is_repeating) return false;
+        // Since recurring tasks have been removed, only show one-time tasks
+        if (filters.taskType === 'recurring') return false;
       }
       
       return true;
@@ -184,9 +185,9 @@ export const CalendarView = ({
 
   // Group events by date - handle multi-day events
   const eventsByDate = useMemo(() => {
-    const grouped: { [key: string]: any[] } = {};
+    const grouped: { [key: string]: (CalendarEvent & {isMultiDay?: boolean, isFirstDay?: boolean, isLastDay?: boolean, originalStart?: Date, originalEnd?: Date})[] } = {};
     
-    events.forEach(event => {
+    events.forEach((event: CalendarEvent) => {
       if (event.start_date) {
         const startDate = new Date(event.start_date);
         const endDate = event.end_date ? new Date(event.end_date) : startDate;
@@ -263,25 +264,9 @@ export const CalendarView = ({
     };
   }, [filteredTasks, currentDate, familyMembers]);
 
-  // Calculate streaks for recurring tasks
+  // Calculate streaks for tasks (simplified since recurring tasks are removed)
   const calculateStreak = (task: Task) => {
-    if (!task.series_id) return 0;
-    
-    const seriesTasks = tasks.filter(t => t.series_id === task.series_id && t.due_date);
-    const sortedTasks = seriesTasks.sort((a, b) => new Date(b.due_date!).getTime() - new Date(a.due_date!).getTime());
-    
-    let streak = 0;
-    for (const t of sortedTasks) {
-      const isCompleted = t.task_completions && t.task_completions.length > 0;
-      const isDue = new Date(t.due_date!) <= new Date();
-      
-      if (isCompleted) {
-        streak++;
-      } else if (isDue) {
-        break;
-      }
-    }
-    return streak;
+    return 0; // No streaks without recurring tasks
   };
 
   // Handle navigation
@@ -395,8 +380,8 @@ export const CalendarView = ({
   };
 
   // Handle event editing
-  const handleEditEvent = (event: any) => {
-    setEditingEvent(event);
+  const handleEditEvent = (event: CalendarEvent) => {
+    setEditingEvent(event as CalendarEvent);
     setSelectedEventDate(new Date(event.start_date));
     setDefaultMember('');
     setIsEventDialogOpen(true);
