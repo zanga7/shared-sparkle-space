@@ -21,6 +21,7 @@ import { EditTaskDialog } from '@/components/EditTaskDialog';
 
 import { CalendarView } from '@/components/CalendarView';
 import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
+import { MemberDashboard } from './MemberDashboard';
 import { RewardsGallery } from '@/components/rewards/RewardsGallery';
 import { ChildAuthProvider } from '@/hooks/useChildAuth';
 import Lists from '@/pages/Lists';
@@ -1120,153 +1121,24 @@ const ColumnBasedDashboard = () => {
       <div className="w-full px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
         {viewMode === 'member' && selectedMemberFilter ? (
           /* Member-specific single dashboard page */
-          <div className="w-full max-w-7xl mx-auto space-y-8">
-            {(() => {
-              const member = familyMembers.find(m => m.id === selectedMemberFilter);
-              if (!member) return null;
-              
-              const memberTasks = tasksByMember.get(member.id) || [];
-              const pendingTasks = memberTasks.filter(task => 
-                !task.task_completions || task.task_completions.length === 0
-              );
-              const completedTasks = memberTasks.filter(task => 
-                task.task_completions && task.task_completions.length > 0
-              );
-              
-              return (
-                <>
-                  {/* Member Header */}
-                  <div className="text-center py-8 bg-card/50 rounded-lg border">
-                    <UserAvatar 
-                      name={member.display_name} 
-                      color={member.color} 
-                      size="lg" 
-                      className="mx-auto mb-4" 
-                    />
-                    <h1 className="text-4xl font-bold text-foreground mb-4">{member.display_name}'s Dashboard</h1>
-                    <div className="flex justify-center items-center gap-4">
-                      <Badge variant="outline" className="text-lg px-6 py-2">
-                        {member.total_points} points
-                      </Badge>
-                      <Badge variant={member.role === 'parent' ? 'default' : 'secondary'} className="text-lg px-6 py-2">
-                        {member.role}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  {/* Dashboard Grid */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Tasks Section */}
-                    <Card className="p-6">
-                      <CardHeader className="pb-4">
-                        <CardTitle className="flex items-center gap-2 text-xl">
-                          <Users className="h-6 w-6" />
-                          Tasks ({pendingTasks.length} pending, {completedTasks.length} completed)
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3 max-h-96 overflow-y-auto">
-                        {pendingTasks.length === 0 && completedTasks.length === 0 ? (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p>No tasks assigned</p>
-                          </div>
-                        ) : (
-                          <>
-                            {pendingTasks.map((task) => (
-                              <EnhancedTaskItem
-                                key={task.id}
-                                task={task}
-                                allTasks={tasks}
-                                familyMembers={familyMembers}
-                                onToggle={handleTaskToggle}
-                                onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
-                                showActions={profile.role === 'parent'}
-                              />
-                            ))}
-                            {completedTasks.slice(0, 3).map((task) => (
-                              <EnhancedTaskItem
-                                key={task.id}
-                                task={task}
-                                allTasks={tasks}
-                                familyMembers={familyMembers}
-                                onToggle={handleTaskToggle}
-                                onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
-                                showActions={profile.role === 'parent'}
-                              />
-                            ))}
-                            {completedTasks.length > 3 && (
-                              <p className="text-sm text-muted-foreground text-center py-2">
-                                And {completedTasks.length - 3} more completed tasks...
-                              </p>
-                            )}
-                          </>
-                        )}
-                      </CardContent>
-                    </Card>
-
-                    {/* Calendar Section - Today's View */}
-                    <Card className="p-6">
-                      <CardHeader className="pb-4">
-                        <CardTitle className="flex items-center gap-2 text-xl">
-                          <Calendar className="h-6 w-6" />
-                          Today's Schedule
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="max-h-96 overflow-y-auto">
-                        <CalendarView
-                          tasks={tasks.filter(task => 
-                            task.assigned_to === selectedMemberFilter || 
-                            task.assignees?.some(a => a.profile_id === selectedMemberFilter)
-                          )}
-                          familyMembers={[member]}
-                          profile={profile}
-                          onTaskUpdated={fetchUserData}
-                          onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
-                          familyId={profile.family_id}
-                          dashboardMode={dashboardMode}
-                          activeMemberId={activeMemberId}
-                          onTaskComplete={completeTask}
-                        />
-                      </CardContent>
-                    </Card>
-
-                    {/* Lists Section */}
-                    <Card className="p-6">
-                      <CardHeader className="pb-4">
-                        <CardTitle className="flex items-center gap-2 text-xl">
-                          <List className="h-6 w-6" />
-                          Lists
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="max-h-96 overflow-y-auto">
-                        <Lists />
-                      </CardContent>
-                    </Card>
-
-                    {/* Rewards Section */}
-                    <Card className="p-6">
-                      <CardHeader className="pb-4">
-                        <CardTitle className="flex items-center gap-2 text-xl">
-                          <Gift className="h-6 w-6" />
-                          Rewards
-                        </CardTitle>
-                        <CardDescription>
-                          {member.total_points} points available
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="max-h-96 overflow-y-auto">
-                        <ChildAuthProvider>
-                          <RewardsGallery selectedMemberId={selectedMemberFilter} />
-                        </ChildAuthProvider>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
+          (() => {
+            const member = familyMembers.find(m => m.id === selectedMemberFilter);
+            if (!member) return null;
+            
+            return (
+              <MemberDashboard
+                member={member}
+                tasks={tasks}
+                familyMembers={familyMembers}
+                profile={profile}
+                onTaskUpdated={fetchUserData}
+                onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
+                onTaskComplete={(task) => completeTask(task)}
+                activeMemberId={activeMemberId}
+                dashboardMode="member"
+              />
+            );
+          })()
         ) : (
           /* Everyone view - show tabs */
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
