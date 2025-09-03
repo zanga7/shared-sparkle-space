@@ -1306,6 +1306,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      generate_rotating_task_instance: {
+        Args: { rotating_task_id: string }
+        Returns: string
+      }
       get_calendar_integration_safe: {
         Args: { integration_id: string }
         Returns: {
