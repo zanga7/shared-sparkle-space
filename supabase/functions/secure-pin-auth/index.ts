@@ -18,7 +18,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { profileId, pin } = await req.json();
+    const { profileId, pin, pinType = 'numeric' } = await req.json();
 
     if (!profileId || !pin) {
       return new Response(
@@ -30,19 +30,32 @@ serve(async (req) => {
       );
     }
 
-    // Validate PIN format (4 digits)
-    if (!/^\d{4}$/.test(pin)) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'PIN must be exactly 4 digits' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+    // Validate PIN format based on type
+    if (pinType === 'numeric') {
+      if (!/^\d{4}$/.test(pin)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'PIN must be exactly 4 digits' }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+    } else if (pinType === 'icon') {
+      const iconCount = pin.split(',').filter((icon: string) => icon.trim().length > 0).length;
+      if (iconCount !== 4) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Icon PIN must have exactly 4 icons' }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
     }
 
     // Call the secure authentication function
-    const { data, error } = await supabase.rpc('authenticate_child_pin', {
+    const { data, error } = await supabase.rpc('authenticate_member_pin_dashboard', {
       profile_id_param: profileId,
       pin_attempt: pin
     });
