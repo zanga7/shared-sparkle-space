@@ -28,6 +28,7 @@ export function NumberPad({ onNumberPress, onDelete, className, disabled }: Numb
           return (
             <Button
               key={index}
+              type="button"
               variant="outline"
               size="lg"
               onClick={onDelete}
@@ -42,6 +43,7 @@ export function NumberPad({ onNumberPress, onDelete, className, disabled }: Numb
         return (
           <Button
             key={index}
+            type="button"
             variant="outline"
             size="lg"
             onClick={() => onNumberPress(num)}
