@@ -1,30 +1,16 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Backspace } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Delete } from "lucide-react";
 
-// Icon library for PIN creation - easily recognizable icons for children
-const PIN_ICONS = [
-  { id: 'dog', emoji: '🐶', label: 'Dog' },
-  { id: 'cat', emoji: '🐱', label: 'Cat' },
-  { id: 'star', emoji: '⭐', label: 'Star' },
-  { id: 'moon', emoji: '🌙', label: 'Moon' },
-  { id: 'sun', emoji: '☀️', label: 'Sun' },
-  { id: 'car', emoji: '🚗', label: 'Car' },
-  { id: 'house', emoji: '🏠', label: 'House' },
-  { id: 'apple', emoji: '🍎', label: 'Apple' },
-  { id: 'heart', emoji: '❤️', label: 'Heart' },
-  { id: 'rainbow', emoji: '🌈', label: 'Rainbow' },
-  { id: 'flower', emoji: '🌸', label: 'Flower' },
-  { id: 'tree', emoji: '🌳', label: 'Tree' },
-  { id: 'fish', emoji: '🐟', label: 'Fish' },
-  { id: 'bird', emoji: '🐦', label: 'Bird' },
-  { id: 'ball', emoji: '⚽', label: 'Ball' },
-  { id: 'cake', emoji: '🎂', label: 'Cake' },
-  { id: 'rocket', emoji: '🚀', label: 'Rocket' },
-  { id: 'crown', emoji: '👑', label: 'Crown' },
-  { id: 'pizza', emoji: '🍕', label: 'Pizza' },
-  { id: 'butterfly', emoji: '🦋', label: 'Butterfly' }
+// Icon library for PIN creation
+const ICON_LIBRARY = [
+  '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼',
+  '🌟', '🌙', '☀️', '⭐', '🌈', '❤️', '💙', '💚',
+  '🚗', '🚌', '🚲', '✈️', '🚂', '🛸', '🚁', '⛵',
+  '🏠', '🏰', '🗼', '🎪', '🎡', '🎢', '🎠', '🎯',
+  '🍎', '🍌', '🍊', '🍇', '🍓', '🍒', '🥕', '🥖',
+  '⚽', '🏀', '🎾', '🏈', '🎱', '🏓', '🎳', '🎮'
 ];
 
 interface IconPinInputProps {
@@ -34,96 +20,96 @@ interface IconPinInputProps {
   length?: number;
   disabled?: boolean;
   className?: string;
-  showIcons?: boolean;
 }
 
-export function IconPinInput({ 
-  value, 
-  onChange, 
+export function IconPinInput({
+  value,
+  onChange,
   onComplete,
-  length = 4, 
+  length = 4,
   disabled,
-  className,
-  showIcons = true 
+  className
 }: IconPinInputProps) {
-  const handleIconPress = (iconId: string) => {
-    if (disabled || value.length >= length) return;
+  const [selectedIcons, setSelectedIcons] = useState<string[]>(
+    value ? value.split('') : []
+  );
+
+  const handleIconSelect = (icon: string) => {
+    if (disabled || selectedIcons.length >= length) return;
+
+    const newIcons = [...selectedIcons, icon];
+    setSelectedIcons(newIcons);
     
-    const newValue = value + iconId;
+    const newValue = newIcons.join('');
     onChange(newValue);
     
-    if (newValue.length === length && onComplete) {
+    if (newIcons.length === length && onComplete) {
       onComplete(newValue);
     }
   };
 
-  const handleBackspace = () => {
-    if (disabled) return;
-    const newValue = value.slice(0, -1);
-    onChange(newValue);
+  const handleDelete = () => {
+    if (disabled || selectedIcons.length === 0) return;
+
+    const newIcons = selectedIcons.slice(0, -1);
+    setSelectedIcons(newIcons);
+    onChange(newIcons.join(''));
   };
 
-  const getIconById = (id: string) => {
-    return PIN_ICONS.find(icon => icon.id === id);
+  const handleClear = () => {
+    setSelectedIcons([]);
+    onChange('');
   };
-
-  const selectedIcons = value.split(',').filter(Boolean);
 
   return (
-    <div className={cn("space-y-6", className)}>
-      {/* PIN Display */}
-      <div className="flex justify-center gap-2">
-        {Array.from({ length }).map((_, index) => {
-          const iconId = selectedIcons[index];
-          const icon = iconId ? getIconById(iconId) : null;
-          
-          return (
-            <div
-              key={index}
-              className="w-16 h-16 border-2 border-border rounded-lg flex items-center justify-center bg-background text-2xl"
-            >
-              {icon ? icon.emoji : ''}
-            </div>
-          );
-        })}
+    <div className={cn("space-y-4", className)}>
+      {/* Selected Icons Display */}
+      <div className="flex justify-center gap-2 mb-6">
+        {Array.from({ length }).map((_, index) => (
+          <div
+            key={index}
+            className="w-16 h-16 border-2 border-border rounded-lg flex items-center justify-center bg-muted/50 text-2xl"
+          >
+            {selectedIcons[index] || ''}
+          </div>
+        ))}
       </div>
 
-      {showIcons && (
-        <>
-          {/* Icon Grid */}
-          <div className="grid grid-cols-5 gap-3 max-w-md mx-auto">
-            {PIN_ICONS.map((icon) => (
-              <Button
-                key={icon.id}
-                variant="outline"
-                size="lg"
-                onClick={() => handleIconPress(icon.id)}
-                disabled={disabled || value.length >= length}
-                className="h-14 text-2xl hover:bg-muted/50 active:scale-95 transition-transform"
-                title={icon.label}
-              >
-                {icon.emoji}
-              </Button>
-            ))}
-          </div>
+      {/* Icon Selection Grid */}
+      <div className="grid grid-cols-8 gap-2 max-w-2xl mx-auto">
+        {ICON_LIBRARY.map((icon, index) => (
+          <Button
+            key={index}
+            variant="outline"
+            size="sm"
+            onClick={() => handleIconSelect(icon)}
+            disabled={disabled || selectedIcons.length >= length}
+            className="h-12 w-12 text-xl hover:bg-muted/50 p-0"
+          >
+            {icon}
+          </Button>
+        ))}
+      </div>
 
-          {/* Backspace Button */}
-          <div className="flex justify-center">
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={handleBackspace}
-              disabled={disabled || value.length === 0}
-              className="h-14 px-8 hover:bg-muted/50 active:scale-95 transition-transform"
-              aria-label="Delete"
-            >
-              <Backspace className="h-5 w-5" />
-            </Button>
-          </div>
-        </>
-      )}
+      {/* Control Buttons */}
+      <div className="flex justify-center gap-2 mt-4">
+        <Button
+          variant="outline"
+          onClick={handleDelete}
+          disabled={disabled || selectedIcons.length === 0}
+          className="flex items-center gap-2"
+        >
+          <Delete className="h-4 w-4" />
+          Remove
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleClear}
+          disabled={disabled || selectedIcons.length === 0}
+        >
+          Clear All
+        </Button>
+      </div>
     </div>
   );
 }
-
-export { PIN_ICONS };

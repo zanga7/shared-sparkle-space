@@ -261,7 +261,7 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
                         />
                         <NumberPad
                           onNumberPress={handleNumberPadPress}
-                          onBackspace={handleNumberPadBackspace}
+                          onDelete={handleNumberPadBackspace}
                           disabled={loading}
                         />
                       </div>
@@ -277,7 +277,7 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
                           />
                           <NumberPad
                             onNumberPress={handleConfirmNumberPadPress}
-                            onBackspace={handleConfirmNumberPadBackspace}
+                            onDelete={handleConfirmNumberPadBackspace}
                             disabled={loading}
                           />
                         </div>
@@ -307,7 +307,6 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
                         onChange={setConfirmIconPin}
                         length={4}
                         disabled={loading}
-                        showIcons={true}
                       />
                     </div>
                   )}

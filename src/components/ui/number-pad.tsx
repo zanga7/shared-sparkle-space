@@ -1,42 +1,40 @@
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Backspace } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Delete } from "lucide-react";
 
 interface NumberPadProps {
   onNumberPress: (number: string) => void;
-  onBackspace: () => void;
+  onDelete: () => void;
   className?: string;
   disabled?: boolean;
 }
 
-export function NumberPad({ onNumberPress, onBackspace, className, disabled }: NumberPadProps) {
+export function NumberPad({ onNumberPress, onDelete, className, disabled }: NumberPadProps) {
   const numbers = [
     ['1', '2', '3'],
-    ['4', '5', '6'], 
+    ['4', '5', '6'],
     ['7', '8', '9'],
-    ['', '0', 'backspace']
+    ['', '0', '⌫']
   ];
 
   return (
     <div className={cn("grid grid-cols-3 gap-3 max-w-xs mx-auto", className)}>
-      {numbers.flat().map((value, index) => {
-        if (value === '') {
+      {numbers.flat().map((num, index) => {
+        if (num === '') {
           return <div key={index} />; // Empty space
         }
-
-        if (value === 'backspace') {
+        
+        if (num === '⌫') {
           return (
             <Button
               key={index}
               variant="outline"
               size="lg"
-              onClick={onBackspace}
+              onClick={onDelete}
               disabled={disabled}
-              className="h-14 text-lg font-semibold hover:bg-muted/50 active:scale-95 transition-transform"
-              aria-label="Delete"
+              className="h-14 w-14 text-lg font-semibold hover:bg-muted/50"
             >
-              <Backspace className="h-5 w-5" />
+              <Delete className="h-5 w-5" />
             </Button>
           );
         }
@@ -46,11 +44,11 @@ export function NumberPad({ onNumberPress, onBackspace, className, disabled }: N
             key={index}
             variant="outline"
             size="lg"
-            onClick={() => onNumberPress(value)}
+            onClick={() => onNumberPress(num)}
             disabled={disabled}
-            className="h-14 text-xl font-semibold hover:bg-muted/50 active:scale-95 transition-transform"
+            className="h-14 w-14 text-lg font-semibold hover:bg-muted/50"
           >
-            {value}
+            {num}
           </Button>
         );
       })}

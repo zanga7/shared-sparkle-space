@@ -38,9 +38,9 @@ serve(async (req) => {
     const requestBody = await req.json();
     console.log('Request body received:', JSON.stringify(requestBody, null, 2));
     
-    const { profileId, pin } = requestBody;
+    const { profileId, pin, pinType = 'numeric' } = requestBody;
 
-    console.log('Extracted params:', { profileId, pin: pin ? '[REDACTED]' : 'undefined' });
+    console.log('Extracted params:', { profileId, pin: pin ? '[REDACTED]' : 'undefined', pinType });
 
     if (!profileId || !pin) {
       console.error('Missing required parameters:', { 
@@ -63,7 +63,8 @@ serve(async (req) => {
     // Call the secure PIN setting function
     const { data, error } = await supabase.rpc('set_child_pin', {
       profile_id_param: profileId,
-      new_pin: pin
+      new_pin: pin,
+      pin_type_param: pinType
     });
 
     console.log('Database function response:', { data, error });
