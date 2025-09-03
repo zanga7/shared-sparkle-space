@@ -847,60 +847,6 @@ export type Database = {
         }
         Relationships: []
       }
-      rotating_tasks: {
-        Row: {
-          cadence: string
-          created_at: string
-          created_by: string
-          current_member_index: number
-          description: string | null
-          family_id: string
-          id: string
-          is_active: boolean
-          is_paused: boolean
-          member_order: string[]
-          monthly_day: number | null
-          name: string
-          points: number
-          updated_at: string
-          weekly_days: number[] | null
-        }
-        Insert: {
-          cadence: string
-          created_at?: string
-          created_by: string
-          current_member_index?: number
-          description?: string | null
-          family_id: string
-          id?: string
-          is_active?: boolean
-          is_paused?: boolean
-          member_order: string[]
-          monthly_day?: number | null
-          name: string
-          points?: number
-          updated_at?: string
-          weekly_days?: number[] | null
-        }
-        Update: {
-          cadence?: string
-          created_at?: string
-          created_by?: string
-          current_member_index?: number
-          description?: string | null
-          family_id?: string
-          id?: string
-          is_active?: boolean
-          is_paused?: boolean
-          member_order?: string[]
-          monthly_day?: number | null
-          name?: string
-          points?: number
-          updated_at?: string
-          weekly_days?: number[] | null
-        }
-        Relationships: []
-      }
       screensaver_images: {
         Row: {
           created_at: string
@@ -1095,81 +1041,6 @@ export type Database = {
           },
         ]
       }
-      task_series: {
-        Row: {
-          assigned_to: string | null
-          created_at: string
-          created_by: string
-          description: string | null
-          family_id: string
-          id: string
-          is_active: boolean
-          last_generated_date: string | null
-          monthly_type: string | null
-          monthly_weekday_ordinal: number | null
-          next_due_date: string | null
-          points: number
-          recurring_days_of_week: number[] | null
-          recurring_end_date: string | null
-          recurring_frequency: string
-          recurring_interval: number
-          remaining_repetitions: number | null
-          repetition_count: number | null
-          skip_next_occurrence: boolean | null
-          start_date: string | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          assigned_to?: string | null
-          created_at?: string
-          created_by: string
-          description?: string | null
-          family_id: string
-          id?: string
-          is_active?: boolean
-          last_generated_date?: string | null
-          monthly_type?: string | null
-          monthly_weekday_ordinal?: number | null
-          next_due_date?: string | null
-          points?: number
-          recurring_days_of_week?: number[] | null
-          recurring_end_date?: string | null
-          recurring_frequency: string
-          recurring_interval?: number
-          remaining_repetitions?: number | null
-          repetition_count?: number | null
-          skip_next_occurrence?: boolean | null
-          start_date?: string | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          assigned_to?: string | null
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          family_id?: string
-          id?: string
-          is_active?: boolean
-          last_generated_date?: string | null
-          monthly_type?: string | null
-          monthly_weekday_ordinal?: number | null
-          next_due_date?: string | null
-          points?: number
-          recurring_days_of_week?: number[] | null
-          recurring_end_date?: string | null
-          recurring_frequency?: string
-          recurring_interval?: number
-          remaining_repetitions?: number | null
-          repetition_count?: number | null
-          skip_next_occurrence?: boolean | null
-          start_date?: string | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       tasks: {
         Row: {
           assigned_to: string | null
@@ -1181,13 +1052,7 @@ export type Database = {
           due_date: string | null
           family_id: string
           id: string
-          is_repeating: boolean
           points: number
-          recurring_days_of_week: number[] | null
-          recurring_end_date: string | null
-          recurring_frequency: string | null
-          recurring_interval: number | null
-          series_id: string | null
           task_group: string | null
           title: string
           updated_at: string
@@ -1202,13 +1067,7 @@ export type Database = {
           due_date?: string | null
           family_id: string
           id?: string
-          is_repeating?: boolean
           points?: number
-          recurring_days_of_week?: number[] | null
-          recurring_end_date?: string | null
-          recurring_frequency?: string | null
-          recurring_interval?: number | null
-          series_id?: string | null
           task_group?: string | null
           title: string
           updated_at?: string
@@ -1223,13 +1082,7 @@ export type Database = {
           due_date?: string | null
           family_id?: string
           id?: string
-          is_repeating?: boolean
           points?: number
-          recurring_days_of_week?: number[] | null
-          recurring_end_date?: string | null
-          recurring_frequency?: string | null
-          recurring_interval?: number | null
-          series_id?: string | null
           task_group?: string | null
           title?: string
           updated_at?: string
@@ -1261,13 +1114,6 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_series_id_fkey"
-            columns: ["series_id"]
-            isOneToOne: false
-            referencedRelation: "task_series"
             referencedColumns: ["id"]
           },
         ]
@@ -1335,6 +1181,16 @@ export type Database = {
         }
         Returns: Json
       }
+      create_google_photos_integration_secure: {
+        Args: {
+          access_token_param: string
+          album_id_param?: string
+          album_name_param?: string
+          expires_at_param?: string
+          refresh_token_param?: string
+        }
+        Returns: Json
+      }
       create_missing_profile_for_user: {
         Args: { user_id_param: string }
         Returns: Json
@@ -1381,6 +1237,10 @@ export type Database = {
         Args: { token_value: string }
         Returns: string
       }
+      encrypt_google_photos_tokens: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       encrypt_oauth_token: {
         Args: { token_type?: string; token_value: string }
         Returns: string
@@ -1399,6 +1259,44 @@ export type Database = {
           integration_type: string
           is_active: boolean
           profile_id: string
+          updated_at: string
+        }[]
+      }
+      get_calendar_integrations_metadata: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          calendar_id: string
+          created_at: string
+          expires_at: string
+          has_access_token: boolean
+          has_refresh_token: boolean
+          id: string
+          integration_type: string
+          is_active: boolean
+          is_encrypted: boolean
+          is_expired: boolean
+          last_token_refresh: string
+          profile_id: string
+          token_refresh_count: number
+          updated_at: string
+        }[]
+      }
+      get_calendar_integrations_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          calendar_id: string
+          created_at: string
+          expires_at: string
+          has_access_token: boolean
+          has_refresh_token: boolean
+          id: string
+          integration_type: string
+          is_active: boolean
+          is_encrypted: boolean
+          is_expired: boolean
+          last_token_refresh: string
+          profile_id: string
+          token_refresh_count: number
           updated_at: string
         }[]
       }
@@ -1478,6 +1376,32 @@ export type Database = {
           refresh_token: string
         }[]
       }
+      get_family_profiles_metadata: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          avatar_url: string
+          calendar_edit_permission: string
+          can_add_for_parents: boolean
+          can_add_for_self: boolean
+          can_add_for_siblings: boolean
+          color: string
+          created_at: string
+          display_name: string
+          family_id: string
+          has_pin: boolean
+          id: string
+          is_own_profile: boolean
+          require_pin_for_list_deletes: boolean
+          require_pin_to_complete_tasks: boolean
+          role: Database["public"]["Enums"]["user_role"]
+          sort_order: number
+          status: string
+          streak_count: number
+          total_points: number
+          updated_at: string
+          user_id: string
+        }[]
+      }
       get_family_profiles_safe: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1528,9 +1452,62 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_google_photos_integrations_metadata: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          album_id: string
+          album_name: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          family_id: string
+          has_access_token: boolean
+          has_refresh_token: boolean
+          id: string
+          is_active: boolean
+          is_encrypted: boolean
+          is_expired: boolean
+          last_sync_at: string
+          sync_count: number
+          updated_at: string
+        }[]
+      }
+      get_google_photos_tokens_for_api: {
+        Args: { integration_id_param: string }
+        Returns: {
+          access_token: string
+          expires_at: string
+          refresh_token: string
+        }[]
+      }
       get_profile_points_balance: {
         Args: { profile_id_param: string }
         Returns: number
+      }
+      get_profile_safe: {
+        Args: { profile_id_param: string }
+        Returns: {
+          avatar_url: string
+          calendar_edit_permission: string
+          can_add_for_parents: boolean
+          can_add_for_self: boolean
+          can_add_for_siblings: boolean
+          color: string
+          created_at: string
+          display_name: string
+          family_id: string
+          has_pin: boolean
+          id: string
+          require_pin_for_list_deletes: boolean
+          require_pin_to_complete_tasks: boolean
+          role: Database["public"]["Enums"]["user_role"]
+          sort_order: number
+          status: string
+          streak_count: number
+          total_points: number
+          updated_at: string
+          user_id: string
+        }[]
       }
       get_token_encryption_status: {
         Args: Record<PropertyKey, never>
@@ -1730,6 +1707,15 @@ export type Database = {
       validate_calendar_token_access: {
         Args: { integration_id: string; requesting_user_id?: string }
         Returns: boolean
+      }
+      validate_token_encryption: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          is_secure: boolean
+          table_name: string
+          total_count: number
+          unencrypted_count: number
+        }[]
       }
       verify_pin: {
         Args: { pin_hash: string; pin_text: string }
