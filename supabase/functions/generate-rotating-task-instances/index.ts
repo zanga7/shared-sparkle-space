@@ -78,7 +78,7 @@ serve(async (req) => {
           family_id: rotatingTask.family_id,
           created_by: rotatingTask.created_by,
           due_date: dueDate.toISOString(),
-          is_repeating: false
+          task_group: 'rotating'
         })
         .select()
         .single();
