@@ -56,8 +56,8 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
     try {
       const { data, error } = await supabase.functions.invoke('set-child-pin', {
         body: {
-          child_profile_id: member.id,
-          new_pin: pin
+          profileId: member.id,
+          pin: pin
         }
       });
 

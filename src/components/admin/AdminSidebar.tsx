@@ -21,7 +21,6 @@ import {
   BarChart3,
   Home,
   Archive,
-  Pin,
   Download,
   RotateCcw,
   Calendar,
@@ -45,7 +44,6 @@ const adminMenuItems = [
   { title: "Theme Management", url: "/admin/themes", icon: Palette },
   { title: "Audit Logs", url: "/admin/audit", icon: FileText },
   { title: "Data Export", url: "/admin/export", icon: Download },
-  { title: "PIN Management", url: "/admin/pins", icon: Pin },
   { title: "Archived Items", url: "/admin/archived", icon: Archive },
   { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
