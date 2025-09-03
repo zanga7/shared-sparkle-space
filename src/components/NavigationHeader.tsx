@@ -95,55 +95,9 @@ export function NavigationHeader({
                 Switch
               </Button>
             </>
-          ) : dashboardMode ? (
-            <>
-              {/* Dashboard Mode without PIN restrictions: Just show member filter */}
-              <Button
-                variant={viewMode === 'everyone' ? "default" : "ghost"}
-                size="sm"
-                onClick={() => onMemberSelect(null)}
-                className="h-9 px-3 font-medium"
-              >
-                Everyone
-              </Button>
-
-              <div className="flex items-center space-x-2">
-                {familyMembers.map((member) => (
-                  <Button
-                    key={member.id}
-                    variant={selectedMember === member.id && viewMode === 'member' ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => onMemberSelect(member.id)}
-                    className="h-9 px-2 font-medium flex items-center space-x-2"
-                  >
-                    <UserAvatar 
-                      name={member.display_name} 
-                      color={member.color} 
-                      size="sm" 
-                    />
-                    <span className="hidden sm:inline">{member.display_name}</span>
-                    <Badge 
-                      variant="secondary" 
-                      className="ml-1 text-xs font-semibold bg-background/80"
-                    >
-                      {member.total_points}
-                    </Badge>
-                  </Button>
-                ))}
-              </div>
-            </>
           ) : (
             <>
-              {/* Regular Mode: Filter UI */}
-              <Button
-                variant={viewMode === 'everyone' ? "default" : "ghost"}
-                size="sm"
-                onClick={() => onMemberSelect(null)}
-                className="h-9 px-3 font-medium"
-              >
-                Everyone
-              </Button>
-
+              {/* Member selection for dashboard views */}
               <div className="flex items-center space-x-2">
                 {familyMembers.map((member) => (
                   <Button
