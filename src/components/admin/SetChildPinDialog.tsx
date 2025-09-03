@@ -46,10 +46,10 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
     const currentPin = pinType === 'icon' ? iconPin : pin;
     const currentConfirmPin = pinType === 'icon' ? confirmIconPin : confirmPin;
 
-    if (currentPin.length < 4) {
+    if (currentPin.length !== 4) {
       toast({
         title: 'Invalid PIN',
-        description: pinType === 'icon' ? 'Icon PIN must have at least 4 icons' : 'PIN must be at least 4 digits',
+        description: pinType === 'icon' ? 'Icon PIN must have exactly 4 icons' : 'PIN must be exactly 4 digits',
         variant: 'destructive'
       });
       return;
