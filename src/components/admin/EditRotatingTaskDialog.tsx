@@ -44,6 +44,7 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
   const [weeklyDays, setWeeklyDays] = useState<number[]>([1]);
   const [monthlyDay, setMonthlyDay] = useState(1);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [taskGroup, setTaskGroup] = useState<'morning' | 'midday' | 'afternoon' | 'general'>('general');
   const [currentMemberIndex, setCurrentMemberIndex] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -83,6 +84,7 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
       setWeeklyDays(task.weekly_days || [1]);
       setMonthlyDay(task.monthly_day || 1);
       setSelectedMembers([...task.member_order]);
+      setTaskGroup((task as any).task_group || 'general');
       setCurrentMemberIndex(task.current_member_index);
       setIsActive(task.is_active);
     }
@@ -181,6 +183,7 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
           weekly_days: cadence === 'weekly' ? weeklyDays : null,
           monthly_day: cadence === 'monthly' ? monthlyDay : null,
           member_order: selectedMembers,
+          task_group: taskGroup,
           current_member_index: Math.min(currentMemberIndex, selectedMembers.length - 1),
           is_active: isActive,
         })
@@ -292,6 +295,21 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
                 <SelectItem value="daily">Daily</SelectItem>
                 <SelectItem value="weekly">Weekly</SelectItem>
                 <SelectItem value="monthly">Monthly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Task Group</Label>
+            <Select value={taskGroup} onValueChange={(value: 'morning' | 'midday' | 'afternoon' | 'general') => setTaskGroup(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="morning">Morning</SelectItem>
+                <SelectItem value="midday">Midday</SelectItem>
+                <SelectItem value="afternoon">Afternoon</SelectItem>
+                <SelectItem value="general">General</SelectItem>
               </SelectContent>
             </Select>
           </div>

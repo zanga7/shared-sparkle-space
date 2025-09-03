@@ -78,7 +78,7 @@ serve(async (req) => {
           family_id: rotatingTask.family_id,
           created_by: rotatingTask.created_by,
           due_date: dueDate.toISOString(),
-          task_group: 'rotating'
+          task_group: rotatingTask.task_group || 'general'
         })
         .select()
         .single();

@@ -862,6 +862,7 @@ export type Database = {
           monthly_day: number | null
           name: string
           points: number
+          task_group: string | null
           updated_at: string
           weekly_days: number[] | null
         }
@@ -879,6 +880,7 @@ export type Database = {
           monthly_day?: number | null
           name: string
           points?: number
+          task_group?: string | null
           updated_at?: string
           weekly_days?: number[] | null
         }
@@ -896,6 +898,7 @@ export type Database = {
           monthly_day?: number | null
           name?: string
           points?: number
+          task_group?: string | null
           updated_at?: string
           weekly_days?: number[] | null
         }

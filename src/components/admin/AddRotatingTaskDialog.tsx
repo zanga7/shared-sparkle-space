@@ -26,6 +26,7 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
   const [weeklyDays, setWeeklyDays] = useState<number[]>([1]); // Monday by default
   const [monthlyDay, setMonthlyDay] = useState(1);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [taskGroup, setTaskGroup] = useState<'morning' | 'midday' | 'afternoon' | 'general'>('general');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -125,6 +126,7 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
           monthly_day: cadence === 'monthly' ? monthlyDay : null,
           member_order: selectedMembers,
           current_member_index: 0,
+          task_group: taskGroup,
           family_id: profile.family_id,
           created_by: profile.id,
         });
@@ -144,6 +146,7 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
       setWeeklyDays([1]);
       setMonthlyDay(1);
       setSelectedMembers([]);
+      setTaskGroup('general');
 
       onSuccess();
     } catch (error) {
@@ -211,6 +214,21 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
                 <SelectItem value="daily">Daily</SelectItem>
                 <SelectItem value="weekly">Weekly</SelectItem>
                 <SelectItem value="monthly">Monthly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Task Group</Label>
+            <Select value={taskGroup} onValueChange={(value: 'morning' | 'midday' | 'afternoon' | 'general') => setTaskGroup(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="morning">Morning</SelectItem>
+                <SelectItem value="midday">Midday</SelectItem>
+                <SelectItem value="afternoon">Afternoon</SelectItem>
+                <SelectItem value="general">General</SelectItem>
               </SelectContent>
             </Select>
           </div>
