@@ -692,6 +692,7 @@ export type Database = {
           id: string
           pin_hash: string | null
           pin_locked_until: string | null
+          pin_type: string | null
           require_pin_for_list_deletes: boolean | null
           require_pin_to_complete_tasks: boolean | null
           role: Database["public"]["Enums"]["user_role"]
@@ -717,6 +718,7 @@ export type Database = {
           id?: string
           pin_hash?: string | null
           pin_locked_until?: string | null
+          pin_type?: string | null
           require_pin_for_list_deletes?: boolean | null
           require_pin_to_complete_tasks?: boolean | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -742,6 +744,7 @@ export type Database = {
           id?: string
           pin_hash?: string | null
           pin_locked_until?: string | null
+          pin_type?: string | null
           require_pin_for_list_deletes?: boolean | null
           require_pin_to_complete_tasks?: boolean | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -1722,7 +1725,13 @@ export type Database = {
         Returns: Json
       }
       set_child_pin: {
-        Args: { new_pin: string; profile_id_param: string }
+        Args:
+          | {
+              new_pin: string
+              pin_type_param?: string
+              profile_id_param: string
+            }
+          | { new_pin: string; profile_id_param: string }
         Returns: Json
       }
       store_calendar_tokens_secure: {
