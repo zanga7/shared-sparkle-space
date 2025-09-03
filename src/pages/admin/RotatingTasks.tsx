@@ -81,24 +81,6 @@ export default function RotatingTasks() {
     }
   };
 
-  const generateTasksManually = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-rotating-task-instances');
-      
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: `Generated ${data.tasksCreated} task instances`,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to generate task instances",
-        variant: "destructive",
-      });
-    }
-  };
 
   const getProfileName = (profileId: string) => {
     return profiles?.find(p => p.id === profileId)?.display_name || 'Unknown';
@@ -163,16 +145,10 @@ export default function RotatingTasks() {
           <h1 className="text-2xl font-bold tracking-tight">Rotating Tasks</h1>
           <p className="text-muted-foreground">Manage tasks that rotate between family members</p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={generateTasksManually} variant="outline">
-            <Play className="h-4 w-4 mr-2" />
-            Generate Now
-          </Button>
-          <Button onClick={() => setIsAddDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Rotating Task
-          </Button>
-        </div>
+        <Button onClick={() => setIsAddDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Rotating Task
+        </Button>
       </div>
 
       {(!rotatingTasks || rotatingTasks.length === 0) ? (
@@ -215,7 +191,7 @@ export default function RotatingTasks() {
                       size="sm"
                       onClick={() => toggleTaskStatus(task.id, task.is_paused)}
                     >
-                      {task.is_paused ? (
+                       {task.is_paused ? (
                         <>
                           <Play className="h-4 w-4 mr-1" />
                           Resume
