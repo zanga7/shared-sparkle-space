@@ -849,6 +849,7 @@ export type Database = {
       }
       rotating_tasks: {
         Row: {
+          allow_multiple_completions: boolean
           cadence: string
           created_at: string
           created_by: string
@@ -867,6 +868,7 @@ export type Database = {
           weekly_days: number[] | null
         }
         Insert: {
+          allow_multiple_completions?: boolean
           cadence: string
           created_at?: string
           created_by: string
@@ -885,6 +887,7 @@ export type Database = {
           weekly_days?: number[] | null
         }
         Update: {
+          allow_multiple_completions?: boolean
           cadence?: string
           created_at?: string
           created_by?: string

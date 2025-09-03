@@ -27,6 +27,7 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
   const [monthlyDay, setMonthlyDay] = useState(1);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [taskGroup, setTaskGroup] = useState<'morning' | 'midday' | 'afternoon' | 'general'>('general');
+  const [allowMultipleCompletions, setAllowMultipleCompletions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -127,6 +128,7 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
           member_order: selectedMembers,
           current_member_index: 0,
           task_group: taskGroup,
+          allow_multiple_completions: allowMultipleCompletions,
           family_id: profile.family_id,
           created_by: profile.id,
         });
@@ -147,6 +149,7 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
       setMonthlyDay(1);
       setSelectedMembers([]);
       setTaskGroup('general');
+      setAllowMultipleCompletions(false);
 
       onSuccess();
     } catch (error) {
@@ -308,6 +311,20 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
               </div>
             )}
           </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="allowMultipleCompletions"
+              checked={allowMultipleCompletions}
+              onCheckedChange={(checked) => setAllowMultipleCompletions(checked as boolean)}
+            />
+            <Label htmlFor="allowMultipleCompletions" className="text-sm">
+              Allow multiple completions per {cadence === 'daily' ? 'day' : cadence === 'weekly' ? 'week' : 'month'}
+            </Label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            When enabled, allows generating new tasks even if one already exists for the current {cadence === 'daily' ? 'day' : cadence === 'weekly' ? 'week' : 'month'}. Useful for tasks that can be done multiple times.
+          </p>
         </div>
 
         <DialogFooter>

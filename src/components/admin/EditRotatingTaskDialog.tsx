@@ -23,6 +23,7 @@ interface RotatingTask {
   monthly_day: number | null;
   member_order: string[];
   current_member_index: number;
+  allow_multiple_completions?: boolean;
   is_active: boolean;
   is_paused: boolean;
   created_at: string;
@@ -45,6 +46,7 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
   const [monthlyDay, setMonthlyDay] = useState(1);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [taskGroup, setTaskGroup] = useState<'morning' | 'midday' | 'afternoon' | 'general'>('general');
+  const [allowMultipleCompletions, setAllowMultipleCompletions] = useState(false);
   const [currentMemberIndex, setCurrentMemberIndex] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,6 +87,7 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
       setMonthlyDay(task.monthly_day || 1);
       setSelectedMembers([...task.member_order]);
       setTaskGroup((task as any).task_group || 'general');
+      setAllowMultipleCompletions(task.allow_multiple_completions || false);
       setCurrentMemberIndex(task.current_member_index);
       setIsActive(task.is_active);
     }
@@ -184,6 +187,7 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
           monthly_day: cadence === 'monthly' ? monthlyDay : null,
           member_order: selectedMembers,
           task_group: taskGroup,
+          allow_multiple_completions: allowMultipleCompletions,
           current_member_index: Math.min(currentMemberIndex, selectedMembers.length - 1),
           is_active: isActive,
         })
@@ -394,6 +398,20 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
               </div>
             )}
           </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="allowMultipleCompletions"
+              checked={allowMultipleCompletions}
+              onCheckedChange={(checked) => setAllowMultipleCompletions(checked as boolean)}
+            />
+            <Label htmlFor="allowMultipleCompletions" className="text-sm">
+              Allow multiple completions per {cadence === 'daily' ? 'day' : cadence === 'weekly' ? 'week' : 'month'}
+            </Label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            When enabled, allows generating new tasks even if one already exists for the current {cadence === 'daily' ? 'day' : cadence === 'weekly' ? 'week' : 'month'}. Useful for tasks that can be done multiple times.
+          </p>
 
           <div className="flex items-center space-x-2">
             <Checkbox
