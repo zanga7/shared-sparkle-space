@@ -15,6 +15,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '');
     if (!authHeader) {
+      console.error('No authorization header found');
       return new Response(
         JSON.stringify({ success: false, error: 'Authorization required' }),
         { 
@@ -34,9 +35,20 @@ serve(async (req) => {
       }
     );
 
-    const { profileId, pin } = await req.json();
+    const requestBody = await req.json();
+    console.log('Request body received:', JSON.stringify(requestBody, null, 2));
+    
+    const { profileId, pin } = requestBody;
+
+    console.log('Extracted params:', { profileId, pin: pin ? '[REDACTED]' : 'undefined' });
 
     if (!profileId || !pin) {
+      console.error('Missing required parameters:', { 
+        hasProfileId: !!profileId, 
+        hasPin: !!pin,
+        profileId,
+        pinLength: pin ? pin.length : 0
+      });
       return new Response(
         JSON.stringify({ success: false, error: 'Missing profileId or pin' }),
         { 
@@ -46,16 +58,20 @@ serve(async (req) => {
       );
     }
 
+    console.log('Calling set_child_pin function with profileId:', profileId);
+    
     // Call the secure PIN setting function
     const { data, error } = await supabase.rpc('set_child_pin', {
       profile_id_param: profileId,
       new_pin: pin
     });
 
+    console.log('Database function response:', { data, error });
+
     if (error) {
       console.error('Database error during PIN setting:', error);
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to set PIN' }),
+        JSON.stringify({ success: false, error: 'Failed to set PIN: ' + error.message }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -72,8 +88,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in set-child-pin function:', error);
+    console.error('Error stack:', error.stack);
     return new Response(
-      JSON.stringify({ success: false, error: 'Internal server error' }),
+      JSON.stringify({ success: false, error: 'Internal server error: ' + error.message }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
