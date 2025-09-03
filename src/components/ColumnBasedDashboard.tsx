@@ -118,6 +118,13 @@ const ColumnBasedDashboard = () => {
     }
   };
 
+  // Handle tab changes - clear member selection when switching to tab view
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setSelectedMemberFilter(null); // Clear member selection
+    setViewMode('everyone');
+  };
+
   // Handle member selection for filtering
   const handleMemberSelect = (memberId: string | null) => {
     setSelectedMemberFilter(memberId);
@@ -1102,7 +1109,7 @@ const ColumnBasedDashboard = () => {
         onMemberSelect={handleMemberSelect}
         onSettingsClick={handleSettingsClick}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         activeMemberId={activeMemberId}
         onMemberSwitch={handleMemberSwitch}
         dashboardMode={dashboardMode}
