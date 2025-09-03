@@ -63,7 +63,7 @@ serve(async (req) => {
     // Call the secure PIN setting function
     const { data, error } = await supabase.rpc('set_child_pin', {
       profile_id_param: profileId,
-      new_pin: pin,
+      pin_param: pin,
       pin_type_param: pinType
     });
 
