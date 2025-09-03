@@ -1,16 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { NumberPad } from '@/components/ui/number-pad';
 import { IconPinInput } from '@/components/ui/icon-pin-input';
 import { PinInput } from '@/components/ui/pin-input';
-import { Eye, EyeOff, Key, Hash, Palette, X, RotateCcw } from 'lucide-react';
+import { Eye, EyeOff, Key, Hash, Palette, X, RotateCcw, Keyboard, Calculator } from 'lucide-react';
 
 interface Profile {
   id: string;
@@ -32,35 +31,74 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
   const [confirmPin, setConfirmPin] = useState('');
   const [showPin, setShowPin] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [pinType, setPinType] = useState<'numeric' | 'icon'>(member?.pin_type || 'numeric');
-  const [inputMethod, setInputMethod] = useState<'manual' | 'numberpad'>('numberpad');
+  const [inputMethod, setInputMethod] = useState<'keypad' | 'manual' | 'icon'>('keypad');
   const [iconPin, setIconPin] = useState('');
   const [confirmIconPin, setConfirmIconPin] = useState('');
   const { toast } = useToast();
 
+  // Clear all state when dialog opens or input method changes
+  const clearAllState = () => {
+    console.log('Clearing all PIN state');
+    setPin('');
+    setConfirmPin('');
+    setIconPin('');
+    setConfirmIconPin('');
+    setShowPin(false);
+  };
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (open) {
+      console.log('Dialog opened, clearing state');
+      clearAllState();
+      setInputMethod('keypad'); // Reset to default method
+    }
+  }, [open]);
+
+  // Clear state when switching input methods
+  useEffect(() => {
+    console.log('Input method changed to:', inputMethod);
+    clearAllState();
+  }, [inputMethod]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!member) return;
+    if (!member) {
+      console.error('No member provided for PIN setting');
+      return;
+    }
 
-    const currentPin = pinType === 'icon' ? iconPin : pin;
-    const currentConfirmPin = pinType === 'icon' ? confirmIconPin : confirmPin;
+    const currentPin = inputMethod === 'icon' ? iconPin : pin;
+    const currentConfirmPin = inputMethod === 'icon' ? confirmIconPin : confirmPin;
+    const pinType = inputMethod === 'icon' ? 'icon' : 'numeric';
 
-    // Only validate on form submission
-    const actualPinLength = pinType === 'icon' 
+    console.log('PIN submission details:', {
+      inputMethod,
+      pinType,
+      currentPinLength: currentPin.length,
+      confirmPinLength: currentConfirmPin.length,
+      memberId: member.id
+    });
+
+    // Enhanced validation
+    const actualPinLength = inputMethod === 'icon' 
       ? (currentPin ? currentPin.split(',').filter(Boolean).length : 0)
       : currentPin.length;
     
     if (actualPinLength !== 4) {
+      const errorMsg = inputMethod === 'icon' ? 'Icon PIN must have exactly 4 icons' : 'PIN must be exactly 4 digits';
+      console.error('PIN length validation failed:', { actualPinLength, expected: 4 });
       toast({
         title: 'Invalid PIN',
-        description: pinType === 'icon' ? 'Icon PIN must have exactly 4 icons' : 'PIN must be exactly 4 digits',
+        description: errorMsg,
         variant: 'destructive'
       });
       return;
     }
 
     if (currentPin !== currentConfirmPin) {
+      console.error('PIN confirmation mismatch');
       toast({
         title: 'PIN Mismatch',
         description: 'PIN and confirmation do not match',
@@ -72,6 +110,7 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
     setLoading(true);
 
     try {
+      console.log('Calling set-child-pin function...');
       const { data, error } = await supabase.functions.invoke('set-child-pin', {
         body: {
           profileId: member.id,
@@ -80,30 +119,35 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
         }
       });
 
-      if (error) throw error;
+      console.log('Function response:', { data, error });
 
-      const result = data as { success: boolean; error?: string };
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
+
+      const result = data as { success: boolean; error?: string; message?: string };
       
       if (result.success) {
+        console.log('PIN set successfully');
         toast({
           title: 'Success',
-          description: 'PIN has been set successfully',
+          description: result.message || 'PIN has been set successfully',
         });
         
-        setPin('');
-        setConfirmPin('');
-        setIconPin('');
-        setConfirmIconPin('');
+        clearAllState();
         onOpenChange(false);
         onPinUpdated();
       } else {
+        console.error('Function returned error:', result.error);
         throw new Error(result.error || 'Failed to set PIN');
       }
     } catch (error) {
       console.error('Error setting PIN:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to set PIN. Please try again.';
       toast({
         title: 'Error',
-        description: 'Failed to set PIN. Please try again.',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {
@@ -199,14 +243,18 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* PIN Type Selection */}
+          {/* Input Method Selection */}
           <div className="space-y-4">
-            <Label className="text-base font-semibold">PIN Type</Label>
-            <Tabs value={pinType} onValueChange={(value) => setPinType(value as 'numeric' | 'icon')}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="numeric" className="flex items-center gap-2">
-                  <Hash className="h-4 w-4" />
-                  Numbers
+            <Label className="text-base font-semibold">Input Method</Label>
+            <Tabs value={inputMethod} onValueChange={(value) => setInputMethod(value as 'keypad' | 'manual' | 'icon')}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="keypad" className="flex items-center gap-2">
+                  <Calculator className="h-4 w-4" />
+                  Keypad
+                </TabsTrigger>
+                <TabsTrigger value="manual" className="flex items-center gap-2">
+                  <Keyboard className="h-4 w-4" />
+                  Manual
                 </TabsTrigger>
                 <TabsTrigger value="icon" className="flex items-center gap-2">
                   <Palette className="h-4 w-4" />
@@ -214,127 +262,111 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="numeric" className="space-y-4">
+              <TabsContent value="keypad" className="space-y-4">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="input-method">Input Method</Label>
-                    <div className="flex items-center space-x-2">
-                      <Label htmlFor="input-toggle" className="text-sm">Manual</Label>
-                      <Switch
-                        id="input-toggle"
-                        checked={inputMethod === 'numberpad'}
-                        onCheckedChange={(checked) => setInputMethod(checked ? 'numberpad' : 'manual')}
+                  {pin.length < 4 ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>New PIN (4 digits)</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={clearPin}
+                          disabled={loading || pin.length === 0}
+                          className="flex items-center gap-1"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          Clear
+                        </Button>
+                      </div>
+                      <PinInput
+                        value={pin}
+                        onChange={setPin}
+                        length={4}
+                        disabled={loading}
                       />
-                      <Label htmlFor="input-toggle" className="text-sm">Number Pad</Label>
+                      <NumberPad
+                        onNumberPress={handleNumberPadPress}
+                        onDelete={handleNumberPadBackspace}
+                        disabled={loading}
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Confirm PIN</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={clearConfirmPin}
+                          disabled={loading || confirmPin.length === 0}
+                          className="flex items-center gap-1"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          Clear
+                        </Button>
+                      </div>
+                      <PinInput
+                        value={confirmPin}
+                        onChange={setConfirmPin}
+                        length={4}
+                        disabled={loading}
+                      />
+                      <NumberPad
+                        onNumberPress={handleConfirmNumberPadPress}
+                        onDelete={handleConfirmNumberPadBackspace}
+                        disabled={loading}
+                      />
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="manual" className="space-y-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="pin">New PIN (4 digits)</Label>
+                    <div className="relative">
+                      <Input
+                        id="pin"
+                        type={showPin ? "text" : "password"}
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        placeholder="Enter 4-digit PIN"
+                        maxLength={4}
+                        disabled={loading}
+                        required
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPin(!showPin)}
+                        disabled={loading}
+                      >
+                        {showPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
                     </div>
                   </div>
 
-                  {inputMethod === 'manual' ? (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="pin">New PIN (4 digits)</Label>
-                        <div className="relative">
-                          <Input
-                            id="pin"
-                            type={showPin ? "text" : "password"}
-                            value={pin}
-                            onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                            placeholder="Enter 4-digit PIN"
-                            maxLength={4}
-                            required
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                            onClick={() => setShowPin(!showPin)}
-                          >
-                            {showPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="confirmPin">Confirm PIN</Label>
-                        <div className="relative">
-                          <Input
-                            id="confirmPin"
-                            type={showPin ? "text" : "password"}
-                            value={confirmPin}
-                            onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                            placeholder="Confirm 4-digit PIN"
-                            maxLength={4}
-                            required
-                          />
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="space-y-4">
-                      {pin.length < 4 ? (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label>New PIN (4 digits)</Label>
-                            <div className="flex gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={clearPin}
-                                disabled={loading || pin.length === 0}
-                                className="flex items-center gap-1"
-                              >
-                                <RotateCcw className="h-3 w-3" />
-                                Clear All
-                              </Button>
-                            </div>
-                          </div>
-                          <PinInput
-                            value={pin}
-                            onChange={setPin}
-                            length={4}
-                            disabled={loading}
-                          />
-                          <NumberPad
-                            onNumberPress={handleNumberPadPress}
-                            onDelete={handleNumberPadBackspace}
-                            disabled={loading}
-                          />
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label>Confirm PIN</Label>
-                            <div className="flex gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={clearConfirmPin}
-                                disabled={loading || confirmPin.length === 0}
-                                className="flex items-center gap-1"
-                              >
-                                <RotateCcw className="h-3 w-3" />
-                                Clear All
-                              </Button>
-                            </div>
-                          </div>
-                          <PinInput
-                            value={confirmPin}
-                            onChange={setConfirmPin}
-                            length={4}
-                            disabled={loading}
-                          />
-                          <NumberPad
-                            onNumberPress={handleConfirmNumberPadPress}
-                            onDelete={handleConfirmNumberPadBackspace}
-                            disabled={loading}
-                          />
-                        </div>
-                      )}
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPin">Confirm PIN</Label>
+                    <div className="relative">
+                      <Input
+                        id="confirmPin"
+                        type={showPin ? "text" : "password"}
+                        value={confirmPin}
+                        onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        placeholder="Confirm 4-digit PIN"
+                        maxLength={4}
+                        disabled={loading}
+                        required
+                      />
                     </div>
-                  )}
+                  </div>
                 </div>
               </TabsContent>
 
@@ -344,19 +376,17 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label>New Icon PIN (4 icons)</Label>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={clearIconPin}
-                            disabled={loading || iconPin.length === 0}
-                            className="flex items-center gap-1"
-                          >
-                            <RotateCcw className="h-3 w-3" />
-                            Clear All
-                          </Button>
-                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={clearIconPin}
+                          disabled={loading || iconPin.length === 0}
+                          className="flex items-center gap-1"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          Clear
+                        </Button>
                       </div>
                       <IconPinInput
                         value={iconPin}
@@ -369,19 +399,17 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label>Confirm Icon PIN</Label>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={clearConfirmIconPin}
-                            disabled={loading || confirmIconPin.length === 0}
-                            className="flex items-center gap-1"
-                          >
-                            <RotateCcw className="h-3 w-3" />
-                            Clear All
-                          </Button>
-                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={clearConfirmIconPin}
+                          disabled={loading || confirmIconPin.length === 0}
+                          className="flex items-center gap-1"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          Clear
+                        </Button>
                       </div>
                       <IconPinInput
                         value={confirmIconPin}
