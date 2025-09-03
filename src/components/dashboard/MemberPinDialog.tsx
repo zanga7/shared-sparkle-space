@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { PinInput } from '@/components/ui/pin-input';
+import { EnhancedPinInput } from '@/components/ui/enhanced-pin-input';
 import { UserAvatar } from '@/components/ui/user-avatar';
 
 interface Profile {
@@ -33,7 +33,12 @@ export function MemberPinDialog({
   const [pin, setPin] = useState('');
 
   const handleSubmit = async () => {
-    if (pin.length !== 4) return;
+    // Check if PIN has the right format (4 digits or 4 icons)
+    const isValidPin = pin.includes(',') ? 
+      pin.split(',').filter(Boolean).length === 4 : 
+      pin.length === 4;
+    
+    if (!isValidPin) return;
     
     const success = await onAuthenticate(pin);
     if (success) {
@@ -70,12 +75,13 @@ export function MemberPinDialog({
           </p>
           
           <div className="flex justify-center">
-            <PinInput
+            <EnhancedPinInput
               value={pin}
               onChange={setPin}
               onComplete={handleSubmit}
               length={4}
               disabled={isAuthenticating}
+              allowIconPin={true}
             />
           </div>
           
@@ -89,7 +95,12 @@ export function MemberPinDialog({
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={pin.length !== 4 || isAuthenticating}
+              disabled={
+                (pin.includes(',') ? 
+                  pin.split(',').filter(Boolean).length !== 4 : 
+                  pin.length !== 4) || 
+                isAuthenticating
+              }
             >
               {isAuthenticating ? "Verifying..." : "Verify PIN"}
             </Button>

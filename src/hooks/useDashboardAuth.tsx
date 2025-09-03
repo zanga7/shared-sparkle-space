@@ -86,9 +86,15 @@ export const useDashboardAuth = () => {
     setIsAuthenticating(true);
     
     try {
-      const { data, error } = await supabase.rpc('authenticate_member_pin_dashboard', {
-        profile_id_param: memberId,
-        pin_attempt: pin
+      // Determine PIN type based on format
+      const pinType = pin.includes(',') ? 'icon' : 'numeric';
+      
+      const { data, error } = await supabase.functions.invoke('secure-pin-auth', {
+        body: {
+          profileId: memberId,
+          pin: pin,
+          pinType: pinType
+        }
       });
 
       if (error) throw error;
