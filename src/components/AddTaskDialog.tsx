@@ -186,6 +186,9 @@ export const AddTaskDialog = ({
         created_by: profileId
       };
 
+      console.log('Creating task with data:', taskData);
+      console.log('Form data task_group:', formData.task_group);
+
       const { data: taskResult, error } = await supabase
         .from('tasks')
         .insert(taskData)
