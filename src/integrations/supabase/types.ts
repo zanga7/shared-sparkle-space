@@ -847,6 +847,60 @@ export type Database = {
         }
         Relationships: []
       }
+      rotating_tasks: {
+        Row: {
+          cadence: string
+          created_at: string
+          created_by: string
+          current_member_index: number
+          description: string | null
+          family_id: string
+          id: string
+          is_active: boolean
+          is_paused: boolean
+          member_order: string[]
+          monthly_day: number | null
+          name: string
+          points: number
+          updated_at: string
+          weekly_days: number[] | null
+        }
+        Insert: {
+          cadence: string
+          created_at?: string
+          created_by: string
+          current_member_index?: number
+          description?: string | null
+          family_id: string
+          id?: string
+          is_active?: boolean
+          is_paused?: boolean
+          member_order: string[]
+          monthly_day?: number | null
+          name: string
+          points?: number
+          updated_at?: string
+          weekly_days?: number[] | null
+        }
+        Update: {
+          cadence?: string
+          created_at?: string
+          created_by?: string
+          current_member_index?: number
+          description?: string | null
+          family_id?: string
+          id?: string
+          is_active?: boolean
+          is_paused?: boolean
+          member_order?: string[]
+          monthly_day?: number | null
+          name?: string
+          points?: number
+          updated_at?: string
+          weekly_days?: number[] | null
+        }
+        Relationships: []
+      }
       screensaver_images: {
         Row: {
           created_at: string
