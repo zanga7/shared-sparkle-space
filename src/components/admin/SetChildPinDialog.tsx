@@ -46,7 +46,7 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
     const currentPin = pinType === 'icon' ? iconPin : pin;
     const currentConfirmPin = pinType === 'icon' ? confirmIconPin : confirmPin;
 
-    // Validate PIN length
+    // Only validate on form submission
     const actualPinLength = pinType === 'icon' 
       ? (currentPin ? currentPin.split(',').filter(Boolean).length : 0)
       : currentPin.length;
