@@ -54,7 +54,9 @@ import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEvents } from '@/hooks/useEvents';
+import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { EventDialog } from '@/components/EventDialog';
+import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
 import { CalendarEvent } from '@/types/event';
 
 interface CalendarViewProps {
@@ -102,8 +104,12 @@ export const CalendarView = ({
   const [selectedEventDate, setSelectedEventDate] = useState<Date | null>(null);
   const [defaultMember, setDefaultMember] = useState<string>('');
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
+  const [pendingTaskCompletion, setPendingTaskCompletion] = useState<Task | null>(null);
+  const [memberRequiringPin, setMemberRequiringPin] = useState<Profile | null>(null);
   const { toast } = useToast();
   const { events, createEvent, updateEvent, deleteEvent, refreshEvents } = useEvents(familyId);
+  const { canPerformAction, authenticateMemberPin, isAuthenticating } = useDashboardAuth();
 
   // Get member color classes using the global color system
   const getMemberColors = (member: Profile | null) => {
@@ -387,7 +393,7 @@ export const CalendarView = ({
     setIsEventDialogOpen(true);
   };
 
-  // Handle task completion
+  // Handle task completion with PIN protection
   const completeTask = async (task: Task, event: React.MouseEvent) => {
     event.stopPropagation();
     
@@ -398,6 +404,45 @@ export const CalendarView = ({
     }
     
     // Fallback to regular completion for non-dashboard mode
+    if (!profile) return;
+    
+    try {
+      // Dashboard Mode: Check PIN requirements for the active member
+      if (dashboardMode && activeMemberId) {
+        const { canProceed, needsPin, profile: memberProfile } = await canPerformAction(activeMemberId, 'task_completion');
+        
+        if (needsPin) {
+          // Store the task to complete after PIN authentication
+          setPendingTaskCompletion(task);
+          setMemberRequiringPin(memberProfile || null);
+          setPinDialogOpen(true);
+          return;
+        }
+        
+        if (!canProceed) {
+          toast({
+            title: 'Cannot Complete Task',
+            description: 'Permission denied for this action.',
+            variant: 'destructive'
+          });
+          return;
+        }
+      }
+      
+      // Execute task completion
+      await executeTaskCompletion(task);
+    } catch (error) {
+      console.error('Error in completeTask:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to complete task',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Execute the actual task completion
+  const executeTaskCompletion = async (task: Task) => {
     if (!profile) return;
     
     try {
@@ -1195,6 +1240,36 @@ export const CalendarView = ({
               }
             } : undefined}
       />
+
+      {/* PIN Dialog for Task Completion */}
+      {memberRequiringPin && (
+        <MemberPinDialog
+          open={pinDialogOpen}
+          onOpenChange={(open) => {
+            setPinDialogOpen(open);
+            if (!open) {
+              setPendingTaskCompletion(null);
+              setMemberRequiringPin(null);
+            }
+          }}
+          member={memberRequiringPin}
+          onSuccess={async () => {
+            if (pendingTaskCompletion) {
+              await executeTaskCompletion(pendingTaskCompletion);
+              setPendingTaskCompletion(null);
+              setMemberRequiringPin(null);
+            }
+          }}
+          onAuthenticate={async (pin: string) => {
+            if (memberRequiringPin) {
+              return await authenticateMemberPin(memberRequiringPin.id, pin);
+            }
+            return false;
+          }}
+          isAuthenticating={isAuthenticating}
+          action="complete this task"
+        />
+      )}
     </Card>
   );
 };
