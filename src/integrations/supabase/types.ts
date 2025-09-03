@@ -1726,7 +1726,7 @@ export type Database = {
       }
       set_child_pin: {
         Args: {
-          new_pin: string
+          pin_param: string
           pin_type_param?: string
           profile_id_param: string
         }
