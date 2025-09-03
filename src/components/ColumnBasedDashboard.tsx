@@ -1583,6 +1583,34 @@ const ColumnBasedDashboard = () => {
           }}
         />
       )}
+      {/* Temporary debug button */}
+      {profile?.role === 'parent' && (
+        <div className="fixed bottom-4 left-4 z-50">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={async () => {
+              try {
+                const { data, error } = await supabase.functions.invoke('generate-rotating-task-instances');
+                if (error) throw error;
+                toast({
+                  title: "Success",
+                  description: `Generated ${data.tasksCreated} rotating task instances`,
+                });
+                fetchUserData(); // Refresh the data
+              } catch (error) {
+                toast({
+                  title: "Error", 
+                  description: "Failed to generate tasks",
+                  variant: "destructive",
+                });
+              }
+            }}
+          >
+            Generate Rotating Tasks
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
