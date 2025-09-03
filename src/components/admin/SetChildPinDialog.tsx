@@ -372,7 +372,7 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
 
               <TabsContent value="icon" className="space-y-4">
                 <div className="space-y-4">
-                  {iconPin.split(',').filter(Boolean).length < 4 ? (
+                  {!iconPin || iconPin.split(',').filter(Boolean).length < 4 ? (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label>New Icon PIN (4 icons)</Label>
@@ -381,7 +381,7 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
                           variant="outline"
                           size="sm"
                           onClick={clearIconPin}
-                          disabled={loading || iconPin.length === 0}
+                          disabled={loading || !iconPin}
                           className="flex items-center gap-1"
                         >
                           <RotateCcw className="h-3 w-3" />
@@ -404,7 +404,7 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
                           variant="outline"
                           size="sm"
                           onClick={clearConfirmIconPin}
-                          disabled={loading || confirmIconPin.length === 0}
+                          disabled={loading || !confirmIconPin}
                           className="flex items-center gap-1"
                         >
                           <RotateCcw className="h-3 w-3" />

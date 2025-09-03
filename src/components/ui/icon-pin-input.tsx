@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Delete } from "lucide-react";
@@ -33,6 +33,12 @@ export function IconPinInput({
   const [selectedIcons, setSelectedIcons] = useState<string[]>(
     value ? value.split(',').filter(Boolean) : []
   );
+
+  // Sync with external value changes
+  useEffect(() => {
+    const newIcons = value ? value.split(',').filter(Boolean) : [];
+    setSelectedIcons(newIcons);
+  }, [value]);
 
   const handleIconSelect = (icon: string) => {
     if (disabled || selectedIcons.length >= length) return;
