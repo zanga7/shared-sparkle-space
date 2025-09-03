@@ -88,8 +88,23 @@ serve(async (req) => {
         continue;
       }
 
+      // Create task assignee entry (this is what the dashboard uses to display tasks)
+      const { error: assigneeError } = await supabaseClient
+        .from('task_assignees')
+        .insert({
+          task_id: newTask.id,
+          profile_id: currentMemberId,
+          assigned_by: rotatingTask.created_by,
+          assigned_at: new Date().toISOString()
+        });
+
+      if (assigneeError) {
+        console.error(`Error creating task assignee for ${rotatingTask.name}:`, assigneeError);
+        // Don't continue here - the task was created, just log the assignee error
+      }
+
       tasksCreated.push(newTask);
-      console.log(`Created task: ${rotatingTask.name} for member ${currentMemberId}`);
+      console.log(`Created task: ${rotatingTask.name} for member ${currentMemberId} with assignee entry`);
 
       // Rotate to next member for next time
       const nextIndex = (rotatingTask.current_member_index + 1) % rotatingTask.member_order.length;
