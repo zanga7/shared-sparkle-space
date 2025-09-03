@@ -15,6 +15,7 @@ import { useEvents } from '@/hooks/useEvents';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarEvent } from '@/types/event';
+import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 
 interface EventDialogProps {
   open: boolean;
@@ -83,10 +84,10 @@ export const EventDialog = ({
         startTime: '09:00',
         endTime: '10:00',
         isAllDay: false,
-        attendees: []
+        attendees: defaultMember ? [defaultMember] : []
       });
     }
-  }, [event, editingEvent, selectedDate, defaultDate]);
+  }, [event, editingEvent, selectedDate, defaultDate, defaultMember]);
 
   const handleSave = () => {
     if (!formData.title.trim()) {
@@ -223,6 +224,20 @@ export const EventDialog = ({
               </div>
             </div>
           )}
+
+          {/* Event Assignees */}
+          <div>
+            <Label className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Attendees
+            </Label>
+            <MultiSelectAssignees
+              familyMembers={familyMembers}
+              selectedAssignees={formData.attendees}
+              onAssigneesChange={(attendees) => setFormData(prev => ({ ...prev, attendees }))}
+              placeholder="Select event attendees..."
+            />
+          </div>
 
           <div className="flex justify-between">
             <div className="flex gap-2">
