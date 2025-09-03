@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json,vue,txt,woff2}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB limit
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/timefstlnqojqidllokb\.supabase\.co\/rest\/v1\/.*/i,
@@ -74,6 +75,20 @@ export default defineConfig(({ mode }) => ({
       }
     }),
   ].filter(Boolean),
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-popover', '@radix-ui/react-select'],
+          supabase: ['@supabase/supabase-js'],
+          query: ['@tanstack/react-query'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
