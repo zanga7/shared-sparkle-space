@@ -107,7 +107,7 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
   };
 
   const handleNumberPadPress = (number: string) => {
-    if (pin.length < 8) {
+    if (pin.length < 4) {
       setPin(prev => prev + number);
     }
   };
@@ -117,13 +117,18 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
   };
 
   const handleConfirmNumberPadPress = (number: string) => {
-    if (confirmPin.length < 8) {
+    if (confirmPin.length < 4) {
       setConfirmPin(prev => prev + number);
     }
   };
 
   const handleConfirmNumberPadBackspace = () => {
     setConfirmPin(prev => prev.slice(0, -1));
+  };
+
+  const clearNumericPin = () => {
+    setPin('');
+    setConfirmPin('');
   };
 
   const removePIN = async () => {
@@ -210,18 +215,29 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
 
                   {inputMethod === 'manual' ? (
                     <>
-                      <div className="space-y-2">
-                        <Label htmlFor="pin">New PIN (4+ digits)</Label>
-                        <div className="relative">
-                          <Input
-                            id="pin"
-                            type={showPin ? "text" : "password"}
-                            value={pin}
-                            onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                            placeholder="Enter PIN"
-                            maxLength={8}
-                            required
-                          />
+                       <div className="space-y-2">
+                         <div className="flex items-center justify-between">
+                           <Label htmlFor="pin">New PIN (4 digits)</Label>
+                           <Button
+                             type="button"
+                             variant="ghost"
+                             size="sm"
+                             onClick={clearNumericPin}
+                             className="text-sm"
+                           >
+                             Clear
+                           </Button>
+                         </div>
+                         <div className="relative">
+                           <Input
+                             id="pin"
+                             type={showPin ? "text" : "password"}
+                             value={pin}
+                             onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                             placeholder="Enter PIN"
+                             maxLength={4}
+                             required
+                           />
                           <Button
                             type="button"
                             variant="ghost"
@@ -234,91 +250,102 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="confirmPin">Confirm PIN</Label>
-                        <div className="relative">
-                          <Input
-                            id="confirmPin"
-                            type={showPin ? "text" : "password"}
-                            value={confirmPin}
-                            onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
-                            placeholder="Confirm PIN"
-                            maxLength={8}
-                            required
-                          />
+                       <div className="space-y-2">
+                         <Label htmlFor="confirmPin">Confirm PIN</Label>
+                         <div className="relative">
+                           <Input
+                             id="confirmPin"
+                             type={showPin ? "text" : "password"}
+                             value={confirmPin}
+                             onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                             placeholder="Confirm PIN"
+                             maxLength={4}
+                             required
+                           />
                         </div>
                       </div>
                     </>
                   ) : (
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>New PIN (4+ digits)</Label>
-                        <PinInput
-                          value={pin}
-                          onChange={setPin}
-                          length={pin.length > 6 ? 8 : pin.length > 4 ? 6 : 4}
-                          disabled={loading}
-                        />
-                        <NumberPad
-                          onNumberPress={handleNumberPadPress}
-                          onDelete={handleNumberPadBackspace}
-                          disabled={loading}
-                        />
-                      </div>
+                     <div className="space-y-4">
+                       <div className="space-y-2">
+                         <div className="flex items-center justify-between">
+                           <Label>New PIN (4 digits)</Label>
+                           <Button
+                             type="button"
+                             variant="ghost"
+                             size="sm"
+                             onClick={clearNumericPin}
+                             className="text-sm"
+                           >
+                             Clear
+                           </Button>
+                         </div>
+                         <PinInput
+                           value={pin}
+                           onChange={setPin}
+                           length={4}
+                           disabled={loading}
+                         />
+                         <NumberPad
+                           onNumberPress={handleNumberPadPress}
+                           onDelete={handleNumberPadBackspace}
+                           disabled={loading}
+                         />
+                       </div>
 
-                      {pin.length >= 4 && (
-                        <div className="space-y-2">
-                          <Label>Confirm PIN</Label>
-                          <PinInput
-                            value={confirmPin}
-                            onChange={setConfirmPin}
-                            length={pin.length}
-                            disabled={loading}
-                          />
-                          <NumberPad
-                            onNumberPress={handleConfirmNumberPadPress}
-                            onDelete={handleConfirmNumberPadBackspace}
-                            disabled={loading}
-                          />
-                        </div>
-                      )}
-                    </div>
+                       {pin.length === 4 && (
+                         <div className="space-y-2">
+                           <Label>Confirm PIN</Label>
+                           <PinInput
+                             value={confirmPin}
+                             onChange={setConfirmPin}
+                             length={4}
+                             disabled={loading}
+                           />
+                           <NumberPad
+                             onNumberPress={handleConfirmNumberPadPress}
+                             onDelete={handleConfirmNumberPadBackspace}
+                             disabled={loading}
+                           />
+                         </div>
+                       )}
+                     </div>
                   )}
                 </div>
               </TabsContent>
 
-              <TabsContent value="icon" className="space-y-4">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>New Icon PIN (4+ icons)</Label>
-                    <IconPinInput
-                      value={iconPin}
-                      onChange={setIconPin}
-                      length={4}
-                      disabled={loading}
-                    />
-                  </div>
+               <TabsContent value="icon" className="space-y-4">
+                 <div className="space-y-4">
+                   <div className="space-y-2">
+                     <Label>New Icon PIN (4 icons)</Label>
+                     <IconPinInput
+                       value={iconPin}
+                       onChange={setIconPin}
+                       length={4}
+                       disabled={loading}
+                     />
+                   </div>
 
-                  {iconPin.split(',').filter(Boolean).length >= 4 && (
-                    <div className="space-y-2">
-                      <Label>Confirm Icon PIN</Label>
-                      <IconPinInput
-                        value={confirmIconPin}
-                        onChange={setConfirmIconPin}
-                        length={4}
-                        disabled={loading}
-                      />
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
+                   {iconPin.split(',').filter(Boolean).length === 4 && (
+                     <div className="space-y-2">
+                       <Label>Confirm Icon PIN</Label>
+                       <IconPinInput
+                         value={confirmIconPin}
+                         onChange={setConfirmIconPin}
+                         length={4}
+                         disabled={loading}
+                       />
+                     </div>
+                   )}
+                 </div>
+               </TabsContent>
             </Tabs>
           </div>
 
           <div className="flex flex-col gap-2 pt-4">
             <Button 
               type="submit" 
-              disabled={loading || (pinType === 'numeric' ? pin.length < 4 || confirmPin.length < 4 : iconPin.split(',').filter(Boolean).length < 4 || confirmIconPin.split(',').filter(Boolean).length < 4)} 
+              disabled={loading || (pinType === 'numeric' ? pin.length !== 4 || confirmPin.length !== 4 : iconPin.split(',').filter(Boolean).length !== 4 || confirmIconPin.split(',').filter(Boolean).length !== 4)} 
               className="w-full"
             >
               {loading ? 'Setting PIN...' : `${member?.pin_hash ? 'Update' : 'Set'} PIN`}
