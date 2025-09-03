@@ -1725,13 +1725,11 @@ export type Database = {
         Returns: Json
       }
       set_child_pin: {
-        Args:
-          | {
-              new_pin: string
-              pin_type_param?: string
-              profile_id_param: string
-            }
-          | { new_pin: string; profile_id_param: string }
+        Args: {
+          new_pin: string
+          pin_type_param?: string
+          profile_id_param: string
+        }
         Returns: Json
       }
       store_calendar_tokens_secure: {

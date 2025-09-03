@@ -31,7 +31,7 @@ export function IconPinInput({
   className
 }: IconPinInputProps) {
   const [selectedIcons, setSelectedIcons] = useState<string[]>(
-    value ? value.split('') : []
+    value ? value.split(',').filter(Boolean) : []
   );
 
   const handleIconSelect = (icon: string) => {
@@ -40,7 +40,7 @@ export function IconPinInput({
     const newIcons = [...selectedIcons, icon];
     setSelectedIcons(newIcons);
     
-    const newValue = newIcons.join('');
+    const newValue = newIcons.join(',');
     onChange(newValue);
     
     if (newIcons.length === length && onComplete) {
@@ -53,7 +53,7 @@ export function IconPinInput({
 
     const newIcons = selectedIcons.slice(0, -1);
     setSelectedIcons(newIcons);
-    onChange(newIcons.join(''));
+    onChange(newIcons.length > 0 ? newIcons.join(',') : '');
   };
 
   const handleClear = () => {

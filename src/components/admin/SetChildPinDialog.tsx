@@ -46,7 +46,12 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
     const currentPin = pinType === 'icon' ? iconPin : pin;
     const currentConfirmPin = pinType === 'icon' ? confirmIconPin : confirmPin;
 
-    if (currentPin.length !== 4) {
+    // Validate PIN length
+    const actualPinLength = pinType === 'icon' 
+      ? (currentPin ? currentPin.split(',').filter(Boolean).length : 0)
+      : currentPin.length;
+    
+    if (actualPinLength !== 4) {
       toast({
         title: 'Invalid PIN',
         description: pinType === 'icon' ? 'Icon PIN must have exactly 4 icons' : 'PIN must be exactly 4 digits',
@@ -394,7 +399,7 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
           <div className="flex flex-col gap-2 pt-4">
             <Button 
               type="submit" 
-              disabled={loading || (pinType === 'numeric' ? pin.length !== 4 || confirmPin.length !== 4 : iconPin.split(',').filter(Boolean).length !== 4 || confirmIconPin.split(',').filter(Boolean).length !== 4)} 
+              disabled={loading} 
               className="w-full"
             >
               {loading ? 'Setting PIN...' : `${member?.pin_hash ? 'Update' : 'Set'} PIN`}
