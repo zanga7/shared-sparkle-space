@@ -93,69 +93,14 @@ export const AddTaskDialog = ({
         ...prev, 
         task_group: preselectedTaskGroup
       }));
-      
-      if (!selectedDate) {
-        let defaultDueDate = null;
-        
-        switch (preselectedTaskGroup) {
-          case 'morning':
-            defaultDueDate = new Date();
-            defaultDueDate.setHours(10, 0, 0, 0); // 10 AM
-            break;
-          case 'midday':
-            defaultDueDate = new Date();
-            defaultDueDate.setHours(13, 0, 0, 0); // 1 PM
-            break;
-          case 'afternoon':
-            defaultDueDate = new Date();
-            defaultDueDate.setHours(18, 0, 0, 0); // 6 PM
-            break;
-          case 'general':
-          default:
-            defaultDueDate = null;
-            break;
-        }
-        
-        if (defaultDueDate) {
-          setFormData(prev => ({ 
-            ...prev, 
-            due_date: defaultDueDate
-          }));
-        }
-      }
     }
-  }, [preselectedTaskGroup, selectedDate]);
+  }, [preselectedTaskGroup]);
 
-  // Helper function to get task group time based on selection
-  const getTaskGroupDueDate = (group: string) => {
-    if (group === 'general') return null;
-    
-    const dueDate = new Date();
-    
-    switch (group) {
-      case 'morning':
-        dueDate.setHours(10, 0, 0, 0);
-        break;
-      case 'midday':
-        dueDate.setHours(13, 0, 0, 0);
-        break;
-      case 'afternoon':
-        dueDate.setHours(18, 0, 0, 0);
-        break;
-      default:
-        return null;
-    }
-    
-    return dueDate;
-  };
-
-  // Update due date when task group changes
+  // Update task group when changed
   const handleTaskGroupChange = (group: string) => {
-    const newDueDate = getTaskGroupDueDate(group);
     setFormData(prev => ({
       ...prev,
-      task_group: group,
-      due_date: selectedDate || newDueDate
+      task_group: group
     }));
   };
 
