@@ -78,9 +78,9 @@ export function NavigationHeader({
 
         {/* Member Management & Settings */}
         <div className="flex items-center space-x-3">
-          {dashboardMode ? (
+          {dashboardMode && activeMember && activeMember.require_pin_to_complete_tasks ? (
             <>
-              {/* Dashboard Mode: Active Member + Member Switcher */}
+              {/* Dashboard Mode with PIN: Active Member + Member Switcher */}
               <ActiveMemberChip activeMember={activeMember} />
               
               <Button
@@ -92,6 +92,43 @@ export function NavigationHeader({
                 <ArrowLeftRight className="mr-2 h-4 w-4" />
                 Switch
               </Button>
+            </>
+          ) : dashboardMode ? (
+            <>
+              {/* Dashboard Mode without PIN restrictions: Just show member filter */}
+              <Button
+                variant={selectedMember === null ? "default" : "ghost"}
+                size="sm"
+                onClick={() => onMemberSelect(null)}
+                className="h-9 px-3 font-medium"
+              >
+                Everyone
+              </Button>
+
+              <div className="flex items-center space-x-2">
+                {familyMembers.map((member) => (
+                  <Button
+                    key={member.id}
+                    variant={selectedMember === member.id ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => onMemberSelect(member.id)}
+                    className="h-9 px-2 font-medium flex items-center space-x-2"
+                  >
+                    <UserAvatar 
+                      name={member.display_name} 
+                      color={member.color} 
+                      size="sm" 
+                    />
+                    <span className="hidden sm:inline">{member.display_name}</span>
+                    <Badge 
+                      variant="secondary" 
+                      className="ml-1 text-xs font-semibold bg-background/80"
+                    >
+                      {member.total_points}
+                    </Badge>
+                  </Button>
+                ))}
+              </div>
             </>
           ) : (
             <>

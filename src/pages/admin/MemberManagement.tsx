@@ -27,6 +27,7 @@ import {
 import { ExtendedProfile, ColorSwatch, ColorSwatches } from '@/types/admin';
 import { format } from 'date-fns';
 import { AddMemberDialog } from '@/components/admin/AddMemberDialog';
+import { SetChildPinDialog } from '@/components/admin/SetChildPinDialog';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 const MemberManagement = () => {
@@ -37,6 +38,7 @@ const MemberManagement = () => {
   const [familyMembers, setFamilyMembers] = useState<ExtendedProfile[]>([]);
   const [editingMember, setEditingMember] = useState<ExtendedProfile | null>(null);
   const [archivingMember, setArchivingMember] = useState<ExtendedProfile | null>(null);
+  const [pinMember, setPinMember] = useState<ExtendedProfile | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -361,17 +363,15 @@ const MemberManagement = () => {
                 </div>
 
                           <div className="flex items-center gap-2">
-                            {member.role === 'child' && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => resetMemberPIN(member)}
-                                className="gap-1"
-                              >
-                                <Key className="h-3 w-3" />
-                                Reset PIN
-                              </Button>
-                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setPinMember(member)}
+                              className="gap-1"
+                            >
+                              <Key className="h-3 w-3" />
+                              {member.pin_hash ? 'Update PIN' : 'Set PIN'}
+                            </Button>
                             
                             <Button
                               variant="outline"
@@ -613,6 +613,14 @@ const MemberManagement = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* PIN Management Dialog */}
+      <SetChildPinDialog
+        member={pinMember}
+        open={!!pinMember}
+        onOpenChange={(open) => !open && setPinMember(null)}
+        onPinUpdated={fetchMemberData}
+      />
     </div>
   );
 };
