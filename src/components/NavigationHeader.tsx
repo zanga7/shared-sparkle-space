@@ -27,6 +27,7 @@ interface NavigationHeaderProps {
   activeMemberId?: string | null;
   onMemberSwitch?: (memberId: string | null) => void;
   dashboardMode?: boolean;
+  viewMode?: 'everyone' | 'member';
 }
 
 const navigationItems = [
@@ -45,7 +46,8 @@ export function NavigationHeader({
   onTabChange,
   activeMemberId,
   onMemberSwitch,
-  dashboardMode = false
+  dashboardMode = false,
+  viewMode = 'everyone'
 }: NavigationHeaderProps) {
   const activeMember = familyMembers.find(m => m.id === activeMemberId);
 
@@ -97,7 +99,7 @@ export function NavigationHeader({
             <>
               {/* Dashboard Mode without PIN restrictions: Just show member filter */}
               <Button
-                variant={selectedMember === null ? "default" : "ghost"}
+                variant={viewMode === 'everyone' ? "default" : "ghost"}
                 size="sm"
                 onClick={() => onMemberSelect(null)}
                 className="h-9 px-3 font-medium"
@@ -109,7 +111,7 @@ export function NavigationHeader({
                 {familyMembers.map((member) => (
                   <Button
                     key={member.id}
-                    variant={selectedMember === member.id ? "default" : "ghost"}
+                    variant={selectedMember === member.id && viewMode === 'member' ? "default" : "ghost"}
                     size="sm"
                     onClick={() => onMemberSelect(member.id)}
                     className="h-9 px-2 font-medium flex items-center space-x-2"
@@ -134,7 +136,7 @@ export function NavigationHeader({
             <>
               {/* Regular Mode: Filter UI */}
               <Button
-                variant={selectedMember === null ? "default" : "ghost"}
+                variant={viewMode === 'everyone' ? "default" : "ghost"}
                 size="sm"
                 onClick={() => onMemberSelect(null)}
                 className="h-9 px-3 font-medium"
@@ -146,7 +148,7 @@ export function NavigationHeader({
                 {familyMembers.map((member) => (
                   <Button
                     key={member.id}
-                    variant={selectedMember === member.id ? "default" : "ghost"}
+                    variant={selectedMember === member.id && viewMode === 'member' ? "default" : "ghost"}
                     size="sm"
                     onClick={() => onMemberSelect(member.id)}
                     className="h-9 px-2 font-medium flex items-center space-x-2"
