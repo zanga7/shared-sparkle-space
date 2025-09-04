@@ -4,9 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AddButton } from '@/components/ui/add-button';
 import { UserAvatar } from '@/components/ui/user-avatar';
-import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
-import { MemberTodaysTasks } from '@/components/MemberTodaysTasks';
-import { MemberPersonalLists } from '@/components/MemberPersonalLists';
+import { MemberTasksWidget } from '@/components/MemberTasksWidget';
+import { MemberEventsWidget } from '@/components/MemberEventsWidget';
+import { MemberPersonalListsEnhanced } from '@/components/MemberPersonalListsEnhanced';
 import { MemberRewardsStack } from '@/components/MemberRewardsStack';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
 import { EventDialog } from '@/components/EventDialog';
@@ -31,7 +31,7 @@ interface MemberDashboardProps {
 
 const WIDGET_SECTIONS = [
   { id: 'tasks', title: 'Tasks', icon: Users },
-  { id: 'schedule', title: 'Today\'s Tasks', icon: Calendar },
+  { id: 'schedule', title: 'Today\'s Events', icon: Calendar },
   { id: 'lists', title: 'My Lists', icon: List },
   { id: 'rewards', title: 'Rewards', icon: Gift },
 ];
@@ -101,84 +101,32 @@ export const MemberDashboard = ({
           {member.role}
         </Badge>
       </div>
-      {/* Action Buttons */}
-      <div className="flex justify-center gap-4">
-        <AddButton 
-          text="Add Task"
-          onClick={() => setIsTaskDialogOpen(true)}
-          className={cn("border-dashed hover:border-solid", memberColors.border)}
-        />
-        <AddButton 
-          text="Add Event"
-          onClick={() => setIsEventDialogOpen(true)}
-          className={cn("border-dashed hover:border-solid", memberColors.border)}
-        />
-      </div>
     </div>
   );
 
   const renderTasksWidget = () => (
-    <Card className={cn("h-full", memberColors.border)} style={{ borderWidth: '2px' }}>
-      <CardHeader className="pb-4">
-        <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
-          <Users className="h-6 w-6" />
-          Tasks ({pendingTasks.length} pending, {completedTasks.length} completed)
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 max-h-96 overflow-y-auto">
-        {pendingTasks.length === 0 && completedTasks.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No tasks assigned</p>
-          </div>
-        ) : (
-          <>
-            {pendingTasks.map((task) => (
-              <EnhancedTaskItem
-                key={task.id}
-                task={task}
-                allTasks={tasks}
-                familyMembers={familyMembers}
-                onToggle={(task) => onTaskComplete(task)}
-                onEdit={profile.role === 'parent' ? onEditTask : undefined}
-                showActions={profile.role === 'parent'}
-              />
-            ))}
-            {completedTasks.slice(0, 3).map((task) => (
-              <EnhancedTaskItem
-                key={task.id}
-                task={task}
-                allTasks={tasks}
-                familyMembers={familyMembers}
-                onToggle={(task) => onTaskComplete(task)}
-                onEdit={profile.role === 'parent' ? onEditTask : undefined}
-                showActions={profile.role === 'parent'}
-              />
-            ))}
-            {completedTasks.length > 3 && (
-              <p className="text-sm text-muted-foreground text-center py-2">
-                And {completedTasks.length - 3} more completed tasks...
-              </p>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  const renderScheduleWidget = () => (
-    <MemberTodaysTasks
+    <MemberTasksWidget
       member={member}
       tasks={tasks}
       familyMembers={familyMembers}
       profile={profile}
+      onTaskUpdated={onTaskUpdated}
       onEditTask={onEditTask}
       onTaskComplete={onTaskComplete}
+      onAddTask={() => setIsTaskDialogOpen(true)}
+    />
+  );
+
+  const renderScheduleWidget = () => (
+    <MemberEventsWidget
+      member={member}
+      profile={profile}
+      onAddEvent={() => setIsEventDialogOpen(true)}
     />
   );
 
   const renderListsWidget = () => (
-    <MemberPersonalLists
+    <MemberPersonalListsEnhanced
       member={member}
       profile={profile}
     />
@@ -197,7 +145,7 @@ export const MemberDashboard = ({
 
   if (isMobile) {
     return (
-      <div className="w-full max-w-7xl mx-auto">
+      <div className="w-full mx-auto px-4">
         {renderMemberHeader()}
         
         {/* Mobile Navigation Dots */}
@@ -279,14 +227,14 @@ export const MemberDashboard = ({
     );
   }
 
-  // Desktop Layout - Horizontal
+  // Desktop Layout - Full Width
   return (
-    <div className="w-full max-w-7xl mx-auto">
+    <div className="w-full mx-auto px-4">
       {renderMemberHeader()}
       
-      <div className="grid grid-cols-4 gap-6 h-[calc(100vh-300px)]">
+      <div className="grid grid-cols-4 gap-6 h-[calc(100vh-250px)]">
         {widgets.map((widget, index) => (
-          <div key={index} className="min-h-0">
+          <div key={index} className="min-h-0 h-full">
             {widget}
           </div>
         ))}
