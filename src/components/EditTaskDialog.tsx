@@ -8,8 +8,10 @@ import { Trash2, Calendar, User, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Task, Profile } from '@/types/task';
+import { TaskRecurrenceOptions } from '@/types/recurrence';
 import { format } from 'date-fns';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
+import { UnifiedRecurrencePanel } from '@/components/recurrence/UnifiedRecurrencePanel';
 import { cn } from '@/lib/utils';
 
 interface EditTaskDialogProps {
@@ -36,15 +38,25 @@ export const EditTaskDialog = ({
     assigned_to: 'unassigned',
     assignees: [] as string[],
     due_date: null as Date | null,
-    task_group: 'general',
-    is_repeating: false,
-    recurring_frequency: 'daily',
-    recurring_interval: 1,
-    recurring_days_of_week: [] as number[],
-    recurring_end_date: null as Date | null
+    task_group: 'general'
   });
   
   const [loading, setLoading] = useState(false);
+  
+  // Recurrence state
+  const [recurrenceEnabled, setRecurrenceEnabled] = useState(false);
+  const [taskRecurrenceOptions, setTaskRecurrenceOptions] = useState<TaskRecurrenceOptions>({
+    enabled: false,
+    rule: {
+      frequency: 'daily',
+      interval: 1,
+      endType: 'never'
+    },
+    repeatFrom: 'scheduled',
+    skipWeekends: false,
+    pauseDuringHolidays: false,
+    rotateBetweenMembers: false
+  });
 
   useEffect(() => {
     if (task && open) {
@@ -59,13 +71,30 @@ export const EditTaskDialog = ({
         assigned_to: task.assigned_to || 'unassigned',
         assignees: currentAssignees,
         due_date: task.due_date ? new Date(task.due_date) : null,
-        task_group: (task as any).task_group || 'general',
-        is_repeating: false,
-        recurring_frequency: 'daily',
-        recurring_interval: 1,
-        recurring_days_of_week: [],
-        recurring_end_date: null
+        task_group: (task as any).task_group || 'general'
       });
+
+      // Load existing recurrence options
+      const hasRecurrence = task.recurrence_options && task.recurrence_options.enabled;
+      setRecurrenceEnabled(hasRecurrence || false);
+      
+      if (hasRecurrence && task.recurrence_options) {
+        setTaskRecurrenceOptions(task.recurrence_options);
+      } else {
+        // Reset to default
+        setTaskRecurrenceOptions({
+          enabled: false,
+          rule: {
+            frequency: 'daily',
+            interval: 1,
+            endType: 'never'
+          },
+          repeatFrom: 'scheduled',
+          skipWeekends: false,
+          pauseDuringHolidays: false,
+          rotateBetweenMembers: false
+        });
+      }
     }
   }, [task, open]);
 
@@ -75,7 +104,6 @@ export const EditTaskDialog = ({
     
     setLoading(true);
 
-    // Update individual task only (recurring tasks have been removed)
     try {
       const taskData = {
         title: formData.title.trim(),
@@ -83,7 +111,11 @@ export const EditTaskDialog = ({
         points: formData.points,
         assigned_to: formData.assignees.length === 1 ? formData.assignees[0] : null,
         due_date: formData.due_date?.toISOString() || task.due_date,
-        task_group: formData.task_group, // Include task_group in updates
+        task_group: formData.task_group,
+        recurrence_options: recurrenceEnabled ? {
+          ...taskRecurrenceOptions,
+          enabled: true
+        } as any : null
       };
 
       const { error } = await supabase
@@ -204,6 +236,11 @@ export const EditTaskDialog = ({
               max="100"
               value={formData.points}
               onChange={(e) => setFormData(prev => ({ ...prev, points: parseInt(e.target.value) || 10 }))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                }
+              }}
               required
             />
           </div>
@@ -246,6 +283,18 @@ export const EditTaskDialog = ({
               <option value="afternoon">Afternoon</option>
             </select>
           </div>
+
+          {/* Recurrence Options */}
+          <UnifiedRecurrencePanel
+            type="task"
+            enabled={recurrenceEnabled}
+            onEnabledChange={setRecurrenceEnabled}
+            startDate={formData.due_date || new Date()}
+            taskOptions={taskRecurrenceOptions}
+            onTaskOptionsChange={setTaskRecurrenceOptions}
+            familyMembers={familyMembers}
+            selectedAssignees={formData.assignees}
+          />
 
           <div className="flex justify-between pt-4">
             <Button

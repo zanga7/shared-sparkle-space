@@ -80,6 +80,11 @@ export const CustomRecurrenceBuilder = ({ rule, onRuleChange }: CustomRecurrence
                 max="99"
                 value={rule.interval}
                 onChange={(e) => updateRule({ interval: parseInt(e.target.value) || 1 })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                  }
+                }}
                 className="w-16 text-center"
               />
               <span className="text-sm text-muted-foreground">
@@ -140,6 +145,11 @@ export const CustomRecurrenceBuilder = ({ rule, onRuleChange }: CustomRecurrence
                         max="31"
                         value={rule.monthDay || 1}
                         onChange={(e) => updateRule({ monthDay: parseInt(e.target.value) || 1 })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                          }
+                        }}
                         className="w-16 text-center"
                       />
                       <span className="text-sm text-muted-foreground">of the month</span>

@@ -26,7 +26,8 @@ import {
   Users,
   Calendar,
   Sun,
-  MapPin
+  MapPin,
+  Repeat
 } from 'lucide-react';
 import { AddButton } from '@/components/ui/add-button';
 import { EventAttendeesDisplay } from '@/components/ui/event-attendees-display';
@@ -1106,6 +1107,13 @@ export const CalendarView = ({
                                     {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
                                     {event.isMultiDay && ` - ${format(new Date(event.originalEnd), 'MMM d')}`}
                                   </span>
+                                  {/* Recurrence Indicator */}
+                                  {event.recurrence_options?.enabled && (
+                                    <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600 ml-1">
+                                      <Repeat className="h-2.5 w-2.5 mr-0.5" />
+                                      Repeats
+                                    </Badge>
+                                  )}
                                 </div>
                               )}
                              </div>

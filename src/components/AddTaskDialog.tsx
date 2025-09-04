@@ -355,6 +355,11 @@ export const AddTaskDialog = ({
                 max="100"
                 value={formData.points}
                 onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) || 10 })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                  }
+                }}
               />
             </div>
 

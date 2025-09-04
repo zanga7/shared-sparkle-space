@@ -109,6 +109,11 @@ export const RecurrenceEnds = ({
               max="999"
               value={endCount}
               onChange={(e) => onEndCountChange(parseInt(e.target.value) || 1)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                }
+              }}
               className="w-20 text-center"
             />
             <span className="text-sm text-muted-foreground">times</span>

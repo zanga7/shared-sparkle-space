@@ -93,6 +93,7 @@ export const useEvents = (familyId?: string) => {
     end_date: string;
     is_all_day: boolean;
     attendees?: string[];
+    recurrence_options?: any;
   }) => {
     if (!familyId) {
       toast({
@@ -104,7 +105,7 @@ export const useEvents = (familyId?: string) => {
     }
 
     try {
-      const { attendees, ...eventFields } = eventData;
+      const { attendees, recurrence_options, ...eventFields } = eventData;
       
       // Get the current user's profile ID to use as created_by
       const { data: profile, error: profileError } = await supabase
@@ -122,7 +123,8 @@ export const useEvents = (familyId?: string) => {
         .insert([{
           ...eventFields,
           family_id: familyId,
-          created_by: profile.id
+          created_by: profile.id,
+          recurrence_options: recurrence_options || null
         }])
         .select()
         .single();
