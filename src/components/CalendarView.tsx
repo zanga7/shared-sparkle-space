@@ -93,7 +93,7 @@ export const CalendarView = ({
   onTaskComplete
 }: CalendarViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>(dashboardMode ? 'today' : 'today');
+  const [viewMode, setViewMode] = useState<ViewMode>('today');
   const [filters, setFilters] = useState<TaskFilters>({
     assignedTo: 'all',
     status: 'all',
@@ -686,166 +686,162 @@ export const CalendarView = ({
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <CalendarIcon className="h-5 w-5" />
-              {dashboardMode ? "Today's Schedule" : "Family Calendar"}
+              Family Calendar
             </CardTitle>
             
-            {!dashboardMode && (
-              <div className="flex items-center gap-2">
-                {/* Analytics Toggle */}
+            <div className="flex items-center gap-2">
+              {/* Analytics Toggle */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAnalytics(!showAnalytics)}
+              >
+                <BarChart3 className="h-4 w-4" />
+              </Button>
+
+              {/* View Mode Toggle */}
+              <div className="flex border rounded-md">
                 <Button
-                  variant="outline"
+                  variant={viewMode === 'today' ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => setShowAnalytics(!showAnalytics)}
+                  onClick={() => setViewMode('today')}
+                  className="rounded-r-none"
                 >
-                  <BarChart3 className="h-4 w-4" />
+                  <Sun className="h-4 w-4" />
                 </Button>
-
-                {/* View Mode Toggle */}
-                <div className="flex border rounded-md">
-                  <Button
-                    variant={viewMode === 'today' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('today')}
-                    className="rounded-r-none"
-                  >
-                    <Sun className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'week' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('week')}
-                    className="rounded-none"
-                  >
-                    <Rows3 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'month' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('month')}
-                    className="rounded-l-none"
-                  >
-                    <Grid3X3 className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Navigation */}
-                <div className="flex items-center gap-1">
-                  <Button variant="outline" size="sm" onClick={navigatePrevious}>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
-                    Today
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={navigateNext}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Button
+                  variant={viewMode === 'week' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('week')}
+                  className="rounded-none"
+                >
+                  <Rows3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'month' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('month')}
+                  className="rounded-l-none"
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </Button>
               </div>
-            )}
+
+              {/* Navigation */}
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" onClick={navigatePrevious}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
+                  Today
+                </Button>
+                <Button variant="outline" size="sm" onClick={navigateNext}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
 
-          {/* Filters & Analytics - Hide in dashboard mode */}
-          {!dashboardMode && (
-            <div className="flex flex-col gap-3">
-              {/* Filters */}
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Filters:</span>
-                </div>
-                
-                <Select value={filters.assignedTo} onValueChange={(value) => 
-                  setFilters(prev => ({ ...prev, assignedTo: value }))
-                }>
-                  <SelectTrigger className="w-32 h-8">
-                    <SelectValue placeholder="Member" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Members</SelectItem>
-                    {familyMembers.map(member => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.display_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={filters.status} onValueChange={(value: any) => 
-                  setFilters(prev => ({ ...prev, status: value }))
-                }>
-                  <SelectTrigger className="w-32 h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="overdue">Overdue</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={filters.taskType} onValueChange={(value: any) => 
-                  setFilters(prev => ({ ...prev, taskType: value }))
-                }>
-                  <SelectTrigger className="w-32 h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="recurring">Recurring</SelectItem>
-                    <SelectItem value="one-time">One-time</SelectItem>
-                  </SelectContent>
-                </Select>
+          {/* Filters & Analytics */}
+          <div className="flex flex-col gap-3">
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Filters:</span>
               </div>
+              
+              <Select value={filters.assignedTo} onValueChange={(value) => 
+                setFilters(prev => ({ ...prev, assignedTo: value }))
+              }>
+                <SelectTrigger className="w-32 h-8">
+                  <SelectValue placeholder="Member" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Members</SelectItem>
+                  {familyMembers.map(member => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.display_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-              {/* Analytics */}
-              {showAnalytics && (
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">{analytics.completed}</div>
-                        <div className="text-xs text-muted-foreground">Completed</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-orange-600">{analytics.pending}</div>
-                        <div className="text-xs text-muted-foreground">Pending</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-red-600">{analytics.overdue}</div>
-                        <div className="text-xs text-muted-foreground">Overdue</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{analytics.totalPoints}</div>
-                        <div className="text-xs text-muted-foreground">Points Earned</div>
-                      </div>
-                    </div>
-                    
-                    <Separator className="my-3" />
-                    
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium">Member Progress</div>
-                      {analytics.memberStats.map((member, index) => {
-                        const familyMember = familyMembers[index];
-                        const memberColors = getMemberColors(familyMember);
-                        return (
-                          <div key={member.name} className="flex items-center gap-2">
-                            <Badge variant="outline" className={cn("text-xs", memberColors.text, memberColors.border)}>
-                              {member.name}
-                            </Badge>
-                            <Progress value={member.percentage} className="flex-1 h-2" />
-                            <span className="text-xs text-muted-foreground w-12 text-right">
-                              {member.completed}/{member.total}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              <Select value={filters.status} onValueChange={(value: any) => 
+                setFilters(prev => ({ ...prev, status: value }))
+              }>
+                <SelectTrigger className="w-32 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filters.taskType} onValueChange={(value: any) => 
+                setFilters(prev => ({ ...prev, taskType: value }))
+              }>
+                <SelectTrigger className="w-32 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="recurring">Recurring</SelectItem>
+                  <SelectItem value="one-time">One-time</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          )}
+
+            {/* Analytics */}
+            {showAnalytics && (
+              <Card className="bg-muted/50">
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">{analytics.completed}</div>
+                      <div className="text-xs text-muted-foreground">Completed</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-orange-600">{analytics.pending}</div>
+                      <div className="text-xs text-muted-foreground">Pending</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-red-600">{analytics.overdue}</div>
+                      <div className="text-xs text-muted-foreground">Overdue</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">{analytics.totalPoints}</div>
+                      <div className="text-xs text-muted-foreground">Points Earned</div>
+                    </div>
+                  </div>
+                  
+                  <Separator className="my-3" />
+                  
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Member Progress</div>
+                    {analytics.memberStats.map((member, index) => {
+                      const familyMember = familyMembers[index];
+                      const memberColors = getMemberColors(familyMember);
+                      return (
+                        <div key={member.name} className="flex items-center gap-2">
+                          <Badge variant="outline" className={cn("text-xs", memberColors.text, memberColors.border)}>
+                            {member.name}
+                          </Badge>
+                          <Progress value={member.percentage} className="flex-1 h-2" />
+                          <span className="text-xs text-muted-foreground w-12 text-right">
+                            {member.completed}/{member.total}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
         
         <div className="text-lg font-semibold">
@@ -863,6 +859,15 @@ export const CalendarView = ({
           {viewMode === 'today' ? (
             // Today View - Member Columns Layout
             <div className="space-y-4">
+              <div className="text-center mb-6">
+                <h3 className="text-lg font-semibold mb-2">
+                  {format(currentDate, 'EEEE, MMMM d')}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {isToday(currentDate) ? "Today's Schedule" : format(currentDate, 'EEEE') + "'s Schedule"}
+                </p>
+              </div>
+              
               {/* Member Columns */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {familyMembers.map((member) => {
@@ -890,7 +895,7 @@ export const CalendarView = ({
                             snapshot.isDraggingOver && "ring-2 ring-primary/20"
                           )}
                         >
-                          <CardHeader className="pb-3 w-full">
+                          <CardHeader className="pb-3">
                             <div className="flex items-center gap-2">
                               <UserAvatar
                                 name={member.display_name}

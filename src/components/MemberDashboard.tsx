@@ -106,21 +106,21 @@ export const MemberDashboard = ({
   );
 
   const renderTasksWidget = () => (
-    <Card className={cn("h-full flex flex-col", memberColors.border)} style={{ borderWidth: '2px' }}>
-      <CardHeader className="pb-2 flex-shrink-0">
-        <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
-          <Users className="h-6 w-6" />
-          Tasks ({pendingTasks.length} pending, {completedTasks.length} completed)
-        </CardTitle>
-        <div className="pt-2">
+    <Card className={cn("h-full", memberColors.border)} style={{ borderWidth: '2px' }}>
+      <CardHeader className="pb-4">
+        <div className="flex justify-between items-center">
+          <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
+            <Users className="h-6 w-6" />
+            Tasks ({pendingTasks.length} pending, {completedTasks.length} completed)
+          </CardTitle>
           <AddButton 
             text="Add Task"
             onClick={() => setIsTaskDialogOpen(true)}
-            className={cn("border-dashed hover:border-solid w-full", memberColors.border)}
+            className={cn("border-dashed hover:border-solid", memberColors.border)}
           />
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 flex-1 overflow-y-auto">
+      <CardContent className="space-y-3 max-h-96 overflow-y-auto">
         {pendingTasks.length === 0 && completedTasks.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -170,21 +170,21 @@ export const MemberDashboard = ({
   );
 
   const renderCalendarWidget = () => (
-    <Card className={cn("h-full flex flex-col", memberColors.border)} style={{ borderWidth: '2px' }}>
-      <CardHeader className="pb-2 flex-shrink-0">
-        <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
-          <Calendar className="h-6 w-6" />
-          Today's Schedule
-        </CardTitle>
-        <div className="pt-2">
+    <Card className={cn("h-full", memberColors.border)} style={{ borderWidth: '2px' }}>
+      <CardHeader className="pb-4">
+        <div className="flex justify-between items-center">
+          <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
+            <Calendar className="h-6 w-6" />
+            Today's Schedule
+          </CardTitle>
           <AddButton 
             text="Add Event"
             onClick={() => setIsEventDialogOpen(true)}
-            className={cn("border-dashed hover:border-solid w-full", memberColors.border)}
+            className={cn("border-dashed hover:border-solid", memberColors.border)}
           />
         </div>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto">
+      <CardContent className="max-h-96 overflow-y-auto">
         <CalendarView
           tasks={memberTasks}
           familyMembers={[member]}
@@ -201,24 +201,22 @@ export const MemberDashboard = ({
   );
 
   const renderListsWidget = () => (
-    <Card className={cn("h-full flex flex-col", memberColors.border)} style={{ borderWidth: '2px' }}>
-      <CardHeader className="pb-2 flex-shrink-0">
+    <Card className={cn("h-full", memberColors.border)} style={{ borderWidth: '2px' }}>
+      <CardHeader className="pb-4">
         <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
           <List className="h-6 w-6" />
           Lists
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto">
-        <div className="space-y-4">
-          <Lists />
-        </div>
+      <CardContent className="max-h-96 overflow-y-auto">
+        <Lists />
       </CardContent>
     </Card>
   );
 
   const renderRewardsWidget = () => (
-    <Card className={cn("h-full flex flex-col", memberColors.border)} style={{ borderWidth: '2px' }}>
-      <CardHeader className="pb-2 flex-shrink-0">
+    <Card className={cn("h-full", memberColors.border)} style={{ borderWidth: '2px' }}>
+      <CardHeader className="pb-4">
         <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
           <Gift className="h-6 w-6" />
           Rewards
@@ -227,12 +225,10 @@ export const MemberDashboard = ({
           {member.total_points} points available
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto">
-        <div className="space-y-4">
-          <ChildAuthProvider>
-            <RewardsGallery selectedMemberId={member.id} />
-          </ChildAuthProvider>
-        </div>
+      <CardContent className="max-h-96 overflow-y-auto">
+        <ChildAuthProvider>
+          <RewardsGallery selectedMemberId={member.id} />
+        </ChildAuthProvider>
       </CardContent>
     </Card>
   );
@@ -246,7 +242,7 @@ export const MemberDashboard = ({
 
   if (isMobile) {
     return (
-      <div className="w-full mx-auto px-4">
+      <div className="w-full max-w-7xl mx-auto">
         {renderMemberHeader()}
         
         {/* Mobile Navigation Dots */}
@@ -269,7 +265,7 @@ export const MemberDashboard = ({
           <div className="flex">
             {widgets.map((widget, index) => (
               <div key={index} className="flex-[0_0_100%] px-2">
-                <div className="h-[calc(100vh-250px)]">
+                <div className="h-[calc(100vh-300px)]">
                   {widget}
                 </div>
               </div>
@@ -328,12 +324,12 @@ export const MemberDashboard = ({
     );
   }
 
-  // Desktop Layout - Full Width
+  // Desktop Layout - Horizontal
   return (
-    <div className="w-full mx-auto px-4">
+    <div className="w-full max-w-7xl mx-auto">
       {renderMemberHeader()}
       
-      <div className="grid grid-cols-4 gap-6 h-[calc(100vh-250px)]">
+      <div className="grid grid-cols-4 gap-6 h-[calc(100vh-300px)]">
         {widgets.map((widget, index) => (
           <div key={index} className="min-h-0">
             {widget}
