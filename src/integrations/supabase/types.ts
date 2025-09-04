@@ -1199,7 +1199,14 @@ export type Database = {
         Returns: Json
       }
       authenticate_member_pin_dashboard: {
-        Args: { pin_attempt: string; profile_id_param: string }
+        Args:
+          | {
+              device_id_param?: string
+              pin_param: string
+              pin_type_param?: string
+              profile_id_param: string
+            }
+          | { pin_attempt: string; profile_id_param: string }
         Returns: Json
       }
       can_access_calendar_integration: {
@@ -1688,6 +1695,15 @@ export type Database = {
         Args: { target_family_id: string }
         Returns: boolean
       }
+      log_admin_action: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_target_entity: string
+          p_target_id?: string
+        }
+        Returns: undefined
+      }
       log_calendar_token_access: {
         Args: {
           p_action: string
@@ -1704,6 +1720,24 @@ export type Database = {
           error_message_param?: string
           integration_id_param: string
           success_param?: boolean
+        }
+        Returns: undefined
+      }
+      log_pin_attempt: {
+        Args: {
+          p_attempt_type?: string
+          p_profile_id: string
+          p_success: boolean
+        }
+        Returns: undefined
+      }
+      log_security_event: {
+        Args: {
+          p_details?: Json
+          p_entity_id?: string
+          p_entity_type?: string
+          p_event_type: string
+          p_risk_level?: string
         }
         Returns: undefined
       }
