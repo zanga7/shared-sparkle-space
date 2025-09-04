@@ -5,10 +5,9 @@ import { Button } from '@/components/ui/button';
 import { AddButton } from '@/components/ui/add-button';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
-import { CalendarView } from '@/components/CalendarView';
-import Lists from '@/pages/Lists';
-import { RewardsGallery } from '@/components/rewards/RewardsGallery';
-import { ChildAuthProvider } from '@/hooks/useChildAuth';
+import { MemberTodaysTasks } from '@/components/MemberTodaysTasks';
+import { MemberPersonalLists } from '@/components/MemberPersonalLists';
+import { MemberRewardsStack } from '@/components/MemberRewardsStack';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
 import { EventDialog } from '@/components/EventDialog';
 import { getMemberColorClasses } from '@/lib/utils';
@@ -32,8 +31,8 @@ interface MemberDashboardProps {
 
 const WIDGET_SECTIONS = [
   { id: 'tasks', title: 'Tasks', icon: Users },
-  { id: 'calendar', title: 'Today\'s Schedule', icon: Calendar },
-  { id: 'lists', title: 'Lists', icon: List },
+  { id: 'schedule', title: 'Today\'s Tasks', icon: Calendar },
+  { id: 'lists', title: 'My Lists', icon: List },
   { id: 'rewards', title: 'Rewards', icon: Gift },
 ];
 
@@ -94,7 +93,7 @@ export const MemberDashboard = ({
       )}>
         {member.display_name}'s Dashboard
       </h1>
-      <div className="flex justify-center items-center gap-4">
+      <div className="flex justify-center items-center gap-4 mb-6">
         <Badge variant="outline" className="text-lg px-4 sm:px-6 py-2">
           {member.total_points} points
         </Badge>
@@ -102,37 +101,35 @@ export const MemberDashboard = ({
           {member.role}
         </Badge>
       </div>
+      {/* Action Buttons */}
+      <div className="flex justify-center gap-4">
+        <AddButton 
+          text="Add Task"
+          onClick={() => setIsTaskDialogOpen(true)}
+          className={cn("border-dashed hover:border-solid", memberColors.border)}
+        />
+        <AddButton 
+          text="Add Event"
+          onClick={() => setIsEventDialogOpen(true)}
+          className={cn("border-dashed hover:border-solid", memberColors.border)}
+        />
+      </div>
     </div>
   );
 
   const renderTasksWidget = () => (
     <Card className={cn("h-full", memberColors.border)} style={{ borderWidth: '2px' }}>
       <CardHeader className="pb-4">
-        <div className="flex justify-between items-center">
-          <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
-            <Users className="h-6 w-6" />
-            Tasks ({pendingTasks.length} pending, {completedTasks.length} completed)
-          </CardTitle>
-          <AddButton 
-            text="Add Task"
-            onClick={() => setIsTaskDialogOpen(true)}
-            className={cn("border-dashed hover:border-solid", memberColors.border)}
-          />
-        </div>
+        <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
+          <Users className="h-6 w-6" />
+          Tasks ({pendingTasks.length} pending, {completedTasks.length} completed)
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 max-h-96 overflow-y-auto">
         {pendingTasks.length === 0 && completedTasks.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No tasks assigned</p>
-            <Button 
-              variant="outline" 
-              className="mt-4"
-              onClick={() => setIsTaskDialogOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add First Task
-            </Button>
           </div>
         ) : (
           <>
@@ -169,73 +166,31 @@ export const MemberDashboard = ({
     </Card>
   );
 
-  const renderCalendarWidget = () => (
-    <Card className={cn("h-full", memberColors.border)} style={{ borderWidth: '2px' }}>
-      <CardHeader className="pb-4">
-        <div className="flex justify-between items-center">
-          <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
-            <Calendar className="h-6 w-6" />
-            Today's Schedule
-          </CardTitle>
-          <AddButton 
-            text="Add Event"
-            onClick={() => setIsEventDialogOpen(true)}
-            className={cn("border-dashed hover:border-solid", memberColors.border)}
-          />
-        </div>
-      </CardHeader>
-      <CardContent className="max-h-96 overflow-y-auto">
-        <CalendarView
-          tasks={memberTasks}
-          familyMembers={[member]}
-          profile={profile}
-          onTaskUpdated={onTaskUpdated}
-          onEditTask={profile.role === 'parent' ? onEditTask : undefined}
-          familyId={profile.family_id}
-          dashboardMode={true}
-          activeMemberId={activeMemberId || null}
-          onTaskComplete={async (task) => { onTaskComplete(task); }}
-        />
-      </CardContent>
-    </Card>
+  const renderScheduleWidget = () => (
+    <MemberTodaysTasks
+      member={member}
+      tasks={tasks}
+      familyMembers={familyMembers}
+      profile={profile}
+      onEditTask={onEditTask}
+      onTaskComplete={onTaskComplete}
+    />
   );
 
   const renderListsWidget = () => (
-    <Card className={cn("h-full", memberColors.border)} style={{ borderWidth: '2px' }}>
-      <CardHeader className="pb-4">
-        <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
-          <List className="h-6 w-6" />
-          Lists
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="max-h-96 overflow-y-auto">
-        <Lists />
-      </CardContent>
-    </Card>
+    <MemberPersonalLists
+      member={member}
+      profile={profile}
+    />
   );
 
   const renderRewardsWidget = () => (
-    <Card className={cn("h-full", memberColors.border)} style={{ borderWidth: '2px' }}>
-      <CardHeader className="pb-4">
-        <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
-          <Gift className="h-6 w-6" />
-          Rewards
-        </CardTitle>
-        <CardDescription>
-          {member.total_points} points available
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="max-h-96 overflow-y-auto">
-        <ChildAuthProvider>
-          <RewardsGallery selectedMemberId={member.id} />
-        </ChildAuthProvider>
-      </CardContent>
-    </Card>
+    <MemberRewardsStack member={member} />
   );
 
   const widgets = [
     renderTasksWidget(),
-    renderCalendarWidget(),
+    renderScheduleWidget(),
     renderListsWidget(),
     renderRewardsWidget()
   ];
