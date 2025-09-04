@@ -8,14 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Calendar, Clock, MapPin, Users } from 'lucide-react';
+import { Calendar, MapPin, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { useEvents } from '@/hooks/useEvents';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarEvent } from '@/types/event';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 
 interface EventDialogProps {
   open: boolean;
@@ -162,68 +162,18 @@ export const EventDialog = ({
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="all-day"
-              checked={formData.isAllDay}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isAllDay: checked }))}
-            />
-            <Label htmlFor="all-day">All day event</Label>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Start Date</Label>
-              <Input
-                type="date"
-                value={format(formData.startDate, 'yyyy-MM-dd')}
-                onChange={(e) => setFormData(prev => ({ 
-                  ...prev, 
-                  startDate: new Date(e.target.value) 
-                }))}
-              />
-            </div>
-            <div>
-              <Label>End Date</Label>
-              <Input
-                type="date"
-                value={format(formData.endDate, 'yyyy-MM-dd')}
-                onChange={(e) => setFormData(prev => ({ 
-                  ...prev, 
-                  endDate: new Date(e.target.value) 
-                }))}
-              />
-            </div>
-          </div>
-
-          {!formData.isAllDay && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Start Time</Label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="time"
-                    value={formData.startTime}
-                    onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label>End Time</Label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="time"
-                    value={formData.endTime}
-                    onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+          <DateTimePicker
+            startDate={formData.startDate}
+            endDate={formData.endDate}
+            startTime={formData.startTime}
+            endTime={formData.endTime}
+            isAllDay={formData.isAllDay}
+            onStartDateChange={(date) => setFormData(prev => ({ ...prev, startDate: date }))}
+            onEndDateChange={(date) => setFormData(prev => ({ ...prev, endDate: date }))}
+            onStartTimeChange={(time) => setFormData(prev => ({ ...prev, startTime: time }))}
+            onEndTimeChange={(time) => setFormData(prev => ({ ...prev, endTime: time }))}
+            onAllDayChange={(isAllDay) => setFormData(prev => ({ ...prev, isAllDay }))}
+          />
 
           {/* Event Assignees */}
           <div>
