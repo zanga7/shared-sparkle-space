@@ -107,6 +107,9 @@ export const useEvents = (familyId?: string) => {
     try {
       const { attendees, recurrence_options, ...eventFields } = eventData;
       
+      console.log('useEvents.createEvent - Full eventData received:', eventData);
+      console.log('useEvents.createEvent - Extracted recurrence_options:', recurrence_options);
+      
       // Get the current user's profile ID to use as created_by
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -118,14 +121,18 @@ export const useEvents = (familyId?: string) => {
         throw new Error('User profile not found');
       }
 
+      const insertData = {
+        ...eventFields,
+        family_id: familyId,
+        created_by: profile.id,
+        recurrence_options: recurrence_options || null
+      };
+      
+      console.log('useEvents.createEvent - Data being inserted to database:', insertData);
+
       const { data: event, error: eventError } = await supabase
         .from('events')
-        .insert([{
-          ...eventFields,
-          family_id: familyId,
-          created_by: profile.id,
-          recurrence_options: recurrence_options || null
-        }])
+        .insert([insertData])
         .select()
         .single();
 

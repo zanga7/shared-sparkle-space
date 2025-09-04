@@ -1197,7 +1197,8 @@ export const CalendarView = ({
                     location: eventData.location,
                     start_date: eventData.start_date,
                     end_date: eventData.end_date,
-                    is_all_day: eventData.is_all_day
+                    is_all_day: eventData.is_all_day,
+                    recurrence_options: eventData.recurrence_options
                   }, eventData.attendees);
                   
                   toast({
@@ -1213,7 +1214,8 @@ export const CalendarView = ({
                     start_date: eventData.start_date,
                     end_date: eventData.end_date,
                     is_all_day: eventData.is_all_day,
-                    attendees: eventData.attendees
+                    attendees: eventData.attendees,
+                    recurrence_options: eventData.recurrence_options
                   });
                   
                   if (result) {
