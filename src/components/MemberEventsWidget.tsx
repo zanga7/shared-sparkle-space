@@ -19,7 +19,12 @@ export const MemberEventsWidget = ({
   onAddEvent
 }: MemberEventsWidgetProps) => {
   const memberColors = getMemberColorClasses(member.color);
-  const { events = [] } = useEvents(profile.family_id);
+  const { events = [], refreshEvents } = useEvents(profile.family_id);
+
+  // Function to be called when an event is added
+  const handleEventAdded = () => {
+    refreshEvents();
+  };
   
   // Filter events for today and for this member
   const todaysEvents = events.filter(event => {

@@ -12,6 +12,7 @@ import { AddTaskDialog } from '@/components/AddTaskDialog';
 import { EventDialog } from '@/components/EventDialog';
 import { getMemberColorClasses } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useEvents } from '@/hooks/useEvents';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ChevronLeft, ChevronRight, Users, Calendar, List, Gift, Plus } from 'lucide-react';
 import { Task, Profile } from '@/types/task';
@@ -54,6 +55,7 @@ export const MemberDashboard = ({
   const isMobile = useIsMobile();
 
   const memberColors = getMemberColorClasses(member.color);
+  const { createEvent } = useEvents(profile.family_id);
   
   const memberTasks = tasks.filter(task => 
     task.assigned_to === member.id || 
@@ -218,9 +220,13 @@ export const MemberDashboard = ({
           familyMembers={familyMembers}
           familyId={profile.family_id}
           defaultMember={member.id}
-          onSave={async () => {
-            onTaskUpdated();
-            setIsEventDialogOpen(false);
+          onSave={async (eventData) => {
+            try {
+              await createEvent(eventData);
+              setIsEventDialogOpen(false);
+            } catch (error) {
+              console.error('Failed to create event:', error);
+            }
           }}
         />
       </div>
@@ -257,9 +263,13 @@ export const MemberDashboard = ({
         familyMembers={familyMembers}
         familyId={profile.family_id}
         defaultMember={member.id}
-        onSave={async () => {
-          onTaskUpdated();
-          setIsEventDialogOpen(false);
+        onSave={async (eventData) => {
+          try {
+            await createEvent(eventData);
+            setIsEventDialogOpen(false);
+          } catch (error) {
+            console.error('Failed to create event:', error);
+          }
         }}
       />
     </div>

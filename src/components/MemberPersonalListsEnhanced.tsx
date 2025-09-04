@@ -39,9 +39,9 @@ export const MemberPersonalListsEnhanced = ({
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   
-  // Fetch member's personal list items
-  const { data: listItems = [], refetch } = useQuery({
-    queryKey: ['member-list-items', member.id],
+  // Fetch member's personal list items and assigned items
+  const { data: allListItems = [], refetch } = useQuery({
+    queryKey: ['member-all-list-items', member.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('list_items')
@@ -52,15 +52,33 @@ export const MemberPersonalListsEnhanced = ({
           category,
           quantity,
           list_id,
-          lists!inner(name, family_id)
+          created_by,
+          lists!inner(name, family_id),
+          assignees:list_item_assignees(
+            profile_id,
+            profile:profiles(id, display_name, color)
+          )
         `)
         .eq('lists.family_id', profile.family_id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as ListItem[];
+      return data as (ListItem & { 
+        created_by: string; 
+        assignees: Array<{ profile_id: string; profile: { id: string; display_name: string; color: string } }>;
+      })[];
     }
   });
+
+  // Separate personal items from assigned items
+  const personalListItems = allListItems.filter(item => 
+    item.lists.name === `${member.display_name}'s Personal List`
+  );
+  
+  const assignedListItems = allListItems.filter(item => 
+    item.lists.name !== `${member.display_name}'s Personal List` &&
+    item.assignees?.some(assignee => assignee.profile_id === member.id)
+  );
 
   const toggleComplete = async (itemId: string, isCompleted: boolean) => {
     const { error } = await supabase
@@ -177,8 +195,10 @@ export const MemberPersonalListsEnhanced = ({
     }
   };
 
-  const incompleteItems = listItems.filter(item => !item.is_completed);
-  const completedItems = listItems.filter(item => item.is_completed);
+  const incompletePersonalItems = personalListItems.filter(item => !item.is_completed);
+  const completedPersonalItems = personalListItems.filter(item => item.is_completed);
+  const incompleteAssignedItems = assignedListItems.filter(item => !item.is_completed);
+  const completedAssignedItems = assignedListItems.filter(item => item.is_completed);
 
   return (
     <Card className={cn("h-full flex flex-col", memberColors.border)} style={{ borderWidth: '2px' }}>
@@ -217,69 +237,105 @@ export const MemberPersonalListsEnhanced = ({
         )}
       </CardHeader>
       
-      <CardContent className="flex-1 overflow-y-auto space-y-4">
-        {listItems.length === 0 && !isAddingItem ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <List className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No list items found</p>
-          </div>
-        ) : (
-          <>
-            {/* Incomplete Items */}
-            {incompleteItems.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm text-muted-foreground">To Do</h4>
-                {incompleteItems.map((item) => (
-                  <div key={item.id} className="flex items-center space-x-3 p-2 rounded-lg border group">
-                    <Checkbox
-                      checked={item.is_completed}
-                      onCheckedChange={() => toggleComplete(item.id, item.is_completed)}
-                    />
-                    <div className="flex-1 min-w-0">
-                      {editingItemId === item.id ? (
-                        <div className="flex gap-2">
-                          <Input
-                            value={editingName}
-                            onChange={(e) => setEditingName(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') editItem(item.id, editingName);
-                              if (e.key === 'Escape') setEditingItemId(null);
+      <CardContent className="flex-1 overflow-y-auto space-y-6">
+        {/* Personal List Section */}
+        <div className="space-y-4">
+          <h3 className="font-semibold text-base text-foreground border-b pb-2">My Personal Items</h3>
+          {personalListItems.length === 0 && !isAddingItem ? (
+            <div className="text-center py-4 text-muted-foreground">
+              <p className="text-sm">No personal items yet</p>
+            </div>
+          ) : (
+            <>
+              {/* Incomplete Personal Items */}
+              {incompletePersonalItems.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm text-muted-foreground">To Do</h4>
+                  {incompletePersonalItems.map((item) => (
+                    <div key={item.id} className="flex items-center space-x-3 p-2 rounded-lg border group">
+                      <Checkbox
+                        checked={item.is_completed}
+                        onCheckedChange={() => toggleComplete(item.id, item.is_completed)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        {editingItemId === item.id ? (
+                          <div className="flex gap-2">
+                            <Input
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') editItem(item.id, editingName);
+                                if (e.key === 'Escape') setEditingItemId(null);
+                              }}
+                              autoFocus
+                            />
+                            <Button size="sm" onClick={() => editItem(item.id, editingName)}>
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingItemId(null)}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{item.name}</span>
+                              {item.quantity && item.quantity > 1 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {item.quantity}
+                                </Badge>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      {editingItemId !== item.id && (
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingItemId(item.id);
+                              setEditingName(item.name);
                             }}
-                            autoFocus
-                          />
-                          <Button size="sm" onClick={() => editItem(item.id, editingName)}>
-                            <Check className="h-4 w-4" />
+                          >
+                            <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => setEditingItemId(null)}>
-                            <X className="h-4 w-4" />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deleteItem(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      ) : (
-                        <>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{item.name}</span>
-                            {item.quantity && item.quantity > 1 && (
-                              <Badge variant="secondary" className="text-xs">
-                                {item.quantity}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground">{item.lists.name}</p>
-                        </>
                       )}
                     </div>
-                    {editingItemId !== item.id && (
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setEditingItemId(item.id);
-                            setEditingName(item.name);
-                          }}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
+                  ))}
+                </div>
+              )}
+
+              {/* Completed Personal Items */}
+              {completedPersonalItems.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm text-muted-foreground">Completed</h4>
+                  {completedPersonalItems.slice(0, 2).map((item) => (
+                    <div key={item.id} className="flex items-center space-x-3 p-2 rounded-lg border opacity-60 group">
+                      <Checkbox
+                        checked={item.is_completed}
+                        onCheckedChange={() => toggleComplete(item.id, item.is_completed)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium line-through">{item.name}</span>
+                          {item.quantity && item.quantity > 1 && (
+                            <Badge variant="secondary" className="text-xs">
+                              {item.quantity}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
                           size="sm"
                           variant="ghost"
@@ -288,53 +344,87 @@ export const MemberPersonalListsEnhanced = ({
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                    </div>
+                  ))}
+                  {completedPersonalItems.length > 2 && (
+                    <p className="text-sm text-muted-foreground text-center py-1">
+                      +{completedPersonalItems.length - 2} more completed
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
-            {/* Completed Items */}
-            {completedItems.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm text-muted-foreground">Completed</h4>
-                {completedItems.slice(0, 3).map((item) => (
-                  <div key={item.id} className="flex items-center space-x-3 p-2 rounded-lg border opacity-60 group">
-                    <Checkbox
-                      checked={item.is_completed}
-                      onCheckedChange={() => toggleComplete(item.id, item.is_completed)}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium line-through">{item.name}</span>
-                        {item.quantity && item.quantity > 1 && (
-                          <Badge variant="secondary" className="text-xs">
-                            {item.quantity}
-                          </Badge>
-                        )}
+        {/* Assigned Items Section */}
+        <div className="space-y-4">
+          <h3 className="font-semibold text-base text-foreground border-b pb-2">Assigned to Me</h3>
+          {assignedListItems.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              <p className="text-sm">No items assigned to you</p>
+            </div>
+          ) : (
+            <>
+              {/* Incomplete Assigned Items */}
+              {incompleteAssignedItems.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm text-muted-foreground">To Do</h4>
+                  {incompleteAssignedItems.map((item) => (
+                    <div key={item.id} className="flex items-center space-x-3 p-2 rounded-lg border group">
+                      <Checkbox
+                        checked={item.is_completed}
+                        onCheckedChange={() => toggleComplete(item.id, item.is_completed)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{item.name}</span>
+                          {item.quantity && item.quantity > 1 && (
+                            <Badge variant="secondary" className="text-xs">
+                              {item.quantity}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{item.lists.name}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground">{item.lists.name}</p>
                     </div>
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => deleteItem(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                  ))}
+                </div>
+              )}
+
+              {/* Completed Assigned Items */}
+              {completedAssignedItems.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm text-muted-foreground">Completed</h4>
+                  {completedAssignedItems.slice(0, 2).map((item) => (
+                    <div key={item.id} className="flex items-center space-x-3 p-2 rounded-lg border opacity-60 group">
+                      <Checkbox
+                        checked={item.is_completed}
+                        onCheckedChange={() => toggleComplete(item.id, item.is_completed)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium line-through">{item.name}</span>
+                          {item.quantity && item.quantity > 1 && (
+                            <Badge variant="secondary" className="text-xs">
+                              {item.quantity}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{item.lists.name}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-                {completedItems.length > 3 && (
-                  <p className="text-sm text-muted-foreground text-center py-2">
-                    And {completedItems.length - 3} more completed items...
-                  </p>
-                )}
-              </div>
-            )}
-          </>
-        )}
+                  ))}
+                  {completedAssignedItems.length > 2 && (
+                    <p className="text-sm text-muted-foreground text-center py-1">
+                      +{completedAssignedItems.length - 2} more completed
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

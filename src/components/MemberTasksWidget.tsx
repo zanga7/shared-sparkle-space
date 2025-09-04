@@ -122,7 +122,10 @@ export const MemberTasksWidget = ({
           </div>
         ) : (
           <div className="h-full overflow-y-auto">
-            <Accordion type="multiple" className="space-y-2">
+            <Accordion type="multiple" defaultValue={[
+              'pending-morning', 'pending-midday', 'pending-evening', 'pending-general',
+              'completed-morning', 'completed-midday', 'completed-evening', 'completed-general'
+            ]} className="space-y-2">
               {/* Pending Tasks */}
               {renderTaskGroup('morning', pendingGroups.morning, 'pending')}
               {renderTaskGroup('midday', pendingGroups.midday, 'pending')}
