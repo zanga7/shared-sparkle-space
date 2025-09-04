@@ -313,7 +313,7 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               {availableRewards.map((reward) => {
                 if (reward.reward_type === 'group_contribution') {
                   const rewardContributions = groupContributions.filter(c => c.reward_id === reward.id);
