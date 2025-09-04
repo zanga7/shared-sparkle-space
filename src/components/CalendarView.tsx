@@ -861,10 +861,68 @@ export const CalendarView = ({
       <CardContent>
         <DragDropContext onDragEnd={handleDragEnd}>
           {viewMode === 'today' ? (
-            // Today View - Member Columns Layout
-            <div className="space-y-4">
-              {/* Member Columns */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            // Dashboard mode - Simple single column layout
+            dashboardMode ? (
+              <div className="space-y-3">
+                {(() => {
+                  const dateKey = format(currentDate, 'yyyy-MM-dd');
+                  const todayEvents = eventsByDate[dateKey] || [];
+                  
+                  if (todayEvents.length === 0) {
+                    return (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>No events scheduled for today</p>
+                      </div>
+                    );
+                  }
+                  
+                  return todayEvents.map((event, eventIndex) => (
+                    <div
+                      key={event.id}
+                      className="p-3 rounded-md border border-purple-200 bg-purple-50 hover:shadow-md cursor-pointer transition-all group"
+                      onClick={() => handleEditEvent(event)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-purple-700">{event.title}</span>
+                        <div className="flex items-center gap-2">
+                          {event.start_date && (
+                            <span className="text-xs text-purple-600">
+                              {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
+                            </span>
+                          )}
+                          <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600">
+                            {event.isMultiDay ? 'Multi' : 'Event'}
+                          </Badge>
+                          <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-purple-600" />
+                        </div>
+                      </div>
+                      {event.location && (
+                        <div className="flex items-center gap-1 mt-2">
+                          <MapPin className="h-3 w-3 text-purple-600" />
+                          <p className="text-sm text-purple-600">{event.location}</p>
+                        </div>
+                      )}
+                      {event.description && (
+                        <p className="text-sm text-muted-foreground mt-2">{event.description}</p>
+                      )}
+                      {event.attendees && event.attendees.length > 0 && (
+                        <div className="mt-2">
+                          <EventAttendeesDisplay 
+                            attendees={event.attendees} 
+                            maxDisplay={3}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ));
+                })()}
+              </div>
+            ) : (
+              // Regular today view - Member Columns Layout
+              <div className="space-y-4">
+                {/* Member Columns */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {familyMembers.map((member) => {
                   const dateKey = format(currentDate, 'yyyy-MM-dd');
                   const memberTasks = (tasksByDate[dateKey] || []).filter(task => 
@@ -984,6 +1042,7 @@ export const CalendarView = ({
                 })}
               </div>
             </div>
+            )
           ) : (
             // Week/Month Grid View
             <div className={cn(
@@ -1265,6 +1324,6 @@ export const CalendarView = ({
           action="complete this task"
         />
       )}
-    </Card>
-  );
-};
+     </Card>
+   );
+ };
