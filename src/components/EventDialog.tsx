@@ -160,29 +160,11 @@ export const EventDialog = ({
     console.log('Event creation - eventRecurrenceOptions:', eventRecurrenceOptions);
     console.log('Event creation - eventData:', eventData);
 
-    // Call onSave and handle recurring instances if needed
+    // Call onSave - the recurrence data is now properly saved with the event
     onSave?.(eventData);
 
-    // If recurrence is enabled, create future instances
-    if (recurrenceEnabled && eventRecurrenceOptions.enabled) {
-      try {
-        // For events, we need to get the created event ID from the onSave callback
-        // This is a simplified version - in production you'd want better coordination
-        setTimeout(async () => {
-          const { data: functionData, error: functionError } = await supabase.functions.invoke('create-recurring-instances', {
-            body: { type: 'event', parentId: 'temp-id' } // We don't have the real ID yet from onSave
-          });
-          
-          if (functionError) {
-            console.error('Error creating recurring event instances:', functionError);
-          } else {
-            console.log('Created recurring event instances:', functionData);
-          }
-        }, 1000);
-      } catch (recurringError) {
-        console.error('Error with recurring event instances:', recurringError);
-      }
-    }
+    // Remove automatic recurring instance creation for now
+    // The recurrence data is saved and can be used later to generate instances
   };
 
   return (

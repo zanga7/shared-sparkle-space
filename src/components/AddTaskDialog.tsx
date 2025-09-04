@@ -154,9 +154,6 @@ export const AddTaskDialog = ({
       console.log('Task creation - taskRecurrenceOptions:', taskRecurrenceOptions);
       console.log('Task creation - taskData:', taskData);
 
-      console.log('Creating task with data:', taskData);
-      console.log('Form data task_group:', formData.task_group);
-
       const { data: taskResult, error } = await supabase
         .from('tasks')
         .insert(taskData)
@@ -238,24 +235,8 @@ export const AddTaskDialog = ({
         }
       }
 
-      // If recurrence is enabled, create future instances
-      if (recurrenceEnabled && taskRecurrenceOptions.enabled) {
-        try {
-          const { data: functionData, error: functionError } = await supabase.functions.invoke('create-recurring-instances', {
-            body: { type: 'task', parentId: taskResult.id }
-          });
-          
-          if (functionError) {
-            console.error('Error creating recurring instances:', functionError);
-            // Don't fail the main task creation if recurring instances fail
-          } else {
-            console.log('Created recurring instances:', functionData);
-          }
-        } catch (recurringError) {
-          console.error('Error with recurring instances:', recurringError);
-          // Don't fail the main task creation
-        }
-      }
+      // Remove automatic recurring instance creation for now to prevent issues
+      // Users can manually create recurring tasks or we can implement this better later
 
       toast({
         title: 'Success',
