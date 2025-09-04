@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 interface MemberEventsWidgetProps {
   member: Profile;
   profile: Profile;
+  events: any[];
   onAddEvent: () => void;
   onEditEvent: (event: any) => void;
 }
@@ -19,16 +20,11 @@ interface MemberEventsWidgetProps {
 export const MemberEventsWidget = ({
   member,
   profile,
+  events,
   onAddEvent,
   onEditEvent
 }: MemberEventsWidgetProps) => {
   const memberColors = getMemberColorClasses(member.color);
-  const { events = [], refreshEvents } = useEvents(profile.family_id);
-
-  // Function to be called when an event is added
-  const handleEventAdded = () => {
-    refreshEvents();
-  };
   
   // Filter events for today and for this member
   const todaysEvents = events.filter(event => {

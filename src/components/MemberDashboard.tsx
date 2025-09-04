@@ -56,7 +56,7 @@ export const MemberDashboard = ({
   const isMobile = useIsMobile();
 
   const memberColors = getMemberColorClasses(member.color);
-  const { createEvent, updateEvent, deleteEvent, refreshEvents } = useEvents(profile.family_id);
+  const { events = [], createEvent, updateEvent, deleteEvent, refreshEvents } = useEvents(profile.family_id);
   
   const memberTasks = tasks.filter(task => 
     task.assigned_to === member.id || 
@@ -124,6 +124,7 @@ export const MemberDashboard = ({
     <MemberEventsWidget
       member={member}
       profile={profile}
+      events={events}
       onAddEvent={() => {
         setEditingEvent(null);
         setIsEventDialogOpen(true);
@@ -239,7 +240,6 @@ export const MemberDashboard = ({
               } else {
                 await createEvent(eventData);
               }
-              await refreshEvents();
               setIsEventDialogOpen(false);
               setEditingEvent(null);
             } catch (error) {
@@ -249,7 +249,6 @@ export const MemberDashboard = ({
           onDelete={editingEvent ? async () => {
             try {
               await deleteEvent(editingEvent.id);
-              await refreshEvents();
               setIsEventDialogOpen(false);
               setEditingEvent(null);
             } catch (error) {
@@ -302,7 +301,6 @@ export const MemberDashboard = ({
             } else {
               await createEvent(eventData);
             }
-            await refreshEvents();
             setIsEventDialogOpen(false);
             setEditingEvent(null);
           } catch (error) {
@@ -312,7 +310,6 @@ export const MemberDashboard = ({
         onDelete={editingEvent ? async () => {
           try {
             await deleteEvent(editingEvent.id);
-            await refreshEvents();
             setIsEventDialogOpen(false);
             setEditingEvent(null);
           } catch (error) {
