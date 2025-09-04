@@ -1,3 +1,5 @@
+import { TaskRecurrenceOptions } from './recurrence';
+
 // Shared Task interface for the entire application
 export interface Task {
   id: string;
@@ -9,6 +11,7 @@ export interface Task {
   created_by: string;
   completion_rule: 'any_one' | 'everyone'; // Field for completion behavior
   task_group?: string | null; // Task group field for organizing tasks
+  recurrence_options?: TaskRecurrenceOptions | null; // Recurrence configuration
   assigned_profile?: {
     id: string;
     display_name: string;

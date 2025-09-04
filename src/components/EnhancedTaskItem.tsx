@@ -176,7 +176,7 @@ export const EnhancedTaskItem = ({
             )}
 
             {/* Recurrence Indicator */}
-            {(task as any).recurrence_options?.enabled && (
+            {task.recurrence_options?.enabled && (
               <Badge variant="outline" className="text-xs py-0 h-5 flex items-center gap-1">
                 <Repeat className="h-2.5 w-2.5" />
                 Repeats

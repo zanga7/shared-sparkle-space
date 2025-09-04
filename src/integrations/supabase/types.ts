@@ -276,6 +276,7 @@ export type Database = {
           id: string
           is_all_day: boolean
           location: string | null
+          recurrence_options: Json | null
           start_date: string
           title: string
           updated_at: string
@@ -289,6 +290,7 @@ export type Database = {
           id?: string
           is_all_day?: boolean
           location?: string | null
+          recurrence_options?: Json | null
           start_date: string
           title: string
           updated_at?: string
@@ -302,6 +304,7 @@ export type Database = {
           id?: string
           is_all_day?: boolean
           location?: string | null
+          recurrence_options?: Json | null
           start_date?: string
           title?: string
           updated_at?: string
@@ -1116,6 +1119,7 @@ export type Database = {
           family_id: string
           id: string
           points: number
+          recurrence_options: Json | null
           task_group: string | null
           title: string
           updated_at: string
@@ -1131,6 +1135,7 @@ export type Database = {
           family_id: string
           id?: string
           points?: number
+          recurrence_options?: Json | null
           task_group?: string | null
           title: string
           updated_at?: string
@@ -1146,6 +1151,7 @@ export type Database = {
           family_id?: string
           id?: string
           points?: number
+          recurrence_options?: Json | null
           task_group?: string | null
           title?: string
           updated_at?: string

@@ -135,8 +135,8 @@ export const EventDialog = ({
         : new Date(`${format(formData.endDate, 'yyyy-MM-dd')}T${formData.endTime}`).toISOString(),
       is_all_day: formData.isAllDay,
       attendees: formData.attendees,
-      // Include recurrence data if enabled
-      recurrence_options: recurrenceEnabled ? eventRecurrenceOptions : null
+      // Include recurrence data if enabled - cast to unknown then any for Supabase
+      recurrence_options: recurrenceEnabled ? (eventRecurrenceOptions as unknown as any) : null
     };
 
     onSave?.(eventData);

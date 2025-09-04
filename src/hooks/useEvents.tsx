@@ -65,13 +65,14 @@ export const useEvents = (familyId?: string) => {
         }
       });
 
-      // Combine events with their attendees
+      // Combine events with their attendees and cast types properly
       const eventsWithAttendees = eventsData.map(event => ({
         ...event,
-        attendees: attendeesByEvent.get(event.id) || []
+        attendees: attendeesByEvent.get(event.id) || [],
+        recurrence_options: event.recurrence_options as any // Cast to handle JSON<->interface mismatch
       }));
       
-      setEvents(eventsWithAttendees);
+      setEvents(eventsWithAttendees as CalendarEvent[]);
     } catch (error) {
       console.error('Error fetching events:', error);
       toast({
@@ -174,9 +175,15 @@ export const useEvents = (familyId?: string) => {
 
   const updateEvent = async (id: string, updates: Partial<CalendarEvent>, attendees?: string[]) => {
     try {
+      // Cast recurrence_options for database update
+      const dbUpdates = {
+        ...updates,
+        recurrence_options: updates.recurrence_options ? (updates.recurrence_options as unknown as any) : updates.recurrence_options
+      };
+      
       const { error: eventError } = await supabase
         .from('events')
-        .update(updates)
+        .update(dbUpdates)
         .eq('id', id);
 
       if (eventError) throw eventError;

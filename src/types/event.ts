@@ -1,3 +1,5 @@
+import { EventRecurrenceOptions } from './recurrence';
+
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -11,4 +13,5 @@ export interface CalendarEvent {
   created_by: string;
   family_id: string;
   updated_at: string;
+  recurrence_options?: EventRecurrenceOptions | null; // Recurrence configuration
 }

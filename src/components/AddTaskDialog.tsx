@@ -146,8 +146,8 @@ export const AddTaskDialog = ({
         task_group: formData.task_group, // Add the task_group field
         family_id: familyId,
         created_by: profileId,
-        // Include recurrence data if enabled
-        recurrence_options: recurrenceEnabled ? taskRecurrenceOptions : null
+        // Include recurrence data if enabled - cast to unknown then Json for Supabase
+        recurrence_options: recurrenceEnabled ? (taskRecurrenceOptions as unknown as any) : null
       };
 
       console.log('Creating task with data:', taskData);
