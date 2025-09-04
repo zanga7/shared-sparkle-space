@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -48,7 +48,11 @@ export const MemberDashboard = ({
   activeMemberId,
   dashboardMode
 }: MemberDashboardProps) => {
-  const [emblaRef, emblaApi] = useEmblaCarousel({ align: 'start', dragFree: false });
+  const [emblaRef, emblaApi] = useEmblaCarousel({ 
+    align: 'start', 
+    dragFree: false,
+    containScroll: 'trimSnaps'
+  });
   const [activeWidget, setActiveWidget] = useState(0);
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
@@ -78,6 +82,19 @@ export const MemberDashboard = ({
     }
   };
 
+  // Listen for carousel changes to update active widget
+  React.useEffect(() => {
+    if (emblaApi) {
+      const onSelect = () => {
+        setActiveWidget(emblaApi.selectedScrollSnap());
+      };
+      emblaApi.on('select', onSelect);
+      return () => {
+        emblaApi.off('select', onSelect);
+      };
+    }
+  }, [emblaApi]);
+
   const renderMemberHeader = () => (
     <div className={cn(
       "text-center py-6 sm:py-8 rounded-lg border-2 mb-6",
@@ -104,6 +121,30 @@ export const MemberDashboard = ({
           {member.role}
         </Badge>
       </div>
+      
+      {/* Mobile Widget Navigation Buttons */}
+      {isMobile && (
+        <div className="flex justify-center gap-2 mt-4">
+          {WIDGET_SECTIONS.map((section, index) => {
+            const IconComponent = section.icon;
+            return (
+              <Button
+                key={section.id}
+                variant={activeWidget === index ? "default" : "outline"}
+                size="sm"
+                onClick={() => scrollToWidget(index)}
+                className={cn(
+                  "h-12 w-12 p-0",
+                  activeWidget === index && memberColors.accent
+                )}
+                aria-label={`Go to ${section.title}`}
+              >
+                <IconComponent className="h-5 w-5" />
+              </Button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 
@@ -159,27 +200,12 @@ export const MemberDashboard = ({
       <div className="w-full mx-auto px-4">
         {renderMemberHeader()}
         
-        {/* Mobile Navigation Dots */}
-        <div className="flex justify-center gap-2 mb-4">
-          {WIDGET_SECTIONS.map((section, index) => (
-            <button
-              key={section.id}
-              onClick={() => scrollToWidget(index)}
-              className={cn(
-                "w-3 h-3 rounded-full transition-colors",
-                activeWidget === index ? memberColors.accent : "bg-muted"
-              )}
-              aria-label={`Go to ${section.title}`}
-            />
-          ))}
-        </div>
-
-        {/* Mobile Carousel */}
-        <div className="overflow-hidden" ref={emblaRef}>
+        {/* Mobile Carousel - Full Width */}
+        <div className="overflow-hidden -mx-4" ref={emblaRef}>
           <div className="flex">
             {widgets.map((widget, index) => (
-              <div key={index} className="flex-[0_0_100%] px-2">
-                <div className="h-[calc(100vh-300px)]">
+              <div key={index} className="flex-[0_0_100%] px-4">
+                <div className="h-[calc(100vh-400px)] w-full">
                   {widget}
                 </div>
               </div>
@@ -187,29 +213,11 @@ export const MemberDashboard = ({
           </div>
         </div>
 
-        {/* Mobile Navigation */}
-        <div className="flex justify-between items-center mt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => scrollToWidget(Math.max(0, activeWidget - 1))}
-            disabled={activeWidget === 0}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          
-          <span className="text-sm text-muted-foreground">
+        {/* Mobile Navigation - Current Widget Title */}
+        <div className="flex justify-center items-center mt-4">
+          <span className="text-lg font-medium text-center">
             {WIDGET_SECTIONS[activeWidget]?.title}
           </span>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => scrollToWidget(Math.min(widgets.length - 1, activeWidget + 1))}
-            disabled={activeWidget === widgets.length - 1}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
         </div>
 
         {/* Dialogs */}
