@@ -126,6 +126,7 @@ export const RecurrencePresets = ({
         {presets.map(({ preset, config }) => (
           <Button
             key={preset}
+            type="button"
             variant={selectedPreset === preset ? "default" : "outline"}
             className={`h-auto p-4 justify-start text-left ${
               selectedPreset === preset ? "" : "hover:bg-muted/50"

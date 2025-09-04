@@ -56,6 +56,7 @@ export const RecurrenceEnds = ({
         {endOptions.map(({ type, label, icon: Icon }) => (
           <Button
             key={type}
+            type="button"
             variant={endType === type ? "default" : "outline"}
             className="h-auto p-3 flex-col gap-2"
             onClick={() => onEndTypeChange(type)}
@@ -73,6 +74,7 @@ export const RecurrenceEnds = ({
           <Popover>
             <PopoverTrigger asChild>
               <Button
+                type="button"
                 variant="outline"
                 className={cn(
                   "w-full justify-start text-left font-normal",
