@@ -7,7 +7,6 @@ import NetworkStatusIndicator from "@/components/NetworkStatusIndicator";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import { useMemo } from "react";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ChildAuth from "./pages/ChildAuth";
@@ -26,18 +25,17 @@ import DashboardMode from "./pages/admin/DashboardMode";
 import Permissions from "./pages/admin/Permissions";
 import RotatingTasks from "./pages/admin/RotatingTasks";
 
-const App = () => {
-  const queryClient = useMemo(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: 1,
-        refetchOnWindowFocus: false,
-      },
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
     },
-  }), []);
+  },
+});
 
-  return (
-    <QueryClientProvider client={queryClient}>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
@@ -70,8 +68,7 @@ const App = () => {
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
-   </QueryClientProvider>
-  );
-};
+  </QueryClientProvider>
+);
 
 export default App;
