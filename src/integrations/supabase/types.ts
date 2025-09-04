@@ -1443,6 +1443,15 @@ export type Database = {
           refresh_token: string
         }[]
       }
+      get_decrypted_google_photos_tokens: {
+        Args: { family_id_param: string }
+        Returns: {
+          access_token: string
+          expires_at: string
+          is_expired: boolean
+          refresh_token: string
+        }[]
+      }
       get_family_profiles_metadata: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1750,12 +1759,30 @@ export type Database = {
         }
         Returns: Json
       }
+      store_encrypted_google_photos_tokens: {
+        Args: {
+          access_token_param: string
+          created_by_param?: string
+          expires_at_param?: string
+          family_id_param: string
+          refresh_token_param?: string
+        }
+        Returns: Json
+      }
       update_calendar_integration_secure: {
         Args: {
           calendar_id_param?: string
           integration_id_param: string
           integration_type_param?: string
           is_active_param?: boolean
+        }
+        Returns: Json
+      }
+      update_google_photos_tokens: {
+        Args: {
+          access_token_param: string
+          expires_at_param?: string
+          family_id_param: string
         }
         Returns: Json
       }
