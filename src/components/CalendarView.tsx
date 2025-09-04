@@ -863,15 +863,6 @@ export const CalendarView = ({
           {viewMode === 'today' ? (
             // Today View - Member Columns Layout
             <div className="space-y-4">
-              <div className="text-center mb-6">
-                <h3 className="text-lg font-semibold mb-2">
-                  {format(currentDate, 'EEEE, MMMM d')}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {isToday(currentDate) ? "Today's Schedule" : format(currentDate, 'EEEE') + "'s Schedule"}
-                </p>
-              </div>
-              
               {/* Member Columns */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {familyMembers.map((member) => {
