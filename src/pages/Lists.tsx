@@ -51,6 +51,7 @@ const Lists = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [lists, setLists] = useState<List[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +71,7 @@ const Lists = () => {
     if (profile) {
       fetchLists();
       fetchCategories();
+      fetchProfiles();
     }
   }, [profile]);
 
@@ -175,6 +177,28 @@ const Lists = () => {
     }
   };
 
+  const fetchProfiles = async () => {
+    if (!profile) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('family_id', profile.family_id);
+
+      if (error) throw error;
+      setProfiles(data || []);
+    } catch (error) {
+      console.error('Error fetching profiles:', error);
+    }
+  };
+
+  const isPersonalList = (list: List): boolean => {
+    return profiles.some(p => 
+      list.name === `${p.display_name}'s Personal List`
+    );
+  };
+
   const filteredLists = lists.filter(list => {
     // Apply search filter
     if (searchQuery && !list.name.toLowerCase().includes(searchQuery.toLowerCase())) {
@@ -184,11 +208,13 @@ const Lists = () => {
     // Apply category filter
     if (selectedFilter === 'archived') {
       return list.is_archived;
+    } else if (selectedFilter === 'personal') {
+      return !list.is_archived && isPersonalList(list);
     } else if (selectedFilter === 'all') {
-      return !list.is_archived;
+      return !list.is_archived && !isPersonalList(list);
     } else {
-      // Filter by category ID
-      return !list.is_archived && list.category_id === selectedFilter;
+      // Filter by category ID (exclude personal lists)
+      return !list.is_archived && list.category_id === selectedFilter && !isPersonalList(list);
     }
   });
 
@@ -397,13 +423,14 @@ const Lists = () => {
 
         {/* Tabs */}
         <Tabs value={selectedFilter} onValueChange={setSelectedFilter} className="mb-6">
-          <TabsList className="grid w-full h-auto" style={{ gridTemplateColumns: `repeat(${categories.length + 2}, 1fr)` }}>
+          <TabsList className="grid w-full h-auto" style={{ gridTemplateColumns: `repeat(${categories.length + 3}, 1fr)` }}>
             <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
             {categories.map((category) => (
               <TabsTrigger key={category.id} value={category.id} className="flex-1">
                 {category.name}
               </TabsTrigger>
             ))}
+            <TabsTrigger value="personal" className="flex-1">Personal</TabsTrigger>
             <TabsTrigger value="archived" className="flex-1">Archived</TabsTrigger>
           </TabsList>
         </Tabs>
