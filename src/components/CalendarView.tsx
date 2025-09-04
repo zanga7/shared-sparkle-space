@@ -899,7 +899,7 @@ export const CalendarView = ({
                             snapshot.isDraggingOver && "ring-2 ring-primary/20"
                           )}
                         >
-                          <CardHeader className="pb-3">
+                          <CardHeader className="pb-3 w-full">
                             <div className="flex items-center gap-2">
                               <UserAvatar
                                 name={member.display_name}
