@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import ColumnBasedDashboard from '@/components/ColumnBasedDashboard';
 import { AdminProvider } from '@/contexts/AdminContext';
+import { RecurrenceDataTest } from '@/components/RecurrenceDataTest';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -30,7 +31,10 @@ const Index = () => {
 
   return (
     <AdminProvider>
-      <ColumnBasedDashboard />
+      <div className="min-h-screen bg-background w-full">
+        <RecurrenceDataTest />
+        <ColumnBasedDashboard />
+      </div>
     </AdminProvider>
   );
 };

@@ -150,6 +150,10 @@ export const AddTaskDialog = ({
         recurrence_options: recurrenceEnabled ? (taskRecurrenceOptions as unknown as any) : null
       };
 
+      console.log('Task creation - recurrenceEnabled:', recurrenceEnabled);
+      console.log('Task creation - taskRecurrenceOptions:', taskRecurrenceOptions);
+      console.log('Task creation - taskData:', taskData);
+
       console.log('Creating task with data:', taskData);
       console.log('Form data task_group:', formData.task_group);
 
@@ -231,6 +235,25 @@ export const AddTaskDialog = ({
           if (assigneeError) {
             throw assigneeError;
           }
+        }
+      }
+
+      // If recurrence is enabled, create future instances
+      if (recurrenceEnabled && taskRecurrenceOptions.enabled) {
+        try {
+          const { data: functionData, error: functionError } = await supabase.functions.invoke('create-recurring-instances', {
+            body: { type: 'task', parentId: taskResult.id }
+          });
+          
+          if (functionError) {
+            console.error('Error creating recurring instances:', functionError);
+            // Don't fail the main task creation if recurring instances fail
+          } else {
+            console.log('Created recurring instances:', functionData);
+          }
+        } catch (recurringError) {
+          console.error('Error with recurring instances:', recurringError);
+          // Don't fail the main task creation
         }
       }
 
@@ -466,22 +489,20 @@ export const AddTaskDialog = ({
             </Popover>
           </div>
 
-          {/* Recurrence Panel */}
-          {formData.due_date && (
-            <UnifiedRecurrencePanel
-              enabled={recurrenceEnabled}
-              onEnabledChange={(enabled) => {
-                setRecurrenceEnabled(enabled);
-                setTaskRecurrenceOptions(prev => ({ ...prev, enabled }));
-              }}
-              startDate={formData.due_date}
-              type="task"
-              taskOptions={taskRecurrenceOptions}
-              onTaskOptionsChange={setTaskRecurrenceOptions}
-              familyMembers={familyMembers}
-              selectedAssignees={formData.assignees}
-            />
-          )}
+          {/* Recurrence Panel - Always show, not just when due_date exists */}
+          <UnifiedRecurrencePanel
+            enabled={recurrenceEnabled}
+            onEnabledChange={(enabled) => {
+              setRecurrenceEnabled(enabled);
+              setTaskRecurrenceOptions(prev => ({ ...prev, enabled }));
+            }}
+            startDate={formData.due_date || new Date()}
+            type="task"
+            taskOptions={taskRecurrenceOptions}
+            onTaskOptionsChange={setTaskRecurrenceOptions}
+            familyMembers={familyMembers}
+            selectedAssignees={formData.assignees}
+          />
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
