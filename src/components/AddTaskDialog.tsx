@@ -14,7 +14,9 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Profile } from '@/types/task';
+import { TaskRecurrenceOptions } from '@/types/recurrence';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
+import { UnifiedRecurrencePanel } from '@/components/recurrence/UnifiedRecurrencePanel';
 
 interface AddTaskDialogProps {
   familyMembers: Profile[];
@@ -57,6 +59,21 @@ export const AddTaskDialog = ({
     due_date: selectedDate || null,
     completion_rule: 'everyone' as 'any_one' | 'everyone',
     task_group: preselectedTaskGroup || 'general',
+  });
+
+  // Recurrence state
+  const [recurrenceEnabled, setRecurrenceEnabled] = useState(false);
+  const [taskRecurrenceOptions, setTaskRecurrenceOptions] = useState<TaskRecurrenceOptions>({
+    enabled: false,
+    rule: {
+      frequency: 'daily',
+      interval: 1,
+      endType: 'never'
+    },
+    repeatFrom: 'scheduled',
+    rotateBetweenMembers: false,
+    skipWeekends: false,
+    pauseDuringHolidays: false
   });
 
   // Update due_date when selectedDate changes
@@ -230,6 +247,21 @@ export const AddTaskDialog = ({
         due_date: selectedDate || null,
         completion_rule: 'everyone',
         task_group: preselectedTaskGroup || 'general',
+      });
+
+      // Reset recurrence
+      setRecurrenceEnabled(false);
+      setTaskRecurrenceOptions({
+        enabled: false,
+        rule: {
+          frequency: 'daily',
+          interval: 1,
+          endType: 'never'
+        },
+        repeatFrom: 'scheduled',
+        rotateBetweenMembers: false,
+        skipWeekends: false,
+        pauseDuringHolidays: false
       });
 
       setOpen(false);
@@ -431,6 +463,23 @@ export const AddTaskDialog = ({
               </PopoverContent>
             </Popover>
           </div>
+
+          {/* Recurrence Panel */}
+          {formData.due_date && (
+            <UnifiedRecurrencePanel
+              enabled={recurrenceEnabled}
+              onEnabledChange={(enabled) => {
+                setRecurrenceEnabled(enabled);
+                setTaskRecurrenceOptions(prev => ({ ...prev, enabled }));
+              }}
+              startDate={formData.due_date}
+              type="task"
+              taskOptions={taskRecurrenceOptions}
+              onTaskOptionsChange={setTaskRecurrenceOptions}
+              familyMembers={familyMembers}
+              selectedAssignees={formData.assignees}
+            />
+          )}
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>

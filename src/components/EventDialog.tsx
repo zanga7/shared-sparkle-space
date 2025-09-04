@@ -14,8 +14,10 @@ import { useEvents } from '@/hooks/useEvents';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarEvent } from '@/types/event';
+import { EventRecurrenceOptions } from '@/types/recurrence';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
+import { UnifiedRecurrencePanel } from '@/components/recurrence/UnifiedRecurrencePanel';
 
 interface EventDialogProps {
   open: boolean;
@@ -56,6 +58,17 @@ export const EventDialog = ({
     attendees: [] as string[]
   });
 
+  // Recurrence state
+  const [recurrenceEnabled, setRecurrenceEnabled] = useState(false);
+  const [eventRecurrenceOptions, setEventRecurrenceOptions] = useState<EventRecurrenceOptions>({
+    enabled: false,
+    rule: {
+      frequency: 'daily',
+      interval: 1,
+      endType: 'never'
+    }
+  });
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -85,6 +98,17 @@ export const EventDialog = ({
         endTime: '10:00',
         isAllDay: false,
         attendees: defaultMember ? [defaultMember] : []
+      });
+
+      // Reset recurrence for new events
+      setRecurrenceEnabled(false);
+      setEventRecurrenceOptions({
+        enabled: false,
+        rule: {
+          frequency: 'daily',
+          interval: 1,
+          endType: 'never'
+        }
       });
     }
   }, [event, editingEvent, selectedDate, defaultDate, defaultMember]);
@@ -188,6 +212,22 @@ export const EventDialog = ({
               placeholder="Select event attendees..."
             />
           </div>
+
+          {/* Recurrence Panel */}
+          <UnifiedRecurrencePanel
+            enabled={recurrenceEnabled}
+            onEnabledChange={(enabled) => {
+              setRecurrenceEnabled(enabled);
+              setEventRecurrenceOptions(prev => ({ ...prev, enabled }));
+            }}
+            startDate={formData.startDate}
+            startTime={formData.startTime}
+            type="event"
+            eventOptions={eventRecurrenceOptions}
+            onEventOptionsChange={setEventRecurrenceOptions}
+            familyMembers={familyMembers}
+            selectedAssignees={formData.attendees}
+          />
 
           <div className="flex justify-between">
             <div className="flex gap-2">
