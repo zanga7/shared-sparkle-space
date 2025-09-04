@@ -134,7 +134,9 @@ export const EventDialog = ({
         ? new Date(formData.endDate).toISOString()
         : new Date(`${format(formData.endDate, 'yyyy-MM-dd')}T${formData.endTime}`).toISOString(),
       is_all_day: formData.isAllDay,
-      attendees: formData.attendees
+      attendees: formData.attendees,
+      // Include recurrence data if enabled
+      recurrence_options: recurrenceEnabled ? eventRecurrenceOptions : null
     };
 
     onSave?.(eventData);

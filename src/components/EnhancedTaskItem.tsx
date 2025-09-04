@@ -9,7 +9,8 @@ import {
   Edit,
   Trash2,
   AlertTriangle,
-  Target
+  Target,
+  Repeat
 } from 'lucide-react';
 import { format, isAfter, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -171,6 +172,14 @@ export const EnhancedTaskItem = ({
                  daysUntilDue === 1 ? 'Tomorrow' :
                  format(new Date(task.due_date), "MMM d")
                 }
+              </Badge>
+            )}
+
+            {/* Recurrence Indicator */}
+            {(task as any).recurrence_options?.enabled && (
+              <Badge variant="outline" className="text-xs py-0 h-5 flex items-center gap-1">
+                <Repeat className="h-2.5 w-2.5" />
+                Repeats
               </Badge>
             )}
 

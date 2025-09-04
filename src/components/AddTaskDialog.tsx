@@ -145,7 +145,9 @@ export const AddTaskDialog = ({
         completion_rule: formData.completion_rule,
         task_group: formData.task_group, // Add the task_group field
         family_id: familyId,
-        created_by: profileId
+        created_by: profileId,
+        // Include recurrence data if enabled
+        recurrence_options: recurrenceEnabled ? taskRecurrenceOptions : null
       };
 
       console.log('Creating task with data:', taskData);
