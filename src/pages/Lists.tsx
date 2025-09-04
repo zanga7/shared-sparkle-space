@@ -184,11 +184,13 @@ const Lists = () => {
     // Apply category filter
     if (selectedFilter === 'archived') {
       return list.is_archived;
+    } else if (selectedFilter === 'personal') {
+      return !list.is_archived && list.created_by === profile?.id;
     } else if (selectedFilter === 'all') {
-      return !list.is_archived;
+      return !list.is_archived && list.created_by !== profile?.id;
     } else {
-      // Filter by category ID
-      return !list.is_archived && list.category_id === selectedFilter;
+      // Filter by category ID (exclude personal lists)
+      return !list.is_archived && list.category_id === selectedFilter && list.created_by !== profile?.id;
     }
   });
 
@@ -397,13 +399,14 @@ const Lists = () => {
 
         {/* Tabs */}
         <Tabs value={selectedFilter} onValueChange={setSelectedFilter} className="mb-6">
-          <TabsList className="grid w-full h-auto" style={{ gridTemplateColumns: `repeat(${categories.length + 2}, 1fr)` }}>
+          <TabsList className="grid w-full h-auto" style={{ gridTemplateColumns: `repeat(${categories.length + 3}, 1fr)` }}>
             <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
             {categories.map((category) => (
               <TabsTrigger key={category.id} value={category.id} className="flex-1">
                 {category.name}
               </TabsTrigger>
             ))}
+            <TabsTrigger value="personal" className="flex-1">Personal</TabsTrigger>
             <TabsTrigger value="archived" className="flex-1">Archived</TabsTrigger>
           </TabsList>
         </Tabs>
