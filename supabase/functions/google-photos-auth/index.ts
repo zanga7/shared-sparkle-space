@@ -93,24 +93,27 @@ serve(async (req) => {
         throw new Error('User profile not found')
       }
 
-      // Store the integration
+      // Store the integration using secure encryption
       const expiresAt = tokens.expires_in 
         ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
         : null
 
-      const { error: integrationError } = await supabase
-        .from('google_photos_integrations')
-        .insert({
-          family_id: profile.family_id,
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          expires_at: expiresAt,
-          created_by: profile.id,
-          is_active: true,
+      const { data: result, error: integrationError } = await supabase
+        .rpc('store_encrypted_google_photos_tokens', {
+          family_id_param: profile.family_id,
+          access_token_param: tokens.access_token,
+          refresh_token_param: tokens.refresh_token,
+          expires_at_param: expiresAt,
+          created_by_param: profile.id
         })
 
       if (integrationError) {
-        throw new Error('Failed to save integration: ' + integrationError.message)
+        console.error('Integration storage error:', integrationError)
+        throw new Error('Failed to store integration securely')
+      }
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to store integration')
       }
 
       return new Response(JSON.stringify({ 
@@ -136,21 +139,21 @@ serve(async (req) => {
         throw new Error('Invalid user session')
       }
 
-      // Get user's Google Photos integration
-      const { data: integration, error: integrationError } = await supabase
-        .from('google_photos_integrations')
-        .select('access_token, refresh_token, expires_at')
-        .eq('family_id', family_id)
-        .eq('is_active', true)
+      // Get user's Google Photos integration using secure decryption
+      const { data: tokenData, error: tokenError } = await supabase
+        .rpc('get_decrypted_google_photos_tokens', {
+          family_id_param: family_id
+        })
         .single()
 
-      if (integrationError || !integration) {
+      if (tokenError || !tokenData) {
+        console.error('Token retrieval error:', tokenError)
         throw new Error('Google Photos integration not found')
       }
 
       // Check if token needs refresh
-      let accessToken = integration.access_token
-      if (integration.expires_at && new Date(integration.expires_at) <= new Date()) {
+      let accessToken = tokenData.access_token
+      if (tokenData.is_expired && tokenData.refresh_token) {
         // Token expired, refresh it
         const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
           method: 'POST',
@@ -158,7 +161,7 @@ serve(async (req) => {
           body: new URLSearchParams({
             client_id: clientId,
             client_secret: clientSecret,
-            refresh_token: integration.refresh_token,
+            refresh_token: tokenData.refresh_token,
             grant_type: 'refresh_token',
           }),
         })
@@ -170,15 +173,18 @@ serve(async (req) => {
 
         accessToken = refreshTokens.access_token
         
-        // Update stored tokens
-        await supabase
-          .from('google_photos_integrations')
-          .update({
-            access_token: accessToken,
-            expires_at: new Date(Date.now() + refreshTokens.expires_in * 1000).toISOString(),
-            updated_at: new Date().toISOString(),
+        // Update stored tokens securely
+        const { error: updateError } = await supabase
+          .rpc('update_google_photos_tokens', {
+            family_id_param: family_id,
+            access_token_param: accessToken,
+            expires_at_param: new Date(Date.now() + refreshTokens.expires_in * 1000).toISOString()
           })
-          .eq('family_id', family_id)
+
+        if (updateError) {
+          console.error('Token update error:', updateError)
+          throw new Error('Failed to update tokens securely')
+        }
       }
 
       // Fetch albums from Google Photos
