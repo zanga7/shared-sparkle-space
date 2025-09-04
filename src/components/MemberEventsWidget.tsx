@@ -1,22 +1,26 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AddButton } from '@/components/ui/add-button';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { getMemberColorClasses } from '@/lib/utils';
-import { Calendar } from 'lucide-react';
+import { Calendar, Edit } from 'lucide-react';
 import { Profile } from '@/types/task';
 import { cn } from '@/lib/utils';
 import { useEvents } from '@/hooks/useEvents';
 import { format, isToday } from 'date-fns';
+import { Button } from '@/components/ui/button';
 
 interface MemberEventsWidgetProps {
   member: Profile;
   profile: Profile;
   onAddEvent: () => void;
+  onEditEvent: (event: any) => void;
 }
 
 export const MemberEventsWidget = ({
   member,
   profile,
-  onAddEvent
+  onAddEvent,
+  onEditEvent
 }: MemberEventsWidgetProps) => {
   const memberColors = getMemberColorClasses(member.color);
   const { events = [], refreshEvents } = useEvents(profile.family_id);
@@ -60,12 +64,19 @@ export const MemberEventsWidget = ({
         ) : (
           <div className="space-y-3">
             {todaysEvents.map((event) => (
-              <div key={event.id} className="p-3 border rounded-lg space-y-2">
+              <div 
+                key={event.id} 
+                className="p-3 border rounded-lg space-y-2 cursor-pointer hover:bg-muted/50 transition-colors group"
+                onClick={() => onEditEvent(event)}
+              >
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium">{event.title}</h4>
-                  <span className="text-sm text-muted-foreground">
-                    {format(new Date(event.start_date), 'HH:mm')}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      {format(new Date(event.start_date), 'HH:mm')}
+                    </span>
+                    <Edit className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
                 </div>
                 
                 {event.location && (
@@ -77,15 +88,18 @@ export const MemberEventsWidget = ({
                 )}
                 
                 {event.attendees && event.attendees.length > 0 && (
-                  <div className="flex gap-1 flex-wrap">
-                    {event.attendees.map((attendee) => (
-                      <span
-                        key={attendee.profile_id}
-                        className="text-xs px-2 py-1 bg-muted rounded-full"
-                      >
-                        {attendee.profile?.display_name}
-                      </span>
-                    ))}
+                  <div className="flex gap-2 items-center">
+                    <span className="text-xs text-muted-foreground">Attendees:</span>
+                    <div className="flex gap-1">
+                      {event.attendees.map((attendee) => (
+                        <UserAvatar
+                          key={attendee.profile_id}
+                          name={attendee.profile?.display_name || 'Unknown'}
+                          color={attendee.profile?.color}
+                          size="sm"
+                        />
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

@@ -52,10 +52,11 @@ export const MemberDashboard = ({
   const [activeWidget, setActiveWidget] = useState(0);
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
   const isMobile = useIsMobile();
 
   const memberColors = getMemberColorClasses(member.color);
-  const { createEvent } = useEvents(profile.family_id);
+  const { createEvent, updateEvent, deleteEvent, refreshEvents } = useEvents(profile.family_id);
   
   const memberTasks = tasks.filter(task => 
     task.assigned_to === member.id || 
@@ -123,7 +124,14 @@ export const MemberDashboard = ({
     <MemberEventsWidget
       member={member}
       profile={profile}
-      onAddEvent={() => setIsEventDialogOpen(true)}
+      onAddEvent={() => {
+        setEditingEvent(null);
+        setIsEventDialogOpen(true);
+      }}
+      onEditEvent={(event) => {
+        setEditingEvent(event);
+        setIsEventDialogOpen(true);
+      }}
     />
   );
 
@@ -216,18 +224,38 @@ export const MemberDashboard = ({
         
         <EventDialog
           open={isEventDialogOpen}
-          onOpenChange={setIsEventDialogOpen}
+          onOpenChange={(open) => {
+            setIsEventDialogOpen(open);
+            if (!open) setEditingEvent(null);
+          }}
           familyMembers={familyMembers}
           familyId={profile.family_id}
           defaultMember={member.id}
+          editingEvent={editingEvent}
           onSave={async (eventData) => {
             try {
-              await createEvent(eventData);
+              if (editingEvent) {
+                await updateEvent(editingEvent.id, eventData, eventData.attendees);
+              } else {
+                await createEvent(eventData);
+              }
+              await refreshEvents();
               setIsEventDialogOpen(false);
+              setEditingEvent(null);
             } catch (error) {
-              console.error('Failed to create event:', error);
+              console.error('Failed to save event:', error);
             }
           }}
+          onDelete={editingEvent ? async () => {
+            try {
+              await deleteEvent(editingEvent.id);
+              await refreshEvents();
+              setIsEventDialogOpen(false);
+              setEditingEvent(null);
+            } catch (error) {
+              console.error('Failed to delete event:', error);
+            }
+          } : undefined}
         />
       </div>
     );
@@ -259,18 +287,38 @@ export const MemberDashboard = ({
       
       <EventDialog
         open={isEventDialogOpen}
-        onOpenChange={setIsEventDialogOpen}
+        onOpenChange={(open) => {
+          setIsEventDialogOpen(open);
+          if (!open) setEditingEvent(null);
+        }}
         familyMembers={familyMembers}
         familyId={profile.family_id}
         defaultMember={member.id}
+        editingEvent={editingEvent}
         onSave={async (eventData) => {
           try {
-            await createEvent(eventData);
+            if (editingEvent) {
+              await updateEvent(editingEvent.id, eventData, eventData.attendees);
+            } else {
+              await createEvent(eventData);
+            }
+            await refreshEvents();
             setIsEventDialogOpen(false);
+            setEditingEvent(null);
           } catch (error) {
-            console.error('Failed to create event:', error);
+            console.error('Failed to save event:', error);
           }
         }}
+        onDelete={editingEvent ? async () => {
+          try {
+            await deleteEvent(editingEvent.id);
+            await refreshEvents();
+            setIsEventDialogOpen(false);
+            setEditingEvent(null);
+          } catch (error) {
+            console.error('Failed to delete event:', error);
+          }
+        } : undefined}
       />
     </div>
   );
