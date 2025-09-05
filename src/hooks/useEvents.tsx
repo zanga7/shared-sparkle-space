@@ -279,6 +279,13 @@ export const useEvents = (familyId?: string) => {
 
   const updateEvent = async (id: string, updates: Partial<CalendarEvent>, attendees?: string[]) => {
     try {
+      // Check if this is a virtual event that needs special handling
+      const eventToUpdate = events.find(e => e.id === id);
+      if (eventToUpdate?.isVirtual && eventToUpdate?.series_id) {
+        // This should not happen as virtual events should go through edit scope dialog
+        throw new Error('Virtual events must be updated through the series system');
+      }
+
       // Cast recurrence_options for database update
       const dbUpdates = {
         ...updates,
@@ -354,6 +361,27 @@ export const useEvents = (familyId?: string) => {
 
   const deleteEvent = async (id: string) => {
     try {
+      // Check if this is a virtual event that needs special handling
+      const eventToDelete = events.find(e => e.id === id);
+      if (eventToDelete?.isVirtual && eventToDelete?.series_id) {
+        // For virtual events, we need to create a 'skip' exception instead of deleting
+        await createException({
+          series_id: eventToDelete.series_id,
+          series_type: 'event',
+          exception_date: eventToDelete.occurrence_date!,
+          exception_type: 'skip',
+          created_by: eventToDelete.created_by
+        });
+        
+        await fetchEvents();
+        toast({
+          title: 'Success',
+          description: 'Event occurrence cancelled',
+        });
+        return;
+      }
+
+      // Regular event deletion
       const { error } = await supabase
         .from('events')
         .delete()

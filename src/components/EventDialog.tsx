@@ -180,15 +180,88 @@ export const EventDialog = ({
   const handleEditScopeSelect = async (scope: EditScope) => {
     if (!pendingSave) return;
 
+    const currentEvent = editingEvent || event;
+    if (!currentEvent?.series_id || !currentEvent?.occurrence_date) {
+      console.error('Missing series information for edit scope');
+      return;
+    }
+
     try {
-      // TODO: Implement edit scope handling with series functions
-      // This would call different functions based on scope:
-      // - 'this_only': Create exception
-      // - 'this_and_following': Split series  
-      // - 'all_occurrences': Update series
-      console.log('Edit scope selected:', scope, 'for event:', editingEvent || event);
-      
-      onSave?.(pendingSave);
+      // Import the recurring event manager functions
+      const { createException, updateSeries, splitSeries } = await import('@/hooks/useRecurringSeries').then(m => m.useRecurringSeries(familyId));
+
+      switch (scope) {
+        case 'this_only':
+          // Create an exception for this specific occurrence
+          await createException({
+            series_id: currentEvent.series_id,
+            series_type: 'event',
+            exception_date: currentEvent.occurrence_date,
+            exception_type: 'override',
+            override_data: pendingSave,
+            created_by: currentEvent.created_by
+          });
+          toast({
+            title: 'Success',
+            description: 'This occurrence updated successfully',
+          });
+          break;
+
+        case 'this_and_following':
+          // Split the series at this occurrence
+          const splitDate = new Date(currentEvent.start_date);
+          const startDate = new Date(pendingSave.start_date);
+          const endDate = new Date(pendingSave.end_date);
+          const durationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60));
+          
+          await splitSeries(
+            currentEvent.series_id,
+            'event',
+            splitDate,
+            {
+              title: pendingSave.title,
+              description: pendingSave.description,
+              location: pendingSave.location,
+              duration_minutes: durationMinutes,
+              is_all_day: pendingSave.is_all_day,
+              attendee_profiles: pendingSave.attendees || [],
+              family_id: currentEvent.family_id,
+              created_by: currentEvent.created_by,
+              recurrence_rule: {
+                frequency: 'weekly',
+                interval: 1,
+                endType: 'never'
+              },
+              is_active: true
+            }
+          );
+          toast({
+            title: 'Success',
+            description: 'Series split and updated from this occurrence forward',
+          });
+          break;
+
+        case 'all_occurrences':
+          // Update the entire series
+          const allStartDate = new Date(pendingSave.start_date);
+          const allEndDate = new Date(pendingSave.end_date);
+          const allDurationMinutes = Math.round((allEndDate.getTime() - allStartDate.getTime()) / (1000 * 60));
+          
+          await updateSeries(currentEvent.series_id, 'event', {
+            title: pendingSave.title,
+            description: pendingSave.description,
+            location: pendingSave.location,
+            duration_minutes: allDurationMinutes,
+            is_all_day: pendingSave.is_all_day,
+            attendee_profiles: pendingSave.attendees || []
+          });
+          toast({
+            title: 'Success',
+            description: 'All occurrences in the series updated',
+          });
+          break;
+      }
+
       onOpenChange(false);
     } catch (error) {
       console.error('Error handling edit scope:', error);
