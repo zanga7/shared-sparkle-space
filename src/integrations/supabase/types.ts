@@ -266,6 +266,71 @@ export type Database = {
         }
         Relationships: []
       }
+      event_series: {
+        Row: {
+          attendee_profiles: string[] | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          duration_minutes: number
+          family_id: string
+          id: string
+          is_active: boolean | null
+          is_all_day: boolean | null
+          location: string | null
+          original_series_id: string | null
+          recurrence_rule: Json
+          series_end: string | null
+          series_start: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          attendee_profiles?: string[] | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          duration_minutes?: number
+          family_id: string
+          id?: string
+          is_active?: boolean | null
+          is_all_day?: boolean | null
+          location?: string | null
+          original_series_id?: string | null
+          recurrence_rule: Json
+          series_end?: string | null
+          series_start: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          attendee_profiles?: string[] | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          duration_minutes?: number
+          family_id?: string
+          id?: string
+          is_active?: boolean | null
+          is_all_day?: boolean | null
+          location?: string | null
+          original_series_id?: string | null
+          recurrence_rule?: Json
+          series_end?: string | null
+          series_start?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_series_original_series_fkey"
+            columns: ["original_series_id"]
+            isOneToOne: false
+            referencedRelation: "event_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           created_at: string
@@ -769,6 +834,39 @@ export type Database = {
           },
         ]
       }
+      recurrence_exceptions: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          exception_date: string
+          exception_type: string
+          id: string
+          override_data: Json | null
+          series_id: string
+          series_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          exception_date: string
+          exception_type: string
+          id?: string
+          override_data?: Json | null
+          series_id: string
+          series_type: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          exception_date?: string
+          exception_type?: string
+          id?: string
+          override_data?: Json | null
+          series_id?: string
+          series_type?: string
+        }
+        Relationships: []
+      }
       reward_requests: {
         Row: {
           approval_note: string | null
@@ -1103,6 +1201,71 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_series: {
+        Row: {
+          assigned_profiles: string[] | null
+          completion_rule: string | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          family_id: string
+          id: string
+          is_active: boolean | null
+          original_series_id: string | null
+          points: number
+          recurrence_rule: Json
+          series_end: string | null
+          series_start: string
+          task_group: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_profiles?: string[] | null
+          completion_rule?: string | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          family_id: string
+          id?: string
+          is_active?: boolean | null
+          original_series_id?: string | null
+          points?: number
+          recurrence_rule: Json
+          series_end?: string | null
+          series_start: string
+          task_group?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_profiles?: string[] | null
+          completion_rule?: string | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          family_id?: string
+          id?: string
+          is_active?: boolean | null
+          original_series_id?: string | null
+          points?: number
+          recurrence_rule?: Json
+          series_end?: string | null
+          series_start?: string
+          task_group?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_series_original_series_fkey"
+            columns: ["original_series_id"]
+            isOneToOne: false
+            referencedRelation: "task_series"
             referencedColumns: ["id"]
           },
         ]

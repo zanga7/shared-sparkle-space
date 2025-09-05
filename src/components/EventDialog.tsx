@@ -47,6 +47,8 @@ export const EventDialog = ({
   editingEvent,
   defaultDate
 }: EventDialogProps) => {
+  // Check if this is a recurring event instance
+  const isRecurringEvent = editingEvent?.recurrence_options?.enabled || event?.recurrence_options?.enabled;
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -140,6 +142,8 @@ export const EventDialog = ({
       return;
     }
 
+    // For recurring events being edited, we need to show the edit scope dialog
+    // For now, we'll handle this as a regular save and implement scope later
     const eventData = {
       title: formData.title,
       description: formData.description,
@@ -163,8 +167,8 @@ export const EventDialog = ({
     // Call onSave - the recurrence data is now properly saved with the event
     onSave?.(eventData);
 
-    // Remove automatic recurring instance creation for now
-    // The recurrence data is saved and can be used later to generate instances
+    // TODO: Implement series creation when recurrence is enabled
+    // Instead of creating individual instances, create a series record
   };
 
   return (
@@ -173,8 +177,16 @@ export const EventDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            {editingEvent || event ? 'Edit Event' : 'Create Event'}
+            {editingEvent || event ? 
+              (isRecurringEvent ? 'Edit Recurring Event' : 'Edit Event') : 
+              'Create Event'
+            }
           </DialogTitle>
+          {isRecurringEvent && (editingEvent || event) && (
+            <p className="text-sm text-muted-foreground">
+              Changes to recurring events will show edit scope options.
+            </p>
+          )}
         </DialogHeader>
 
         <div className="space-y-4">
