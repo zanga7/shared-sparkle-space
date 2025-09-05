@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -110,6 +110,16 @@ export const CalendarView = ({
   const [memberRequiringPin, setMemberRequiringPin] = useState<Profile | null>(null);
   const { toast } = useToast();
   const { events, createEvent, updateEvent, deleteEvent, refreshEvents, generateVirtualEvents } = useEvents(familyId);
+  
+  // Expose refresh function globally for EventDialog to call
+  React.useEffect(() => {
+    (window as any).refreshCalendar = () => {
+      refreshEvents();
+    };
+    return () => {
+      delete (window as any).refreshCalendar;
+    };
+  }, [refreshEvents]);
   const { canPerformAction, authenticateMemberPin, isAuthenticating } = useDashboardAuth();
 
   // Get member color classes using the global color system

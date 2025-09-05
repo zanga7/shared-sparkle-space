@@ -277,8 +277,10 @@ export const EventDialog = ({
           break;
       }
 
-      // Refresh the calendar to show changes
-      window.location.reload(); // Force refresh for now - could be improved with proper state management
+      // Refresh events data to show changes immediately
+      if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
+        (window as any).refreshCalendar();
+      }
       
       onOpenChange(false);
     } catch (error) {
