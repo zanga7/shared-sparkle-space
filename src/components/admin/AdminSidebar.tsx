@@ -39,6 +39,7 @@ const adminMenuItems = [
   { title: "Reward Approvals", url: "/admin/reward-approvals", icon: ClipboardCheck },
   { title: "Calendar Settings", url: "/admin/calendar-settings", icon: Calendar },
   { title: "Screen Saver", url: "/admin/screensaver", icon: Monitor },
+  { title: "Event Migration", url: "/admin/event-migration", icon: Database },
   { title: "Permissions", url: "/admin/permissions", icon: Shield },
   { title: "Categories", url: "/admin/categories", icon: Database },
   { title: "Theme Management", url: "/admin/themes", icon: Palette },

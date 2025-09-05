@@ -341,6 +341,7 @@ export type Database = {
           id: string
           is_all_day: boolean
           location: string | null
+          migrated_to_series: boolean | null
           recurrence_options: Json | null
           start_date: string
           title: string
@@ -355,6 +356,7 @@ export type Database = {
           id?: string
           is_all_day?: boolean
           location?: string | null
+          migrated_to_series?: boolean | null
           recurrence_options?: Json | null
           start_date: string
           title: string
@@ -369,6 +371,7 @@ export type Database = {
           id?: string
           is_all_day?: boolean
           location?: string | null
+          migrated_to_series?: boolean | null
           recurrence_options?: Json | null
           start_date?: string
           title?: string
