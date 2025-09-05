@@ -19,6 +19,9 @@ import { EventRecurrenceOptions } from '@/types/recurrence';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { UnifiedRecurrencePanel } from '@/components/recurrence/UnifiedRecurrencePanel';
+import { EditScopeDialog, EditScope } from '@/components/recurrence/EditScopeDialog';
+import { Badge } from '@/components/ui/badge';
+import { Repeat } from 'lucide-react';
 
 interface EventDialogProps {
   open: boolean;
@@ -71,6 +74,10 @@ export const EventDialog = ({
       endType: 'never'
     }
   });
+  
+  // Edit scope state for recurring events
+  const [editScopeDialogOpen, setEditScopeDialogOpen] = useState(false);
+  const [pendingSave, setPendingSave] = useState<any>(null);
 
   const { toast } = useToast();
 
@@ -142,8 +149,6 @@ export const EventDialog = ({
       return;
     }
 
-    // For recurring events being edited, we need to show the edit scope dialog
-    // For now, we'll handle this as a regular save and implement scope later
     const eventData = {
       title: formData.title,
       description: formData.description,
@@ -160,15 +165,41 @@ export const EventDialog = ({
       recurrence_options: recurrenceEnabled ? (eventRecurrenceOptions as unknown as any) : null
     };
 
-    console.log('Event creation - recurrenceEnabled:', recurrenceEnabled);
-    console.log('Event creation - eventRecurrenceOptions:', eventRecurrenceOptions);
-    console.log('Event creation - eventData:', eventData);
+    // Check if this is editing a virtual event from a series
+    if ((editingEvent?.isVirtual && editingEvent?.series_id) || (event?.isVirtual && event?.series_id)) {
+      // Show edit scope dialog for recurring events
+      setPendingSave(eventData);
+      setEditScopeDialogOpen(true);
+      return;
+    }
 
-    // Call onSave - the recurrence data is now properly saved with the event
+    // Regular event save
     onSave?.(eventData);
+  };
 
-    // TODO: Implement series creation when recurrence is enabled
-    // Instead of creating individual instances, create a series record
+  const handleEditScopeSelect = async (scope: EditScope) => {
+    if (!pendingSave) return;
+
+    try {
+      // TODO: Implement edit scope handling with series functions
+      // This would call different functions based on scope:
+      // - 'this_only': Create exception
+      // - 'this_and_following': Split series  
+      // - 'all_occurrences': Update series
+      console.log('Edit scope selected:', scope, 'for event:', editingEvent || event);
+      
+      onSave?.(pendingSave);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error handling edit scope:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save event changes',
+        variant: 'destructive'
+      });
+    } finally {
+      setPendingSave(null);
+    }
   };
 
   return (
@@ -177,14 +208,17 @@ export const EventDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            {editingEvent || event ? 
-              (isRecurringEvent ? 'Edit Recurring Event' : 'Edit Event') : 
-              'Create Event'
-            }
+            {editingEvent || event ? 'Edit Event' : 'Create Event'}
+            {((editingEvent?.isVirtual) || (event?.isVirtual)) && (
+              <Badge variant="secondary" className="text-xs">
+                <Repeat className="h-3 w-3 mr-1" />
+                Recurring
+              </Badge>
+            )}
           </DialogTitle>
-          {isRecurringEvent && (editingEvent || event) && (
+          {((editingEvent?.isVirtual) || (event?.isVirtual)) && (
             <p className="text-sm text-muted-foreground">
-              Changes to recurring events will show edit scope options.
+              This is a recurring event. Changes will show edit scope options.
             </p>
           )}
         </DialogHeader>
@@ -287,6 +321,14 @@ export const EventDialog = ({
           </div>
         </div>
       </DialogContent>
+      
+      <EditScopeDialog
+        open={editScopeDialogOpen}
+        onOpenChange={setEditScopeDialogOpen}
+        onScopeSelect={handleEditScopeSelect}
+        itemType="event"
+        occurrenceDate={editingEvent ? new Date(editingEvent.start_date) : (event ? new Date(event.start_date) : undefined)}
+      />
     </Dialog>
   );
 };

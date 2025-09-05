@@ -109,7 +109,7 @@ export const CalendarView = ({
   const [pendingTaskCompletion, setPendingTaskCompletion] = useState<Task | null>(null);
   const [memberRequiringPin, setMemberRequiringPin] = useState<Profile | null>(null);
   const { toast } = useToast();
-  const { events, createEvent, updateEvent, deleteEvent, refreshEvents } = useEvents(familyId);
+  const { events, createEvent, updateEvent, deleteEvent, refreshEvents, generateVirtualEvents } = useEvents(familyId);
   const { canPerformAction, authenticateMemberPin, isAuthenticating } = useDashboardAuth();
 
   // Get member color classes using the global color system
@@ -190,11 +190,14 @@ export const CalendarView = ({
     return grouped;
   }, [filteredTasks]);
 
-  // Group events by date - handle multi-day events
+  // Group events by date - handle multi-day events using virtual events
   const eventsByDate = useMemo(() => {
     const grouped: { [key: string]: (CalendarEvent & {isMultiDay?: boolean, isFirstDay?: boolean, isLastDay?: boolean, originalStart?: Date, originalEnd?: Date})[] } = {};
     
-    events.forEach((event: CalendarEvent) => {
+    // Generate virtual events for the current view range
+    const allEvents = generateVirtualEvents ? generateVirtualEvents(dateRange.start, dateRange.end) : events;
+    
+    allEvents.forEach((event: CalendarEvent) => {
       if (event.start_date) {
         const startDate = new Date(event.start_date);
         const endDate = event.end_date ? new Date(event.end_date) : startDate;
@@ -227,7 +230,7 @@ export const CalendarView = ({
     });
     
     return grouped;
-  }, [events]);
+  }, [events, generateVirtualEvents, dateRange]);
 
   // Calculate analytics
   const analytics = useMemo(() => {

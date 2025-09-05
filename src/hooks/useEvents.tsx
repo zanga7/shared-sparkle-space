@@ -2,12 +2,87 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarEvent } from '@/types/event';
+import { useRecurringSeries } from './useRecurringSeries';
+import { VirtualEventInstance } from '@/types/series';
+import { format, startOfDay, endOfDay } from 'date-fns';
 
 
 export const useEvents = (familyId?: string) => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { eventSeries, exceptions, generateSeriesInstances, createEventSeries, createException, updateSeries, splitSeries } = useRecurringSeries(familyId);
+
+  // Generate virtual event instances from both regular events and series
+  const generateVirtualEvents = (startDate: Date, endDate: Date): CalendarEvent[] => {
+    const virtualEvents: CalendarEvent[] = [];
+    
+    // Add regular events (non-recurring)
+    events.forEach(event => {
+      const eventStart = new Date(event.start_date);
+      const eventEnd = new Date(event.end_date);
+      
+      // Include event if it overlaps with the date range
+      if (eventEnd >= startDate && eventStart <= endDate) {
+        virtualEvents.push(event);
+      }
+    });
+    
+    // Generate virtual instances from series
+    eventSeries.forEach(series => {
+      const instances = generateSeriesInstances(series, startDate, endDate);
+      
+      instances.forEach(instance => {
+        if (instance.exceptionType === 'skip') return; // Skip this occurrence
+        
+        // Create virtual event from series instance
+        const virtualEvent: CalendarEvent = {
+          id: `${series.id}-${format(instance.date, 'yyyy-MM-dd')}`,
+          title: instance.overrideData?.title || series.title,
+          description: instance.overrideData?.description || series.description,
+          location: instance.overrideData?.location || series.location,
+          start_date: series.is_all_day 
+            ? startOfDay(instance.date).toISOString()
+            : instance.date.toISOString(),
+          end_date: series.is_all_day
+            ? endOfDay(instance.date).toISOString() 
+            : new Date(instance.date.getTime() + (series.duration_minutes * 60 * 1000)).toISOString(),
+          is_all_day: series.is_all_day,
+          family_id: series.family_id,
+          created_by: series.created_by,
+          created_at: series.created_at,
+          updated_at: series.updated_at,
+          attendees: [], // Will be populated below
+          recurrence_options: null,
+          // Virtual event metadata
+          isVirtual: true,
+          series_id: series.id,
+          occurrence_date: format(instance.date, 'yyyy-MM-dd'),
+          isException: instance.isException,
+          exceptionType: instance.exceptionType
+        };
+        
+        // Populate attendees from series
+        if (series.attendee_profiles && series.attendee_profiles.length > 0) {
+          // This would need profile data - for now, just store IDs
+          virtualEvent.attendees = series.attendee_profiles.map(profileId => ({
+            id: crypto.randomUUID(),
+            event_id: virtualEvent.id,
+            profile_id: profileId,
+            added_by: series.created_by,
+            added_at: new Date().toISOString(),
+            profile: { id: profileId, display_name: '', role: 'child' as const, color: 'sky' }
+          }));
+        }
+        
+        virtualEvents.push(virtualEvent);
+      });
+    });
+    
+    return virtualEvents.sort((a, b) => 
+      new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+    );
+  };
 
   const fetchEvents = async () => {
     if (!familyId) {
@@ -15,7 +90,7 @@ export const useEvents = (familyId?: string) => {
     }
 
     try {
-      // First get events
+      // First get regular events (non-recurring legacy events)
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
         .select('*')
@@ -107,9 +182,6 @@ export const useEvents = (familyId?: string) => {
     try {
       const { attendees, recurrence_options, ...eventFields } = eventData;
       
-      console.log('useEvents.createEvent - Full eventData received:', eventData);
-      console.log('useEvents.createEvent - Extracted recurrence_options:', recurrence_options);
-      
       // Get the current user's profile ID to use as created_by
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -121,80 +193,79 @@ export const useEvents = (familyId?: string) => {
         throw new Error('User profile not found');
       }
 
-      const insertData = {
-        ...eventFields,
-        family_id: familyId,
-        created_by: profile.id,
-        recurrence_options: recurrence_options || null
-      };
-      
-      console.log('useEvents.createEvent - Data being inserted to database:', insertData);
-
-      const { data: event, error: eventError } = await supabase
-        .from('events')
-        .insert([insertData])
-        .select()
-        .single();
-
-      if (eventError) throw eventError;
-
-      // Add attendees if provided
-      if (attendees && attendees.length > 0) {
-        console.log('Creating attendees:', { attendees, eventId: event.id, profileId: profile.id });
+      // Check if this should be a recurring series
+      if (recurrence_options?.enabled && recurrence_options?.rule) {
+        // Create as event series instead of regular event
+        const startDate = new Date(eventFields.start_date);
+        const endDate = new Date(eventFields.end_date);
+        const durationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60));
         
-        const attendeeRecords = attendees.map(profileId => ({
-          event_id: event.id,
-          profile_id: profileId,
-          added_by: profile.id
-        }));
-
-        console.log('Attendee records to insert:', attendeeRecords);
-
-        const { error: attendeesError } = await supabase
-          .from('event_attendees')
-          .insert(attendeeRecords);
-
-        if (attendeesError) {
-          console.error('Error adding attendees:', attendeesError);
-          throw attendeesError;
-        }
+        const seriesData = {
+          title: eventFields.title,
+          description: eventFields.description,
+          location: eventFields.location,
+          duration_minutes: durationMinutes,
+          is_all_day: eventFields.is_all_day,
+          attendee_profiles: attendees || [],
+          family_id: familyId,
+          created_by: profile.id,
+          recurrence_rule: recurrence_options.rule,
+          series_start: startDate.toISOString(),
+          is_active: true
+        };
         
-        console.log('Attendees added successfully');
+        const series = await createEventSeries(seriesData);
+        await fetchEvents(); // Refresh to include new virtual instances
+        
+        toast({
+          title: 'Success',
+          description: 'Recurring event series created successfully',
+        });
+        
+        return series;
       } else {
-        console.log('No attendees to add:', { attendees });
-      }
+        // Create as regular one-time event
+        const insertData = {
+          ...eventFields,
+          family_id: familyId,
+          created_by: profile.id,
+          recurrence_options: null // No recurrence for regular events
+        };
 
-      // Generate recurring instances if recurrence is enabled
-      if (recurrence_options?.enabled) {
-        console.log('Generating recurring instances for event:', event.id);
-        try {
-          const { data: recurringResult, error: recurringError } = await supabase.functions.invoke(
-            'create-recurring-instances',
-            {
-              body: {
-                type: 'event',
-                parentId: event.id
-              }
-            }
-          );
-          
-          if (recurringError) {
-            console.error('Error generating recurring instances:', recurringError);
-          } else {
-            console.log('Successfully generated recurring instances:', recurringResult);
+        const { data: event, error: eventError } = await supabase
+          .from('events')
+          .insert([insertData])
+          .select()
+          .single();
+
+        if (eventError) throw eventError;
+
+        // Add attendees if provided
+        if (attendees && attendees.length > 0) {
+          const attendeeRecords = attendees.map(profileId => ({
+            event_id: event.id,
+            profile_id: profileId,
+            added_by: profile.id
+          }));
+
+          const { error: attendeesError } = await supabase
+            .from('event_attendees')
+            .insert(attendeeRecords);
+
+          if (attendeesError) {
+            console.error('Error adding attendees:', attendeesError);
+            throw attendeesError;
           }
-        } catch (recurringError) {
-          console.error('Failed to invoke recurring instances function:', recurringError);
         }
+
+        await fetchEvents();
+        toast({
+          title: 'Success',
+          description: 'Event created successfully',
+        });
+
+        return event;
       }
-
-      await fetchEvents();
-      toast({
-        title: 'Success',
-        description: 'Event created successfully',
-      });
-
-      return event;
     } catch (error) {
       console.error('Error creating event:', error);
       toast({
@@ -317,5 +388,11 @@ export const useEvents = (familyId?: string) => {
     updateEvent,
     deleteEvent,
     refreshEvents: fetchEvents,
+    generateVirtualEvents, // Export the virtual events generator
+    // Series management functions
+    createEventSeries,
+    createException,
+    updateSeries,
+    splitSeries
   };
 };

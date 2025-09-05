@@ -14,4 +14,10 @@ export interface CalendarEvent {
   family_id: string;
   updated_at: string;
   recurrence_options?: EventRecurrenceOptions | null; // Recurrence configuration
+  // Virtual event properties for series instances
+  isVirtual?: boolean;
+  series_id?: string;
+  occurrence_date?: string;
+  isException?: boolean;
+  exceptionType?: 'skip' | 'override';
 }
