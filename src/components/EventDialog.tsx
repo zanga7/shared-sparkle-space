@@ -22,6 +22,7 @@ import { UnifiedRecurrencePanel } from '@/components/recurrence/UnifiedRecurrenc
 import { EditScopeDialog, EditScope } from '@/components/recurrence/EditScopeDialog';
 import { Badge } from '@/components/ui/badge';
 import { Repeat } from 'lucide-react';
+import { useRecurringSeries } from '@/hooks/useRecurringSeries';
 
 interface EventDialogProps {
   open: boolean;
@@ -80,6 +81,7 @@ export const EventDialog = ({
   const [pendingSave, setPendingSave] = useState<any>(null);
 
   const { toast } = useToast();
+  const { createException, updateSeries, splitSeries, eventSeries } = useRecurringSeries(familyId);
 
   useEffect(() => {
     const eventToEdit = editingEvent || event;
@@ -97,10 +99,23 @@ export const EventDialog = ({
       });
 
       // Load existing recurrence options if available
-      if (eventToEdit.recurrence_options) {
+      // For virtual events, we need to check if it's from a series and show recurring settings
+      if (eventToEdit.isVirtual && eventToEdit.series_id) {
+        // This is a virtual event from a series - show as recurring
+        const series = eventSeries.find(s => s.id === eventToEdit.series_id);
+        if (series) {
+          setRecurrenceEnabled(true);
+          setEventRecurrenceOptions({
+            enabled: true,
+            rule: series.recurrence_rule as any // Cast to match interface
+          });
+        }
+      } else if (eventToEdit.recurrence_options) {
+        // Regular event with recurrence options
         setRecurrenceEnabled(eventToEdit.recurrence_options.enabled || false);
         setEventRecurrenceOptions(eventToEdit.recurrence_options as EventRecurrenceOptions);
       } else {
+        // No recurrence
         setRecurrenceEnabled(false);
         setEventRecurrenceOptions({
           enabled: false,
@@ -137,7 +152,7 @@ export const EventDialog = ({
         }
       });
     }
-  }, [event, editingEvent, selectedDate, defaultDate, defaultMember]);
+  }, [event, editingEvent, selectedDate, defaultDate, defaultMember, eventSeries]);
 
   const handleSave = () => {
     if (!formData.title.trim()) {
@@ -187,8 +202,7 @@ export const EventDialog = ({
     }
 
     try {
-      // Import the recurring event manager functions
-      const { createException, updateSeries, splitSeries } = await import('@/hooks/useRecurringSeries').then(m => m.useRecurringSeries(familyId));
+      // Use the hooks that are already available at component level
 
       switch (scope) {
         case 'this_only':
