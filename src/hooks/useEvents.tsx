@@ -362,26 +362,38 @@ export const useEvents = (familyId?: string) => {
   const deleteEvent = async (id: string) => {
     try {
       // Check if this is a virtual event that needs special handling
-      const eventToDelete = events.find(e => e.id === id);
-      if (eventToDelete?.isVirtual && eventToDelete?.series_id) {
-        // For virtual events, we need to create a 'skip' exception instead of deleting
-        await createException({
-          series_id: eventToDelete.series_id,
-          series_type: 'event',
-          exception_date: eventToDelete.occurrence_date!,
-          exception_type: 'skip',
-          created_by: eventToDelete.created_by
-        });
-        
-        await fetchEvents();
-        toast({
-          title: 'Success',
-          description: 'Event occurrence cancelled',
-        });
-        return;
+      // Virtual events have composite IDs like "series_id-date"
+      if (id.includes('-') && id.length > 36) {
+        // This is likely a virtual event - extract series ID and date
+        const parts = id.split('-');
+        if (parts.length >= 6) { // UUID has 5 parts, so 6+ means it has a date suffix
+          const seriesId = parts.slice(0, 5).join('-'); // Reconstruct UUID
+          const dateStr = parts.slice(5).join('-'); // Get date part
+          
+          // Create a 'skip' exception for this occurrence
+          await createException({
+            series_id: seriesId,
+            series_type: 'event',
+            exception_date: dateStr,
+            exception_type: 'skip',
+            created_by: (await supabase.auth.getUser()).data.user?.id || ''
+          });
+          
+          await fetchEvents();
+          toast({
+            title: 'Success',
+            description: 'Event occurrence cancelled',
+          });
+          return;
+        }
       }
 
-      // Regular event deletion
+      // Regular event deletion - check if it exists in the events table
+      const eventToDelete = events.find(e => e.id === id);
+      if (!eventToDelete || eventToDelete.isVirtual) {
+        throw new Error('Cannot delete virtual event directly');
+      }
+
       const { error } = await supabase
         .from('events')
         .delete()

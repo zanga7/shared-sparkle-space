@@ -190,6 +190,7 @@ export const EventDialog = ({
 
     // Regular event save
     onSave?.(eventData);
+    onOpenChange(false);
   };
 
   const handleEditScopeSelect = async (scope: EditScope) => {
@@ -276,6 +277,9 @@ export const EventDialog = ({
           break;
       }
 
+      // Refresh the calendar to show changes
+      window.location.reload(); // Force refresh for now - could be improved with proper state management
+      
       onOpenChange(false);
     } catch (error) {
       console.error('Error handling edit scope:', error);
