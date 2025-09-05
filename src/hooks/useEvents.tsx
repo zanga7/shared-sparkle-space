@@ -164,6 +164,30 @@ export const useEvents = (familyId?: string) => {
         console.log('No attendees to add:', { attendees });
       }
 
+      // Generate recurring instances if recurrence is enabled
+      if (recurrence_options?.enabled) {
+        console.log('Generating recurring instances for event:', event.id);
+        try {
+          const { data: recurringResult, error: recurringError } = await supabase.functions.invoke(
+            'create-recurring-instances',
+            {
+              body: {
+                type: 'event',
+                parentId: event.id
+              }
+            }
+          );
+          
+          if (recurringError) {
+            console.error('Error generating recurring instances:', recurringError);
+          } else {
+            console.log('Successfully generated recurring instances:', recurringResult);
+          }
+        } catch (recurringError) {
+          console.error('Failed to invoke recurring instances function:', recurringError);
+        }
+      }
+
       await fetchEvents();
       toast({
         title: 'Success',
