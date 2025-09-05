@@ -94,27 +94,59 @@ serve(async (req) => {
         );
       }
 
-      // Generate next 5 instances as example
+      // Generate instances based on recurrence rules
       const instances = [];
       const startDate = new Date(task.due_date || new Date());
+      const rule = task.recurrence_options.rule;
       
-      for (let i = 1; i <= 5; i++) {
-        const nextDate = new Date(startDate);
+      console.log('Generating task instances with rule:', rule);
+      
+      // Determine how many instances to create
+      let maxInstances = 100; // Default safety limit
+      if (rule.endType === 'after_count' && rule.endCount) {
+        maxInstances = rule.endCount;
+        console.log('Creating', maxInstances, 'task instances based on endCount');
+      } else if (rule.endType === 'on_date' && rule.endDate) {
+        console.log('Creating task instances until', rule.endDate);
+      } else {
+        maxInstances = 365;
+        console.log('Creating task instances for next year (365 max)');
+      }
+      
+      let currentDate = new Date(startDate);
+      let instanceCount = 0;
+      
+      while (instanceCount < maxInstances) {
+        const nextDate = new Date(currentDate);
         
-        switch (task.recurrence_options.rule.frequency) {
+        switch (rule.frequency) {
           case 'daily':
-            nextDate.setDate(nextDate.getDate() + (i * task.recurrence_options.rule.interval));
+            nextDate.setDate(nextDate.getDate() + rule.interval);
             break;
           case 'weekly':
-            nextDate.setDate(nextDate.getDate() + (i * 7 * task.recurrence_options.rule.interval));
+            nextDate.setDate(nextDate.getDate() + (7 * rule.interval));
             break;
           case 'monthly':
-            nextDate.setMonth(nextDate.getMonth() + (i * task.recurrence_options.rule.interval));
+            nextDate.setMonth(nextDate.getMonth() + rule.interval);
+            break;
+          case 'yearly':
+            nextDate.setFullYear(nextDate.getFullYear() + rule.interval);
             break;
         }
+        
+        // Check if we've exceeded the end date
+        if (rule.endType === 'on_date' && rule.endDate) {
+          const endDateLimit = new Date(rule.endDate);
+          if (nextDate > endDateLimit) {
+            console.log('Reached task end date limit:', rule.endDate);
+            break;
+          }
+        }
+        
+        instanceCount++;
 
         instances.push({
-          title: `${task.title} (${i})`,
+          title: task.title,
           description: task.description,
           points: task.points,
           due_date: nextDate.toISOString(),
@@ -124,7 +156,11 @@ serve(async (req) => {
           completion_rule: task.completion_rule,
           recurrence_options: null // Future instances don't need recurrence
         });
+        
+        currentDate = nextDate;
       }
+      
+      console.log('Generated', instances.length, 'recurring task instances');
 
       const { error } = await supabase.from('tasks').insert(instances);
       
@@ -150,31 +186,65 @@ serve(async (req) => {
         );
       }
 
-      // Generate next 5 instances as example
+      // Generate instances based on recurrence rules
       const instances = [];
       const startDate = new Date(event.start_date);
       const endDate = new Date(event.end_date);
       const duration = endDate.getTime() - startDate.getTime();
+      const rule = event.recurrence_options.rule;
       
-      for (let i = 1; i <= 5; i++) {
-        const nextStartDate = new Date(startDate);
+      console.log('Generating instances with rule:', rule);
+      
+      // Determine how many instances to create
+      let maxInstances = 100; // Default safety limit
+      if (rule.endType === 'after_count' && rule.endCount) {
+        maxInstances = rule.endCount;
+        console.log('Creating', maxInstances, 'instances based on endCount');
+      } else if (rule.endType === 'on_date' && rule.endDate) {
+        // We'll check dates in the loop for date-based endings
+        console.log('Creating instances until', rule.endDate);
+      } else {
+        // 'never' - create a reasonable number for the next year
+        maxInstances = 365;
+        console.log('Creating instances for next year (365 max)');
+      }
+      
+      let currentDate = new Date(startDate);
+      let instanceCount = 0;
+      
+      while (instanceCount < maxInstances) {
+        // Calculate next occurrence
+        const nextStartDate = new Date(currentDate);
         
-        switch (event.recurrence_options.rule.frequency) {
+        switch (rule.frequency) {
           case 'daily':
-            nextStartDate.setDate(nextStartDate.getDate() + (i * event.recurrence_options.rule.interval));
+            nextStartDate.setDate(nextStartDate.getDate() + rule.interval);
             break;
           case 'weekly':
-            nextStartDate.setDate(nextStartDate.getDate() + (i * 7 * event.recurrence_options.rule.interval));
+            nextStartDate.setDate(nextStartDate.getDate() + (7 * rule.interval));
             break;
           case 'monthly':
-            nextStartDate.setMonth(nextStartDate.getMonth() + (i * event.recurrence_options.rule.interval));
+            nextStartDate.setMonth(nextStartDate.getMonth() + rule.interval);
+            break;
+          case 'yearly':
+            nextStartDate.setFullYear(nextStartDate.getFullYear() + rule.interval);
             break;
         }
-
+        
+        // Check if we've exceeded the end date
+        if (rule.endType === 'on_date' && rule.endDate) {
+          const endDateLimit = new Date(rule.endDate);
+          if (nextStartDate > endDateLimit) {
+            console.log('Reached end date limit:', rule.endDate);
+            break;
+          }
+        }
+        
         const nextEndDate = new Date(nextStartDate.getTime() + duration);
+        instanceCount++;
 
         instances.push({
-          title: `${event.title} (${i})`,
+          title: event.title,
           description: event.description,
           location: event.location,
           start_date: nextStartDate.toISOString(),
@@ -184,7 +254,11 @@ serve(async (req) => {
           created_by: event.created_by,
           recurrence_options: null // Future instances don't need recurrence
         });
+        
+        currentDate = nextStartDate;
       }
+      
+      console.log('Generated', instances.length, 'recurring instances');
 
       const { error } = await supabase.from('events').insert(instances);
       

@@ -59,14 +59,32 @@ export const UnifiedRecurrencePanel = ({
   
   const [selectedPreset, setSelectedPreset] = useState<RecurrencePreset>('every_day');
   const [showCustomBuilder, setShowCustomBuilder] = useState(false);
-  const [currentRule, setCurrentRule] = useState<RecurrenceRule>(() => 
-    createRuleFromPreset('every_day', startDate)
-  );
+  
+  // Initialize currentRule from existing options or create default
+  const [currentRule, setCurrentRule] = useState<RecurrenceRule>(() => {
+    // Check if we have existing recurrence options
+    const existingRule = (type === 'task' ? taskOptions?.rule : eventOptions?.rule);
+    if (existingRule) {
+      console.log('Using existing recurrence rule:', existingRule);
+      return existingRule;
+    }
+    console.log('Creating default recurrence rule');
+    return createRuleFromPreset('every_day', startDate);
+  });
 
   // Generate preview whenever rule changes
   const [preview, setPreview] = useState<RecurrencePreviewType>(() => 
     generateRecurrencePreview(startDate, currentRule, taskOptions, eventOptions)
   );
+
+  // Sync with external options changes (when editing existing events)
+  useEffect(() => {
+    const existingRule = (type === 'task' ? taskOptions?.rule : eventOptions?.rule);
+    if (existingRule && JSON.stringify(existingRule) !== JSON.stringify(currentRule)) {
+      console.log('Syncing with external rule change:', existingRule);
+      setCurrentRule(existingRule);
+    }
+  }, [taskOptions?.rule, eventOptions?.rule, type, currentRule]);
 
   // Update preview when inputs change
   useEffect(() => {
