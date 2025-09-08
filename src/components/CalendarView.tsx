@@ -207,7 +207,7 @@ export const CalendarView = ({
   const eventsByDate = useMemo(() => {
     const grouped: { [key: string]: (CalendarEvent & {isMultiDay?: boolean, isFirstDay?: boolean, isLastDay?: boolean, originalStart?: Date, originalEnd?: Date})[] } = {};
     
-    // Generate virtual events for the current view range
+    // Use generateVirtualEvents if available, otherwise fallback to regular events
     const allEvents = generateVirtualEvents ? generateVirtualEvents(dateRange.start, dateRange.end) : events;
     
     console.log(`CalendarView - Generating events for ${viewMode} view:`, {
