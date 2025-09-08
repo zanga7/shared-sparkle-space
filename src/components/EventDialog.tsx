@@ -189,16 +189,29 @@ export const EventDialog = ({
       return;
     }
 
+    const calculatedStartDate = isAllDay 
+      ? startDate.toISOString()
+      : new Date(`${format(startDate, 'yyyy-MM-dd')}T${startTime}`).toISOString();
+    const calculatedEndDate = isAllDay
+      ? endDate.toISOString()
+      : new Date(`${format(endDate, 'yyyy-MM-dd')}T${endTime}`).toISOString();
+
+    // Validate that end date is not before start date
+    if (new Date(calculatedEndDate) < new Date(calculatedStartDate)) {
+      toast({
+        title: "Error",
+        description: "End date/time cannot be before start date/time",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const eventData = {
       title: title.trim(),
       description: description.trim(),
       location: location.trim(),
-      start_date: isAllDay 
-        ? startDate.toISOString()
-        : new Date(`${format(startDate, 'yyyy-MM-dd')}T${startTime}`).toISOString(),
-      end_date: isAllDay
-        ? endDate.toISOString()
-        : new Date(`${format(endDate, 'yyyy-MM-dd')}T${endTime}`).toISOString(),
+      start_date: calculatedStartDate,
+      end_date: calculatedEndDate,
       is_all_day: isAllDay,
       attendees: assignees.filter(id => id && id.trim() !== ''),
       family_id: familyId,

@@ -18,6 +18,7 @@ export const useEvents = (familyId?: string) => {
   // Generate virtual event instances from both regular events and series
   const generateVirtualEvents = (startDate: Date, endDate: Date): CalendarEvent[] => {
     const virtualEvents: CalendarEvent[] = [];
+    const invalidEvents: CalendarEvent[] = [];
     
     console.log('generateVirtualEvents called:', {
       startDate: startDate.toISOString(),
@@ -27,21 +28,47 @@ export const useEvents = (familyId?: string) => {
       eventSeries: eventSeries.length
     });
     
-    // Add regular events (non-recurring)
+    // Add regular events (non-recurring) with validation
     events.forEach(event => {
-      const eventStart = new Date(event.start_date);
-      const eventEnd = new Date(event.end_date);
-      
-      console.log(`Checking event "${event.title}":`, {
-        eventStart: eventStart.toISOString(),
-        eventEnd: eventEnd.toISOString(),
-        overlaps: eventEnd >= startDate && eventStart <= endDate
-      });
-      
-      // Include event if it overlaps with the date range
-      if (eventEnd >= startDate && eventStart <= endDate) {
-        virtualEvents.push(event);
-        console.log(`Added regular event: ${event.title}`);
+      try {
+        const eventStart = new Date(event.start_date);
+        const eventEnd = new Date(event.end_date);
+        
+        // Validate dates
+        if (isNaN(eventStart.getTime()) || isNaN(eventEnd.getTime())) {
+          console.warn(`Event "${event.title}" has invalid dates:`, {
+            start_date: event.start_date,
+            end_date: event.end_date
+          });
+          invalidEvents.push(event);
+          return;
+        }
+        
+        // Check for invalid date sequence (end before start)
+        if (eventEnd < eventStart) {
+          console.warn(`Event "${event.title}" has end date before start date:`, {
+            eventStart: eventStart.toISOString(),
+            eventEnd: eventEnd.toISOString(),
+            id: event.id
+          });
+          invalidEvents.push(event);
+          return;
+        }
+        
+        console.log(`Checking event "${event.title}":`, {
+          eventStart: eventStart.toISOString(),
+          eventEnd: eventEnd.toISOString(),
+          overlaps: eventEnd >= startDate && eventStart <= endDate
+        });
+        
+        // Include event if it overlaps with the date range
+        if (eventEnd >= startDate && eventStart <= endDate) {
+          virtualEvents.push(event);
+          console.log(`Added regular event: ${event.title}`);
+        }
+      } catch (error) {
+        console.error(`Error processing event "${event.title}":`, error);
+        invalidEvents.push(event);
       }
     });
     
@@ -100,8 +127,17 @@ export const useEvents = (familyId?: string) => {
       totalVirtualEvents: virtualEvents.length,
       virtualEventTitles: virtualEvents.map(e => e.title),
       regularEventCount: virtualEvents.filter(e => !e.isVirtual).length,
-      seriesEventCount: virtualEvents.filter(e => e.isVirtual).length
+      seriesEventCount: virtualEvents.filter(e => e.isVirtual).length,
+      invalidEventCount: invalidEvents.length,
+      invalidEventTitles: invalidEvents.map(e => e.title)
     });
+    
+    // Report invalid events if any found
+    if (invalidEvents.length > 0) {
+      console.warn('Found invalid events that were excluded from display:', 
+        invalidEvents.map(e => ({ id: e.id, title: e.title, start_date: e.start_date, end_date: e.end_date }))
+      );
+    }
     
     return virtualEvents.sort((a, b) => 
       new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
