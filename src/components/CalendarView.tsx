@@ -805,8 +805,13 @@ export const CalendarView = ({
                 {familyMembers.map(member => {
               const dateKey = format(currentDate, 'yyyy-MM-dd');
               const memberTasks = (tasksByDate[dateKey] || []).filter(task => task.assigned_to === member.id || task.assignees?.some(a => a.profile_id === member.id));
-              // Show ALL events for today view - don't filter by member assignment
-              const memberEvents = eventsByDate[dateKey] || [];
+              // Show events in correct member columns: events with no attendees show for all, events with attendees show only for assigned members
+              const memberEvents = (eventsByDate[dateKey] || []).filter(event => {
+                const hasAttendees = event.attendees && event.attendees.length > 0;
+                const isAssignedToMember = hasAttendees && event.attendees.some((a: any) => a.profile_id === member.id);
+                const showForAll = !hasAttendees; // Events with no attendees show for everyone
+                return showForAll || isAssignedToMember;
+              });
               const memberColors = getMemberColors(member);
               return <Droppable key={member.id} droppableId={member.id}>
                       {(provided, snapshot) => <Card className={cn("transition-colors border-2", memberColors.bgSoft, memberColors.border, snapshot.isDraggingOver && "ring-2 ring-primary/20")}>
