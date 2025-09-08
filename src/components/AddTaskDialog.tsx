@@ -154,6 +154,24 @@ export const AddTaskDialog = ({
           is_active: true
         };
 
+        // Validate required fields before creating series
+        if (!familyId) {
+          toast({
+            title: 'Error',
+            description: 'Family ID is required to create recurring tasks',
+            variant: 'destructive'
+          });
+          return;
+        }
+
+        if (!profileId) {
+          toast({
+            title: 'Error',
+            description: 'User profile is required to create tasks',
+            variant: 'destructive'
+          });
+          return;
+        }
         await createTaskSeries(seriesData);
         
         toast({
