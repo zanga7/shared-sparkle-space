@@ -7,48 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Calendar as CalendarIcon, 
-  ChevronLeft, 
-  ChevronRight, 
-  Grid3X3, 
-  Rows3,
-  CheckCircle2,
-  Clock,
-  Flame,
-  TrendingUp,
-  Plus,
-  Filter,
-  BarChart3,
-  Eye,
-  Edit,
-  Target,
-  Users,
-  Calendar,
-  Sun,
-  MapPin,
-  Repeat
-} from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Grid3X3, Rows3, CheckCircle2, Clock, Flame, TrendingUp, Plus, Filter, BarChart3, Eye, Edit, Target, Users, Calendar, Sun, MapPin, Repeat } from 'lucide-react';
 import { AddButton } from '@/components/ui/add-button';
 import { EventAttendeesDisplay } from '@/components/ui/event-attendees-display';
-import { 
-  format, 
-  startOfWeek, 
-  endOfWeek, 
-  startOfMonth, 
-  endOfMonth, 
-  eachDayOfInterval, 
-  addWeeks, 
-  addMonths, 
-  addDays,
-  subWeeks, 
-  subMonths, 
-  subDays,
-  isSameDay,
-  isToday,
-  isPast,
-  isSameMonth
-} from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addWeeks, addMonths, addDays, subWeeks, subMonths, subDays, isSameDay, isToday, isPast, isSameMonth } from 'date-fns';
 import { cn, getMemberColorClasses } from '@/lib/utils';
 import { Task, Profile } from '@/types/task';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
@@ -59,7 +21,6 @@ import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { EventDialog } from '@/components/EventDialog';
 import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
 import { CalendarEvent } from '@/types/event';
-
 interface CalendarViewProps {
   tasks: Task[];
   familyMembers: Profile[];
@@ -72,21 +33,18 @@ interface CalendarViewProps {
   activeMemberId?: string | null;
   onTaskComplete?: (task: Task) => Promise<void>;
 }
-
 interface TaskFilters {
   assignedTo: string | 'all';
   status: 'all' | 'completed' | 'pending' | 'overdue';
   taskType: 'all' | 'recurring' | 'one-time';
 }
-
 type ViewMode = 'today' | 'week' | 'month';
-
-export const CalendarView = ({ 
-  tasks, 
-  familyMembers, 
+export const CalendarView = ({
+  tasks,
+  familyMembers,
   profile,
-  onTaskUpdated, 
-  onCreateTask, 
+  onTaskUpdated,
+  onCreateTask,
   onEditTask,
   familyId,
   dashboardMode = false,
@@ -108,9 +66,18 @@ export const CalendarView = ({
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [pendingTaskCompletion, setPendingTaskCompletion] = useState<Task | null>(null);
   const [memberRequiringPin, setMemberRequiringPin] = useState<Profile | null>(null);
-  const { toast } = useToast();
-  const { events, createEvent, updateEvent, deleteEvent, refreshEvents, generateVirtualEvents } = useEvents(familyId);
-  
+  const {
+    toast
+  } = useToast();
+  const {
+    events,
+    createEvent,
+    updateEvent,
+    deleteEvent,
+    refreshEvents,
+    generateVirtualEvents
+  } = useEvents(familyId);
+
   // Expose refresh function globally for EventDialog to call
   React.useEffect(() => {
     (window as any).refreshCalendar = async () => {
@@ -123,7 +90,11 @@ export const CalendarView = ({
       delete (window as any).refreshCalendar;
     };
   }, [refreshEvents]);
-  const { canPerformAction, authenticateMemberPin, isAuthenticating } = useDashboardAuth();
+  const {
+    canPerformAction,
+    authenticateMemberPin,
+    isAuthenticating
+  } = useDashboardAuth();
 
   // Get member color classes using the global color system
   const getMemberColors = (member: Profile | null) => {
@@ -140,13 +111,18 @@ export const CalendarView = ({
   const dateRange = useMemo(() => {
     if (viewMode === 'today') {
       return {
-        start: currentDate, // Use the selected date, not just "today"
+        start: currentDate,
+        // Use the selected date, not just "today"
         end: currentDate
       };
     } else if (viewMode === 'week') {
       return {
-        start: startOfWeek(currentDate, { weekStartsOn: 1 }),
-        end: endOfWeek(currentDate, { weekStartsOn: 1 })
+        start: startOfWeek(currentDate, {
+          weekStartsOn: 1
+        }),
+        end: endOfWeek(currentDate, {
+          weekStartsOn: 1
+        })
       };
     } else {
       return {
@@ -155,7 +131,6 @@ export const CalendarView = ({
       };
     }
   }, [currentDate, viewMode]);
-
   const days = viewMode === 'today' ? [currentDate] : eachDayOfInterval(dateRange);
 
   // Filter tasks based on selected filters
@@ -165,31 +140,30 @@ export const CalendarView = ({
       if (filters.assignedTo !== 'all' && task.assigned_to !== filters.assignedTo) {
         return false;
       }
-      
+
       // Filter by status
       if (filters.status !== 'all') {
         const isCompleted = task.task_completions && task.task_completions.length > 0;
         const isOverdue = task.due_date && isPast(new Date(task.due_date)) && !isCompleted;
-        
         if (filters.status === 'completed' && !isCompleted) return false;
         if (filters.status === 'pending' && (isCompleted || isOverdue)) return false;
         if (filters.status === 'overdue' && !isOverdue) return false;
       }
-      
+
       // Filter by task type
       if (filters.taskType !== 'all') {
         // Since recurring tasks have been removed, only show one-time tasks
         if (filters.taskType === 'recurring') return false;
       }
-      
       return true;
     });
   }, [tasks, filters]);
 
   // Group filtered tasks by date
   const tasksByDate = useMemo(() => {
-    const grouped: { [key: string]: Task[] } = {};
-    
+    const grouped: {
+      [key: string]: Task[];
+    } = {};
     filteredTasks.forEach(task => {
       if (task.due_date) {
         const dateKey = format(new Date(task.due_date), 'yyyy-MM-dd');
@@ -199,17 +173,23 @@ export const CalendarView = ({
         grouped[dateKey].push(task);
       }
     });
-    
     return grouped;
   }, [filteredTasks]);
 
   // Group events by date - handle multi-day events using virtual events
   const eventsByDate = useMemo(() => {
-    const grouped: { [key: string]: (CalendarEvent & {isMultiDay?: boolean, isFirstDay?: boolean, isLastDay?: boolean, originalStart?: Date, originalEnd?: Date})[] } = {};
-    
+    const grouped: {
+      [key: string]: (CalendarEvent & {
+        isMultiDay?: boolean;
+        isFirstDay?: boolean;
+        isLastDay?: boolean;
+        originalStart?: Date;
+        originalEnd?: Date;
+      })[];
+    } = {};
+
     // Use generateVirtualEvents if available, otherwise fallback to regular events
     const allEvents = generateVirtualEvents ? generateVirtualEvents(dateRange.start, dateRange.end) : events;
-    
     console.log(`CalendarView - Generating events for ${viewMode} view:`, {
       totalEvents: allEvents.length,
       dateRange: {
@@ -218,12 +198,11 @@ export const CalendarView = ({
       },
       eventTitles: allEvents.map(e => e.title)
     });
-    
     allEvents.forEach((event: CalendarEvent) => {
       if (event.start_date) {
         const startDate = new Date(event.start_date);
         const endDate = event.end_date ? new Date(event.end_date) : startDate;
-        
+
         // Create events for each day the event spans
         const currentDate = new Date(startDate);
         while (currentDate <= endDate) {
@@ -231,12 +210,11 @@ export const CalendarView = ({
           if (!grouped[dateKey]) {
             grouped[dateKey] = [];
           }
-          
+
           // Add event with indication if it's start, middle, or end of multi-day event
           const isMultiDay = format(startDate, 'yyyy-MM-dd') !== format(endDate, 'yyyy-MM-dd');
           const isFirstDay = format(currentDate, 'yyyy-MM-dd') === format(startDate, 'yyyy-MM-dd');
           const isLastDay = format(currentDate, 'yyyy-MM-dd') === format(endDate, 'yyyy-MM-dd');
-          
           grouped[dateKey].push({
             ...event,
             isMultiDay,
@@ -245,24 +223,20 @@ export const CalendarView = ({
             originalStart: startDate,
             originalEnd: endDate
           });
-          
           console.log(`Event "${event.title}" added to date ${dateKey}`, {
             eventId: event.id,
             attendees: event.attendees?.length || 0,
             attendeeIds: event.attendees?.map((a: any) => a.profile_id)
           });
-          
           currentDate.setDate(currentDate.getDate() + 1);
         }
       }
     });
-    
     console.log('Final eventsByDate grouping:', Object.keys(grouped).map(dateKey => ({
       date: dateKey,
       eventCount: grouped[dateKey].length,
       eventTitles: grouped[dateKey].map(e => e.title)
     })));
-    
     return grouped;
   }, [events, generateVirtualEvents, dateRange, viewMode]);
 
@@ -271,21 +245,20 @@ export const CalendarView = ({
     const currentWeekTasks = filteredTasks.filter(task => {
       if (!task.due_date) return false;
       const taskDate = new Date(task.due_date);
-      const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-      const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+      const weekStart = startOfWeek(currentDate, {
+        weekStartsOn: 1
+      });
+      const weekEnd = endOfWeek(currentDate, {
+        weekStartsOn: 1
+      });
       return taskDate >= weekStart && taskDate <= weekEnd;
     });
-
     const completed = currentWeekTasks.filter(t => t.task_completions?.length).length;
-    const overdue = currentWeekTasks.filter(t => 
-      t.due_date && isPast(new Date(t.due_date)) && !t.task_completions?.length
-    ).length;
+    const overdue = currentWeekTasks.filter(t => t.due_date && isPast(new Date(t.due_date)) && !t.task_completions?.length).length;
     const pending = currentWeekTasks.length - completed - overdue;
-
     const totalPoints = currentWeekTasks.reduce((sum, task) => {
       return sum + (task.task_completions?.length ? task.points : 0);
     }, 0);
-
     const memberStats = familyMembers.map(member => {
       const memberTasks = currentWeekTasks.filter(t => t.assigned_to === member.id);
       const memberCompleted = memberTasks.filter(t => t.task_completions?.length).length;
@@ -293,17 +266,16 @@ export const CalendarView = ({
         name: member.display_name,
         completed: memberCompleted,
         total: memberTasks.length,
-        percentage: memberTasks.length > 0 ? Math.round((memberCompleted / memberTasks.length) * 100) : 0
+        percentage: memberTasks.length > 0 ? Math.round(memberCompleted / memberTasks.length * 100) : 0
       };
     });
-
     return {
       total: currentWeekTasks.length,
       completed,
       pending,
       overdue,
       totalPoints,
-      completionRate: currentWeekTasks.length > 0 ? Math.round((completed / currentWeekTasks.length) * 100) : 0,
+      completionRate: currentWeekTasks.length > 0 ? Math.round(completed / currentWeekTasks.length * 100) : 0,
       memberStats
     };
   }, [filteredTasks, currentDate, familyMembers]);
@@ -323,7 +295,6 @@ export const CalendarView = ({
       setCurrentDate(subMonths(currentDate, 1));
     }
   };
-
   const navigateNext = () => {
     if (viewMode === 'today') {
       setCurrentDate(addDays(currentDate, 1));
@@ -337,24 +308,20 @@ export const CalendarView = ({
   // Handle drag and drop
   const handleDragEnd = async (result: any) => {
     if (!result.destination) return;
-
     const itemId = result.draggableId;
     const newDate = result.destination.droppableId;
     const isEvent = itemId.startsWith('event-');
-    
     try {
       if (isEvent) {
         // Handle event drag and drop
         const eventId = itemId.replace('event-', '');
         const event = events.find(e => e.id === eventId);
-        
         if (!event) return;
-        
+
         // Calculate the new dates maintaining the event duration
         const originalStart = new Date(event.start_date);
         const originalEnd = new Date(event.end_date);
         const duration = originalEnd.getTime() - originalStart.getTime();
-        
         const newStartDate = new Date(newDate);
         // If it's an all-day event, keep the time as start of day
         if (event.is_all_day) {
@@ -363,39 +330,31 @@ export const CalendarView = ({
           // Preserve the original time
           newStartDate.setHours(originalStart.getHours(), originalStart.getMinutes(), originalStart.getSeconds());
         }
-        
         const newEndDate = new Date(newStartDate.getTime() + duration);
-        
-        const { error } = await supabase
-          .from('events')
-          .update({ 
-            start_date: newStartDate.toISOString(),
-            end_date: newEndDate.toISOString()
-          })
-          .eq('id', eventId);
-
+        const {
+          error
+        } = await supabase.from('events').update({
+          start_date: newStartDate.toISOString(),
+          end_date: newEndDate.toISOString()
+        }).eq('id', eventId);
         if (error) throw error;
-
         await refreshEvents();
-
         toast({
           title: 'Event Rescheduled',
-          description: `${event.title} moved to ${format(newStartDate, 'MMM d')}`,
+          description: `${event.title} moved to ${format(newStartDate, 'MMM d')}`
         });
       } else {
         // Handle task drag and drop (existing logic)
-        const { error } = await supabase
-          .from('tasks')
-          .update({ due_date: new Date(newDate).toISOString() })
-          .eq('id', itemId);
-
+        const {
+          error
+        } = await supabase.from('tasks').update({
+          due_date: new Date(newDate).toISOString()
+        }).eq('id', itemId);
         if (error) throw error;
-
         toast({
           title: 'Task Rescheduled',
-          description: `Task moved to ${format(new Date(newDate), 'MMM d')}`,
+          description: `Task moved to ${format(new Date(newDate), 'MMM d')}`
         });
-
         onTaskUpdated();
       }
     } catch (error) {
@@ -403,7 +362,7 @@ export const CalendarView = ({
       toast({
         title: 'Error',
         description: 'Failed to reschedule task',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     }
   };
@@ -434,21 +393,23 @@ export const CalendarView = ({
   // Handle task completion with PIN protection
   const completeTask = async (task: Task, event: React.MouseEvent) => {
     event.stopPropagation();
-    
+
     // Use dashboard mode completion handler if available
     if (dashboardMode && onTaskComplete) {
       await onTaskComplete(task);
       return;
     }
-    
+
     // Fallback to regular completion for non-dashboard mode
     if (!profile) return;
-    
     try {
       // Dashboard Mode: Check PIN requirements for the active member
       if (dashboardMode && activeMemberId) {
-        const { canProceed, needsPin, profile: memberProfile } = await canPerformAction(activeMemberId, 'task_completion');
-        
+        const {
+          canProceed,
+          needsPin,
+          profile: memberProfile
+        } = await canPerformAction(activeMemberId, 'task_completion');
         if (needsPin) {
           // Store the task to complete after PIN authentication
           setPendingTaskCompletion(task);
@@ -456,7 +417,6 @@ export const CalendarView = ({
           setPinDialogOpen(true);
           return;
         }
-        
         if (!canProceed) {
           toast({
             title: 'Cannot Complete Task',
@@ -466,7 +426,7 @@ export const CalendarView = ({
           return;
         }
       }
-      
+
       // Execute task completion
       await executeTaskCompletion(task);
     } catch (error) {
@@ -482,43 +442,36 @@ export const CalendarView = ({
   // Execute the actual task completion
   const executeTaskCompletion = async (task: Task) => {
     if (!profile) return;
-    
     try {
       // Get all assignees for this task (including both old and new format)
-      const assignees = task.assignees?.map(a => a.profile) || 
-                       (task.assigned_profile ? [task.assigned_profile] : []);
-      
+      const assignees = task.assignees?.map(a => a.profile) || (task.assigned_profile ? [task.assigned_profile] : []);
+
       // If no specific assignees, anyone can complete it and only they get points
       const pointRecipients = assignees.length > 0 ? assignees : [profile];
-      
-      // Create task completion record
-      const { error } = await supabase
-        .from('task_completions')
-        .insert({
-          task_id: task.id,
-          completed_by: profile.id,
-          points_earned: task.points
-        });
 
+      // Create task completion record
+      const {
+        error
+      } = await supabase.from('task_completions').insert({
+        task_id: task.id,
+        completed_by: profile.id,
+        points_earned: task.points
+      });
       if (error) {
         throw error;
       }
 
       // Award points to all assignees (or just the completer if no assignees)
-      const pointUpdates = pointRecipients.map(async (recipient) => {
+      const pointUpdates = pointRecipients.map(async recipient => {
         const currentProfile = familyMembers.find(m => m.id === recipient.id);
         if (currentProfile) {
-          return supabase
-            .from('profiles')
-            .update({
-              total_points: currentProfile.total_points + task.points
-            })
-            .eq('id', recipient.id);
+          return supabase.from('profiles').update({
+            total_points: currentProfile.total_points + task.points
+          }).eq('id', recipient.id);
         }
       });
-
       const updateResults = await Promise.all(pointUpdates.filter(Boolean));
-      
+
       // Check for errors in point updates
       const updateErrors = updateResults.filter(result => result?.error);
       if (updateErrors.length > 0) {
@@ -535,12 +488,10 @@ export const CalendarView = ({
         const names = pointRecipients.map(p => p.display_name).join(', ');
         toastMessage = `${task.points} points awarded to: ${names}`;
       }
-
       toast({
         title: 'Task Completed!',
-        description: toastMessage,
+        description: toastMessage
       });
-
       onTaskUpdated();
     } catch (error) {
       console.error('Error completing task:', error);
@@ -551,48 +502,38 @@ export const CalendarView = ({
       });
     }
   };
-
   const uncompleteTask = async (task: Task, event: React.MouseEvent) => {
     event.stopPropagation();
     if (!profile || !task.task_completions || task.task_completions.length === 0) return;
-    
     try {
       // Find the completion record by the current user
       const userCompletion = task.task_completions.find(completion => completion.completed_by === profile.id);
-      
       if (!userCompletion) {
         return;
       }
 
       // Get all assignees who received points
-      const assignees = task.assignees?.map(a => a.profile) || 
-                       (task.assigned_profile ? [task.assigned_profile] : [profile]);
+      const assignees = task.assignees?.map(a => a.profile) || (task.assigned_profile ? [task.assigned_profile] : [profile]);
 
       // Remove the specific task completion record
-      const { error } = await supabase
-        .from('task_completions')
-        .delete()
-        .eq('id', userCompletion.id);
-
+      const {
+        error
+      } = await supabase.from('task_completions').delete().eq('id', userCompletion.id);
       if (error) {
         throw error;
       }
 
       // Remove points from all assignees who received them
-      const pointUpdates = assignees.map(async (recipient) => {
+      const pointUpdates = assignees.map(async recipient => {
         const currentProfile = familyMembers.find(m => m.id === recipient.id);
         if (currentProfile) {
-          return supabase
-            .from('profiles')
-            .update({
-              total_points: currentProfile.total_points - task.points
-            })
-            .eq('id', recipient.id);
+          return supabase.from('profiles').update({
+            total_points: currentProfile.total_points - task.points
+          }).eq('id', recipient.id);
         }
       });
-
       const updateResults = await Promise.all(pointUpdates.filter(Boolean));
-      
+
       // Check for errors in point updates
       const updateErrors = updateResults.filter(result => result?.error);
       if (updateErrors.length > 0) {
@@ -607,12 +548,10 @@ export const CalendarView = ({
         const names = assignees.map(p => p.display_name).join(', ');
         toastMessage = `${task.points} points removed from: ${names}`;
       }
-
       toast({
         title: 'Task Uncompleted',
-        description: toastMessage,
+        description: toastMessage
       });
-
       onTaskUpdated();
     } catch (error) {
       console.error('Error uncompleting task:', error);
@@ -623,7 +562,6 @@ export const CalendarView = ({
       });
     }
   };
-
   const handleTaskToggle = (task: Task, event: React.MouseEvent) => {
     const isCompleted = task.task_completions && task.task_completions.length > 0;
     if (isCompleted) {
@@ -648,35 +586,11 @@ export const CalendarView = ({
     const streak = calculateStreak(task);
     const assignedMember = familyMembers.find(m => m.id === task.assigned_to);
     const memberColors = getMemberColors(assignedMember);
-
-    return (
-      <Draggable key={task.id} draggableId={task.id} index={index}>
-        {(provided, snapshot) => (
-            <div
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            {...provided.dragHandleProps}
-            className={cn(
-              "p-2 mb-1 rounded-md border text-xs transition-all hover:shadow-md group relative",
-              onEditTask ? "cursor-pointer hover:ring-2 hover:ring-primary/20" : "cursor-move",
-              memberColors.bgSoft,
-              memberColors.border,
-              isCompleted && "opacity-60 line-through",
-              isOverdue && "border-red-300 bg-red-50",
-              snapshot.isDragging && "shadow-lg rotate-2"
-            )}
-          >
+    return <Draggable key={task.id} draggableId={task.id} index={index}>
+        {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("p-2 mb-1 rounded-md border text-xs transition-all hover:shadow-md group relative", onEditTask ? "cursor-pointer hover:ring-2 hover:ring-primary/20" : "cursor-move", memberColors.bgSoft, memberColors.border, isCompleted && "opacity-60 line-through", isOverdue && "border-red-300 bg-red-50", snapshot.isDragging && "shadow-lg rotate-2")}>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1 min-w-0" onClick={(e) => handleTaskClick(task, e)}>
-                <button
-                  onClick={(e) => handleTaskToggle(task, e)}
-                  className={cn(
-                    "h-3 w-3 flex-shrink-0 rounded-full border transition-colors hover:scale-110",
-                    isCompleted 
-                      ? "bg-green-500 border-green-500 text-white" 
-                      : "border-gray-300 hover:border-green-400"
-                  )}
-                >
+              <div className="flex items-center gap-1 min-w-0" onClick={e => handleTaskClick(task, e)}>
+                <button onClick={e => handleTaskToggle(task, e)} className={cn("h-3 w-3 flex-shrink-0 rounded-full border transition-colors hover:scale-110", isCompleted ? "bg-green-500 border-green-500 text-white" : "border-gray-300 hover:border-green-400")}>
                   {isCompleted && <CheckCircle2 className="h-3 w-3" />}
                 </button>
                 {isOverdue && <Clock className="h-3 w-3 text-red-500 flex-shrink-0" />}
@@ -684,40 +598,26 @@ export const CalendarView = ({
                 {onEditTask && <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity" />}
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
-                {task.due_date && (
-                  <span className="text-xs opacity-60">
+                {task.due_date && <span className="text-xs opacity-60">
                     {format(new Date(task.due_date), 'HH:mm')}
-                  </span>
-                )}
-                {streak > 0 && (
-                  <Badge variant="secondary" className="text-xs h-4 px-1">
+                  </span>}
+                {streak > 0 && <Badge variant="secondary" className="text-xs h-4 px-1">
                     <Flame className="h-2 w-2 mr-1" />
                     {streak}
-                  </Badge>
-                )}
+                  </Badge>}
                 <Badge variant="outline" className="text-xs h-4 px-1">
                   {task.points}pt
                 </Badge>
               </div>
             </div>
-            {assignedMember && (
-              <div className="flex items-center gap-1 mt-1">
-                <UserAvatar
-                  name={assignedMember.display_name}
-                  color={assignedMember.color}
-                  size="sm"
-                />
+            {assignedMember && <div className="flex items-center gap-1 mt-1">
+                <UserAvatar name={assignedMember.display_name} color={assignedMember.color} size="sm" />
                 <span className="text-xs opacity-75">{assignedMember.display_name}</span>
-              </div>
-            )}
-          </div>
-        )}
-      </Draggable>
-    );
+              </div>}
+          </div>}
+      </Draggable>;
   };
-
-  return (
-    <Card className="w-full">
+  return <Card className="w-full">
       <CardHeader>
         <div className="flex flex-col gap-4">
           {/* Header Row */}
@@ -729,38 +629,19 @@ export const CalendarView = ({
             
             <div className="flex items-center gap-2">
               {/* Analytics Toggle */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAnalytics(!showAnalytics)}
-              >
+              <Button variant="outline" size="sm" onClick={() => setShowAnalytics(!showAnalytics)}>
                 <BarChart3 className="h-4 w-4" />
               </Button>
 
               {/* View Mode Toggle */}
               <div className="flex border rounded-md">
-                <Button
-                  variant={viewMode === 'today' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('today')}
-                  className="rounded-r-none"
-                >
+                <Button variant={viewMode === 'today' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('today')} className="rounded-r-none">
                   <Sun className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant={viewMode === 'week' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('week')}
-                  className="rounded-none"
-                >
+                <Button variant={viewMode === 'week' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('week')} className="rounded-none">
                   <Rows3 className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant={viewMode === 'month' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('month')}
-                  className="rounded-l-none"
-                >
+                <Button variant={viewMode === 'month' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('month')} className="rounded-l-none">
                   <Grid3X3 className="h-4 w-4" />
                 </Button>
               </div>
@@ -789,25 +670,25 @@ export const CalendarView = ({
                 <span className="text-sm font-medium">Filters:</span>
               </div>
               
-              <Select value={filters.assignedTo} onValueChange={(value) => 
-                setFilters(prev => ({ ...prev, assignedTo: value }))
-              }>
+              <Select value={filters.assignedTo} onValueChange={value => setFilters(prev => ({
+              ...prev,
+              assignedTo: value
+            }))}>
                 <SelectTrigger className="w-32 h-8">
                   <SelectValue placeholder="Member" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Members</SelectItem>
-                  {familyMembers.map(member => (
-                    <SelectItem key={member.id} value={member.id}>
+                  {familyMembers.map(member => <SelectItem key={member.id} value={member.id}>
                       {member.display_name}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
 
-              <Select value={filters.status} onValueChange={(value: any) => 
-                setFilters(prev => ({ ...prev, status: value }))
-              }>
+              <Select value={filters.status} onValueChange={(value: any) => setFilters(prev => ({
+              ...prev,
+              status: value
+            }))}>
                 <SelectTrigger className="w-32 h-8">
                   <SelectValue />
                 </SelectTrigger>
@@ -819,9 +700,10 @@ export const CalendarView = ({
                 </SelectContent>
               </Select>
 
-              <Select value={filters.taskType} onValueChange={(value: any) => 
-                setFilters(prev => ({ ...prev, taskType: value }))
-              }>
+              <Select value={filters.taskType} onValueChange={(value: any) => setFilters(prev => ({
+              ...prev,
+              taskType: value
+            }))}>
                 <SelectTrigger className="w-32 h-8">
                   <SelectValue />
                 </SelectTrigger>
@@ -834,8 +716,7 @@ export const CalendarView = ({
             </div>
 
             {/* Analytics */}
-            {showAnalytics && (
-              <Card className="bg-muted/50">
+            {showAnalytics && <Card className="bg-muted/50">
                 <CardContent className="p-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center">
@@ -861,10 +742,9 @@ export const CalendarView = ({
                   <div className="space-y-2">
                     <div className="text-sm font-medium">Member Progress</div>
                     {analytics.memberStats.map((member, index) => {
-                      const familyMember = familyMembers[index];
-                      const memberColors = getMemberColors(familyMember);
-                      return (
-                        <div key={member.name} className="flex items-center gap-2">
+                  const familyMember = familyMembers[index];
+                  const memberColors = getMemberColors(familyMember);
+                  return <div key={member.name} className="flex items-center gap-2">
                           <Badge variant="outline" className={cn("text-xs", memberColors.text, memberColors.border)}>
                             {member.name}
                           </Badge>
@@ -872,35 +752,26 @@ export const CalendarView = ({
                           <span className="text-xs text-muted-foreground w-12 text-right">
                             {member.completed}/{member.total}
                           </span>
-                        </div>
-                      );
-                    })}
+                        </div>;
+                })}
                   </div>
                 </CardContent>
-              </Card>
-            )}
+              </Card>}
           </div>
         </div>
         
         <div className="text-lg font-semibold">
-          {viewMode === 'today' 
-            ? `Today - ${format(currentDate, 'EEEE, MMMM d, yyyy')}`
-            : viewMode === 'week' 
-            ? `Week of ${format(dateRange.start, 'MMM d')} - ${format(dateRange.end, 'MMM d, yyyy')}`
-            : format(currentDate, 'MMMM yyyy')
-          }
+          {viewMode === 'today' ? `Today - ${format(currentDate, 'EEEE, MMMM d, yyyy')}` : viewMode === 'week' ? `Week of ${format(dateRange.start, 'MMM d')} - ${format(dateRange.end, 'MMM d, yyyy')}` : format(currentDate, 'MMMM yyyy')}
         </div>
       </CardHeader>
 
       <CardContent>
         <DragDropContext onDragEnd={handleDragEnd}>
-          {viewMode === 'today' ? (
-            // Today View - Member Columns Layout
-            <div className="space-y-4">
+          {viewMode === 'today' ?
+        // Today View - Member Columns Layout
+        <div className="space-y-4">
               <div className="text-center mb-6">
-                <h3 className="text-lg font-semibold mb-2">
-                  {format(currentDate, 'EEEE, MMMM d')}
-                </h3>
+                
                 <p className="text-sm text-muted-foreground">
                   {isToday(currentDate) ? "Today's Schedule" : format(currentDate, 'EEEE') + "'s Schedule"}
                 </p>
@@ -908,49 +779,30 @@ export const CalendarView = ({
               
               {/* Member Columns */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {familyMembers.map((member) => {
-                  const dateKey = format(currentDate, 'yyyy-MM-dd');
-                  const memberTasks = (tasksByDate[dateKey] || []).filter(task => 
-                    task.assigned_to === member.id || 
-                    task.assignees?.some(a => a.profile_id === member.id)
-                  );
-                  const memberEvents = (eventsByDate[dateKey] || []).filter(event => {
-                     // Match member dashboard logic: show events with no attendees OR events where member is assigned
-                     const hasAttendees = event.attendees && event.attendees.length > 0;
-                     const isAssignedToMember = hasAttendees && event.attendees.some((a: any) => a.profile_id === member.id);
-                     const showForAll = !hasAttendees;
-                     
-                     console.log(`Event "${event.title}" for member ${member.display_name}:`, {
-                       eventId: event.id,
-                       hasAttendees,
-                       attendeeIds: event.attendees?.map((a: any) => a.profile_id) || [],
-                       memberId: member.id,
-                       isAssigned: isAssignedToMember,
-                       showForAll
-                     });
-                     
-                     return showForAll || isAssignedToMember;
-                   });
-                  const memberColors = getMemberColors(member);
-
-                  return (
-                    <Droppable key={member.id} droppableId={member.id}>
-                      {(provided, snapshot) => (
-                        <Card 
-                          className={cn(
-                            "transition-colors border-2",
-                            memberColors.bgSoft,
-                            memberColors.border,
-                            snapshot.isDraggingOver && "ring-2 ring-primary/20"
-                          )}
-                        >
+                {familyMembers.map(member => {
+              const dateKey = format(currentDate, 'yyyy-MM-dd');
+              const memberTasks = (tasksByDate[dateKey] || []).filter(task => task.assigned_to === member.id || task.assignees?.some(a => a.profile_id === member.id));
+              const memberEvents = (eventsByDate[dateKey] || []).filter(event => {
+                // Match member dashboard logic: show events with no attendees OR events where member is assigned
+                const hasAttendees = event.attendees && event.attendees.length > 0;
+                const isAssignedToMember = hasAttendees && event.attendees.some((a: any) => a.profile_id === member.id);
+                const showForAll = !hasAttendees;
+                console.log(`Event "${event.title}" for member ${member.display_name}:`, {
+                  eventId: event.id,
+                  hasAttendees,
+                  attendeeIds: event.attendees?.map((a: any) => a.profile_id) || [],
+                  memberId: member.id,
+                  isAssigned: isAssignedToMember,
+                  showForAll
+                });
+                return showForAll || isAssignedToMember;
+              });
+              const memberColors = getMemberColors(member);
+              return <Droppable key={member.id} droppableId={member.id}>
+                      {(provided, snapshot) => <Card className={cn("transition-colors border-2", memberColors.bgSoft, memberColors.border, snapshot.isDraggingOver && "ring-2 ring-primary/20")}>
                           <CardHeader className="pb-3">
                             <div className="flex items-center gap-2">
-                              <UserAvatar
-                                name={member.display_name}
-                                color={member.color}
-                                size="sm"
-                              />
+                              <UserAvatar name={member.display_name} color={member.color} size="sm" />
                               <div>
                                 <CardTitle className="text-sm">{member.display_name}</CardTitle>
                                 <p className="text-xs text-muted-foreground">
@@ -960,28 +812,13 @@ export const CalendarView = ({
                             </div>
                           </CardHeader>
                           
-                          <CardContent 
-                            ref={provided.innerRef}
-                            {...provided.droppableProps}
-                            className="space-y-2 min-h-[200px]"
-                          >
+                          <CardContent ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[200px]">
                             {/* Tasks */}
                             {memberTasks.map((task, index) => renderTask(task, index))}
                             
                              {/* Events */}
-                             {memberEvents.map((event, eventIndex) => (
-                               <Draggable key={`event-${event.id}`} draggableId={`event-${event.id}`} index={memberTasks.length + eventIndex}>
-                                 {(provided, snapshot) => (
-                                   <div
-                                     ref={provided.innerRef}
-                                     {...provided.draggableProps}
-                                     {...provided.dragHandleProps}
-                                     className={cn(
-                                       "group p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs hover:shadow-md cursor-move transition-all",
-                                       snapshot.isDragging && "shadow-lg rotate-1"
-                                     )}
-                                     onClick={() => handleEditEvent(event)}
-                                   >
+                             {memberEvents.map((event, eventIndex) => <Draggable key={`event-${event.id}`} draggableId={`event-${event.id}`} index={memberTasks.length + eventIndex}>
+                                 {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("group p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs hover:shadow-md cursor-move transition-all", snapshot.isDragging && "shadow-lg rotate-1")} onClick={() => handleEditEvent(event)}>
                                 <div className="flex items-center justify-between">
                                   <span className="font-medium text-purple-700">{event.title}</span>
                                   <div className="flex items-center gap-1">
@@ -991,110 +828,70 @@ export const CalendarView = ({
                                     <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-purple-600" />
                                   </div>
                                 </div>
-                                {event.location && (
-                                  <div className="flex items-center gap-1 mt-1">
+                                {event.location && <div className="flex items-center gap-1 mt-1">
                                     <MapPin className="h-2.5 w-2.5 text-purple-600" />
                                     <p className="text-xs text-purple-600">{event.location}</p>
-                                  </div>
-                                )}
-                                {event.start_date && (
-                                  <div className="flex items-center gap-1 mt-1">
+                                  </div>}
+                                {event.start_date && <div className="flex items-center gap-1 mt-1">
                                     <Clock className="h-2.5 w-2.5 text-purple-600" />
                                     <p className="text-xs text-purple-600">
                                       {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
                                     </p>
-                                  </div>
-                                 )}
-                               </div>
-                                 )}
-                               </Draggable>
-                             ))}
+                                  </div>}
+                               </div>}
+                               </Draggable>)}
                              
                              {provided.placeholder}
                             
                             {/* Add New Event Button */}
                             <div className="pt-2 border-t border-muted/30">
-                              <AddButton
-                                className="w-full h-8 text-xs"
-                                text="Add Event"
-                                showIcon={true}
-                                onClick={() => handleCreateEvent(currentDate, member.id)}
-                              />
+                              <AddButton className="w-full h-8 text-xs" text="Add Event" showIcon={true} onClick={() => handleCreateEvent(currentDate, member.id)} />
                             </div>
                             
                             {/* Empty State */}
-                            {memberTasks.length === 0 && memberEvents.length === 0 && (
-                              <div className="text-center py-8">
+                            {memberTasks.length === 0 && memberEvents.length === 0 && <div className="text-center py-8">
                                 <div className="text-xs text-muted-foreground">
                                   No items for {isToday(currentDate) ? 'today' : 'this day'}
                                 </div>
-                              </div>
-                            )}
+                              </div>}
                           </CardContent>
-                        </Card>
-                      )}
-                    </Droppable>
-                  );
-                })}
+                        </Card>}
+                    </Droppable>;
+            })}
               </div>
-            </div>
-          ) : (
-            // Week/Month Grid View
-            <div className={cn(
-              "grid gap-2",
-              viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-7'
-            )}>
+            </div> :
+        // Week/Month Grid View
+        <div className={cn("grid gap-2", viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-7')}>
               {/* Day Headers */}
-              {days.slice(0, 7).map((day) => (
-                <div key={format(day, 'E')} className="p-2 text-center font-medium text-sm border-b">
+              {days.slice(0, 7).map(day => <div key={format(day, 'E')} className="p-2 text-center font-medium text-sm border-b">
                   {format(day, 'EEE')}
-                </div>
-              ))}
+                </div>)}
 
               {/* Calendar Days */}
-              {days.map((day) => {
-                const dateKey = format(day, 'yyyy-MM-dd');
-                const dayTasks = tasksByDate[dateKey] || [];
-                const dayEvents = eventsByDate[dateKey] || [];
-                const completedCount = dayTasks.filter(t => t.task_completions?.length).length;
-                const totalCount = dayTasks.length;
-
-                return (
-                  <Droppable key={dateKey} droppableId={dateKey}>
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                         onClick={() => handleDayClick(day)}
-                         className={cn(
-                          "min-h-[120px] p-2 border rounded-md transition-colors cursor-pointer group hover:bg-accent/50",
-                          isToday(day) && "bg-blue-50 border-blue-200",
-                          !isSameMonth(day, currentDate) && viewMode === 'month' && "opacity-50 bg-gray-50",
-                          snapshot.isDraggingOver && "bg-green-50 border-green-300"
-                        )}
-                      >
+              {days.map(day => {
+            const dateKey = format(day, 'yyyy-MM-dd');
+            const dayTasks = tasksByDate[dateKey] || [];
+            const dayEvents = eventsByDate[dateKey] || [];
+            const completedCount = dayTasks.filter(t => t.task_completions?.length).length;
+            const totalCount = dayTasks.length;
+            return <Droppable key={dateKey} droppableId={dateKey}>
+                    {(provided, snapshot) => <div ref={provided.innerRef} {...provided.droppableProps} onClick={() => handleDayClick(day)} className={cn("min-h-[120px] p-2 border rounded-md transition-colors cursor-pointer group hover:bg-accent/50", isToday(day) && "bg-blue-50 border-blue-200", !isSameMonth(day, currentDate) && viewMode === 'month' && "opacity-50 bg-gray-50", snapshot.isDraggingOver && "bg-green-50 border-green-300")}>
                         {/* Day Number & Progress */}
                         <div className="flex items-center justify-between mb-2">
-                          <span className={cn(
-                            "text-sm font-medium",
-                            isToday(day) && "text-blue-600"
-                          )}>
+                          <span className={cn("text-sm font-medium", isToday(day) && "text-blue-600")}>
                             {format(day, 'd')}
                           </span>
                           
-                          {totalCount > 0 && (
-                            <div className="flex items-center gap-1">
+                          {totalCount > 0 && <div className="flex items-center gap-1">
                               <div className="w-6 h-1 bg-gray-200 rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-green-500 transition-all"
-                                  style={{ width: `${(completedCount / totalCount) * 100}%` }}
-                                />
+                                <div className="h-full bg-green-500 transition-all" style={{
+                        width: `${completedCount / totalCount * 100}%`
+                      }} />
                               </div>
                               <span className="text-xs text-muted-foreground">
                                 {completedCount}/{totalCount}
                               </span>
-                            </div>
-                          )}
+                            </div>}
                         </div>
 
                         {/* Tasks and Events */}
@@ -1102,27 +899,11 @@ export const CalendarView = ({
                           {dayTasks.map((task, index) => renderTask(task, index))}
                           
                            {/* Events */}
-                           {dayEvents.map((event, eventIndex) => (
-                             <Draggable key={`event-${event.id}-${format(day, 'yyyy-MM-dd')}`} draggableId={`event-${event.id}`} index={dayTasks.length + eventIndex}>
-                               {(provided, snapshot) => (
-                                 <div
-                                   ref={provided.innerRef}
-                                   {...provided.draggableProps}
-                                   {...provided.dragHandleProps}
-                                   className={cn(
-                                     "group p-2 mb-1 text-xs hover:shadow-md cursor-move transition-all border",
-                                     "bg-purple-50 border-purple-200 text-purple-700",
-                                     event.isMultiDay && !event.isFirstDay && !event.isLastDay && "rounded-none border-l-0 border-r-0",
-                                     event.isMultiDay && event.isFirstDay && "rounded-r-none border-r-0",
-                                     event.isMultiDay && event.isLastDay && "rounded-l-none border-l-0",
-                                     !event.isMultiDay && "rounded-md",
-                                     snapshot.isDragging && "shadow-lg rotate-1"
-                                   )}
-                                   onClick={(e) => {
-                                     e.stopPropagation();
-                                     handleEditEvent(event);
-                                   }}
-                                 >
+                           {dayEvents.map((event, eventIndex) => <Draggable key={`event-${event.id}-${format(day, 'yyyy-MM-dd')}`} draggableId={`event-${event.id}`} index={dayTasks.length + eventIndex}>
+                               {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("group p-2 mb-1 text-xs hover:shadow-md cursor-move transition-all border", "bg-purple-50 border-purple-200 text-purple-700", event.isMultiDay && !event.isFirstDay && !event.isLastDay && "rounded-none border-l-0 border-r-0", event.isMultiDay && event.isFirstDay && "rounded-r-none border-r-0", event.isMultiDay && event.isLastDay && "rounded-l-none border-l-0", !event.isMultiDay && "rounded-md", snapshot.isDragging && "shadow-lg rotate-1")} onClick={e => {
+                      e.stopPropagation();
+                      handleEditEvent(event);
+                    }}>
                               <div className="flex items-center justify-between">
                                 <span className="font-medium truncate">
                                   {event.isMultiDay && !event.isFirstDay ? `↳ ${event.title}` : event.title}
@@ -1136,221 +917,163 @@ export const CalendarView = ({
                               </div>
                               
                               {/* Attendees Display */}
-                              {event.attendees && event.attendees.length > 0 && (
-                                <div className="mt-1">
-                                  <EventAttendeesDisplay
-                                    attendees={event.attendees}
-                                    showNames={false}
-                                    maxDisplay={3}
-                                    className="text-purple-600"
-                                  />
-                                </div>
-                              )}
+                              {event.attendees && event.attendees.length > 0 && <div className="mt-1">
+                                  <EventAttendeesDisplay attendees={event.attendees} showNames={false} maxDisplay={3} className="text-purple-600" />
+                                </div>}
                               
                               {/* Time Display - only show on first day or single day events */}
-                              {(!event.isMultiDay || event.isFirstDay) && event.start_date && (
-                                <div className="flex items-center gap-1 mt-1">
+                              {(!event.isMultiDay || event.isFirstDay) && event.start_date && <div className="flex items-center gap-1 mt-1">
                                   <Clock className="h-2.5 w-2.5 text-purple-600" />
                                   <span className="text-xs text-purple-600">
                                     {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
                                     {event.isMultiDay && ` - ${format(new Date(event.originalEnd), 'MMM d')}`}
                                   </span>
                                   {/* Recurrence Indicator */}
-                                  {event.recurrence_options?.enabled && (
-                                    <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600 ml-1">
+                                  {event.recurrence_options?.enabled && <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600 ml-1">
                                       <Repeat className="h-2.5 w-2.5 mr-0.5" />
                                       Repeats
-                                    </Badge>
-                                  )}
-                                </div>
-                              )}
-                             </div>
-                               )}
-                             </Draggable>
-                           ))}
+                                    </Badge>}
+                                </div>}
+                             </div>}
+                             </Draggable>)}
                            
                            {provided.placeholder}
                          </div>
 
                         {/* Add Event Button - Always show for days with tasks too */}
                         <div className="mt-2 pt-2 border-t border-muted/50">
-                          <AddButton
-                            className="w-full h-6 text-xs opacity-0 group-hover:opacity-75 transition-opacity"
-                            text="Add Event"
-                            showIcon={true}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCreateEvent(day);
-                            }}
-                          />
+                          <AddButton className="w-full h-6 text-xs opacity-0 group-hover:opacity-75 transition-opacity" text="Add Event" showIcon={true} onClick={e => {
+                    e.stopPropagation();
+                    handleCreateEvent(day);
+                  }} />
                         </div>
 
                         {/* Empty State */}
-                        {dayTasks.length === 0 && (
-                          <div className="flex items-center justify-center h-full min-h-[60px]">
-                            {snapshot.isDraggingOver ? (
-                              <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed border-green-300 rounded w-full">
+                        {dayTasks.length === 0 && <div className="flex items-center justify-center h-full min-h-[60px]">
+                            {snapshot.isDraggingOver ? <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed border-green-300 rounded w-full">
                                 Drop task here
-                              </div>
-                            ) : null}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </Droppable>
-                );
-              })}
-            </div>
-          )}
+                              </div> : null}
+                          </div>}
+                      </div>}
+                  </Droppable>;
+          })}
+            </div>}
         </DragDropContext>
 
         {/* Legend & Summary */}
         <div className="flex flex-col gap-3 mt-4 pt-4 border-t">
           <div className="flex flex-wrap gap-2">
             <div className="text-sm font-medium">Family Members:</div>
-            {familyMembers.map((member) => {
-              const memberColors = getMemberColors(member);
-              return (
-                <Badge 
-                  key={member.id} 
-                  variant="outline" 
-                  className={cn("text-xs", memberColors.text, memberColors.border)}
-                >
+            {familyMembers.map(member => {
+            const memberColors = getMemberColors(member);
+            return <Badge key={member.id} variant="outline" className={cn("text-xs", memberColors.text, memberColors.border)}>
                   {member.display_name}
-                </Badge>
-              );
-            })}
+                </Badge>;
+          })}
           </div>
           
         </div>
       </CardContent>
 
       {/* Event Dialog */}
-      <EventDialog
-        open={isEventDialogOpen}
-        onOpenChange={setIsEventDialogOpen}
-        familyMembers={familyMembers}
-        familyId={familyId}
-        defaultDate={selectedEventDate || undefined}
-        currentProfileId={activeMemberId || profile?.id}
-        defaultMember={defaultMember}
-            editingEvent={editingEvent}
-            onSave={async (eventData) => {
-              if (!familyId) return;
-              
-              try {
-                const currentProfileId = activeMemberId || profile?.id;
-                console.log('CalendarView onSave - using profile ID:', currentProfileId);
-                
-                if (!currentProfileId) {
-                  console.error('No profile ID available for event creation');
-                  toast({
-                    title: 'Error',
-                    description: 'Unable to determine event creator - please ensure you\'re logged in',
-                    variant: 'destructive',
-                  });
-                  return;
-                }
-                
-                if (editingEvent) {
-                  // Update existing event
-                  await updateEvent(editingEvent.id, {
-                    title: eventData.title,
-                    description: eventData.description,
-                    location: eventData.location,
-                    start_date: eventData.start_date,
-                    end_date: eventData.end_date,
-                    is_all_day: eventData.is_all_day,
-                    recurrence_options: eventData.recurrence_options
-                  }, eventData.attendees);
-                  
-                  toast({
-                    title: 'Success',
-                    description: 'Event updated successfully',
-                  });
-                } else {
-                  // Create new event - MUST pass the currentProfileId
-                  console.log('Creating event from main calendar with creator:', currentProfileId);
-                  const result = await createEvent({
-                    title: eventData.title,
-                    description: eventData.description,
-                    location: eventData.location,
-                    start_date: eventData.start_date,
-                    end_date: eventData.end_date,
-                    is_all_day: eventData.is_all_day,
-                    attendees: eventData.attendees,
-                    recurrence_options: eventData.recurrence_options
-                  }, currentProfileId); // THIS WAS MISSING!
-                  
-                  if (result) {
-                    console.log('Event created successfully from main calendar');
-                    toast({
-                      title: 'Success',
-                      description: 'Event created successfully',
-                    });
-                  }
-                }
-                
-                console.log('Refreshing calendar after event save');
-                await refreshEvents();
-                setIsEventDialogOpen(false);
-                setSelectedEventDate(null);
-                setDefaultMember('');
-                setEditingEvent(null);
-              } catch (error) {
-                console.error('Error saving event:', error);
-                toast({
-                  title: 'Error',
-                  description: 'Failed to save event',
-                  variant: 'destructive',
-                });
-              }
-            }}
-            onDelete={editingEvent ? async () => {
-              try {
-                await deleteEvent(editingEvent.id);
-                toast({
-                  title: 'Success',
-                  description: 'Event deleted successfully',
-                });
-                await refreshEvents();
-                setIsEventDialogOpen(false);
-                setEditingEvent(null);
-              } catch (error) {
-                console.error('Error deleting event:', error);
-              }
-            } : undefined}
-      />
+      <EventDialog open={isEventDialogOpen} onOpenChange={setIsEventDialogOpen} familyMembers={familyMembers} familyId={familyId} defaultDate={selectedEventDate || undefined} currentProfileId={activeMemberId || profile?.id} defaultMember={defaultMember} editingEvent={editingEvent} onSave={async eventData => {
+      if (!familyId) return;
+      try {
+        const currentProfileId = activeMemberId || profile?.id;
+        console.log('CalendarView onSave - using profile ID:', currentProfileId);
+        if (!currentProfileId) {
+          console.error('No profile ID available for event creation');
+          toast({
+            title: 'Error',
+            description: 'Unable to determine event creator - please ensure you\'re logged in',
+            variant: 'destructive'
+          });
+          return;
+        }
+        if (editingEvent) {
+          // Update existing event
+          await updateEvent(editingEvent.id, {
+            title: eventData.title,
+            description: eventData.description,
+            location: eventData.location,
+            start_date: eventData.start_date,
+            end_date: eventData.end_date,
+            is_all_day: eventData.is_all_day,
+            recurrence_options: eventData.recurrence_options
+          }, eventData.attendees);
+          toast({
+            title: 'Success',
+            description: 'Event updated successfully'
+          });
+        } else {
+          // Create new event - MUST pass the currentProfileId
+          console.log('Creating event from main calendar with creator:', currentProfileId);
+          const result = await createEvent({
+            title: eventData.title,
+            description: eventData.description,
+            location: eventData.location,
+            start_date: eventData.start_date,
+            end_date: eventData.end_date,
+            is_all_day: eventData.is_all_day,
+            attendees: eventData.attendees,
+            recurrence_options: eventData.recurrence_options
+          }, currentProfileId); // THIS WAS MISSING!
+
+          if (result) {
+            console.log('Event created successfully from main calendar');
+            toast({
+              title: 'Success',
+              description: 'Event created successfully'
+            });
+          }
+        }
+        console.log('Refreshing calendar after event save');
+        await refreshEvents();
+        setIsEventDialogOpen(false);
+        setSelectedEventDate(null);
+        setDefaultMember('');
+        setEditingEvent(null);
+      } catch (error) {
+        console.error('Error saving event:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to save event',
+          variant: 'destructive'
+        });
+      }
+    }} onDelete={editingEvent ? async () => {
+      try {
+        await deleteEvent(editingEvent.id);
+        toast({
+          title: 'Success',
+          description: 'Event deleted successfully'
+        });
+        await refreshEvents();
+        setIsEventDialogOpen(false);
+        setEditingEvent(null);
+      } catch (error) {
+        console.error('Error deleting event:', error);
+      }
+    } : undefined} />
 
       {/* PIN Dialog for Task Completion */}
-      {memberRequiringPin && (
-        <MemberPinDialog
-          open={pinDialogOpen}
-          onOpenChange={(open) => {
-            setPinDialogOpen(open);
-            if (!open) {
-              setPendingTaskCompletion(null);
-              setMemberRequiringPin(null);
-            }
-          }}
-          member={memberRequiringPin}
-          onSuccess={async () => {
-            if (pendingTaskCompletion) {
-              await executeTaskCompletion(pendingTaskCompletion);
-              setPendingTaskCompletion(null);
-              setMemberRequiringPin(null);
-            }
-          }}
-          onAuthenticate={async (pin: string) => {
-            if (memberRequiringPin) {
-              return await authenticateMemberPin(memberRequiringPin.id, pin);
-            }
-            return false;
-          }}
-          isAuthenticating={isAuthenticating}
-          action="complete this task"
-        />
-      )}
-    </Card>
-  );
+      {memberRequiringPin && <MemberPinDialog open={pinDialogOpen} onOpenChange={open => {
+      setPinDialogOpen(open);
+      if (!open) {
+        setPendingTaskCompletion(null);
+        setMemberRequiringPin(null);
+      }
+    }} member={memberRequiringPin} onSuccess={async () => {
+      if (pendingTaskCompletion) {
+        await executeTaskCompletion(pendingTaskCompletion);
+        setPendingTaskCompletion(null);
+        setMemberRequiringPin(null);
+      }
+    }} onAuthenticate={async (pin: string) => {
+      if (memberRequiringPin) {
+        return await authenticateMemberPin(memberRequiringPin.id, pin);
+      }
+      return false;
+    }} isAuthenticating={isAuthenticating} action="complete this task" />}
+    </Card>;
 };
