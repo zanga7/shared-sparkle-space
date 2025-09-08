@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useEvents } from '@/hooks/useEvents';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { CalendarEvent } from '@/types/event';
 import { EventRecurrenceOptions } from '@/types/recurrence';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
@@ -76,6 +77,7 @@ export const EventDialog = ({
   const [currentUserProfileId, setCurrentUserProfileId] = useState<string | null>(null);
 
   const { toast } = useToast();
+  const { user, session } = useAuth();
   const { createEventSeries, updateSeries, createException, splitSeries } = useRecurringSeries(familyId || '');
 
   // Effect to get current user's profile ID as fallback and debug auth status
@@ -223,9 +225,21 @@ export const EventDialog = ({
   };
   const handleSave = async () => {
     console.log('EventDialog handleSave called');
+    console.log('Authentication status:', { user: !!user, session: !!session });
     console.log('familyId:', familyId);
     console.log('currentProfileId:', currentProfileId);
     console.log('title:', title);
+    
+    // Check authentication first
+    if (!user || !session) {
+      console.error('User not authenticated');
+      toast({
+        title: "Authentication Required", 
+        description: "Please sign in to create events.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     if (!familyId || familyId.trim() === '') {
       toast({
@@ -372,11 +386,23 @@ export const EventDialog = ({
         try {
           await createEventSeries(seriesData);
           console.log('Event series created successfully');
-        } catch (error) {
+        } catch (error: any) {
           console.error('Failed to create event series:', error);
+          
+          // Provide specific error messages based on the error type
+          let errorMessage = "Failed to save event. Please try again.";
+          
+          if (error.message?.includes('permission') || error.message?.includes('policy') || error.code === '42501') {
+            errorMessage = "Authentication required. Please sign in to create events.";
+          } else if (error.message?.includes('not authenticated')) {
+            errorMessage = "Please sign in to create recurring events.";
+          } else if (error.message?.includes('RLS')) {
+            errorMessage = "You don't have permission to create events. Please sign in.";
+          }
+          
           toast({
             title: "Error",
-            description: "Failed to save event. Please try again.",
+            description: errorMessage,
             variant: "destructive",
           });
           return;
@@ -400,11 +426,23 @@ export const EventDialog = ({
       });
 
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving event:', error);
+      
+      // Provide specific error messages
+      let errorMessage = "Failed to save event. Please try again.";
+      
+      if (error.message?.includes('permission') || error.message?.includes('policy') || error.code === '42501') {
+        errorMessage = "Authentication required. Please sign in to create events.";
+      } else if (error.message?.includes('not authenticated')) {
+        errorMessage = "Please sign in to create events.";
+      } else if (error.message?.includes('RLS')) {
+        errorMessage = "You don't have permission to create events. Please sign in.";
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to save event. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
