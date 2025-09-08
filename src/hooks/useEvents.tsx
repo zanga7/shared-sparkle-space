@@ -171,7 +171,7 @@ export const useEvents = (familyId?: string) => {
     is_all_day: boolean;
     attendees?: string[];
     recurrence_options?: any;
-  }) => {
+  }, creatorProfileId?: string) => {
     if (!familyId) {
       toast({
         title: 'Error',
@@ -184,15 +184,9 @@ export const useEvents = (familyId?: string) => {
     try {
       const { attendees, recurrence_options, ...eventFields } = eventData;
       
-      // Get the current user's profile ID to use as created_by
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (profileError || !profile) {
-        throw new Error('User profile not found');
+      // Use the provided creator profile ID
+      if (!creatorProfileId) {
+        throw new Error('Creator profile ID is required');
       }
 
       // Check if this should be a recurring series
@@ -210,7 +204,7 @@ export const useEvents = (familyId?: string) => {
           is_all_day: eventFields.is_all_day,
           attendee_profiles: attendees || [],
           family_id: familyId,
-          created_by: profile.id,
+          created_by: creatorProfileId,
           recurrence_rule: recurrence_options.rule,
           series_start: startDate.toISOString(),
           is_active: true
@@ -230,7 +224,7 @@ export const useEvents = (familyId?: string) => {
         const insertData = {
           ...eventFields,
           family_id: familyId,
-          created_by: profile.id,
+          created_by: creatorProfileId,
           recurrence_options: null // No recurrence for regular events
         };
 
@@ -247,7 +241,7 @@ export const useEvents = (familyId?: string) => {
           const attendeeRecords = attendees.map(profileId => ({
             event_id: event.id,
             profile_id: profileId,
-            added_by: profile.id
+            added_by: creatorProfileId
           }));
 
           const { error: attendeesError } = await supabase
@@ -316,22 +310,10 @@ export const useEvents = (familyId?: string) => {
 
         // Add new attendees
         if (attendees.length > 0) {
-          // Get the current user's profile to use as added_by
-          const { data: currentProfile, error: profileError } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-            .single();
-
-          if (profileError || !currentProfile) {
-            console.error('Error getting current user profile:', profileError);
-            throw new Error('Could not get current user profile');
-          }
-
           const attendeeRecords = attendees.map(profileId => ({
             event_id: id,
             profile_id: profileId,
-            added_by: currentProfile.id
+            added_by: user?.id || '' // Use the auth user ID for added_by
           }));
 
           const { error: attendeesError } = await supabase
