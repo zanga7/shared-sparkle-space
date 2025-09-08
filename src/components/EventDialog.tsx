@@ -156,10 +156,25 @@ export const EventDialog = ({
     setIsAllDay(allDay);
   };
   const handleSave = async () => {
+    console.log('EventDialog handleSave called');
+    console.log('familyId:', familyId);
+    console.log('currentProfileId:', currentProfileId);
+    console.log('title:', title);
+    
     if (!familyId || familyId.trim() === '') {
       toast({
         title: "Error",
         description: "Family ID is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!currentProfileId) {
+      console.error('Missing currentProfileId');
+      toast({
+        title: "Error",
+        description: "Unable to determine event creator - please ensure you're logged in",
         variant: "destructive",
       });
       return;
@@ -269,8 +284,11 @@ export const EventDialog = ({
           series_start: eventData.start_date,
           is_active: true
         };
+        console.log('Creating event series with data:', seriesData);
         await createEventSeries(seriesData);
+        console.log('Event series created successfully');
       } else {
+        console.log('Creating single event with currentProfileId:', currentProfileId);
         onSave?.(eventData);
       }
 

@@ -1202,6 +1202,7 @@ export const CalendarView = ({
         familyMembers={familyMembers}
         familyId={familyId}
         defaultDate={selectedEventDate || undefined}
+        currentProfileId={activeMemberId || profile?.id}
         defaultMember={defaultMember}
             editingEvent={editingEvent}
             onSave={async (eventData) => {

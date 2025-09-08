@@ -241,6 +241,7 @@ export const MemberDashboard = ({
           familyId={profile.family_id}
           defaultMember={member.id}
           editingEvent={editingEvent}
+          currentProfileId={profile.id}
           onSave={async (eventData) => {
             try {
               if (editingEvent) {
@@ -303,13 +304,14 @@ export const MemberDashboard = ({
         defaultMember={member.id}
         currentProfileId={profile.id}
         editingEvent={editingEvent}
-        onSave={async (eventData) => {
-          try {
-            if (editingEvent) {
-              await updateEvent(editingEvent.id, eventData, eventData.attendees);
-            } else {
-              await createEvent(eventData, profile.id);
-            }
+          onSave={async (eventData) => {
+            try {
+              console.log('MemberDashboard saving event:', eventData.title, 'with profile.id:', profile.id);
+              if (editingEvent) {
+                await updateEvent(editingEvent.id, eventData, eventData.attendees);
+              } else {
+                await createEvent(eventData, profile.id);
+              }
             setIsEventDialogOpen(false);
             setEditingEvent(null);
             // Trigger calendar refresh
