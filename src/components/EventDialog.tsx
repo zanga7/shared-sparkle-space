@@ -73,8 +73,42 @@ export const EventDialog = ({
   const [showEditScope, setShowEditScope] = useState(false);
   const [editScope, setEditScope] = useState<EditScope>('this_only');
 
+  const [currentUserProfileId, setCurrentUserProfileId] = useState<string | null>(null);
+
   const { toast } = useToast();
   const { createEventSeries, updateSeries, createException, splitSeries } = useRecurringSeries(familyId || '');
+
+  // Effect to get current user's profile ID as fallback
+  useEffect(() => {
+    const getCurrentUserProfile = async () => {
+      if (currentProfileId) {
+        setCurrentUserProfileId(currentProfileId);
+        return;
+      }
+
+      if (!familyId) return;
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('family_id', familyId)
+            .limit(1);
+          
+          if (profiles && profiles.length > 0) {
+            setCurrentUserProfileId(profiles[0].id);
+          }
+        }
+      } catch (error) {
+        console.error('Error getting current user profile:', error);
+      }
+    };
+
+    getCurrentUserProfile();
+  }, [currentProfileId, familyId]);
 
   useEffect(() => {
     if (editingEvent) {
@@ -274,11 +308,16 @@ export const EventDialog = ({
         }
       } else if (recurrenceOptions.enabled) {
         // Validate we have a valid created_by UUID for new recurring events
-        const createdBy = editingEvent?.created_by || currentProfileId;
+        const createdBy = editingEvent?.created_by || currentProfileId || currentUserProfileId;
+        console.log('EventDialog - Attempting to create recurring event with createdBy:', createdBy);
+        console.log('EventDialog - currentProfileId:', currentProfileId);
+        console.log('EventDialog - editingEvent?.created_by:', editingEvent?.created_by);
+        
         if (!createdBy || createdBy.trim() === '') {
+          console.error('EventDialog - No valid createdBy ID for recurring event creation');
           toast({
             title: "Error",
-            description: "Unable to determine event creator. Please try again.",
+            description: "Cannot create recurring event: No user profile found. Please try refreshing the page.",
             variant: "destructive",
           });
           return;
@@ -298,8 +337,18 @@ export const EventDialog = ({
           is_active: true
         };
         console.log('Creating event series with data:', seriesData);
-        await createEventSeries(seriesData);
-        console.log('Event series created successfully');
+        try {
+          await createEventSeries(seriesData);
+          console.log('Event series created successfully');
+        } catch (error) {
+          console.error('Failed to create event series:', error);
+          toast({
+            title: "Error",
+            description: "Failed to save event. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
       } else {
         console.log('Creating single event with currentProfileId:', currentProfileId);
         onSave?.(eventData);
