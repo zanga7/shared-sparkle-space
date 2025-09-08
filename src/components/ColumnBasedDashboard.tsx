@@ -137,14 +137,16 @@ const ColumnBasedDashboard = () => {
   };
 
   useEffect(() => {
-    if (user) {
+    if (user && !profile) { // Only fetch if we don't have profile data
+      console.log('🔄 useEffect triggering fetchUserData');
       fetchUserData();
     }
-  }, [user]);
+  }, [user, profile?.id]); // Add profile.id to dependency to prevent loops
 
   const fetchUserData = async () => {
     try {
-      console.log('Fetching user data for user:', user?.id, 'email:', user?.email);
+      console.log('🔄 fetchUserData called for user:', user?.id, 'email:', user?.email);
+      console.log('🔄 Current profile state:', profile?.id, profile?.display_name);
       
       // Fetch current user profile with explicit user_id matching
       const { data: profileData, error: profileError } = await supabase
@@ -180,8 +182,8 @@ const ColumnBasedDashboard = () => {
           }
           
           if (createResult && typeof createResult === 'object' && 'success' in createResult && createResult.success) {
-            console.log('Profile created successfully, retrying fetch...');
-            // Retry fetching the profile
+            console.log('✅ Profile created successfully, retrying fetch...');
+            // Retry fetching the profile instead of reloading
             const { data: retryProfileData, error: retryError } = await supabase
               .from('profiles')
               .select('*')
@@ -1286,9 +1288,7 @@ const ColumnBasedDashboard = () => {
                                                                // Use group-specific index instead of global index for stability
                                                                return (
                                                                  <Draggable key={task.id} draggableId={task.id} index={index}>
-                                                                   {(provided, snapshot) => {
-                                                                     console.log('Rendering draggable:', task.id, 'index:', index);
-                                                                     return (
+                                                                    {(provided, snapshot) => (
                                                                      <div
                                                                        ref={provided.innerRef}
                                                                        {...provided.draggableProps}
@@ -1335,11 +1335,10 @@ const ColumnBasedDashboard = () => {
                                                                          onEdit={profile.role === 'parent' ? setEditingTask : undefined}
                                                                          onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
                                                                          showActions={profile.role === 'parent' && !snapshot.isDragging}
-                                                                       />
-                                                                     </div>
-                                                                   );
-                                                                   }}
-                                                                </Draggable>
+                                                                        />
+                                                                      </div>
+                                                                    )}
+                                                                 </Draggable>
                                                               );
                                                             })
                                                           )}
