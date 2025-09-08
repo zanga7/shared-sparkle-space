@@ -772,9 +772,7 @@ export const CalendarView = ({
         <div className="space-y-4">
               <div className="text-center mb-6">
                 
-                <p className="text-sm text-muted-foreground">
-                  {isToday(currentDate) ? "Today's Schedule" : format(currentDate, 'EEEE') + "'s Schedule"}
-                </p>
+                
               </div>
               
               {/* Member Columns */}
@@ -961,18 +959,7 @@ export const CalendarView = ({
         </DragDropContext>
 
         {/* Legend & Summary */}
-        <div className="flex flex-col gap-3 mt-4 pt-4 border-t">
-          <div className="flex flex-wrap gap-2">
-            <div className="text-sm font-medium">Family Members:</div>
-            {familyMembers.map(member => {
-            const memberColors = getMemberColors(member);
-            return <Badge key={member.id} variant="outline" className={cn("text-xs", memberColors.text, memberColors.border)}>
-                  {member.display_name}
-                </Badge>;
-          })}
-          </div>
-          
-        </div>
+        
       </CardContent>
 
       {/* Event Dialog */}
