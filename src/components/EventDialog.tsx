@@ -183,7 +183,7 @@ export const EventDialog = ({
         ? endDate.toISOString()
         : new Date(`${format(endDate, 'yyyy-MM-dd')}T${endTime}`).toISOString(),
       is_all_day: isAllDay,
-      attendees: assignees,
+      attendees: assignees.filter(id => id && id.trim() !== ''),
       family_id: familyId,
       recurrence_options: recurrenceOptions.enabled ? recurrenceOptions : null
     };
