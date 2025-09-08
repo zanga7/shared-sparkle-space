@@ -122,8 +122,8 @@ export const MemberDashboard = ({
         </Badge>
       </div>
       
-      {/* Mobile & Tablet Widget Navigation Buttons */}
-      {(isMobile || window.innerWidth <= 1024) && (
+      {/* Mobile Widget Navigation Buttons */}
+      {isMobile && (
         <div className="flex justify-center gap-2 mt-4">
           {WIDGET_SECTIONS.map((section, index) => {
             const IconComponent = section.icon;
@@ -195,12 +195,12 @@ export const MemberDashboard = ({
     renderRewardsWidget()
   ];
 
-  if (isMobile || window.innerWidth <= 1024) {
+  if (isMobile) {
     return (
-      <div className="w-full px-2 sm:px-4">
+      <div className="w-full mx-auto px-4">
         {renderMemberHeader()}
         
-        {/* Mobile & Tablet Carousel - Full Width */}
+        {/* Mobile Carousel - Full Width */}
         <div className="overflow-hidden -mx-4" ref={emblaRef}>
           <div className="flex">
             {widgets.map((widget, index) => (
@@ -271,10 +271,10 @@ export const MemberDashboard = ({
 
   // Desktop Layout - Full Width
   return (
-    <div className="w-full px-2 sm:px-4">
+    <div className="w-full mx-auto px-4">
       {renderMemberHeader()}
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 h-[calc(100vh-250px)]">
+      <div className="grid grid-cols-4 gap-6 h-[calc(100vh-250px)]">
         {widgets.map((widget, index) => (
           <div key={index} className="min-h-0 h-full">
             {widget}

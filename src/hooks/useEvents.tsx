@@ -19,14 +19,29 @@ export const useEvents = (familyId?: string) => {
   const generateVirtualEvents = (startDate: Date, endDate: Date): CalendarEvent[] => {
     const virtualEvents: CalendarEvent[] = [];
     
+    console.log('generateVirtualEvents called:', {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      totalEvents: events.length,
+      eventTitles: events.map(e => e.title),
+      eventSeries: eventSeries.length
+    });
+    
     // Add regular events (non-recurring)
     events.forEach(event => {
       const eventStart = new Date(event.start_date);
       const eventEnd = new Date(event.end_date);
       
+      console.log(`Checking event "${event.title}":`, {
+        eventStart: eventStart.toISOString(),
+        eventEnd: eventEnd.toISOString(),
+        overlaps: eventEnd >= startDate && eventStart <= endDate
+      });
+      
       // Include event if it overlaps with the date range
       if (eventEnd >= startDate && eventStart <= endDate) {
         virtualEvents.push(event);
+        console.log(`Added regular event: ${event.title}`);
       }
     });
     
@@ -79,6 +94,13 @@ export const useEvents = (familyId?: string) => {
         
         virtualEvents.push(virtualEvent);
       });
+    });
+    
+    console.log('generateVirtualEvents returning:', {
+      totalVirtualEvents: virtualEvents.length,
+      virtualEventTitles: virtualEvents.map(e => e.title),
+      regularEventCount: virtualEvents.filter(e => !e.isVirtual).length,
+      seriesEventCount: virtualEvents.filter(e => e.isVirtual).length
     });
     
     return virtualEvents.sort((a, b) => 

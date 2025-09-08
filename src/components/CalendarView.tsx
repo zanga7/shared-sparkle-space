@@ -717,7 +717,7 @@ export const CalendarView = ({
   };
 
   return (
-    <Card className="w-full border-0">
+    <Card className="w-full">
       <CardHeader>
         <div className="flex flex-col gap-4">
           {/* Header Row */}
@@ -914,7 +914,23 @@ export const CalendarView = ({
                     task.assigned_to === member.id || 
                     task.assignees?.some(a => a.profile_id === member.id)
                   );
-                  const memberEvents = eventsByDate[dateKey] || [];
+                  const memberEvents = (eventsByDate[dateKey] || []).filter(event => {
+                     // Match member dashboard logic: show events with no attendees OR events where member is assigned
+                     const hasAttendees = event.attendees && event.attendees.length > 0;
+                     const isAssignedToMember = hasAttendees && event.attendees.some((a: any) => a.profile_id === member.id);
+                     const showForAll = !hasAttendees;
+                     
+                     console.log(`Event "${event.title}" for member ${member.display_name}:`, {
+                       eventId: event.id,
+                       hasAttendees,
+                       attendeeIds: event.attendees?.map((a: any) => a.profile_id) || [],
+                       memberId: member.id,
+                       isAssigned: isAssignedToMember,
+                       showForAll
+                     });
+                     
+                     return showForAll || isAssignedToMember;
+                   });
                   const memberColors = getMemberColors(member);
 
                   return (
