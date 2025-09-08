@@ -914,16 +914,20 @@ export const CalendarView = ({
                     task.assigned_to === member.id || 
                     task.assignees?.some(a => a.profile_id === member.id)
                   );
-                   const memberEvents = (eventsByDate[dateKey] || []).filter(event => {
+                  const memberEvents = (eventsByDate[dateKey] || []).filter(event => {
                      // Show events if member is specifically assigned OR if no attendees are assigned (show for all)
-                     const isEventForThisMember = !event.attendees || event.attendees.length === 0 || 
-                       event.attendees?.some((a: any) => a.profile_id === member.id);
+                     const hasAttendees = event.attendees && event.attendees.length > 0;
+                     const isAssignedToMember = hasAttendees && event.attendees?.some((a: any) => a.profile_id === member.id);
+                     const showForAllMembers = !hasAttendees;
+                     const isEventForThisMember = showForAllMembers || isAssignedToMember;
                      
                      console.log(`Event "${event.title}" for member ${member.display_name}:`, {
                        eventId: event.id,
-                       hasAttendees: event.attendees?.length > 0,
-                       attendeeIds: event.attendees?.map((a: any) => a.profile_id),
+                       hasAttendees,
+                       attendeeIds: event.attendees?.map((a: any) => a.profile_id) || [],
                        memberId: member.id,
+                       isAssignedToMember,
+                       showForAllMembers,
                        isForMember: isEventForThisMember
                      });
                      
