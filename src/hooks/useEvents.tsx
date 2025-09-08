@@ -379,7 +379,14 @@ export const useEvents = (familyId?: string) => {
             created_by: (await supabase.auth.getUser()).data.user?.id || ''
           });
           
+          // Refresh events to show changes immediately
           await fetchEvents();
+          
+          // Also trigger calendar refresh if available
+          if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
+            (window as any).refreshCalendar();
+          }
+          
           toast({
             title: 'Success',
             description: 'Event occurrence cancelled',
@@ -401,7 +408,13 @@ export const useEvents = (familyId?: string) => {
 
       if (error) throw error;
 
+      // Refresh events and trigger calendar refresh
       await fetchEvents();
+      
+      if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
+        (window as any).refreshCalendar();
+      }
+      
       toast({
         title: 'Success',
         description: 'Event deleted successfully',
@@ -417,6 +430,15 @@ export const useEvents = (familyId?: string) => {
     }
   };
 
+  // Enhanced refresh function that also updates virtual instances
+  const refreshEventsAndSeries = async () => {
+    await fetchEvents();
+    
+    // Trigger calendar refresh if available
+    if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
+      (window as any).refreshCalendar();
+    }
+  };
   useEffect(() => {
     fetchEvents();
   }, [familyId]);
@@ -427,7 +449,7 @@ export const useEvents = (familyId?: string) => {
     createEvent,
     updateEvent,
     deleteEvent,
-    refreshEvents: fetchEvents,
+    refreshEvents: refreshEventsAndSeries,
     generateVirtualEvents, // Export the virtual events generator
     // Series management functions
     createEventSeries,

@@ -35,6 +35,13 @@ export interface Task {
     completed_at: string;
     completed_by: string;
   }>;
+  // Virtual task properties for series instances
+  isVirtual?: boolean;
+  series_id?: string;
+  occurrence_date?: string;
+  isException?: boolean;
+  exceptionType?: 'skip' | 'override';
+  overrideData?: any;
 }
 
 export interface Profile {

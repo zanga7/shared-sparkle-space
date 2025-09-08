@@ -121,9 +121,7 @@ export const EventDialog = ({
           enabled: false,
           rule: {
             frequency: 'daily',
-            interval: 1,
-            endType: 'never'
-          }
+          onSave?.({}); // Trigger parent refresh
         });
       }
     } else {
@@ -379,27 +377,29 @@ export const EventDialog = ({
             />
           </div>
 
-          {/* Recurrence Panel */}
-          <UnifiedRecurrencePanel
-            enabled={recurrenceEnabled}
-            onEnabledChange={(enabled) => {
-              setRecurrenceEnabled(enabled);
-              setEventRecurrenceOptions(prev => ({ ...prev, enabled }));
-            }}
-            startDate={formData.startDate}
-            startTime={formData.startTime}
-            type="event"
-            eventOptions={eventRecurrenceOptions}
-            onEventOptionsChange={setEventRecurrenceOptions}
-            familyMembers={familyMembers}
-            selectedAssignees={formData.attendees}
-          />
+          {/* Recurrence Panel - only show for non-virtual events */}
+          {!((editingEvent?.isVirtual) || (event?.isVirtual)) && (
+            <UnifiedRecurrencePanel
+              enabled={recurrenceEnabled}
+              onEnabledChange={(enabled) => {
+                setRecurrenceEnabled(enabled);
+                setEventRecurrenceOptions(prev => ({ ...prev, enabled }));
+              }}
+              startDate={formData.startDate}
+              startTime={formData.startTime}
+              type="event"
+              eventOptions={eventRecurrenceOptions}
+              onEventOptionsChange={setEventRecurrenceOptions}
+              familyMembers={familyMembers}
+              selectedAssignees={formData.attendees}
+            />
+          )}
 
           <div className="flex justify-between">
             <div className="flex gap-2">
               {onDelete && (
                 <Button variant="destructive" onClick={onDelete}>
-                  Delete Event
+                  {((editingEvent?.isVirtual) || (event?.isVirtual)) ? 'Skip Event' : 'Delete Event'}
                 </Button>
               )}
             </div>

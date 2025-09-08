@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
 import { EditTaskDialog } from '@/components/EditTaskDialog';
+import { useTaskSeries } from '@/hooks/useTaskSeries';
 
 import { CalendarView } from '@/components/CalendarView';
 import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
@@ -41,6 +42,8 @@ const Dashboard = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   
 
+  
+  const { generateVirtualTaskInstances, createTaskException } = useTaskSeries(profile?.family_id);
   useEffect(() => {
     if (user) {
       fetchUserData();
@@ -76,7 +79,7 @@ const Dashboard = () => {
       }
 
       // Fetch family tasks with completion status
-      const { data: tasksData, error: tasksError } = await supabase
+      const { data: regularTasksData, error: tasksError } = await supabase
         .from('tasks')
         .select(`
           id,
@@ -87,21 +90,69 @@ const Dashboard = () => {
           assigned_to,
           created_by,
           completion_rule,
+          task_group,
+          recurrence_options,
           assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
           assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
           task_completions(id, completed_at, completed_by)
         `)
-        .eq('family_id', profileData.family_id);
+        .eq('family_id', profileData.family_id)
+        .is('recurrence_options', null); // Only get non-recurring tasks
 
       if (tasksError) {
         console.error('Tasks error:', tasksError);
       } else {
-        // Type assertion to handle completion_rule from database
-        const typedTasks = (tasksData || []).map(task => ({
+        // Get virtual task instances from series (for the next 30 days)
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + 30);
+        
+        const virtualTasks = generateVirtualTaskInstances(startDate, endDate);
+        
+        // Combine regular tasks with virtual instances
+        const regularTasks = (regularTasksData || []).map(task => ({
           ...task,
           completion_rule: (task.completion_rule || 'everyone') as 'any_one' | 'everyone'
         }));
-        setTasks(typedTasks);
+        
+        // Convert virtual tasks to Task format
+        const virtualTasksAsRegular = virtualTasks.map(vTask => ({
+          id: vTask.id,
+          title: vTask.title,
+          description: vTask.description,
+          points: vTask.points,
+          due_date: vTask.due_date,
+          assigned_to: vTask.assigned_profiles.length === 1 ? vTask.assigned_profiles[0] : null,
+          created_by: vTask.created_by,
+          completion_rule: vTask.completion_rule as 'any_one' | 'everyone',
+          task_group: vTask.task_group,
+          recurrence_options: vTask.recurrence_options,
+          // Add virtual task metadata
+          isVirtual: vTask.isVirtual,
+          series_id: vTask.series_id,
+          occurrence_date: vTask.occurrence_date,
+          isException: vTask.isException,
+          exceptionType: vTask.exceptionType,
+          // Convert assigned_profiles to assignees format
+          assignees: vTask.assigned_profiles.map(profileId => {
+            const profile = familyMembers.find(m => m.id === profileId);
+            return {
+              id: `virtual-${vTask.id}-${profileId}`,
+              profile_id: profileId,
+              assigned_at: vTask.due_date,
+              assigned_by: vTask.created_by,
+              profile: {
+                id: profileId,
+                display_name: profile?.display_name || 'Unknown',
+                role: profile?.role || 'child',
+                color: profile?.color || 'sky'
+              }
+            };
+          }),
+          task_completions: [] // Virtual tasks don't have completions yet
+        }));
+        
+        setTasks([...regularTasks, ...virtualTasksAsRegular]);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -117,6 +168,51 @@ const Dashboard = () => {
 
   const completeTask = async (task: Task) => {
     if (!profile) return;
+    
+    // Handle virtual task completion
+    if ((task as any).isVirtual && (task as any).series_id) {
+      try {
+        // For virtual tasks, we need to create a completion exception
+        await createTaskException({
+          series_id: (task as any).series_id,
+          exception_date: (task as any).occurrence_date,
+          exception_type: 'override',
+          override_data: {
+            completed: true,
+            completed_by: profile.id,
+            completed_at: new Date().toISOString(),
+            points_earned: task.points
+          },
+          created_by: profile.id
+        });
+
+        // Update profile points
+        const { error: pointsError } = await supabase
+          .from('profiles')
+          .update({
+            total_points: profile.total_points + task.points
+          })
+          .eq('id', profile.id);
+
+        if (pointsError) throw pointsError;
+
+        toast({
+          title: 'Task Completed!',
+          description: `You earned ${task.points} points!`,
+        });
+
+        fetchUserData();
+        return;
+      } catch (error) {
+        console.error('Error completing virtual task:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to complete task',
+          variant: 'destructive'
+        });
+        return;
+      }
+    }
     
     try {
       // Get all assignees for this task (including both old and new format)
@@ -211,6 +307,47 @@ const Dashboard = () => {
   const uncompleteTask = async (task: Task) => {
     if (!profile || !task.task_completions || task.task_completions.length === 0) return;
     
+    // Handle virtual task uncompletion
+    if ((task as any).isVirtual && (task as any).series_id) {
+      try {
+        // For virtual tasks, remove the completion exception
+        const { error } = await supabase
+          .from('recurrence_exceptions')
+          .delete()
+          .eq('series_id', (task as any).series_id)
+          .eq('exception_date', (task as any).occurrence_date)
+          .eq('exception_type', 'override');
+
+        if (error) throw error;
+
+        // Update profile points
+        const { error: pointsError } = await supabase
+          .from('profiles')
+          .update({
+            total_points: profile.total_points - task.points
+          })
+          .eq('id', profile.id);
+
+        if (pointsError) throw pointsError;
+
+        toast({
+          title: 'Task Uncompleted',
+          description: `${task.points} points removed`,
+        });
+
+        fetchUserData();
+        return;
+      } catch (error) {
+        console.error('Error uncompleting virtual task:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to uncomplete task',
+          variant: 'destructive'
+        });
+        return;
+      }
+    }
+    
     try {
       // Find the completion record by the current user
       const userCompletion = task.task_completions.find(completion => completion.completed_by === profile.id);
@@ -290,7 +427,11 @@ const Dashboard = () => {
   };
 
   const handleTaskToggle = (task: Task) => {
-    const isCompleted = task.task_completions && task.task_completions.length > 0;
+    // For virtual tasks, check if there's a completion exception
+    const isCompleted = (task as any).isVirtual 
+      ? (task as any).isException && (task as any).exceptionType === 'override' && (task as any).overrideData?.completed
+      : task.task_completions && task.task_completions.length > 0;
+      
     if (isCompleted) {
       uncompleteTask(task);
     } else {
@@ -301,6 +442,36 @@ const Dashboard = () => {
   const deleteTask = async () => {
     if (!deletingTask) return;
 
+    // Handle virtual task deletion (skip occurrence)
+    if ((deletingTask as any).isVirtual && (deletingTask as any).series_id) {
+      try {
+        await createTaskException({
+          series_id: (deletingTask as any).series_id,
+          exception_date: (deletingTask as any).occurrence_date,
+          exception_type: 'skip',
+          created_by: profile?.id || ''
+        });
+
+        toast({
+          title: 'Task Skipped',
+          description: 'This occurrence has been skipped',
+        });
+
+        setDeletingTask(null);
+        fetchUserData();
+        return;
+      } catch (error) {
+        console.error('Error skipping virtual task:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to skip task occurrence',
+          variant: 'destructive'
+        });
+        return;
+      }
+    }
+
+    // Regular task deletion
     try {
       const { error } = await supabase
         .from('tasks')
@@ -494,13 +665,16 @@ const Dashboard = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Task</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deletingTask?.title}"? This action cannot be undone.
+              {(deletingTask as any)?.isVirtual 
+                ? `Are you sure you want to skip this occurrence of "${deletingTask?.title}"?`
+                : `Are you sure you want to delete "${deletingTask?.title}"? This action cannot be undone.`
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={deleteTask} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete Task
+              {(deletingTask as any)?.isVirtual ? 'Skip Occurrence' : 'Delete Task'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
