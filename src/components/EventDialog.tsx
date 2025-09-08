@@ -190,6 +190,25 @@ export const EventDialog = ({
 
     try {
       if (editingEvent?.isVirtual && editingEvent?.series_id) {
+        // Validate series_id and created_by are valid UUIDs
+        if (!editingEvent.series_id || editingEvent.series_id.trim() === '') {
+          toast({
+            title: "Error",
+            description: "Invalid series ID for recurring event",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        if (!editingEvent.created_by || editingEvent.created_by.trim() === '') {
+          toast({
+            title: "Error",
+            description: "Invalid creator ID for recurring event",
+            variant: "destructive",
+          });
+          return;
+        }
+        
         if (editScope === 'this_only') {
           await createException({
             series_id: editingEvent.series_id,
