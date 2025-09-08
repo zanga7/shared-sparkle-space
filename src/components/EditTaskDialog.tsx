@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Trash2, Calendar, User, Users } from 'lucide-react';
+import { Trash2, Calendar, User, Users, Repeat } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Task, Profile } from '@/types/task';
@@ -22,6 +23,7 @@ interface EditTaskDialogProps {
   onOpenChange: (open: boolean) => void;
   onTaskUpdated: () => void;
   familyMembers: Profile[];
+  familyId: string;
 }
 
 export const EditTaskDialog = ({ 
@@ -29,7 +31,8 @@ export const EditTaskDialog = ({
   open, 
   onOpenChange, 
   onTaskUpdated, 
-  familyMembers 
+  familyMembers,
+  familyId 
 }: EditTaskDialogProps) => {
   const { toast } = useToast();
   
@@ -238,7 +241,7 @@ export const EditTaskDialog = ({
               task_group: pendingSave.task_group,
               completion_rule: task.completion_rule,
               assigned_profiles: pendingSave.assignees || [],
-              family_id: task.family_id || '',
+              family_id: familyId,
               created_by: task.created_by,
               recurrence_rule: taskRecurrenceOptions.rule,
               is_active: true

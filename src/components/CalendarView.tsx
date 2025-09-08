@@ -1195,6 +1195,7 @@ export const CalendarView = ({
         open={isEventDialogOpen}
         onOpenChange={setIsEventDialogOpen}
         familyMembers={familyMembers}
+        familyId={familyId}
         defaultDate={selectedEventDate || undefined}
         defaultMember={defaultMember}
             editingEvent={editingEvent}

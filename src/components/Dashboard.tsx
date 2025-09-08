@@ -112,7 +112,8 @@ const Dashboard = () => {
         // Combine regular tasks with virtual instances
         const regularTasks = (regularTasksData || []).map(task => ({
           ...task,
-          completion_rule: (task.completion_rule || 'everyone') as 'any_one' | 'everyone'
+          completion_rule: (task.completion_rule || 'everyone') as 'any_one' | 'everyone',
+          recurrence_options: task.recurrence_options as any // Type cast to fix JSON compatibility
         }));
         
         // Convert virtual tasks to Task format
@@ -126,7 +127,7 @@ const Dashboard = () => {
           created_by: vTask.created_by,
           completion_rule: vTask.completion_rule as 'any_one' | 'everyone',
           task_group: vTask.task_group,
-          recurrence_options: vTask.recurrence_options,
+          recurrence_options: null, // Virtual tasks don't have individual recurrence options
           // Add virtual task metadata
           isVirtual: vTask.isVirtual,
           series_id: vTask.series_id,
@@ -636,6 +637,7 @@ const Dashboard = () => {
         <EditTaskDialog
           task={editingTask}
           familyMembers={familyMembers}
+          familyId={profile.family_id}
           open={!!editingTask}
           onOpenChange={(open) => !open && setEditingTask(null)}
           onTaskUpdated={fetchUserData}

@@ -1716,6 +1716,7 @@ const ColumnBasedDashboard = () => {
           onOpenChange={(open) => !open && setEditingTask(null)}
           task={editingTask}
           familyMembers={familyMembers}
+          familyId={profile.family_id}
           onTaskUpdated={fetchUserData}
         />
       )}
