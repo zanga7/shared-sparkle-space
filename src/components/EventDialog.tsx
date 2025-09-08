@@ -22,8 +22,20 @@ import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { UnifiedRecurrencePanel } from '@/components/recurrence/UnifiedRecurrencePanel';
 import { EditScopeDialog, EditScope } from '@/components/recurrence/EditScopeDialog';
 import { Badge } from '@/components/ui/badge';
-import { Repeat } from 'lucide-react';
+import { Repeat, Settings, Trash2 } from 'lucide-react';
 import { useRecurringSeries } from '@/hooks/useRecurringSeries';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { RecurringEventInfo } from '@/components/recurrence/RecurringEventInfo';
 
 interface EventDialogProps {
   open: boolean;
@@ -73,12 +85,15 @@ export const EventDialog = ({
   });
   const [showEditScope, setShowEditScope] = useState(false);
   const [editScope, setEditScope] = useState<EditScope>('this_only');
+  const [showSeriesOptions, setShowSeriesOptions] = useState(false);
+  const [seriesData, setSeriesData] = useState<any>(null);
+  const [showDeleteSeriesDialog, setShowDeleteSeriesDialog] = useState(false);
 
   const [currentUserProfileId, setCurrentUserProfileId] = useState<string | null>(null);
 
   const { toast } = useToast();
   const { user, session } = useAuth();
-  const { createEventSeries, updateSeries, createException, splitSeries } = useRecurringSeries(familyId || '');
+  const { createEventSeries, updateSeries, createException, splitSeries, deleteSeries, getSeriesById } = useRecurringSeries(familyId || '');
 
   // Effect to get current user's profile ID as fallback and debug auth status
   useEffect(() => {
@@ -160,7 +175,17 @@ export const EventDialog = ({
       setIsAllDay(editingEvent.is_all_day || false);
       setAssignees(editingEvent.attendees?.map(a => a.profile_id) || []);
       
-      if (editingEvent.recurrence_options?.enabled) {
+      // If this is a virtual event (part of a series), load the series data
+      if (editingEvent.isVirtual && editingEvent.series_id) {
+        const series = getSeriesById(editingEvent.series_id, 'event');
+        if (series) {
+          setSeriesData(series);
+          setRecurrenceOptions({
+            enabled: true,
+            rule: series.recurrence_rule
+          });
+        }
+      } else if (editingEvent.recurrence_options?.enabled) {
         setRecurrenceOptions({
           enabled: true,
           rule: editingEvent.recurrence_options.rule || {
@@ -180,6 +205,8 @@ export const EventDialog = ({
       setEndTime('10:00');
       setIsAllDay(false);
       setAssignees(defaultMember ? [defaultMember] : []);
+      setSeriesData(null);
+      setShowSeriesOptions(false);
       setRecurrenceOptions({
         enabled: false,
         rule: {
@@ -189,7 +216,7 @@ export const EventDialog = ({
         }
       });
     }
-  }, [editingEvent, selectedDate, defaultMember, defaultDate]);
+  }, [editingEvent, selectedDate, defaultMember, defaultDate, getSeriesById]);
 
   // Update start and end dates when time changes
   const handleStartDateChange = (date: Date) => {
@@ -343,14 +370,21 @@ export const EventDialog = ({
             is_active: true
           });
         } else {
-          await updateSeries(editingEvent.series_id, 'event', {
+          const updateData: any = {
             title: eventData.title,
             description: eventData.description,
             location: eventData.location,
             duration_minutes: Math.round((new Date(eventData.end_date).getTime() - new Date(eventData.start_date).getTime()) / (1000 * 60)),
             is_all_day: eventData.is_all_day,
             attendee_profiles: eventData.attendees
-          });
+          };
+          
+          // If we're editing the series, also update the recurrence rule
+          if (showSeriesOptions && recurrenceOptions.enabled) {
+            updateData.recurrence_rule = recurrenceOptions.rule;
+          }
+          
+          await updateSeries(editingEvent.series_id, 'event', updateData);
         }
       } else if (recurrenceOptions.enabled) {
         // Validate we have a valid created_by UUID for new recurring events
@@ -456,9 +490,53 @@ export const EventDialog = ({
 
   const handleSubmit = () => {
     if (editingEvent?.isVirtual && editingEvent?.series_id) {
-      setShowEditScope(true);
+      if (showSeriesOptions) {
+        // We're editing the series itself
+        handleSave();
+      } else {
+        // Show edit scope dialog for instance edits
+        setShowEditScope(true);
+      }
     } else {
       handleSave();
+    }
+  };
+
+  const handleDeleteSeries = async () => {
+    if (!editingEvent?.series_id) return;
+    
+    try {
+      await deleteSeries(editingEvent.series_id, 'event');
+      
+      // Trigger calendar refresh
+      if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
+        setTimeout(() => {
+          (window as any).refreshCalendar();
+        }, 200);
+      }
+
+      toast({
+        title: "Success",
+        description: "Event series deleted successfully",
+      });
+
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error deleting series:', error);
+    }
+  };
+
+  const handleEditSeries = () => {
+    setShowSeriesOptions(true);
+    // Pre-populate form with series data
+    if (seriesData) {
+      setTitle(seriesData.title);
+      setDescription(seriesData.description || '');
+      setLocation(seriesData.location || '');
+      setRecurrenceOptions({
+        enabled: true,
+        rule: seriesData.recurrence_rule
+      });
     }
   };
 
@@ -556,6 +634,104 @@ export const EventDialog = ({
               />
             )}
 
+            {/* Series Management Options */}
+            {editingEvent?.isVirtual && editingEvent?.series_id && seriesData && !showSeriesOptions && (
+              <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-sm">Recurring Event</h4>
+                    <p className="text-xs text-muted-foreground">
+                      This is part of a recurring event series
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    <Repeat className="w-3 h-3 mr-1" />
+                    Series
+                  </Badge>
+                </div>
+                
+                <RecurringEventInfo 
+                  rule={seriesData.recurrence_rule}
+                  seriesStart={seriesData.series_start}
+                  seriesEnd={seriesData.series_end}
+                  className="px-2"
+                />
+                
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEditSeries}
+                    className="flex items-center gap-1"
+                  >
+                    <Settings className="w-3 h-3" />
+                    Edit Series
+                  </Button>
+                  
+                  <AlertDialog open={showDeleteSeriesDialog} onOpenChange={setShowDeleteSeriesDialog}>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-1 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Delete Series
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Recurring Event Series</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete all occurrences of "{seriesData.title}" and cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDeleteSeries}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete Series
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+            )}
+
+            {/* Series Editing Mode */}
+            {showSeriesOptions && seriesData && (
+              <div className="bg-primary/5 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-sm">Editing Entire Series</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Changes will apply to all occurrences in this series
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowSeriesOptions(false)}
+                  >
+                    Cancel Series Edit
+                  </Button>
+                </div>
+                
+                <UnifiedRecurrencePanel
+                  type="event"
+                  enabled={recurrenceOptions.enabled}
+                  onEnabledChange={(enabled) => setRecurrenceOptions(prev => ({ ...prev, enabled }))}
+                  startDate={startDate}
+                  startTime={startTime}
+                  eventOptions={recurrenceOptions}
+                  onEventOptionsChange={setRecurrenceOptions}
+                />
+              </div>
+            )}
+
             <div className="flex justify-between pt-4">
               <div>
                 {onDelete && editingEvent && (
@@ -575,7 +751,7 @@ export const EventDialog = ({
                   Cancel
                 </Button>
                 <Button onClick={handleSubmit}>
-                  {editingEvent ? 'Update Event' : 'Create Event'}
+                  {showSeriesOptions ? 'Update Series' : editingEvent ? 'Update Event' : 'Create Event'}
                 </Button>
               </div>
             </div>

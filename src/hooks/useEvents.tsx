@@ -13,7 +13,7 @@ export const useEvents = (familyId?: string) => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
-  const { eventSeries, exceptions, generateSeriesInstances, createEventSeries, createException, updateSeries, splitSeries } = useRecurringSeries(familyId);
+  const { eventSeries, exceptions, generateSeriesInstances, createEventSeries, createException, updateSeries, splitSeries, deleteSeries } = useRecurringSeries(familyId);
 
   // Generate virtual event instances from both regular events and series
   const generateVirtualEvents = (startDate: Date, endDate: Date): CalendarEvent[] => {
@@ -514,6 +514,7 @@ export const useEvents = (familyId?: string) => {
     createEventSeries,
     createException,
     updateSeries,
-    splitSeries
+    splitSeries,
+    deleteSeries
   };
 };

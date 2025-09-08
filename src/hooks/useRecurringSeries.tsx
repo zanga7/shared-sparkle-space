@@ -352,6 +352,52 @@ export const useRecurringSeries = (familyId?: string) => {
     }
   };
 
+  // Delete an entire series
+  const deleteSeries = async (seriesId: string, seriesType: 'task' | 'event') => {
+    try {
+      const table = seriesType === 'task' ? 'task_series' : 'event_series';
+      
+      // First delete all exceptions for this series
+      await supabase
+        .from('recurrence_exceptions')
+        .delete()
+        .eq('series_id', seriesId)
+        .eq('series_type', seriesType);
+
+      // Then delete the series itself
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('id', seriesId);
+
+      if (error) throw error;
+
+      await fetchSeries(); // Refresh data
+      
+      toast({
+        title: 'Success',
+        description: `${seriesType === 'task' ? 'Task' : 'Event'} series deleted successfully`,
+      });
+    } catch (error) {
+      console.error('Error deleting series:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete series',
+        variant: 'destructive'
+      });
+      throw error;
+    }
+  };
+
+  // Get series by ID
+  const getSeriesById = (seriesId: string, seriesType: 'task' | 'event') => {
+    if (seriesType === 'task') {
+      return taskSeries.find(s => s.id === seriesId);
+    } else {
+      return eventSeries.find(s => s.id === seriesId);
+    }
+  };
+
   return {
     taskSeries,
     eventSeries,
@@ -363,6 +409,8 @@ export const useRecurringSeries = (familyId?: string) => {
     createEventSeries,
     createException,
     updateSeries,
-    splitSeries
+    splitSeries,
+    deleteSeries,
+    getSeriesById
   };
 };
