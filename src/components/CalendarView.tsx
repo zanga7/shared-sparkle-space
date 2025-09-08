@@ -156,7 +156,7 @@ export const CalendarView = ({
     }
   }, [currentDate, viewMode]);
 
-  const days = viewMode === 'today' ? [new Date()] : eachDayOfInterval(dateRange);
+  const days = viewMode === 'today' ? [currentDate] : eachDayOfInterval(dateRange);
 
   // Filter tasks based on selected filters
   const filteredTasks = useMemo(() => {
