@@ -395,12 +395,16 @@ const ColumnBasedDashboard = () => {
     <ChildAuthProvider>
       <div className="min-h-screen bg-background w-full">
         <NavigationHeader 
-          profile={profile}
           familyMembers={familyMembers}
-          dashboardMode={dashboardMode}
+          selectedMember={selectedMemberFilter}
+          onMemberSelect={handleMemberSelect}
+          onSettingsClick={() => {}}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
           activeMemberId={activeMemberId}
           onMemberSwitch={handleMemberSwitch}
-          onSignOut={signOut}
+          dashboardMode={dashboardMode}
+          viewMode={viewMode}
         />
 
         <div className="container mx-auto p-4 space-y-6">
@@ -457,7 +461,7 @@ const ColumnBasedDashboard = () => {
                       <Card key={member.id} className="p-4">
                         <CardHeader>
                           <CardTitle className="flex items-center gap-2">
-                            <UserAvatar profile={member} size="sm" />
+                            <UserAvatar name={member.display_name} color={member.color} size="sm" />
                             {member.display_name}
                           </CardTitle>
                         </CardHeader>
@@ -472,13 +476,12 @@ const ColumnBasedDashboard = () => {
                                 <EnhancedTaskItem
                                   key={task.id}
                                   task={task}
+                                  allTasks={filteredTasks}
                                   familyMembers={familyMembers}
-                                  profile={profile}
-                                  onComplete={() => handleTaskToggle(task)}
+                                  onToggle={() => handleTaskToggle(task)}
                                   onEdit={profile.role === 'parent' ? () => setEditingTask(task) : undefined}
                                   onDelete={profile.role === 'parent' ? () => setDeletingTask(task) : undefined}
-                                  dashboardMode={dashboardMode}
-                                  activeMemberId={activeMemberId}
+                                  showActions={true}
                                 />
                               ))
                             }
@@ -551,7 +554,7 @@ const ColumnBasedDashboard = () => {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteTask} variant="destructive">
+              <AlertDialogAction onClick={handleDeleteTask} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 Delete
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -562,7 +565,7 @@ const ColumnBasedDashboard = () => {
         <MemberPinDialog
           open={pinDialogOpen}
           onOpenChange={setPinDialogOpen}
-          memberId={pendingAction?.requiredMemberId || ''}
+          member={familyMembers.find(m => m.id === (pendingAction?.requiredMemberId || '')) || familyMembers[0]}
           onSuccess={() => {
             setPinDialogOpen(false);
             if (pendingAction?.onSuccess) {
@@ -570,18 +573,21 @@ const ColumnBasedDashboard = () => {
             }
             setPendingAction(null);
           }}
-          onCancel={() => {
-            setPinDialogOpen(false);
-            setPendingAction(null);
+          onAuthenticate={async (pin: string) => {
+            const memberId = pendingAction?.requiredMemberId || '';
+            return await authenticateMemberPin(memberId, pin);
           }}
+          isAuthenticating={isAuthenticating}
+          action="complete task"
         />
 
         <MemberSwitchDialog
           open={switchDialogOpen}
           onOpenChange={setSwitchDialogOpen}
-          familyMembers={familyMembers}
-          requiredMemberId={pendingAction?.requiredMemberId}
-          onMemberSelect={(memberId) => {
+          members={familyMembers}
+          currentMemberId={activeMemberId}
+          requiredMemberId={pendingAction?.requiredMemberId || ''}
+          onSwitch={(memberId, member) => {
             setSwitchDialogOpen(false);
             if (memberId && pendingAction?.onSuccess) {
               handleMemberSwitch(memberId);
@@ -589,17 +595,15 @@ const ColumnBasedDashboard = () => {
             }
             setPendingAction(null);
           }}
-          onCancel={() => {
-            setSwitchDialogOpen(false);
-            setPendingAction(null);
-          }}
+          action="complete task"
         />
 
         <MemberSelectorDialog
           open={showMemberSelector}
           onOpenChange={setShowMemberSelector}
-          familyMembers={familyMembers}
-          onMemberSelect={(memberId) => {
+          members={familyMembers}
+          currentMemberId={activeMemberId}
+          onSelect={(memberId, member) => {
             setShowMemberSelector(false);
             if (memberId) {
               handleMemberSwitch(memberId);
