@@ -717,7 +717,7 @@ export const CalendarView = ({
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full border-0">
       <CardHeader>
         <div className="flex flex-col gap-4">
           {/* Header Row */}
