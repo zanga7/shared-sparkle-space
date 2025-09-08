@@ -23,6 +23,7 @@ import { EditScopeDialog, EditScope } from '@/components/recurrence/EditScopeDia
 import { Badge } from '@/components/ui/badge';
 import { Repeat } from 'lucide-react';
 import { useRecurringSeries } from '@/hooks/useRecurringSeries';
+import { format } from 'date-fns';
 
 interface EventDialogProps {
   open: boolean;
@@ -56,17 +57,20 @@ export const EventDialog = ({
   const [location, setLocation] = useState('');
   const [startDate, setStartDate] = useState<Date>(defaultDate || selectedDate || new Date());
   const [endDate, setEndDate] = useState<Date>(defaultDate || selectedDate || new Date());
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('10:00');
+  const [isAllDay, setIsAllDay] = useState(false);
   const [assignees, setAssignees] = useState<string[]>([]);
   const [recurrenceOptions, setRecurrenceOptions] = useState<EventRecurrenceOptions>({
     enabled: false,
-    frequency: 'daily',
-    interval: 1,
-    daysOfWeek: [],
-    endDate: null,
-    count: null
+    rule: {
+      frequency: 'daily',
+      interval: 1,
+      endType: 'never'
+    }
   });
   const [showEditScope, setShowEditScope] = useState(false);
-  const [editScope, setEditScope] = useState<EditScope>('this');
+  const [editScope, setEditScope] = useState<EditScope>('this_only');
 
   const { toast } = useToast();
   const { createEventSeries, updateSeries, createException, splitSeries } = useRecurringSeries(familyId || '');
@@ -76,18 +80,25 @@ export const EventDialog = ({
       setTitle(editingEvent.title || '');
       setDescription(editingEvent.description || '');
       setLocation(editingEvent.location || '');
-      setStartDate(editingEvent.start_date ? new Date(editingEvent.start_date) : new Date());
-      setEndDate(editingEvent.end_date ? new Date(editingEvent.end_date) : new Date());
-      setAssignees(editingEvent.attendees || []);
       
-      if (editingEvent.series_id) {
+      const eventStartDate = editingEvent.start_date ? new Date(editingEvent.start_date) : new Date();
+      const eventEndDate = editingEvent.end_date ? new Date(editingEvent.end_date) : new Date();
+      
+      setStartDate(eventStartDate);
+      setEndDate(eventEndDate);
+      setStartTime(format(eventStartDate, 'HH:mm'));
+      setEndTime(format(eventEndDate, 'HH:mm'));
+      setIsAllDay(editingEvent.is_all_day || false);
+      setAssignees(editingEvent.attendees?.map(a => a.profile_id) || []);
+      
+      if (editingEvent.recurrence_options?.enabled) {
         setRecurrenceOptions({
           enabled: true,
-          frequency: editingEvent.recurrence_rule?.frequency || 'daily',
-          interval: editingEvent.recurrence_rule?.interval || 1,
-          daysOfWeek: editingEvent.recurrence_rule?.daysOfWeek || [],
-          endDate: editingEvent.recurrence_rule?.endDate ? new Date(editingEvent.recurrence_rule.endDate) : null,
-          count: editingEvent.recurrence_rule?.count || null
+          rule: editingEvent.recurrence_options.rule || {
+            frequency: 'daily',
+            interval: 1,
+            endType: 'never'
+          }
         });
       }
     } else {
@@ -96,18 +107,53 @@ export const EventDialog = ({
       setLocation('');
       setStartDate(defaultDate || selectedDate || new Date());
       setEndDate(defaultDate || selectedDate || new Date());
+      setStartTime('09:00');
+      setEndTime('10:00');
+      setIsAllDay(false);
       setAssignees(defaultMember ? [defaultMember] : []);
       setRecurrenceOptions({
         enabled: false,
-        frequency: 'daily',
-        interval: 1,
-        daysOfWeek: [],
-        endDate: null,
-        count: null
+        rule: {
+          frequency: 'daily',
+          interval: 1,
+          endType: 'never'
+        }
       });
     }
   }, [editingEvent, selectedDate, defaultMember, defaultDate]);
 
+  // Update start and end dates when time changes
+  const handleStartDateChange = (date: Date) => {
+    setStartDate(date);
+    // If end date is before start date, adjust it
+    if (endDate < date) {
+      setEndDate(date);
+    }
+  };
+
+  const handleEndDateChange = (date: Date) => {
+    setEndDate(date);
+  };
+
+  const handleStartTimeChange = (time: string) => {
+    setStartTime(time);
+    // Auto-adjust end time to be 1 hour later if it's before start time
+    const [startHour, startMin] = time.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    
+    if (endHour < startHour || (endHour === startHour && endMin <= startMin)) {
+      const newEndHour = startHour + 1;
+      setEndTime(`${newEndHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}`);
+    }
+  };
+
+  const handleEndTimeChange = (time: string) => {
+    setEndTime(time);
+  };
+
+  const handleAllDayChange = (allDay: boolean) => {
+    setIsAllDay(allDay);
+  };
   const handleSave = async () => {
     if (!title.trim()) {
       toast({
@@ -131,23 +177,68 @@ export const EventDialog = ({
       title: title.trim(),
       description: description.trim(),
       location: location.trim(),
-      start_date: startDate.toISOString(),
-      end_date: endDate.toISOString(),
+      start_date: isAllDay 
+        ? startDate.toISOString()
+        : new Date(`${format(startDate, 'yyyy-MM-dd')}T${startTime}`).toISOString(),
+      end_date: isAllDay
+        ? endDate.toISOString()
+        : new Date(`${format(endDate, 'yyyy-MM-dd')}T${endTime}`).toISOString(),
+      is_all_day: isAllDay,
       attendees: assignees,
       family_id: familyId,
+      recurrence_options: recurrenceOptions.enabled ? recurrenceOptions : null
     };
 
     try {
-      if (editingEvent?.series_id && recurrenceOptions.enabled) {
-        if (editScope === 'this') {
-          await createException(editingEvent.series_id, startDate, 'override', eventData);
-        } else if (editScope === 'future') {
-          await splitSeries(editingEvent.series_id, startDate, eventData, recurrenceOptions);
+      if (editingEvent?.isVirtual && editingEvent?.series_id) {
+        if (editScope === 'this_only') {
+          await createException({
+            series_id: editingEvent.series_id,
+            series_type: 'event',
+            exception_date: editingEvent.occurrence_date || format(startDate, 'yyyy-MM-dd'),
+            exception_type: 'override',
+            override_data: eventData,
+            created_by: editingEvent.created_by
+          });
+        } else if (editScope === 'this_and_following') {
+          await splitSeries(editingEvent.series_id, 'event', startDate, {
+            title: eventData.title,
+            description: eventData.description,
+            location: eventData.location,
+            duration_minutes: Math.round((new Date(eventData.end_date).getTime() - new Date(eventData.start_date).getTime()) / (1000 * 60)),
+            is_all_day: eventData.is_all_day,
+            attendee_profiles: eventData.attendees,
+            family_id: eventData.family_id,
+            created_by: editingEvent.created_by,
+            recurrence_rule: recurrenceOptions.rule,
+            series_start: eventData.start_date,
+            is_active: true
+          });
         } else {
-          await updateSeries(editingEvent.series_id, eventData, recurrenceOptions);
+          await updateSeries(editingEvent.series_id, 'event', {
+            title: eventData.title,
+            description: eventData.description,
+            location: eventData.location,
+            duration_minutes: Math.round((new Date(eventData.end_date).getTime() - new Date(eventData.start_date).getTime()) / (1000 * 60)),
+            is_all_day: eventData.is_all_day,
+            attendee_profiles: eventData.attendees
+          });
         }
       } else if (recurrenceOptions.enabled) {
-        await createEventSeries(eventData, recurrenceOptions);
+        const seriesData = {
+          title: eventData.title,
+          description: eventData.description,
+          location: eventData.location,
+          duration_minutes: Math.round((new Date(eventData.end_date).getTime() - new Date(eventData.start_date).getTime()) / (1000 * 60)),
+          is_all_day: eventData.is_all_day,
+          attendee_profiles: eventData.attendees,
+          family_id: eventData.family_id,
+          created_by: editingEvent?.created_by || '',
+          recurrence_rule: recurrenceOptions.rule,
+          series_start: eventData.start_date,
+          is_active: true
+        };
+        await createEventSeries(seriesData);
       } else {
         onSave?.(eventData);
       }
@@ -175,7 +266,7 @@ export const EventDialog = ({
   };
 
   const handleSubmit = () => {
-    if (editingEvent?.series_id && recurrenceOptions.enabled) {
+    if (editingEvent?.isVirtual && editingEvent?.series_id) {
       setShowEditScope(true);
     } else {
       handleSave();
@@ -235,18 +326,18 @@ export const EventDialog = ({
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Start Date & Time</Label>
+              <div className="col-span-2">
                 <DateTimePicker
-                  date={startDate}
-                  setDate={setStartDate}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>End Date & Time</Label>
-                <DateTimePicker
-                  date={endDate}
-                  setDate={setEndDate}
+                  startDate={startDate}
+                  endDate={endDate}
+                  startTime={startTime}
+                  endTime={endTime}
+                  isAllDay={isAllDay}
+                  onStartDateChange={handleStartDateChange}
+                  onEndDateChange={handleEndDateChange}
+                  onStartTimeChange={handleStartTimeChange}
+                  onEndTimeChange={handleEndTimeChange}
+                  onAllDayChange={handleAllDayChange}
                 />
               </div>
             </div>
@@ -258,16 +349,23 @@ export const EventDialog = ({
               </Label>
               <MultiSelectAssignees
                 familyMembers={familyMembers}
-                selectedMembers={assignees}
-                onSelectionChange={setAssignees}
+                selectedAssignees={assignees}
+                onAssigneesChange={setAssignees}
                 placeholder="Select attendees"
               />
             </div>
 
-            <UnifiedRecurrencePanel
-              options={recurrenceOptions}
-              onChange={setRecurrenceOptions}
-            />
+            {!editingEvent?.isVirtual && (
+              <UnifiedRecurrencePanel
+                type="event"
+                enabled={recurrenceOptions.enabled}
+                onEnabledChange={(enabled) => setRecurrenceOptions(prev => ({ ...prev, enabled }))}
+                startDate={startDate}
+                startTime={startTime}
+                eventOptions={recurrenceOptions}
+                onEventOptionsChange={setRecurrenceOptions}
+              />
+            )}
 
             <div className="flex justify-between pt-4">
               <div>
@@ -300,6 +398,8 @@ export const EventDialog = ({
         open={showEditScope}
         onOpenChange={setShowEditScope}
         onScopeSelect={handleEditScopeSelect}
+        itemType="event"
+        occurrenceDate={editingEvent?.start_date ? new Date(editingEvent.start_date) : undefined}
       />
     </>
   );

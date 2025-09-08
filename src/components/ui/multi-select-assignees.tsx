@@ -26,23 +26,26 @@ export function MultiSelectAssignees({
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
 
+  // Ensure selectedAssignees is always an array
+  const safeSelectedAssignees = selectedAssignees || [];
+
   const selectedMembers = familyMembers.filter(member => 
-    selectedAssignees.includes(member.id)
+    safeSelectedAssignees.includes(member.id)
   );
 
   const availableMembers = familyMembers.filter(member => 
-    !selectedAssignees.includes(member.id)
+    !safeSelectedAssignees.includes(member.id)
   );
 
   const toggleAssignee = (profileId: string) => {
-    const newAssignees = selectedAssignees.includes(profileId)
-      ? selectedAssignees.filter(id => id !== profileId)
-      : [...selectedAssignees, profileId];
+    const newAssignees = safeSelectedAssignees.includes(profileId)
+      ? safeSelectedAssignees.filter(id => id !== profileId)
+      : [...safeSelectedAssignees, profileId];
     onAssigneesChange(newAssignees);
   };
 
   const removeAssignee = (profileId: string) => {
-    onAssigneesChange(selectedAssignees.filter(id => id !== profileId));
+    onAssigneesChange(safeSelectedAssignees.filter(id => id !== profileId));
   };
 
   const getInitials = (name: string) => {
@@ -163,7 +166,7 @@ export function MultiSelectAssignees({
                   <Check
                     className={cn(
                       "h-4 w-4",
-                      selectedAssignees.includes(member.id) ? "opacity-100" : "opacity-0"
+                      safeSelectedAssignees.includes(member.id) ? "opacity-100" : "opacity-0"
                     )}
                   />
                 </CommandItem>

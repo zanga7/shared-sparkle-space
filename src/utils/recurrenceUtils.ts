@@ -222,6 +222,11 @@ export const generateSummaryText = (
   startDate: Date,
   taskOptions?: TaskRecurrenceOptions
 ): string => {
+  // Validate startDate
+  if (!startDate || isNaN(startDate.getTime())) {
+    return 'Invalid date provided';
+  }
+
   let frequency = '';
   
   switch (rule.frequency) {
@@ -264,7 +269,10 @@ export const generateSummaryText = (
   // Add end condition
   let endCondition = '';
   if (rule.endType === 'on_date' && rule.endDate) {
-    endCondition = `, ends ${format(new Date(rule.endDate), 'MMM d, yyyy')}`;
+    const endDate = new Date(rule.endDate);
+    if (!isNaN(endDate.getTime())) {
+      endCondition = `, ends ${format(endDate, 'MMM d, yyyy')}`;
+    }
   } else if (rule.endType === 'after_count' && rule.endCount) {
     endCondition = `, ends after ${rule.endCount} times`;
   }

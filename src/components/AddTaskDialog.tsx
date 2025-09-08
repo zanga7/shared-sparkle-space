@@ -473,7 +473,11 @@ export const AddTaskDialog = ({
                 <Calendar
                   mode="single"
                   selected={formData.due_date}
-                  onSelect={(date) => setFormData({ ...formData, due_date: date || null })}
+                  onSelect={(date) => {
+                    // Validate the date before setting it
+                    const validDate = date && !isNaN(date.getTime()) ? date : null;
+                    setFormData({ ...formData, due_date: validDate });
+                  }}
                   initialFocus
                   className="p-3 pointer-events-auto"
                 />
@@ -488,7 +492,7 @@ export const AddTaskDialog = ({
               setRecurrenceEnabled(enabled);
               setTaskRecurrenceOptions(prev => ({ ...prev, enabled }));
             }}
-            startDate={formData.due_date || new Date()}
+            startDate={formData.due_date && !isNaN(formData.due_date.getTime()) ? formData.due_date : new Date()}
             type="task"
             taskOptions={taskRecurrenceOptions}
             onTaskOptionsChange={setTaskRecurrenceOptions}
