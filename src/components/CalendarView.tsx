@@ -113,8 +113,11 @@ export const CalendarView = ({
   
   // Expose refresh function globally for EventDialog to call
   React.useEffect(() => {
-    (window as any).refreshCalendar = () => {
-      refreshEvents();
+    (window as any).refreshCalendar = async () => {
+      console.log('Calendar refresh triggered');
+      await refreshEvents();
+      // Force a re-render by updating state
+      setCurrentDate(prev => new Date(prev));
     };
     return () => {
       delete (window as any).refreshCalendar;
@@ -206,6 +209,8 @@ export const CalendarView = ({
     
     // Generate virtual events for the current view range
     const allEvents = generateVirtualEvents ? generateVirtualEvents(dateRange.start, dateRange.end) : events;
+    
+    console.log('Generating events for calendar view:', allEvents.length, 'events found');
     
     allEvents.forEach((event: CalendarEvent) => {
       if (event.start_date) {

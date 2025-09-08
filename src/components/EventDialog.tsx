@@ -274,6 +274,14 @@ export const EventDialog = ({
         onSave?.(eventData);
       }
 
+      // Trigger calendar refresh after any event operation
+      if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
+        setTimeout(() => {
+          console.log('EventDialog triggering calendar refresh');
+          (window as any).refreshCalendar();
+        }, 200);
+      }
+
       toast({
         title: "Success",
         description: editingEvent ? "Event updated successfully" : "Event created successfully",

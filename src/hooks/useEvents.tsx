@@ -172,6 +172,8 @@ export const useEvents = (familyId?: string) => {
     attendees?: string[];
     recurrence_options?: any;
   }, creatorProfileId?: string) => {
+    console.log('Creating event:', eventData.title, 'for family:', familyId);
+    
     if (!familyId) {
       toast({
         title: 'Error',
@@ -213,6 +215,11 @@ export const useEvents = (familyId?: string) => {
         const series = await createEventSeries(seriesData);
         await fetchEvents(); // Refresh to include new virtual instances
         
+        // Trigger calendar refresh immediately
+        if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
+          setTimeout(() => (window as any).refreshCalendar(), 100);
+        }
+        
         toast({
           title: 'Success',
           description: 'Recurring event series created successfully',
@@ -234,7 +241,12 @@ export const useEvents = (familyId?: string) => {
           .select()
           .single();
 
-        if (eventError) throw eventError;
+        if (eventError) {
+          console.error('Event creation error:', eventError);
+          throw eventError;
+        }
+        
+        console.log('Event created successfully:', event.id);
 
         // Add attendees if provided
         if (attendees && attendees.length > 0) {
@@ -255,6 +267,12 @@ export const useEvents = (familyId?: string) => {
         }
 
         await fetchEvents();
+        
+        // Trigger calendar refresh immediately
+        if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
+          setTimeout(() => (window as any).refreshCalendar(), 100);
+        }
+        
         toast({
           title: 'Success',
           description: 'Event created successfully',
