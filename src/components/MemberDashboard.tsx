@@ -302,17 +302,20 @@ export const MemberDashboard = ({
         familyId={profile.family_id}
         defaultMember={member.id}
         currentProfileId={profile.id}
-        currentProfileId={profile.id}
         editingEvent={editingEvent}
         onSave={async (eventData) => {
           try {
             if (editingEvent) {
               await updateEvent(editingEvent.id, eventData, eventData.attendees);
             } else {
-             await createEvent(eventData, profile.id);
+              await createEvent(eventData, profile.id);
             }
             setIsEventDialogOpen(false);
             setEditingEvent(null);
+            // Trigger calendar refresh
+            if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
+              (window as any).refreshCalendar();
+            }
           } catch (error) {
             console.error('Failed to save event:', error);
           }
@@ -322,6 +325,10 @@ export const MemberDashboard = ({
             await deleteEvent(editingEvent.id);
             setIsEventDialogOpen(false);
             setEditingEvent(null);
+            // Trigger calendar refresh
+            if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
+              (window as any).refreshCalendar();
+            }
           } catch (error) {
             console.error('Failed to delete event:', error);
           }
