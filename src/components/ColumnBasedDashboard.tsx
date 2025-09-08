@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { getMemberColorClasses } from '@/lib/utils';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
@@ -428,27 +428,8 @@ const ColumnBasedDashboard = () => {
               );
             })()
           ) : (
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-              <TabsList className="w-full justify-center">
-                <TabsTrigger value="columns" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Tasks
-                </TabsTrigger>
-                <TabsTrigger value="calendar" className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Calendar
-                </TabsTrigger>
-                <TabsTrigger value="lists" className="flex items-center gap-2">
-                  <List className="h-4 w-4" />
-                  Lists
-                </TabsTrigger>
-                <TabsTrigger value="rewards" className="flex items-center gap-2">
-                  <Gift className="h-4 w-4" />
-                  Rewards
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="columns" className="space-y-6">
+            <div className="space-y-6">
+              {activeTab === 'columns' && (
                 <div className="flex flex-col space-y-4">
                   <div className="flex justify-between items-center">
                     <h1 className="text-2xl font-bold">Family Tasks</h1>
@@ -491,9 +472,9 @@ const ColumnBasedDashboard = () => {
                     ))}
                   </div>
                 </div>
-              </TabsContent>
+              )}
 
-              <TabsContent value="calendar">
+              {activeTab === 'calendar' && (
                 <CalendarView
                   tasks={filteredTasks}
                   familyMembers={familyMembers}
@@ -505,16 +486,16 @@ const ColumnBasedDashboard = () => {
                   activeMemberId={activeMemberId}
                   onTaskComplete={completeTask}
                 />
-              </TabsContent>
+              )}
 
-              <TabsContent value="lists">
+              {activeTab === 'lists' && (
                 <Lists />
-              </TabsContent>
+              )}
 
-              <TabsContent value="rewards">
+              {activeTab === 'rewards' && (
                 <RewardsGallery />
-              </TabsContent>
-            </Tabs>
+              )}
+            </div>
           )}
         </div>
 
