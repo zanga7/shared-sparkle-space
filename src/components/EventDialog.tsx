@@ -78,37 +78,69 @@ export const EventDialog = ({
   const { toast } = useToast();
   const { createEventSeries, updateSeries, createException, splitSeries } = useRecurringSeries(familyId || '');
 
-  // Effect to get current user's profile ID as fallback
+  // Effect to get current user's profile ID as fallback and debug auth status
   useEffect(() => {
     const getCurrentUserProfile = async () => {
+      console.log('EventDialog - currentProfileId provided:', currentProfileId);
+      
       if (currentProfileId) {
         setCurrentUserProfileId(currentProfileId);
         return;
       }
 
-      if (!familyId) return;
+      if (!familyId) {
+        console.log('EventDialog - No familyId provided');
+        return;
+      }
 
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('family_id', familyId)
-            .limit(1);
+        // Check authentication status
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        console.log('EventDialog - Current authenticated user:', user?.id, 'Error:', userError);
+        
+        if (!user) {
+          console.log('EventDialog - No authenticated user found');
+          toast({
+            title: "Authentication Required",
+            description: "Please sign in to create events.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Check if user has a profile
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, display_name, family_id')
+          .eq('user_id', user.id)
+          .eq('family_id', familyId)
+          .limit(1);
+        
+        console.log('EventDialog - Profile query result:', profiles, 'Error:', profileError);
           
-          if (profiles && profiles.length > 0) {
-            setCurrentUserProfileId(profiles[0].id);
-          }
+        if (profiles && profiles.length > 0) {
+          setCurrentUserProfileId(profiles[0].id);
+          console.log('EventDialog - Set currentUserProfileId to:', profiles[0].id);
+        } else {
+          console.log('EventDialog - No profile found for user in this family');
+          toast({
+            title: "Profile Not Found",
+            description: "No profile found for your account in this family.",
+            variant: "destructive",
+          });
         }
       } catch (error) {
-        console.error('Error getting current user profile:', error);
+        console.error('EventDialog - Error getting current user profile:', error);
+        toast({
+          title: "Error",
+          description: "Failed to verify user authentication.",
+          variant: "destructive",
+        });
       }
     };
 
     getCurrentUserProfile();
-  }, [currentProfileId, familyId]);
+  }, [currentProfileId, familyId, toast]);
 
   useEffect(() => {
     if (editingEvent) {

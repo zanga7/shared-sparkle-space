@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useEvents } from '@/hooks/useEvents';
 import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { EventDialog } from '@/components/EventDialog';
+import { AuthDebugPanel } from '@/components/AuthDebugPanel';
 import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
 import { CalendarEvent } from '@/types/event';
 interface CalendarViewProps {
@@ -717,13 +718,21 @@ export const CalendarView = ({
               </Select>
             </div>
 
-            {/* Debug Panel */}
+          {/* Auth Debug Panel (development only) */}
+          {process.env.NODE_ENV === 'development' && <AuthDebugPanel />}
+
+          {/* Debug Panel */}
             {showDebugInfo && process.env.NODE_ENV === 'development' && (
               <Card className="bg-blue-50 border-blue-200">
                 <CardContent className="p-4">
                   <div className="text-sm space-y-2">
                     <div><strong>Date Range:</strong> {format(dateRange.start, 'MMM d')} - {format(dateRange.end, 'MMM d')}</div>
                     <div><strong>Total Events:</strong> {generateVirtualEvents ? generateVirtualEvents(dateRange.start, dateRange.end).length : events.length}</div>
+                    <div><strong>Family ID:</strong> {familyId || 'Not set'}</div>
+                    <div><strong>Dashboard Mode:</strong> {dashboardMode ? 'Yes' : 'No'}</div>
+                    <div><strong>Active Member ID:</strong> {activeMemberId || 'Not set'}</div>
+                    <div><strong>Profile ID:</strong> {profile?.id || 'Not set'}</div>
+                    <div><strong>Profile Name:</strong> {profile?.display_name || 'Not set'}</div>
                     {viewMode === 'today' && (
                       <div>
                         <strong>Today's Events:</strong> {eventsByDate[format(currentDate, 'yyyy-MM-dd')]?.length || 0}
@@ -985,6 +994,9 @@ export const CalendarView = ({
       try {
         const currentProfileId = activeMemberId || profile?.id;
         console.log('CalendarView onSave - using profile ID:', currentProfileId);
+        console.log('CalendarView onSave - familyId:', familyId);
+        console.log('CalendarView onSave - profile object:', profile);
+        console.log('CalendarView onSave - activeMemberId:', activeMemberId);
         if (!currentProfileId) {
           console.error('No profile ID available for event creation');
           toast({
