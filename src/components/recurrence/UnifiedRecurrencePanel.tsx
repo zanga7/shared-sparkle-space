@@ -73,9 +73,11 @@ export const UnifiedRecurrencePanel = ({
   });
 
   // Generate preview whenever rule changes
-  const [preview, setPreview] = useState<RecurrencePreviewType>(() => 
-    generateRecurrencePreview(startDate, currentRule, taskOptions, eventOptions)
-  );
+  const [preview, setPreview] = useState<RecurrencePreviewType>(() => {
+    // Validate startDate before generating preview
+    const validStartDate = startDate && !isNaN(startDate.getTime()) ? startDate : new Date();
+    return generateRecurrencePreview(validStartDate, currentRule, taskOptions, eventOptions);
+  });
 
   // Sync with external options changes (when editing existing events)
   useEffect(() => {
@@ -88,7 +90,9 @@ export const UnifiedRecurrencePanel = ({
 
   // Update preview when inputs change
   useEffect(() => {
-    const newPreview = generateRecurrencePreview(startDate, currentRule, taskOptions, eventOptions);
+    // Validate startDate before generating preview
+    const validStartDate = startDate && !isNaN(startDate.getTime()) ? startDate : new Date();
+    const newPreview = generateRecurrencePreview(validStartDate, currentRule, taskOptions, eventOptions);
     setPreview(newPreview);
   }, [startDate, currentRule, taskOptions, eventOptions]);
 
