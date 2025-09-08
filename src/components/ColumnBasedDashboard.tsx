@@ -407,7 +407,7 @@ const ColumnBasedDashboard = () => {
           viewMode={viewMode}
         />
 
-        <div className="container mx-auto p-4 space-y-6">
+        <div className="container mx-auto space-y-6">
           {dashboardMode && viewMode === 'member' && selectedMemberFilter ? (
             (() => {
               const member = familyMembers.find(m => m.id === selectedMemberFilter);
