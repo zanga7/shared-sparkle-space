@@ -140,8 +140,8 @@ export const CalendarView = ({
   const dateRange = useMemo(() => {
     if (viewMode === 'today') {
       return {
-        start: new Date(),
-        end: new Date()
+        start: currentDate, // Use the selected date, not just "today"
+        end: currentDate
       };
     } else if (viewMode === 'week') {
       return {
@@ -210,7 +210,14 @@ export const CalendarView = ({
     // Generate virtual events for the current view range
     const allEvents = generateVirtualEvents ? generateVirtualEvents(dateRange.start, dateRange.end) : events;
     
-    console.log('Generating events for calendar view:', allEvents.length, 'events found');
+    console.log(`CalendarView - Generating events for ${viewMode} view:`, {
+      totalEvents: allEvents.length,
+      dateRange: {
+        start: format(dateRange.start, 'yyyy-MM-dd'),
+        end: format(dateRange.end, 'yyyy-MM-dd')
+      },
+      eventTitles: allEvents.map(e => e.title)
+    });
     
     allEvents.forEach((event: CalendarEvent) => {
       if (event.start_date) {
@@ -239,13 +246,25 @@ export const CalendarView = ({
             originalEnd: endDate
           });
           
+          console.log(`Event "${event.title}" added to date ${dateKey}`, {
+            eventId: event.id,
+            attendees: event.attendees?.length || 0,
+            attendeeIds: event.attendees?.map((a: any) => a.profile_id)
+          });
+          
           currentDate.setDate(currentDate.getDate() + 1);
         }
       }
     });
     
+    console.log('Final eventsByDate grouping:', Object.keys(grouped).map(dateKey => ({
+      date: dateKey,
+      eventCount: grouped[dateKey].length,
+      eventTitles: grouped[dateKey].map(e => e.title)
+    })));
+    
     return grouped;
-  }, [events, generateVirtualEvents, dateRange]);
+  }, [events, generateVirtualEvents, dateRange, viewMode]);
 
   // Calculate analytics
   const analytics = useMemo(() => {
@@ -899,6 +918,15 @@ export const CalendarView = ({
                      // Show events if member is specifically assigned OR if no attendees are assigned (show for all)
                      const isEventForThisMember = !event.attendees || event.attendees.length === 0 || 
                        event.attendees?.some((a: any) => a.profile_id === member.id);
+                     
+                     console.log(`Event "${event.title}" for member ${member.display_name}:`, {
+                       eventId: event.id,
+                       hasAttendees: event.attendees?.length > 0,
+                       attendeeIds: event.attendees?.map((a: any) => a.profile_id),
+                       memberId: member.id,
+                       isForMember: isEventForThisMember
+                     });
+                     
                      return isEventForThisMember;
                    });
                   const memberColors = getMemberColors(member);
@@ -1209,6 +1237,19 @@ export const CalendarView = ({
               if (!familyId) return;
               
               try {
+                const currentProfileId = activeMemberId || profile?.id;
+                console.log('CalendarView onSave - using profile ID:', currentProfileId);
+                
+                if (!currentProfileId) {
+                  console.error('No profile ID available for event creation');
+                  toast({
+                    title: 'Error',
+                    description: 'Unable to determine event creator - please ensure you\'re logged in',
+                    variant: 'destructive',
+                  });
+                  return;
+                }
+                
                 if (editingEvent) {
                   // Update existing event
                   await updateEvent(editingEvent.id, {
@@ -1226,7 +1267,8 @@ export const CalendarView = ({
                     description: 'Event updated successfully',
                   });
                 } else {
-                  // Create new event
+                  // Create new event - MUST pass the currentProfileId
+                  console.log('Creating event from main calendar with creator:', currentProfileId);
                   const result = await createEvent({
                     title: eventData.title,
                     description: eventData.description,
@@ -1236,9 +1278,10 @@ export const CalendarView = ({
                     is_all_day: eventData.is_all_day,
                     attendees: eventData.attendees,
                     recurrence_options: eventData.recurrence_options
-                  });
+                  }, currentProfileId); // THIS WAS MISSING!
                   
                   if (result) {
+                    console.log('Event created successfully from main calendar');
                     toast({
                       title: 'Success',
                       description: 'Event created successfully',
@@ -1246,6 +1289,7 @@ export const CalendarView = ({
                   }
                 }
                 
+                console.log('Refreshing calendar after event save');
                 await refreshEvents();
                 setIsEventDialogOpen(false);
                 setSelectedEventDate(null);
@@ -1253,6 +1297,11 @@ export const CalendarView = ({
                 setEditingEvent(null);
               } catch (error) {
                 console.error('Error saving event:', error);
+                toast({
+                  title: 'Error',
+                  description: 'Failed to save event',
+                  variant: 'destructive',
+                });
               }
             }}
             onDelete={editingEvent ? async () => {
