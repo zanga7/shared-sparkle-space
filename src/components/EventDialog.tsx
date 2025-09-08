@@ -154,19 +154,19 @@ export const EventDialog = ({
     setIsAllDay(allDay);
   };
   const handleSave = async () => {
-    if (!title.trim()) {
+    if (!familyId || familyId.trim() === '') {
       toast({
         title: "Error",
-        description: "Please enter an event title",
+        description: "Family ID is required",
         variant: "destructive",
       });
       return;
     }
 
-    if (!familyId) {
+    if (!title.trim()) {
       toast({
         title: "Error",
-        description: "Family ID is required",
+        description: "Please enter an event title",
         variant: "destructive",
       });
       return;
