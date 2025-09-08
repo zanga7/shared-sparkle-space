@@ -915,23 +915,17 @@ export const CalendarView = ({
                     task.assignees?.some(a => a.profile_id === member.id)
                   );
                   const memberEvents = (eventsByDate[dateKey] || []).filter(event => {
-                     // Show events if member is specifically assigned OR if no attendees are assigned (show for all)
-                     const hasAttendees = event.attendees && event.attendees.length > 0;
-                     const isAssignedToMember = hasAttendees && event.attendees?.some((a: any) => a.profile_id === member.id);
-                     const showForAllMembers = !hasAttendees;
-                     const isEventForThisMember = showForAllMembers || isAssignedToMember;
-                     
+                     // In today view, show ALL events for each member to match member dashboard behavior
+                     // Events should appear in all member columns for better visibility
                      console.log(`Event "${event.title}" for member ${member.display_name}:`, {
                        eventId: event.id,
-                       hasAttendees,
+                       hasAttendees: event.attendees?.length > 0,
                        attendeeIds: event.attendees?.map((a: any) => a.profile_id) || [],
                        memberId: member.id,
-                       isAssignedToMember,
-                       showForAllMembers,
-                       isForMember: isEventForThisMember
+                       showingForAll: true
                      });
                      
-                     return isEventForThisMember;
+                     return true; // Show all events for all members in today view
                    });
                   const memberColors = getMemberColors(member);
 
