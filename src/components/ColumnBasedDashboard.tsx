@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -136,12 +136,19 @@ const ColumnBasedDashboard = () => {
     }
   };
 
+  const hasFetchedRef = useRef(false);
+  const isFetchingRef = useRef(false);
+
   useEffect(() => {
-    if (user && !profile) { // Only fetch if we don't have profile data
-      console.log('🔄 useEffect triggering fetchUserData');
-      fetchUserData();
+    if (user && !profile && !hasFetchedRef.current && !isFetchingRef.current) {
+      console.log('🔄 Initial data fetch triggered');
+      hasFetchedRef.current = true;
+      isFetchingRef.current = true;
+      fetchUserData().finally(() => {
+        isFetchingRef.current = false;
+      });
     }
-  }, [user, profile?.id]); // Add profile.id to dependency to prevent loops
+  }, [user]); // Remove profile?.id dependency to prevent loops
 
   const fetchUserData = async () => {
     try {
@@ -482,7 +489,28 @@ const ColumnBasedDashboard = () => {
         description: toastMessage,
       });
 
-      fetchUserData();
+      // Update local state instead of full refresh
+      setTasks(prevTasks => 
+        prevTasks.map(t => 
+          t.id === task.id 
+            ? { ...t, task_completions: [...(t.task_completions || []), { 
+                id: Date.now().toString(), 
+                completed_at: new Date().toISOString(), 
+                completed_by: profile.id 
+              }] }
+            : t
+        )
+      );
+      
+      // Update member points locally
+      setFamilyMembers(prevMembers =>
+        prevMembers.map(member => {
+          const recipient = pointRecipients.find(r => r.id === member.id);
+          return recipient 
+            ? { ...member, total_points: member.total_points + task.points }
+            : member;
+        })
+      );
     } catch (error) {
       console.error('Error completing task:', error);
       toast({
@@ -562,7 +590,24 @@ const ColumnBasedDashboard = () => {
         description: toastMessage,
       });
 
-      fetchUserData();
+      // Update local state instead of full refresh
+      setTasks(prevTasks => 
+        prevTasks.map(t => 
+          t.id === task.id 
+            ? { ...t, task_completions: [] }
+            : t
+        )
+      );
+      
+      // Update member points locally (subtract points)
+      setFamilyMembers(prevMembers =>
+        prevMembers.map(member => {
+          const wasRecipient = assignees.find(a => a.id === member.id);
+          return wasRecipient 
+            ? { ...member, total_points: Math.max(0, member.total_points - task.points) }
+            : member;
+        })
+      );
     } catch (error) {
       console.error('Error uncompleting task:', error);
       toast({
@@ -601,7 +646,8 @@ const ColumnBasedDashboard = () => {
       });
 
       setDeletingTask(null);
-      fetchUserData();
+      // Remove from local state instead of full refresh
+      setTasks(prevTasks => prevTasks.filter(t => t.id !== deletingTask.id));
     } catch (error) {
       console.error('Error deleting task:', error);
       toast({

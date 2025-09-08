@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import ColumnBasedDashboard from '@/components/ColumnBasedDashboard';
 import { AdminProvider } from '@/contexts/AdminContext';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -29,11 +30,13 @@ const Index = () => {
   }
 
   return (
-    <AdminProvider>
-      <div className="min-h-screen bg-background w-full">
-        <ColumnBasedDashboard />
-      </div>
-    </AdminProvider>
+    <ErrorBoundary>
+      <AdminProvider>
+        <div className="min-h-screen bg-background w-full">
+          <ColumnBasedDashboard />
+        </div>
+      </AdminProvider>
+    </ErrorBoundary>
   );
 };
 
