@@ -407,7 +407,7 @@ const ColumnBasedDashboard = () => {
           viewMode={viewMode}
         />
 
-        <div className="container mx-auto space-y-6">
+        <div className="w-full px-2 sm:px-4 lg:px-6 space-y-6">
           {dashboardMode && viewMode === 'member' && selectedMemberFilter ? (
             (() => {
               const member = familyMembers.find(m => m.id === selectedMemberFilter);
@@ -437,7 +437,7 @@ const ColumnBasedDashboard = () => {
                   </div>
                   
                   {/* Task columns would go here - simplified for cleanup */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {familyMembers.map(member => (
                       <Card key={member.id} className="p-4">
                         <CardHeader>

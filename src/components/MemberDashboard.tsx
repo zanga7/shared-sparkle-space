@@ -197,7 +197,7 @@ export const MemberDashboard = ({
 
   if (isMobile || window.innerWidth <= 1024) {
     return (
-      <div className="w-full mx-auto px-4">
+      <div className="w-full px-2 sm:px-4">
         {renderMemberHeader()}
         
         {/* Mobile & Tablet Carousel - Full Width */}
@@ -271,10 +271,10 @@ export const MemberDashboard = ({
 
   // Desktop Layout - Full Width
   return (
-    <div className="w-full mx-auto px-4">
+    <div className="w-full px-2 sm:px-4">
       {renderMemberHeader()}
       
-      <div className="grid grid-cols-4 gap-6 h-[calc(100vh-250px)]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 h-[calc(100vh-250px)]">
         {widgets.map((widget, index) => (
           <div key={index} className="min-h-0 h-full">
             {widget}

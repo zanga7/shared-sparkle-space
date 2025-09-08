@@ -375,8 +375,8 @@ const Lists = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center bg-background w-full">
+        <div className="text-center px-4">
           <div className="text-lg">Loading your lists...</div>
         </div>
       </div>
@@ -384,15 +384,15 @@ const Lists = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-background w-full px-2 sm:px-4 lg:px-6 py-4">
+      <div className="w-full">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Lists</h1>
-            <p className="text-muted-foreground">Manage your family shopping, camping, and to-do lists</p>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold">Lists</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Manage your family shopping, camping, and to-do lists</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col xs:flex-row gap-2">
             <Button 
               variant="outline" 
               onClick={() => setIsCategoryManagerOpen(true)} 
@@ -436,7 +436,7 @@ const Lists = () => {
         </Tabs>
 
         {/* Lists Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredLists.map((list) => (
             <CompactInlineListCard
               key={list.id}

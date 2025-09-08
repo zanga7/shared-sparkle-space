@@ -53,9 +53,9 @@ export function NavigationHeader({
 
   return (
     <header className="w-full border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="w-full px-2 sm:px-4 lg:px-6 h-16 flex items-center justify-between">
         {/* Main Navigation */}
-        <nav className="flex items-center space-x-1">
+        <nav className="flex items-center space-x-1 overflow-x-auto">
           {navigationItems.map((item) => {
             const IconComponent = item.icon;
             return (
@@ -65,21 +65,21 @@ export function NavigationHeader({
                 size="sm"
                 onClick={() => onTabChange(item.value)}
                 className={cn(
-                  "h-9 px-3 font-medium transition-colors",
-                  activeTab === item.value 
+                  "h-9 px-2 sm:px-3 font-medium transition-colors text-xs sm:text-sm whitespace-nowrap",
+                  activeTab === item.value
                     ? "bg-primary text-primary-foreground shadow-sm" 
                     : "text-muted-foreground hover:text-foreground hover:bg-accent"
                 )}
               >
-                <IconComponent className="mr-2 h-4 w-4" />
-                {item.label}
+                <IconComponent className="mr-1 sm:mr-2 h-4 w-4" />
+                <span className="hidden xs:inline">{item.label}</span>
               </Button>
             );
           })}
         </nav>
 
         {/* Member Management & Settings */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-1 sm:space-x-3 overflow-x-auto">
           {dashboardMode && activeMember && activeMember.require_pin_to_complete_tasks ? (
             <>
               {/* Dashboard Mode with PIN: Active Member + Member Switcher */}
@@ -98,7 +98,7 @@ export function NavigationHeader({
           ) : (
             <>
               {/* Member selection for dashboard views */}
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto">
                 {familyMembers.map((member) => (
                   <Button
                     key={member.id}
