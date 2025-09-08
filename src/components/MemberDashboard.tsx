@@ -301,6 +301,8 @@ export const MemberDashboard = ({
         familyMembers={familyMembers}
         familyId={profile.family_id}
         defaultMember={member.id}
+        currentProfileId={profile.id}
+        currentProfileId={profile.id}
         editingEvent={editingEvent}
         onSave={async (eventData) => {
           try {

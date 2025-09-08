@@ -36,6 +36,7 @@ interface EventDialogProps {
   onDelete?: () => void;
   editingEvent?: CalendarEvent | null;
   defaultDate?: Date;
+  currentProfileId?: string;
 }
 
 export const EventDialog = ({
@@ -49,7 +50,8 @@ export const EventDialog = ({
   onSave,
   onDelete,
   editingEvent,
-  defaultDate
+  defaultDate,
+  currentProfileId
 }: EventDialogProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -243,6 +245,17 @@ export const EventDialog = ({
           });
         }
       } else if (recurrenceOptions.enabled) {
+        // Validate we have a valid created_by UUID for new recurring events
+        const createdBy = editingEvent?.created_by || currentProfileId;
+        if (!createdBy || createdBy.trim() === '') {
+          toast({
+            title: "Error",
+            description: "Unable to determine event creator. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         const seriesData = {
           title: eventData.title,
           description: eventData.description,
@@ -251,7 +264,7 @@ export const EventDialog = ({
           is_all_day: eventData.is_all_day,
           attendee_profiles: eventData.attendees,
           family_id: eventData.family_id,
-          created_by: editingEvent?.created_by || '',
+          created_by: createdBy,
           recurrence_rule: recurrenceOptions.rule,
           series_start: eventData.start_date,
           is_active: true
