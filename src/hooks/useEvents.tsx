@@ -20,11 +20,11 @@ export const useEvents = (familyId?: string) => {
     const virtualEvents: CalendarEvent[] = [];
     const invalidEvents: CalendarEvent[] = [];
     
+    // Log only essential debugging info
     console.log('generateVirtualEvents called:', {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
+      startDate: format(startDate, 'yyyy-MM-dd'),
+      endDate: format(endDate, 'yyyy-MM-dd'),
       totalEvents: events.length,
-      eventTitles: events.map(e => e.title),
       eventSeries: eventSeries.length
     });
     
@@ -55,16 +55,16 @@ export const useEvents = (familyId?: string) => {
           return;
         }
         
-        console.log(`Checking event "${event.title}":`, {
-          eventStart: eventStart.toISOString(),
-          eventEnd: eventEnd.toISOString(),
-          overlaps: eventEnd >= startDate && eventStart <= endDate
-        });
-        
         // Include event if it overlaps with the date range
-        if (eventEnd >= startDate && eventStart <= endDate) {
+        // Normalize dates to local timezone for proper comparison
+        const normalizedStart = startOfDay(startDate);
+        const normalizedEnd = endOfDay(endDate);
+        
+        // Check for overlap: event ends after range start AND event starts before range end
+        const hasOverlap = eventEnd >= normalizedStart && eventStart <= normalizedEnd;
+        
+        if (hasOverlap) {
           virtualEvents.push(event);
-          console.log(`Added regular event: ${event.title}`);
         }
       } catch (error) {
         console.error(`Error processing event "${event.title}":`, error);
@@ -123,13 +123,12 @@ export const useEvents = (familyId?: string) => {
       });
     });
     
-    console.log('generateVirtualEvents returning:', {
-      totalVirtualEvents: virtualEvents.length,
-      virtualEventTitles: virtualEvents.map(e => e.title),
-      regularEventCount: virtualEvents.filter(e => !e.isVirtual).length,
-      seriesEventCount: virtualEvents.filter(e => e.isVirtual).length,
-      invalidEventCount: invalidEvents.length,
-      invalidEventTitles: invalidEvents.map(e => e.title)
+    // Log summary only
+    console.log('Events generated:', {
+      total: virtualEvents.length,
+      regular: virtualEvents.filter(e => !e.isVirtual).length,
+      series: virtualEvents.filter(e => e.isVirtual).length,
+      invalid: invalidEvents.length
     });
     
     // Report invalid events if any found

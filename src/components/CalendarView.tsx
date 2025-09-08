@@ -66,6 +66,7 @@ export const CalendarView = ({
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [pendingTaskCompletion, setPendingTaskCompletion] = useState<Task | null>(null);
   const [memberRequiringPin, setMemberRequiringPin] = useState<Profile | null>(null);
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
   const {
     toast
   } = useToast();
@@ -190,13 +191,10 @@ export const CalendarView = ({
 
     // Use generateVirtualEvents if available, otherwise fallback to regular events
     const allEvents = generateVirtualEvents ? generateVirtualEvents(dateRange.start, dateRange.end) : events;
-    console.log(`CalendarView - Generating events for ${viewMode} view:`, {
+    // Reduce logging to improve performance
+    console.log(`CalendarView ${viewMode} view:`, {
       totalEvents: allEvents.length,
-      dateRange: {
-        start: format(dateRange.start, 'yyyy-MM-dd'),
-        end: format(dateRange.end, 'yyyy-MM-dd')
-      },
-      eventTitles: allEvents.map(e => e.title)
+      dateRange: `${format(dateRange.start, 'MMM d')} - ${format(dateRange.end, 'MMM d')}`
     });
     allEvents.forEach((event: CalendarEvent) => {
       if (event.start_date) {
@@ -223,20 +221,17 @@ export const CalendarView = ({
             originalStart: startDate,
             originalEnd: endDate
           });
-          console.log(`Event "${event.title}" added to date ${dateKey}`, {
-            eventId: event.id,
-            attendees: event.attendees?.length || 0,
-            attendeeIds: event.attendees?.map((a: any) => a.profile_id)
-          });
+          // Reduce logging for performance
           currentDate.setDate(currentDate.getDate() + 1);
         }
       }
     });
-    console.log('Final eventsByDate grouping:', Object.keys(grouped).map(dateKey => ({
-      date: dateKey,
-      eventCount: grouped[dateKey].length,
-      eventTitles: grouped[dateKey].map(e => e.title)
-    })));
+    // Final summary for debugging
+    const eventCounts = Object.keys(grouped).reduce((acc, dateKey) => {
+      acc[dateKey] = grouped[dateKey].length;
+      return acc;
+    }, {} as Record<string, number>);
+    console.log('Events by date:', eventCounts);
     return grouped;
   }, [events, generateVirtualEvents, dateRange, viewMode]);
 
@@ -632,6 +627,13 @@ export const CalendarView = ({
               <Button variant="outline" size="sm" onClick={() => setShowAnalytics(!showAnalytics)}>
                 <BarChart3 className="h-4 w-4" />
               </Button>
+              
+              {/* Debug Toggle (development only) */}
+              {process.env.NODE_ENV === 'development' && (
+                <Button variant="outline" size="sm" onClick={() => setShowDebugInfo(!showDebugInfo)}>
+                  <Eye className="h-4 w-4" />
+                </Button>
+              )}
 
               {/* View Mode Toggle */}
               <div className="flex border rounded-md">
@@ -715,6 +717,29 @@ export const CalendarView = ({
               </Select>
             </div>
 
+            {/* Debug Panel */}
+            {showDebugInfo && process.env.NODE_ENV === 'development' && (
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="p-4">
+                  <div className="text-sm space-y-2">
+                    <div><strong>Date Range:</strong> {format(dateRange.start, 'MMM d')} - {format(dateRange.end, 'MMM d')}</div>
+                    <div><strong>Total Events:</strong> {generateVirtualEvents ? generateVirtualEvents(dateRange.start, dateRange.end).length : events.length}</div>
+                    {viewMode === 'today' && (
+                      <div>
+                        <strong>Today's Events:</strong> {eventsByDate[format(currentDate, 'yyyy-MM-dd')]?.length || 0}
+                        {eventsByDate[format(currentDate, 'yyyy-MM-dd')]?.map(e => (
+                          <div key={e.id} className="ml-4 text-xs">
+                            • {e.title} {e.attendees?.length ? `(${e.attendees.length} attendees)` : '(no attendees)'}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="text-xs text-blue-600">All events now show for all members in today view.</div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
             {/* Analytics */}
             {showAnalytics && <Card className="bg-muted/50">
                 <CardContent className="p-4">
@@ -780,21 +805,8 @@ export const CalendarView = ({
                 {familyMembers.map(member => {
               const dateKey = format(currentDate, 'yyyy-MM-dd');
               const memberTasks = (tasksByDate[dateKey] || []).filter(task => task.assigned_to === member.id || task.assignees?.some(a => a.profile_id === member.id));
-              const memberEvents = (eventsByDate[dateKey] || []).filter(event => {
-                // Match member dashboard logic: show events with no attendees OR events where member is assigned
-                const hasAttendees = event.attendees && event.attendees.length > 0;
-                const isAssignedToMember = hasAttendees && event.attendees.some((a: any) => a.profile_id === member.id);
-                const showForAll = !hasAttendees;
-                console.log(`Event "${event.title}" for member ${member.display_name}:`, {
-                  eventId: event.id,
-                  hasAttendees,
-                  attendeeIds: event.attendees?.map((a: any) => a.profile_id) || [],
-                  memberId: member.id,
-                  isAssigned: isAssignedToMember,
-                  showForAll
-                });
-                return showForAll || isAssignedToMember;
-              });
+              // Show ALL events for today view - don't filter by member assignment
+              const memberEvents = eventsByDate[dateKey] || [];
               const memberColors = getMemberColors(member);
               return <Droppable key={member.id} droppableId={member.id}>
                       {(provided, snapshot) => <Card className={cn("transition-colors border-2", memberColors.bgSoft, memberColors.border, snapshot.isDraggingOver && "ring-2 ring-primary/20")}>
