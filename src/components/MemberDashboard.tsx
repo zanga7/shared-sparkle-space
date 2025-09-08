@@ -246,7 +246,7 @@ export const MemberDashboard = ({
               if (editingEvent) {
                 await updateEvent(editingEvent.id, eventData, eventData.attendees);
               } else {
-                await createEvent(eventData);
+                await createEvent(eventData, profile.id);
               }
               setIsEventDialogOpen(false);
               setEditingEvent(null);
