@@ -23,7 +23,6 @@ import { EditScopeDialog, EditScope } from '@/components/recurrence/EditScopeDia
 import { Badge } from '@/components/ui/badge';
 import { Repeat } from 'lucide-react';
 import { useRecurringSeries } from '@/hooks/useRecurringSeries';
-import { format } from 'date-fns';
 
 interface EventDialogProps {
   open: boolean;
