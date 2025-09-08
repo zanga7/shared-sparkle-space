@@ -5,12 +5,14 @@ import { CalendarEvent } from '@/types/event';
 import { useRecurringSeries } from './useRecurringSeries';
 import { VirtualEventInstance } from '@/types/series';
 import { format, startOfDay, endOfDay } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth';
 
 
 export const useEvents = (familyId?: string) => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
   const { eventSeries, exceptions, generateSeriesInstances, createEventSeries, createException, updateSeries, splitSeries } = useRecurringSeries(familyId);
 
   // Generate virtual event instances from both regular events and series
@@ -186,7 +188,7 @@ export const useEvents = (familyId?: string) => {
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .eq('user_id', user?.id)
         .single();
 
       if (profileError || !profile) {
