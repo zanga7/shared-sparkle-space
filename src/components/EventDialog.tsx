@@ -179,6 +179,7 @@ export const EventDialog = ({
       if (editingEvent.isVirtual && editingEvent.series_id) {
         const series = getSeriesById(editingEvent.series_id, 'event');
         if (series) {
+          console.log('Loading series data for virtual event:', series);
           setSeriesData(series);
           setRecurrenceOptions({
             enabled: true,
@@ -381,10 +382,25 @@ export const EventDialog = ({
           
           // If we're editing the series, also update the recurrence rule
           if (showSeriesOptions && recurrenceOptions.enabled) {
+            console.log('Updating series recurrence rule:', recurrenceOptions.rule);
             updateData.recurrence_rule = recurrenceOptions.rule;
           }
           
-          await updateSeries(editingEvent.series_id, 'event', updateData);
+          const success = await updateSeries(editingEvent.series_id, 'event', updateData);
+          
+          if (success) {
+            // Clear series state to force fresh data loading
+            setSeriesData(null);
+            setShowSeriesOptions(false);
+            
+            toast({
+              title: "Success",
+              description: "Recurring event settings updated successfully",
+            });
+            
+            onOpenChange(false);
+            return;
+          }
         }
       } else if (recurrenceOptions.enabled) {
         // Validate we have a valid created_by UUID for new recurring events
@@ -530,6 +546,7 @@ export const EventDialog = ({
     setShowSeriesOptions(true);
     // Pre-populate form with series data
     if (seriesData) {
+      console.log('Pre-populating form with fresh series data:', seriesData);
       setTitle(seriesData.title);
       setDescription(seriesData.description || '');
       setLocation(seriesData.location || '');

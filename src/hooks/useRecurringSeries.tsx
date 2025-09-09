@@ -289,6 +289,8 @@ export const useRecurringSeries = (familyId?: string) => {
     updates: Partial<TaskSeries | EventSeries>
   ) => {
     try {
+      console.log('Updating series:', seriesId, 'with updates:', updates);
+      
       const table = seriesType === 'task' ? 'task_series' : 'event_series';
       const updateData = updates.recurrence_rule ? {
         ...updates,
@@ -302,7 +304,16 @@ export const useRecurringSeries = (familyId?: string) => {
 
       if (error) throw error;
 
+      console.log('Series updated successfully, refreshing data...');
       await fetchSeries(); // Refresh data
+      
+      // Trigger global calendar refresh after series update
+      if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
+        console.log('Triggering calendar refresh after series update');
+        setTimeout(() => (window as any).refreshCalendar(), 100);
+      }
+      
+      return true; // Indicate success
     } catch (error) {
       console.error('Error updating series:', error);
       toast({

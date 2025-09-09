@@ -491,13 +491,22 @@ export const useEvents = (familyId?: string) => {
 
   // Enhanced refresh function that also updates virtual instances
   const refreshEventsAndSeries = async () => {
+    console.log('Refreshing events and series data...');
     await fetchEvents();
     
     // Trigger calendar refresh if available
     if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
+      console.log('Triggering calendar refresh from useEvents');
       (window as any).refreshCalendar();
     }
   };
+
+  // Make refresh function available globally for series updates
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).refreshEvents = refreshEventsAndSeries;
+    }
+  }, []);
   useEffect(() => {
     fetchEvents();
   }, [familyId]);
