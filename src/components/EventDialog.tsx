@@ -216,7 +216,7 @@ export const EventDialog = ({
         }
       });
     }
-  }, [editingEvent, selectedDate, defaultMember, defaultDate, getSeriesById]);
+  }, [editingEvent, selectedDate, defaultMember, defaultDate]);
 
   // Update start and end dates when time changes
   const handleStartDateChange = (date: Date) => {
@@ -565,6 +565,7 @@ export const EventDialog = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Event title"
+                className="pointer-events-auto"
               />
             </div>
 
@@ -576,6 +577,7 @@ export const EventDialog = ({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Event description"
                 rows={3}
+                className="pointer-events-auto"
               />
             </div>
 
@@ -589,6 +591,7 @@ export const EventDialog = ({
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="Event location"
+                className="pointer-events-auto"
               />
             </div>
 
