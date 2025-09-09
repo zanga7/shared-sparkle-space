@@ -307,10 +307,10 @@ export const useRecurringSeries = (familyId?: string) => {
       console.log('Series updated successfully, refreshing data...');
       await fetchSeries(); // Refresh data
       
-      // Trigger global calendar refresh after series update
+      // Trigger global calendar refresh after series update - NO DELAY
       if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
-        console.log('Triggering calendar refresh after series update');
-        setTimeout(() => (window as any).refreshCalendar(), 100);
+        console.log('Triggering immediate calendar refresh after series update');
+        (window as any).refreshCalendar();
       }
       
       return true; // Indicate success

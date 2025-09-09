@@ -80,13 +80,18 @@ export const CalendarView = ({
     generateVirtualEvents
   } = useEvents(familyId);
 
-  // Expose refresh function globally for EventDialog to call
+  // Expose refresh function globally for EventDialog to call - SYNCHRONOUS
   React.useEffect(() => {
-    (window as any).refreshCalendar = async () => {
-      console.log('Calendar refresh triggered');
-      await refreshEvents();
-      // Force a re-render by updating state
-      setCurrentDate(prev => new Date(prev));
+    (window as any).refreshCalendar = () => {
+      console.log('Calendar refresh triggered - immediate synchronous update');
+      // Trigger immediate refresh without setTimeout delays
+      refreshEvents().then(() => {
+        console.log('Calendar events refreshed successfully');
+        // Force a re-render by updating state
+        setCurrentDate(prev => new Date(prev));
+      }).catch(error => {
+        console.error('Calendar refresh failed:', error);
+      });
     };
     return () => {
       delete (window as any).refreshCalendar;

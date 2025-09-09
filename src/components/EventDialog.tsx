@@ -88,6 +88,7 @@ export const EventDialog = ({
   const [showSeriesOptions, setShowSeriesOptions] = useState(false);
   const [seriesData, setSeriesData] = useState<any>(null);
   const [showDeleteSeriesDialog, setShowDeleteSeriesDialog] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [currentUserProfileId, setCurrentUserProfileId] = useState<string | null>(null);
 
@@ -197,6 +198,7 @@ export const EventDialog = ({
         });
       }
     } else {
+      // Reset form for new event
       setTitle('');
       setDescription('');
       setLocation('');
@@ -208,6 +210,7 @@ export const EventDialog = ({
       setAssignees(defaultMember ? [defaultMember] : []);
       setSeriesData(null);
       setShowSeriesOptions(false);
+      setIsLoading(false); // Reset loading state
       setRecurrenceOptions({
         enabled: false,
         rule: {
@@ -252,6 +255,9 @@ export const EventDialog = ({
     setIsAllDay(allDay);
   };
   const handleSave = async () => {
+    if (isLoading) return; // Prevent double submission
+    
+    setIsLoading(true);
     console.log('EventDialog handleSave called');
     console.log('Authentication status:', { user: !!user, session: !!session });
     console.log('familyId:', familyId);
@@ -380,6 +386,8 @@ export const EventDialog = ({
             attendee_profiles: eventData.attendees
           };
           
+          console.log('Updating series with attendees:', eventData.attendees);
+          
           // If we're editing the series, also update the recurrence rule
           if (showSeriesOptions && recurrenceOptions.enabled) {
             console.log('Updating series recurrence rule:', recurrenceOptions.rule);
@@ -392,6 +400,12 @@ export const EventDialog = ({
             // Clear series state to force fresh data loading
             setSeriesData(null);
             setShowSeriesOptions(false);
+            
+            // Trigger immediate calendar refresh
+            if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
+              console.log('EventDialog triggering immediate calendar refresh after series update');
+              (window as any).refreshCalendar();
+            }
             
             toast({
               title: "Success",
@@ -459,15 +473,22 @@ export const EventDialog = ({
         }
       } else {
         console.log('Creating single event with currentProfileId:', currentProfileId);
-        onSave?.(eventData);
+        console.log('Event data being saved:', eventData);
+        
+        // For single events, we need to handle this through the useEvents hook
+        if (onSave) {
+          onSave(eventData);
+        } else {
+          // Fallback: create directly if no onSave handler
+          const { createEvent } = useEvents(familyId);
+          await createEvent(eventData, currentProfileId || currentUserProfileId || '');
+        }
       }
 
-      // Trigger calendar refresh after any event operation
+      // Trigger immediate calendar refresh after any event operation - NO DELAY
       if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
-        setTimeout(() => {
-          console.log('EventDialog triggering calendar refresh');
-          (window as any).refreshCalendar();
-        }, 200);
+        console.log('EventDialog triggering immediate calendar refresh');
+        (window as any).refreshCalendar();
       }
 
       toast({
@@ -495,6 +516,8 @@ export const EventDialog = ({
         description: errorMessage,
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -770,8 +793,8 @@ export const EventDialog = ({
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleSubmit}>
-                  {showSeriesOptions ? 'Update Series' : editingEvent ? 'Update Event' : 'Create Event'}
+                <Button onClick={handleSubmit} disabled={isLoading}>
+                  {isLoading ? 'Saving...' : showSeriesOptions ? 'Update Series' : editingEvent ? 'Update Event' : 'Create Event'}
                 </Button>
               </div>
             </div>

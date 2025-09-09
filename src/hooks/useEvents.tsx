@@ -72,12 +72,25 @@ export const useEvents = (familyId?: string) => {
       }
     });
     
-    // Generate virtual instances from series
-    eventSeries.forEach(series => {
-      const instances = generateSeriesInstances(series, startDate, endDate);
+    // Generate virtual instances from series - ENHANCED LOGGING
+    console.log('Processing event series:', eventSeries.length, 'series found');
+    eventSeries.forEach((series, index) => {
+      console.log(`Processing series ${index + 1}:`, {
+        id: series.id,
+        title: series.title,
+        recurrence: series.recurrence_rule,
+        seriesStart: series.series_start,
+        seriesEnd: series.series_end
+      });
       
-      instances.forEach(instance => {
-        if (instance.exceptionType === 'skip') return; // Skip this occurrence
+      const instances = generateSeriesInstances(series, startDate, endDate);
+      console.log(`Generated ${instances.length} instances for series "${series.title}"`);
+      
+      instances.forEach((instance, instanceIndex) => {
+        if (instance.exceptionType === 'skip') {
+          console.log(`Skipping instance ${instanceIndex + 1} due to skip exception`);
+          return; // Skip this occurrence
+        }
         
         // Create virtual event from series instance
         const virtualEvent: CalendarEvent = {
@@ -106,9 +119,17 @@ export const useEvents = (familyId?: string) => {
           exceptionType: instance.exceptionType
         };
         
-        // Populate attendees from series
+        console.log(`Created virtual event:`, {
+          id: virtualEvent.id,
+          title: virtualEvent.title,
+          start_date: virtualEvent.start_date,
+          end_date: virtualEvent.end_date,
+          isVirtual: virtualEvent.isVirtual
+        });
+        
+        // Populate attendees from series - ENHANCED
         if (series.attendee_profiles && series.attendee_profiles.length > 0) {
-          // This would need profile data - for now, just store IDs
+          console.log(`Adding ${series.attendee_profiles.length} attendees to virtual event`);
           virtualEvent.attendees = series.attendee_profiles.map(profileId => ({
             id: crypto.randomUUID(),
             event_id: virtualEvent.id,
@@ -272,9 +293,10 @@ export const useEvents = (familyId?: string) => {
         const series = await createEventSeries(seriesData);
         await fetchEvents(); // Refresh to include new virtual instances
         
-        // Trigger calendar refresh immediately
+        // Trigger calendar refresh immediately - NO DELAY
         if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
-          setTimeout(() => (window as any).refreshCalendar(), 100);
+          console.log('Triggering immediate calendar refresh after series creation');
+          (window as any).refreshCalendar();
         }
         
         toast({
@@ -305,13 +327,16 @@ export const useEvents = (familyId?: string) => {
         
         console.log('Event created successfully:', event.id);
 
-        // Add attendees if provided
+        // Add attendees if provided - ENHANCED LOGGING
         if (attendees && attendees.length > 0) {
+          console.log('Adding attendees to new event:', attendees);
           const attendeeRecords = attendees.map(profileId => ({
             event_id: event.id,
             profile_id: profileId,
             added_by: creatorProfileId
           }));
+
+          console.log('Inserting attendee records:', attendeeRecords);
 
           const { error: attendeesError } = await supabase
             .from('event_attendees')
@@ -321,13 +346,16 @@ export const useEvents = (familyId?: string) => {
             console.error('Error adding attendees:', attendeesError);
             throw attendeesError;
           }
+          
+          console.log('Attendees added successfully to new event');
         }
 
         await fetchEvents();
         
-        // Trigger calendar refresh immediately
+        // Trigger calendar refresh immediately - NO DELAY
         if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
-          setTimeout(() => (window as any).refreshCalendar(), 100);
+          console.log('Triggering immediate calendar refresh after event creation');
+          (window as any).refreshCalendar();
         }
         
         toast({
@@ -370,8 +398,10 @@ export const useEvents = (familyId?: string) => {
 
       if (eventError) throw eventError;
 
-      // Update attendees if provided
+      // Update attendees if provided - ENHANCED LOGGING
       if (attendees !== undefined) {
+        console.log('Updating attendees for event:', id, 'new attendees:', attendees);
+        
         // Remove existing attendees first
         const { error: deleteError } = await supabase
           .from('event_attendees')
@@ -385,11 +415,20 @@ export const useEvents = (familyId?: string) => {
 
         // Add new attendees
         if (attendees.length > 0) {
+          // Get current user's profile ID for added_by
+          const { data: userProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('user_id', user?.id)
+            .single();
+
           const attendeeRecords = attendees.map(profileId => ({
             event_id: id,
             profile_id: profileId,
-            added_by: user?.id || '' // Use the auth user ID for added_by
+            added_by: userProfile?.id || user?.id || ''
           }));
+
+          console.log('Inserting attendee records:', attendeeRecords);
 
           const { error: attendeesError } = await supabase
             .from('event_attendees')
@@ -399,10 +438,19 @@ export const useEvents = (familyId?: string) => {
             console.error('Error adding new attendees:', attendeesError);
             throw attendeesError;
           }
+          
+          console.log('Attendees updated successfully');
         }
       }
 
       await fetchEvents();
+      
+      // Trigger immediate calendar refresh after update
+      if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
+        console.log('Triggering immediate calendar refresh after event update');
+        (window as any).refreshCalendar();
+      }
+      
       toast({
         title: 'Success',
         description: 'Event updated successfully',
