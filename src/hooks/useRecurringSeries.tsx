@@ -270,6 +270,15 @@ export const useRecurringSeries = (familyId?: string) => {
       if (error) throw error;
 
       await fetchSeries(); // Refresh data
+      // Trigger global refresh for calendar views
+      if (typeof window !== 'undefined') {
+        const w: any = window as any;
+        if (typeof w.refreshEvents === 'function') {
+          w.refreshEvents();
+        } else if (typeof w.refreshCalendar === 'function') {
+          w.refreshCalendar();
+        }
+      }
       return data;
     } catch (error) {
       console.error('Error creating exception:', error);
@@ -307,10 +316,16 @@ export const useRecurringSeries = (familyId?: string) => {
       console.log('Series updated successfully, refreshing data...');
       await fetchSeries(); // Refresh data
       
-      // Trigger global calendar refresh after series update - NO DELAY
-      if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
-        console.log('Triggering immediate calendar refresh after series update');
-        (window as any).refreshCalendar();
+      // Trigger global calendar refresh after series update
+      if (typeof window !== 'undefined') {
+        const w: any = window as any;
+        if (typeof w.refreshEvents === 'function') {
+          console.log('Triggering refreshEvents after series update');
+          w.refreshEvents();
+        } else if (typeof w.refreshCalendar === 'function') {
+          console.log('Triggering refreshCalendar after series update');
+          w.refreshCalendar();
+        }
       }
       
       return true; // Indicate success
@@ -347,11 +362,24 @@ export const useRecurringSeries = (familyId?: string) => {
         original_series_id: originalSeriesId
       };
 
+      let res;
       if (seriesType === 'task') {
-        return await createTaskSeries(createData as Omit<TaskSeries, 'id' | 'created_at' | 'updated_at'>);
+        res = await createTaskSeries(createData as Omit<TaskSeries, 'id' | 'created_at' | 'updated_at'>);
       } else {
-        return await createEventSeries(createData as Omit<EventSeries, 'id' | 'created_at' | 'updated_at'>);
+        res = await createEventSeries(createData as Omit<EventSeries, 'id' | 'created_at' | 'updated_at'>);
       }
+
+      // Trigger global refresh for calendar views
+      if (typeof window !== 'undefined') {
+        const w: any = window as any;
+        if (typeof w.refreshEvents === 'function') {
+          w.refreshEvents();
+        } else if (typeof w.refreshCalendar === 'function') {
+          w.refreshCalendar();
+        }
+      }
+
+      return res;
     } catch (error) {
       console.error('Error splitting series:', error);
       toast({

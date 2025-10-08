@@ -41,37 +41,54 @@ export const useEvents = (familyId?: string) => {
         if (instance.exceptionType === 'skip') return;
         
         // Create virtual event from series instance
-        const virtualEvent: CalendarEvent = {
-          id: `${series.id}-${format(instance.date, 'yyyy-MM-dd')}`,
-          title: instance.overrideData?.title || series.title,
-          description: instance.overrideData?.description || series.description,
-          location: instance.overrideData?.location || series.location,
-          start_date: series.is_all_day 
-            ? startOfDay(instance.date).toISOString()
-            : instance.date.toISOString(),
-          end_date: series.is_all_day
-            ? endOfDay(instance.date).toISOString() 
-            : new Date(instance.date.getTime() + (series.duration_minutes * 60 * 1000)).toISOString(),
-          is_all_day: series.is_all_day,
-          family_id: series.family_id,
-          created_by: series.created_by,
-          created_at: series.created_at,
-          updated_at: series.updated_at,
-          attendees: series.attendee_profiles?.map(profileId => ({
-            id: crypto.randomUUID(),
-            event_id: `${series.id}-${format(instance.date, 'yyyy-MM-dd')}`,
-            profile_id: profileId,
-            added_by: series.created_by,
-            added_at: new Date().toISOString(),
-            profile: { id: profileId, display_name: '', role: 'child' as const, color: 'sky' }
-          })) || [],
-          recurrence_options: null,
-          isVirtual: true,
-          series_id: series.id,
-          occurrence_date: format(instance.date, 'yyyy-MM-dd'),
-          isException: instance.isException,
-          exceptionType: instance.exceptionType
-        };
+          // Apply override data for this instance when present
+          const override = instance.overrideData as any | undefined;
+          const isAllDay = override?.is_all_day ?? series.is_all_day;
+
+          // Determine start/end using overrides when available
+          let startISO: string;
+          let endISO: string;
+          if (override?.start_date && override?.end_date) {
+            startISO = override.start_date;
+            endISO = override.end_date;
+          } else if (isAllDay) {
+            startISO = startOfDay(instance.date).toISOString();
+            endISO = endOfDay(instance.date).toISOString();
+          } else {
+            startISO = instance.date.toISOString();
+            endISO = new Date(instance.date.getTime() + (series.duration_minutes * 60 * 1000)).toISOString();
+          }
+
+          // Use override attendees when provided
+          const attendeeProfiles: string[] = (override?.attendees as string[] | undefined) ?? series.attendee_profiles ?? [];
+
+          const virtualEvent: CalendarEvent = {
+            id: `${series.id}-${format(instance.date, 'yyyy-MM-dd')}`,
+            title: override?.title || series.title,
+            description: override?.description || series.description,
+            location: override?.location || series.location,
+            start_date: startISO,
+            end_date: endISO,
+            is_all_day: isAllDay,
+            family_id: series.family_id,
+            created_by: series.created_by,
+            created_at: series.created_at,
+            updated_at: series.updated_at,
+            attendees: attendeeProfiles.map(profileId => ({
+              id: crypto.randomUUID(),
+              event_id: `${series.id}-${format(instance.date, 'yyyy-MM-dd')}`,
+              profile_id: profileId,
+              added_by: series.created_by,
+              added_at: new Date().toISOString(),
+              profile: { id: profileId, display_name: '', role: 'child' as const, color: 'sky' }
+            })),
+            recurrence_options: null,
+            isVirtual: true,
+            series_id: series.id,
+            occurrence_date: format(instance.date, 'yyyy-MM-dd'),
+            isException: instance.isException,
+            exceptionType: instance.exceptionType
+          };
         
         virtualEvents.push(virtualEvent);
       });
