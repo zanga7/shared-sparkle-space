@@ -1,4 +1,5 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Sidebar,
   SidebarContent,
@@ -27,7 +28,8 @@ import {
   Gift,
   ClipboardCheck,
   Monitor,
-  Smartphone
+  Smartphone,
+  LogOut
 } from "lucide-react";
 
 const adminMenuItems = [
@@ -51,7 +53,14 @@ const adminMenuItems = [
 
 export function AdminSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const currentPath = location.pathname;
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth');
+  };
 
   const isActive = (path: string, exact?: boolean) => 
     exact ? currentPath === path : currentPath.startsWith(path);
@@ -96,6 +105,12 @@ export function AdminSidebar() {
                     <BarChart3 className="mr-2 h-4 w-4" />
                     <span>Back to Dashboard</span>
                   </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={handleLogout} className="hover:bg-destructive/10 text-destructive hover:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log Out</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
