@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEvents } from '@/hooks/useEvents';
 import { useDashboardAuth } from '@/hooks/useDashboardAuth';
+import { useTaskSeries, VirtualTaskInstance } from '@/hooks/useTaskSeries';
 import { EventDialog } from '@/components/EventDialog';
 import { AuthDebugPanel } from '@/components/AuthDebugPanel';
 import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
@@ -80,6 +81,12 @@ export const CalendarView = ({
     generateVirtualEvents
   } = useEvents(familyId);
 
+  // Initialize task series hook
+  const {
+    generateVirtualTaskInstances,
+    fetchTaskSeries
+  } = useTaskSeries(familyId);
+
   // Auto-refresh events when they change
   React.useEffect(() => {
     // Events are already being tracked, no need for manual refresh
@@ -127,12 +134,57 @@ export const CalendarView = ({
   }, [currentDate, viewMode]);
   const days = viewMode === 'today' ? [currentDate] : eachDayOfInterval(dateRange);
 
+  // Generate virtual task instances and merge with regular tasks
+  const allTasks = useMemo(() => {
+    const virtualInstances = generateVirtualTaskInstances(dateRange.start, dateRange.end);
+    
+    // Map VirtualTaskInstance to Task format
+    const mappedVirtualTasks: Task[] = virtualInstances.map(vTask => ({
+      id: vTask.id,
+      title: vTask.title,
+      description: vTask.description || null,
+      points: vTask.points,
+      due_date: vTask.due_date,
+      assigned_to: vTask.assigned_profiles[0] || null,
+      created_by: vTask.created_by,
+      completion_rule: vTask.completion_rule as 'any_one' | 'everyone',
+      task_group: vTask.task_group,
+      recurrence_options: vTask.recurrence_options,
+      isVirtual: true,
+      series_id: vTask.series_id,
+      occurrence_date: vTask.occurrence_date,
+      isException: vTask.isException,
+      exceptionType: vTask.exceptionType,
+      // Map assigned_profiles to assignees format
+      assignees: vTask.assigned_profiles.map(profileId => {
+        const member = familyMembers.find(m => m.id === profileId);
+        return {
+          id: `${vTask.id}-${profileId}`,
+          profile_id: profileId,
+          assigned_at: vTask.due_date,
+          assigned_by: vTask.created_by,
+          profile: member || {
+            id: profileId,
+            display_name: 'Unknown',
+            role: 'child' as const,
+            color: 'gray'
+          }
+        };
+      })
+    }));
+
+    return [...tasks, ...mappedVirtualTasks];
+  }, [tasks, dateRange, generateVirtualTaskInstances, familyMembers]);
+
   // Filter tasks based on selected filters
   const filteredTasks = useMemo(() => {
-    return tasks.filter(task => {
+    return allTasks.filter(task => {
       // Filter by assigned member
-      if (filters.assignedTo !== 'all' && task.assigned_to !== filters.assignedTo) {
-        return false;
+      if (filters.assignedTo !== 'all') {
+        const isAssignedToMember = 
+          task.assigned_to === filters.assignedTo || 
+          task.assignees?.some(a => a.profile_id === filters.assignedTo);
+        if (!isAssignedToMember) return false;
       }
 
       // Filter by status
@@ -146,12 +198,12 @@ export const CalendarView = ({
 
       // Filter by task type
       if (filters.taskType !== 'all') {
-        // Since recurring tasks have been removed, only show one-time tasks
-        if (filters.taskType === 'recurring') return false;
+        if (filters.taskType === 'recurring' && !task.isVirtual) return false;
+        if (filters.taskType === 'one-time' && task.isVirtual) return false;
       }
       return true;
     });
-  }, [tasks, filters]);
+  }, [allTasks, filters]);
 
   // Group filtered tasks by date
   const tasksByDate = useMemo(() => {
@@ -287,6 +339,18 @@ export const CalendarView = ({
     const itemId = result.draggableId;
     const newDate = result.destination.droppableId;
     const isEvent = itemId.startsWith('event-');
+    
+    // Check if it's a virtual task (prevent drag)
+    const task = allTasks.find(t => t.id === itemId);
+    if (task?.isVirtual) {
+      toast({
+        title: 'Cannot Move Recurring Task',
+        description: 'Edit the recurring task to change its schedule',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     try {
       if (isEvent) {
         // Handle event drag and drop
@@ -562,14 +626,17 @@ export const CalendarView = ({
     const streak = calculateStreak(task);
     const assignedMember = familyMembers.find(m => m.id === task.assigned_to);
     const memberColors = getMemberColors(assignedMember);
-    return <Draggable key={task.id} draggableId={task.id} index={index}>
-        {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("p-2 mb-1 rounded-md border text-xs transition-all hover:shadow-md group relative", onEditTask ? "cursor-pointer hover:ring-2 hover:ring-primary/20" : "cursor-move", memberColors.bgSoft, memberColors.border, isCompleted && "opacity-60 line-through", isOverdue && "border-red-300 bg-red-50", snapshot.isDragging && "shadow-lg rotate-2")}>
+    const isDragDisabled = task.isVirtual || false;
+    
+    return <Draggable key={task.id} draggableId={task.id} index={index} isDragDisabled={isDragDisabled}>
+        {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("p-2 mb-1 rounded-md border text-xs transition-all hover:shadow-md group relative", onEditTask ? "cursor-pointer hover:ring-2 hover:ring-primary/20" : !isDragDisabled && "cursor-move", memberColors.bgSoft, memberColors.border, isCompleted && "opacity-60 line-through", isOverdue && "border-red-300 bg-red-50", snapshot.isDragging && "shadow-lg rotate-2", isDragDisabled && "cursor-pointer")}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1 min-w-0" onClick={e => handleTaskClick(task, e)}>
                 <button onClick={e => handleTaskToggle(task, e)} className={cn("h-3 w-3 flex-shrink-0 rounded-full border transition-colors hover:scale-110", isCompleted ? "bg-green-500 border-green-500 text-white" : "border-gray-300 hover:border-green-400")}>
                   {isCompleted && <CheckCircle2 className="h-3 w-3" />}
                 </button>
                 {isOverdue && <Clock className="h-3 w-3 text-red-500 flex-shrink-0" />}
+                {task.isVirtual && <Repeat className="h-3 w-3 text-blue-500 flex-shrink-0" />}
                 <span className="truncate">{task.title}</span>
                 {onEditTask && <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity" />}
               </div>
