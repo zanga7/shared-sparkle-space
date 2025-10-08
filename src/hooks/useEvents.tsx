@@ -15,82 +15,30 @@ export const useEvents = (familyId?: string) => {
   const { user } = useAuth();
   const { eventSeries, exceptions, generateSeriesInstances, createEventSeries, createException, updateSeries, splitSeries, deleteSeries } = useRecurringSeries(familyId);
 
-  // Generate virtual event instances from both regular events and series
+  // Generate virtual event instances from both regular events and series (OPTIMIZED)
   const generateVirtualEvents = (startDate: Date, endDate: Date): CalendarEvent[] => {
     const virtualEvents: CalendarEvent[] = [];
-    const invalidEvents: CalendarEvent[] = [];
+    const normalizedStart = startOfDay(startDate);
+    const normalizedEnd = endOfDay(endDate);
     
-    // Log only essential debugging info
-    console.log('generateVirtualEvents called:', {
-      startDate: format(startDate, 'yyyy-MM-dd'),
-      endDate: format(endDate, 'yyyy-MM-dd'),
-      totalEvents: events.length,
-      eventSeries: eventSeries.length
-    });
-    
-    // Add regular events (non-recurring) with validation
+    // Add regular events with optimized filtering
     events.forEach(event => {
-      try {
-        const eventStart = new Date(event.start_date);
-        const eventEnd = new Date(event.end_date);
-        
-        // Validate dates
-        if (isNaN(eventStart.getTime()) || isNaN(eventEnd.getTime())) {
-          console.warn(`Event "${event.title}" has invalid dates:`, {
-            start_date: event.start_date,
-            end_date: event.end_date
-          });
-          invalidEvents.push(event);
-          return;
-        }
-        
-        // Check for invalid date sequence (end before start)
-        if (eventEnd < eventStart) {
-          console.warn(`Event "${event.title}" has end date before start date:`, {
-            eventStart: eventStart.toISOString(),
-            eventEnd: eventEnd.toISOString(),
-            id: event.id
-          });
-          invalidEvents.push(event);
-          return;
-        }
-        
-        // Include event if it overlaps with the date range
-        // Normalize dates to local timezone for proper comparison
-        const normalizedStart = startOfDay(startDate);
-        const normalizedEnd = endOfDay(endDate);
-        
-        // Check for overlap: event ends after range start AND event starts before range end
-        const hasOverlap = eventEnd >= normalizedStart && eventStart <= normalizedEnd;
-        
-        if (hasOverlap) {
-          virtualEvents.push(event);
-        }
-      } catch (error) {
-        console.error(`Error processing event "${event.title}":`, error);
-        invalidEvents.push(event);
+      const eventStart = new Date(event.start_date);
+      const eventEnd = new Date(event.end_date);
+      
+      // Quick validation and overlap check
+      if (!isNaN(eventStart.getTime()) && !isNaN(eventEnd.getTime()) && 
+          eventEnd >= eventStart && eventEnd >= normalizedStart && eventStart <= normalizedEnd) {
+        virtualEvents.push(event);
       }
     });
     
-    // Generate virtual instances from series - ENHANCED LOGGING
-    console.log('Processing event series:', eventSeries.length, 'series found');
-    eventSeries.forEach((series, index) => {
-      console.log(`Processing series ${index + 1}:`, {
-        id: series.id,
-        title: series.title,
-        recurrence: series.recurrence_rule,
-        seriesStart: series.series_start,
-        seriesEnd: series.series_end
-      });
-      
+    // Generate virtual instances from series
+    eventSeries.forEach(series => {
       const instances = generateSeriesInstances(series, startDate, endDate);
-      console.log(`Generated ${instances.length} instances for series "${series.title}"`);
       
-      instances.forEach((instance, instanceIndex) => {
-        if (instance.exceptionType === 'skip') {
-          console.log(`Skipping instance ${instanceIndex + 1} due to skip exception`);
-          return; // Skip this occurrence
-        }
+      instances.forEach(instance => {
+        if (instance.exceptionType === 'skip') return;
         
         // Create virtual event from series instance
         const virtualEvent: CalendarEvent = {
@@ -109,9 +57,15 @@ export const useEvents = (familyId?: string) => {
           created_by: series.created_by,
           created_at: series.created_at,
           updated_at: series.updated_at,
-          attendees: [], // Will be populated below
+          attendees: series.attendee_profiles?.map(profileId => ({
+            id: crypto.randomUUID(),
+            event_id: `${series.id}-${format(instance.date, 'yyyy-MM-dd')}`,
+            profile_id: profileId,
+            added_by: series.created_by,
+            added_at: new Date().toISOString(),
+            profile: { id: profileId, display_name: '', role: 'child' as const, color: 'sky' }
+          })) || [],
           recurrence_options: null,
-          // Virtual event metadata
           isVirtual: true,
           series_id: series.id,
           occurrence_date: format(instance.date, 'yyyy-MM-dd'),
@@ -119,45 +73,9 @@ export const useEvents = (familyId?: string) => {
           exceptionType: instance.exceptionType
         };
         
-        console.log(`Created virtual event:`, {
-          id: virtualEvent.id,
-          title: virtualEvent.title,
-          start_date: virtualEvent.start_date,
-          end_date: virtualEvent.end_date,
-          isVirtual: virtualEvent.isVirtual
-        });
-        
-        // Populate attendees from series - ENHANCED
-        if (series.attendee_profiles && series.attendee_profiles.length > 0) {
-          console.log(`Adding ${series.attendee_profiles.length} attendees to virtual event`);
-          virtualEvent.attendees = series.attendee_profiles.map(profileId => ({
-            id: crypto.randomUUID(),
-            event_id: virtualEvent.id,
-            profile_id: profileId,
-            added_by: series.created_by,
-            added_at: new Date().toISOString(),
-            profile: { id: profileId, display_name: '', role: 'child' as const, color: 'sky' }
-          }));
-        }
-        
         virtualEvents.push(virtualEvent);
       });
     });
-    
-    // Log summary only
-    console.log('Events generated:', {
-      total: virtualEvents.length,
-      regular: virtualEvents.filter(e => !e.isVirtual).length,
-      series: virtualEvents.filter(e => e.isVirtual).length,
-      invalid: invalidEvents.length
-    });
-    
-    // Report invalid events if any found
-    if (invalidEvents.length > 0) {
-      console.warn('Found invalid events that were excluded from display:', 
-        invalidEvents.map(e => ({ id: e.id, title: e.title, start_date: e.start_date, end_date: e.end_date }))
-      );
-    }
     
     return virtualEvents.sort((a, b) => 
       new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
@@ -250,8 +168,6 @@ export const useEvents = (familyId?: string) => {
     attendees?: string[];
     recurrence_options?: any;
   }, creatorProfileId?: string) => {
-    console.log('Creating event:', eventData.title, 'for family:', familyId);
-    
     if (!familyId) {
       toast({
         title: 'Error',
@@ -293,17 +209,12 @@ export const useEvents = (familyId?: string) => {
         const series = await createEventSeries(seriesData);
         await fetchEvents(); // Refresh to include new virtual instances
         
-        // Trigger calendar refresh immediately - NO DELAY
-        if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
-          console.log('Triggering immediate calendar refresh after series creation');
-          (window as any).refreshCalendar();
-        }
-        
         toast({
           title: 'Success',
           description: 'Recurring event series created successfully',
         });
         
+        // Calendar will refresh via React Query invalidation
         return series;
       } else {
         // Create as regular one-time event
@@ -320,43 +231,24 @@ export const useEvents = (familyId?: string) => {
           .select()
           .single();
 
-        if (eventError) {
-          console.error('Event creation error:', eventError);
-          throw eventError;
-        }
-        
-        console.log('Event created successfully:', event.id);
+        if (eventError) throw eventError;
 
-        // Add attendees if provided - ENHANCED LOGGING
+        // Add attendees if provided
         if (attendees && attendees.length > 0) {
-          console.log('Adding attendees to new event:', attendees);
           const attendeeRecords = attendees.map(profileId => ({
             event_id: event.id,
             profile_id: profileId,
             added_by: creatorProfileId
           }));
 
-          console.log('Inserting attendee records:', attendeeRecords);
-
           const { error: attendeesError } = await supabase
             .from('event_attendees')
             .insert(attendeeRecords);
 
-          if (attendeesError) {
-            console.error('Error adding attendees:', attendeesError);
-            throw attendeesError;
-          }
-          
-          console.log('Attendees added successfully to new event');
+          if (attendeesError) throw attendeesError;
         }
 
         await fetchEvents();
-        
-        // Trigger calendar refresh immediately - NO DELAY
-        if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
-          console.log('Triggering immediate calendar refresh after event creation');
-          (window as any).refreshCalendar();
-        }
         
         toast({
           title: 'Success',
@@ -398,24 +290,16 @@ export const useEvents = (familyId?: string) => {
 
       if (eventError) throw eventError;
 
-      // Update attendees if provided - ENHANCED LOGGING
+      // Update attendees if provided
       if (attendees !== undefined) {
-        console.log('Updating attendees for event:', id, 'new attendees:', attendees);
-        
-        // Remove existing attendees first
         const { error: deleteError } = await supabase
           .from('event_attendees')
           .delete()
           .eq('event_id', id);
 
-        if (deleteError) {
-          console.error('Error removing existing attendees:', deleteError);
-          throw deleteError;
-        }
+        if (deleteError) throw deleteError;
 
-        // Add new attendees
         if (attendees.length > 0) {
-          // Get current user's profile ID for added_by
           const { data: userProfile } = await supabase
             .from('profiles')
             .select('id')
@@ -428,28 +312,15 @@ export const useEvents = (familyId?: string) => {
             added_by: userProfile?.id || user?.id || ''
           }));
 
-          console.log('Inserting attendee records:', attendeeRecords);
-
           const { error: attendeesError } = await supabase
             .from('event_attendees')
             .insert(attendeeRecords);
 
-          if (attendeesError) {
-            console.error('Error adding new attendees:', attendeesError);
-            throw attendeesError;
-          }
-          
-          console.log('Attendees updated successfully');
+          if (attendeesError) throw attendeesError;
         }
       }
 
       await fetchEvents();
-      
-      // Trigger immediate calendar refresh after update
-      if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
-        console.log('Triggering immediate calendar refresh after event update');
-        (window as any).refreshCalendar();
-      }
       
       toast({
         title: 'Success',

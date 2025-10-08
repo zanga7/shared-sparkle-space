@@ -80,23 +80,10 @@ export const CalendarView = ({
     generateVirtualEvents
   } = useEvents(familyId);
 
-  // Expose refresh function globally for EventDialog to call - SYNCHRONOUS
+  // Auto-refresh events when they change
   React.useEffect(() => {
-    (window as any).refreshCalendar = () => {
-      console.log('Calendar refresh triggered - immediate synchronous update');
-      // Trigger immediate refresh without setTimeout delays
-      refreshEvents().then(() => {
-        console.log('Calendar events refreshed successfully');
-        // Force a re-render by updating state
-        setCurrentDate(prev => new Date(prev));
-      }).catch(error => {
-        console.error('Calendar refresh failed:', error);
-      });
-    };
-    return () => {
-      delete (window as any).refreshCalendar;
-    };
-  }, [refreshEvents]);
+    // Events are already being tracked, no need for manual refresh
+  }, [events]);
   const {
     canPerformAction,
     authenticateMemberPin,
@@ -195,13 +182,8 @@ export const CalendarView = ({
       })[];
     } = {};
 
-    // Use generateVirtualEvents if available, otherwise fallback to regular events
+    // Use generateVirtualEvents for combined event + series view
     const allEvents = generateVirtualEvents ? generateVirtualEvents(dateRange.start, dateRange.end) : events;
-    // Reduce logging to improve performance
-    console.log(`CalendarView ${viewMode} view:`, {
-      totalEvents: allEvents.length,
-      dateRange: `${format(dateRange.start, 'MMM d')} - ${format(dateRange.end, 'MMM d')}`
-    });
     allEvents.forEach((event: CalendarEvent) => {
       if (event.start_date) {
         const startDate = new Date(event.start_date);
@@ -227,17 +209,10 @@ export const CalendarView = ({
             originalStart: startDate,
             originalEnd: endDate
           });
-          // Reduce logging for performance
           currentDate.setDate(currentDate.getDate() + 1);
         }
       }
     });
-    // Final summary for debugging
-    const eventCounts = Object.keys(grouped).reduce((acc, dateKey) => {
-      acc[dateKey] = grouped[dateKey].length;
-      return acc;
-    }, {} as Record<string, number>);
-    console.log('Events by date:', eventCounts);
     return grouped;
   }, [events, generateVirtualEvents, dateRange, viewMode]);
 

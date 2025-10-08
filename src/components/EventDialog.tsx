@@ -96,69 +96,37 @@ export const EventDialog = ({
   const { user, session } = useAuth();
   const { createEventSeries, updateSeries, createException, splitSeries, deleteSeries, getSeriesById } = useRecurringSeries(familyId || '');
 
-  // Effect to get current user's profile ID as fallback and debug auth status
+  // Get current user's profile ID
   useEffect(() => {
     const getCurrentUserProfile = async () => {
-      console.log('EventDialog - currentProfileId provided:', currentProfileId);
-      
       if (currentProfileId) {
         setCurrentUserProfileId(currentProfileId);
         return;
       }
 
-      if (!familyId) {
-        console.log('EventDialog - No familyId provided');
-        return;
-      }
+      if (!familyId) return;
 
       try {
-        // Check authentication status
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        console.log('EventDialog - Current authenticated user:', user?.id, 'Error:', userError);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
         
-        if (!user) {
-          console.log('EventDialog - No authenticated user found');
-          toast({
-            title: "Authentication Required",
-            description: "Please sign in to create events.",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        // Check if user has a profile
-        const { data: profiles, error: profileError } = await supabase
+        const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, display_name, family_id')
+          .select('id')
           .eq('user_id', user.id)
           .eq('family_id', familyId)
           .limit(1);
-        
-        console.log('EventDialog - Profile query result:', profiles, 'Error:', profileError);
           
-        if (profiles && profiles.length > 0) {
+        if (profiles?.[0]) {
           setCurrentUserProfileId(profiles[0].id);
-          console.log('EventDialog - Set currentUserProfileId to:', profiles[0].id);
-        } else {
-          console.log('EventDialog - No profile found for user in this family');
-          toast({
-            title: "Profile Not Found",
-            description: "No profile found for your account in this family.",
-            variant: "destructive",
-          });
         }
       } catch (error) {
-        console.error('EventDialog - Error getting current user profile:', error);
-        toast({
-          title: "Error",
-          description: "Failed to verify user authentication.",
-          variant: "destructive",
-        });
+        console.error('Error getting user profile:', error);
       }
     };
 
     getCurrentUserProfile();
-  }, [currentProfileId, familyId, toast]);
+  }, [currentProfileId, familyId]);
 
   useEffect(() => {
     if (editingEvent) {
@@ -176,11 +144,10 @@ export const EventDialog = ({
       setIsAllDay(editingEvent.is_all_day || false);
       setAssignees(editingEvent.attendees?.map(a => a.profile_id) || []);
       
-      // If this is a virtual event (part of a series), load the series data
+      // Load series data for virtual events
       if (editingEvent.isVirtual && editingEvent.series_id) {
         const series = getSeriesById(editingEvent.series_id, 'event');
         if (series) {
-          console.log('Loading series data for virtual event:', series);
           setSeriesData(series);
           setRecurrenceOptions({
             enabled: true,
@@ -198,7 +165,7 @@ export const EventDialog = ({
         });
       }
     } else {
-      // Reset form for new event
+      // Reset all form state
       setTitle('');
       setDescription('');
       setLocation('');
@@ -210,7 +177,7 @@ export const EventDialog = ({
       setAssignees(defaultMember ? [defaultMember] : []);
       setSeriesData(null);
       setShowSeriesOptions(false);
-      setIsLoading(false); // Reset loading state
+      setIsLoading(false);
       setRecurrenceOptions({
         enabled: false,
         rule: {
@@ -220,7 +187,7 @@ export const EventDialog = ({
         }
       });
     }
-  }, [editingEvent, selectedDate, defaultMember, defaultDate]);
+  }, [editingEvent, selectedDate, defaultMember, defaultDate, getSeriesById]);
 
   // Update start and end dates when time changes
   const handleStartDateChange = (date: Date) => {
@@ -255,51 +222,27 @@ export const EventDialog = ({
     setIsAllDay(allDay);
   };
   const handleSave = async () => {
-    if (isLoading) return; // Prevent double submission
+    if (isLoading) return;
     
     setIsLoading(true);
-    console.log('EventDialog handleSave called');
-    console.log('Authentication status:', { user: !!user, session: !!session });
-    console.log('familyId:', familyId);
-    console.log('currentProfileId:', currentProfileId);
-    console.log('title:', title);
     
-    // Check authentication first
     if (!user || !session) {
-      console.error('User not authenticated');
       toast({
         title: "Authentication Required", 
         description: "Please sign in to create events.",
         variant: "destructive",
       });
+      setIsLoading(false);
       return;
     }
     
-    if (!familyId || familyId.trim() === '') {
+    if (!familyId || !currentProfileId || !title.trim()) {
       toast({
         title: "Error",
-        description: "Family ID is required",
+        description: !familyId ? "Family ID required" : !currentProfileId ? "User profile not found" : "Event title required",
         variant: "destructive",
       });
-      return;
-    }
-
-    if (!currentProfileId) {
-      console.error('Missing currentProfileId');
-      toast({
-        title: "Error",
-        description: "Unable to determine event creator - please ensure you're logged in",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!title.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter an event title",
-        variant: "destructive",
-      });
+      setIsLoading(false);
       return;
     }
 
@@ -310,13 +253,13 @@ export const EventDialog = ({
       ? endDate.toISOString()
       : new Date(`${format(endDate, 'yyyy-MM-dd')}T${endTime}`).toISOString();
 
-    // Validate that end date is not before start date
     if (new Date(calculatedEndDate) < new Date(calculatedStartDate)) {
       toast({
         title: "Error",
         description: "End date/time cannot be before start date/time",
         variant: "destructive",
       });
+      setIsLoading(false);
       return;
     }
 
@@ -394,42 +337,29 @@ export const EventDialog = ({
             updateData.recurrence_rule = recurrenceOptions.rule;
           }
           
-          const success = await updateSeries(editingEvent.series_id, 'event', updateData);
+          await updateSeries(editingEvent.series_id, 'event', updateData);
           
-          if (success) {
-            // Clear series state to force fresh data loading
-            setSeriesData(null);
-            setShowSeriesOptions(false);
-            
-            // Trigger immediate calendar refresh
-            if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
-              console.log('EventDialog triggering immediate calendar refresh after series update');
-              (window as any).refreshCalendar();
-            }
-            
-            toast({
-              title: "Success",
-              description: "Recurring event settings updated successfully",
-            });
-            
-            onOpenChange(false);
-            return;
-          }
+          setSeriesData(null);
+          setShowSeriesOptions(false);
+          
+          toast({
+            title: "Success",
+            description: "Recurring event settings updated successfully",
+          });
+          
+          onOpenChange(false);
+          return;
         }
       } else if (recurrenceOptions.enabled) {
-        // Validate we have a valid created_by UUID for new recurring events
         const createdBy = editingEvent?.created_by || currentProfileId || currentUserProfileId;
-        console.log('EventDialog - Attempting to create recurring event with createdBy:', createdBy);
-        console.log('EventDialog - currentProfileId:', currentProfileId);
-        console.log('EventDialog - editingEvent?.created_by:', editingEvent?.created_by);
         
-        if (!createdBy || createdBy.trim() === '') {
-          console.error('EventDialog - No valid createdBy ID for recurring event creation');
+        if (!createdBy) {
           toast({
             title: "Error",
-            description: "Cannot create recurring event: No user profile found. Please try refreshing the page.",
+            description: "User profile not found for recurring event creation",
             variant: "destructive",
           });
+          setIsLoading(false);
           return;
         }
 
@@ -446,74 +376,43 @@ export const EventDialog = ({
           series_start: eventData.start_date,
           is_active: true
         };
-        console.log('Creating event series with data:', seriesData);
+        
         try {
           await createEventSeries(seriesData);
-          console.log('Event series created successfully');
         } catch (error: any) {
-          console.error('Failed to create event series:', error);
-          
-          // Provide specific error messages based on the error type
-          let errorMessage = "Failed to save event. Please try again.";
-          
-          if (error.message?.includes('permission') || error.message?.includes('policy') || error.code === '42501') {
-            errorMessage = "Authentication required. Please sign in to create events.";
-          } else if (error.message?.includes('not authenticated')) {
-            errorMessage = "Please sign in to create recurring events.";
-          } else if (error.message?.includes('RLS')) {
-            errorMessage = "You don't have permission to create events. Please sign in.";
-          }
+          const isAuthError = error.message?.includes('permission') || error.message?.includes('policy') || 
+                            error.code === '42501' || error.message?.includes('RLS');
           
           toast({
             title: "Error",
-            description: errorMessage,
+            description: isAuthError ? "Please sign in to create events" : "Failed to create recurring event",
             variant: "destructive",
           });
+          setIsLoading(false);
           return;
         }
       } else {
-        console.log('Creating single event with currentProfileId:', currentProfileId);
-        console.log('Event data being saved:', eventData);
-        
-        // For single events, we need to handle this through the useEvents hook
         if (onSave) {
           onSave(eventData);
         } else {
-          // Fallback: create directly if no onSave handler
           const { createEvent } = useEvents(familyId);
           await createEvent(eventData, currentProfileId || currentUserProfileId || '');
         }
       }
 
-      // Trigger immediate calendar refresh after any event operation - NO DELAY
-      if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
-        console.log('EventDialog triggering immediate calendar refresh');
-        (window as any).refreshCalendar();
-      }
-
       toast({
         title: "Success",
-        description: editingEvent ? "Event updated successfully" : "Event created successfully",
+        description: editingEvent ? "Event updated" : "Event created",
       });
 
       onOpenChange(false);
     } catch (error: any) {
-      console.error('Error saving event:', error);
-      
-      // Provide specific error messages
-      let errorMessage = "Failed to save event. Please try again.";
-      
-      if (error.message?.includes('permission') || error.message?.includes('policy') || error.code === '42501') {
-        errorMessage = "Authentication required. Please sign in to create events.";
-      } else if (error.message?.includes('not authenticated')) {
-        errorMessage = "Please sign in to create events.";
-      } else if (error.message?.includes('RLS')) {
-        errorMessage = "You don't have permission to create events. Please sign in.";
-      }
+      const isAuthError = error.message?.includes('permission') || error.message?.includes('policy') || 
+                        error.code === '42501' || error.message?.includes('RLS');
       
       toast({
         title: "Error",
-        description: errorMessage,
+        description: isAuthError ? "Authentication required" : "Failed to save event",
         variant: "destructive",
       });
     } finally {
