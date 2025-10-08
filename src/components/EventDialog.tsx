@@ -187,7 +187,7 @@ export const EventDialog = ({
         }
       });
     }
-  }, [editingEvent, selectedDate, defaultMember, defaultDate, getSeriesById]);
+  }, [editingEvent, selectedDate, defaultMember, defaultDate, familyId]);
 
   // Update start and end dates when time changes
   const handleStartDateChange = (date: Date) => {
