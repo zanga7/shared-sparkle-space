@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { RecurrenceRule } from '@/types/recurrence';
 import { addDays, addWeeks, addMonths, addYears, format, isBefore, isAfter } from 'date-fns';
+import { toRRULE } from '@/utils/rruleConverter';
+import { generateInstances as generateRRuleInstances } from '@/utils/rruleInstanceGenerator';
 
 export interface TaskSeries {
   id: string;
@@ -128,11 +130,53 @@ export const useRecurringSeries = (familyId?: string) => {
     fetchSeries();
   }, [familyId]);
 
-  // Generate instances for a series within a date range
+  // Generate instances for a series within a date range using RRULE
   const generateSeriesInstances = (
     series: TaskSeries | EventSeries,
     startDate: Date,
     endDate: Date
+  ): SeriesInstance[] => {
+    const rule = series.recurrence_rule;
+    const seriesStart = new Date(series.series_start);
+
+    // Get exceptions for this series
+    const seriesExceptions = exceptions.filter(e => 
+      e.series_id === series.id && 
+      ('series_type' in series ? e.series_type === 'task' : e.series_type === 'event')
+    );
+
+    try {
+      // Use RRULE-based instance generation for accuracy and RFC 5545 compliance
+      const rruleInstances = generateRRuleInstances({
+        startDate,
+        endDate,
+        recurrenceRule: rule,
+        exceptions: seriesExceptions,
+        maxInstances: 1000
+      });
+
+      // Map to SeriesInstance format
+      return rruleInstances.map(instance => ({
+        date: instance.date,
+        isException: instance.isException,
+        exceptionType: instance.exceptionType,
+        overrideData: instance.overrideData,
+        originalData: series
+      }));
+    } catch (error) {
+      console.error('Error generating series instances with RRULE, falling back to legacy method:', error);
+      
+      // Fallback to legacy generation if RRULE fails
+      return legacyGenerateInstances(series, startDate, endDate, seriesExceptions);
+    }
+  };
+
+  // Legacy instance generation (kept as fallback)
+  const legacyGenerateInstances = (
+    series: TaskSeries | EventSeries,
+    startDate: Date,
+    endDate: Date,
+    seriesExceptions: RecurrenceException[]
   ): SeriesInstance[] => {
     const instances: SeriesInstance[] = [];
     const rule = series.recurrence_rule;
@@ -141,27 +185,18 @@ export const useRecurringSeries = (familyId?: string) => {
     
     let currentDate = new Date(seriesStart);
     let count = 0;
-    const maxInstances = rule.endCount || 100; // Safety limit
-
-    // Get exceptions for this series
-    const seriesExceptions = exceptions.filter(e => 
-      e.series_id === series.id && 
-      ('series_type' in series ? e.series_type === 'task' : e.series_type === 'event')
-    );
+    const maxInstances = rule.endCount || 100;
 
     while (
       (isBefore(currentDate, endDate) || currentDate.getTime() === endDate.getTime()) &&
       count < maxInstances &&
       (!seriesEnd || isBefore(currentDate, seriesEnd))
     ) {
-      // Check if this date is in our range
       if (!isBefore(currentDate, startDate)) {
         const dateStr = format(currentDate, 'yyyy-MM-dd');
         const exception = seriesExceptions.find(e => e.exception_date === dateStr);
 
-        if (exception && exception.exception_type === 'skip') {
-          // Skip this instance
-        } else {
+        if (!(exception && exception.exception_type === 'skip')) {
           instances.push({
             date: new Date(currentDate),
             isException: !!exception,
@@ -172,7 +207,6 @@ export const useRecurringSeries = (familyId?: string) => {
         }
       }
 
-      // Move to next occurrence
       switch (rule.frequency) {
         case 'daily':
           currentDate = addDays(currentDate, rule.interval);
@@ -190,7 +224,6 @@ export const useRecurringSeries = (familyId?: string) => {
 
       count++;
 
-      // Check end conditions
       if (rule.endType === 'after_count' && count >= (rule.endCount || 1)) {
         break;
       }
@@ -204,14 +237,18 @@ export const useRecurringSeries = (familyId?: string) => {
     return instances;
   };
 
-  // Create a new task series
+  // Create a new task series with RRULE generation
   const createTaskSeries = async (seriesData: Omit<TaskSeries, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      // Generate RRULE string for calendar integration
+      const rruleString = toRRULE(seriesData.recurrence_rule, new Date(seriesData.series_start));
+      
       const { data, error } = await supabase
         .from('task_series')
         .insert({
           ...seriesData,
-          recurrence_rule: seriesData.recurrence_rule as any
+          recurrence_rule: seriesData.recurrence_rule as any,
+          rrule: rruleString // Store RFC 5545 compliant RRULE
         })
         .select()
         .single();
@@ -231,14 +268,18 @@ export const useRecurringSeries = (familyId?: string) => {
     }
   };
 
-  // Create a new event series
+  // Create a new event series with RRULE generation
   const createEventSeries = async (seriesData: Omit<EventSeries, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      // Generate RRULE string for calendar integration
+      const rruleString = toRRULE(seriesData.recurrence_rule, new Date(seriesData.series_start));
+      
       const { data, error } = await supabase
         .from('event_series')
         .insert({
           ...seriesData,
-          recurrence_rule: seriesData.recurrence_rule as any
+          recurrence_rule: seriesData.recurrence_rule as any,
+          rrule: rruleString // Store RFC 5545 compliant RRULE
         })
         .select()
         .single();
@@ -291,7 +332,7 @@ export const useRecurringSeries = (familyId?: string) => {
     }
   };
 
-  // Update a series (all occurrences)
+  // Update a series (all occurrences) with RRULE regeneration
   const updateSeries = async (
     seriesId: string,
     seriesType: 'task' | 'event',
@@ -301,10 +342,20 @@ export const useRecurringSeries = (familyId?: string) => {
       console.log('Updating series:', seriesId, 'with updates:', updates);
       
       const table = seriesType === 'task' ? 'task_series' : 'event_series';
-      const updateData = updates.recurrence_rule ? {
-        ...updates,
-        recurrence_rule: updates.recurrence_rule as any
-      } : updates;
+      
+      // If recurrence_rule is being updated, regenerate RRULE
+      let updateData: any = updates;
+      if (updates.recurrence_rule) {
+        const series = getSeriesById(seriesId, seriesType);
+        const seriesStart = updates.series_start || series?.series_start || new Date().toISOString();
+        const rruleString = toRRULE(updates.recurrence_rule, new Date(seriesStart));
+        
+        updateData = {
+          ...updates,
+          recurrence_rule: updates.recurrence_rule as any,
+          rrule: rruleString // Update RRULE for calendar sync
+        };
+      }
       
       const { error } = await supabase
         .from(table)
