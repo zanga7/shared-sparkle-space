@@ -23,6 +23,7 @@ import {
   generateRecurrencePreview, 
   validateRecurrenceRule 
 } from '@/utils/recurrenceUtils';
+import { toRRULE } from '@/utils/rruleConverter';
 
 interface UnifiedRecurrencePanelProps {
   // Common props
@@ -78,6 +79,19 @@ export const UnifiedRecurrencePanel = ({
     const validStartDate = startDate && !isNaN(startDate.getTime()) ? startDate : new Date();
     return generateRecurrencePreview(validStartDate, currentRule, taskOptions, eventOptions);
   });
+
+  // Generate RRULE string for preview
+  const [rruleString, setRruleString] = useState<string>('');
+  useEffect(() => {
+    try {
+      const validStartDate = startDate && !isNaN(startDate.getTime()) ? startDate : new Date();
+      const rrule = toRRULE(currentRule, validStartDate);
+      setRruleString(rrule);
+    } catch (error) {
+      console.error('Failed to generate RRULE:', error);
+      setRruleString('');
+    }
+  }, [currentRule, startDate]);
 
   // Sync with external options changes (when editing existing events)
   useEffect(() => {
@@ -250,8 +264,8 @@ export const UnifiedRecurrencePanel = ({
 
           <Separator />
 
-          {/* Preview */}
-          <RecurrencePreview preview={preview} />
+          {/* Preview with RRULE */}
+          <RecurrencePreview preview={preview} rrule={rruleString} showRRule={true} />
 
           {/* Validation Errors */}
           {hasErrors && (
