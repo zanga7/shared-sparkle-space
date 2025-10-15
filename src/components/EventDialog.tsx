@@ -328,17 +328,24 @@ export const EventDialog = ({
             is_all_day: eventData.is_all_day,
             attendee_profiles: eventData.attendees
           };
-          
+
           console.log('Updating series with attendees:', eventData.attendees);
-          
+
           // If we're editing the series, also update the recurrence rule
           if (showSeriesOptions && recurrenceOptions.enabled) {
             console.log('Updating series recurrence rule:', recurrenceOptions.rule);
             updateData.recurrence_rule = recurrenceOptions.rule;
+
+            // Keep series_end in sync with rule when applicable
+            if (recurrenceOptions.rule.endType === 'on_date' && recurrenceOptions.rule.endDate) {
+              updateData.series_end = new Date(recurrenceOptions.rule.endDate).toISOString();
+            } else if (recurrenceOptions.rule.endType === 'never' || recurrenceOptions.rule.endType === 'after_count') {
+              updateData.series_end = null; // clear explicit end when not using on_date
+            }
           }
-          
+
           await updateSeries(editingEvent.series_id, 'event', updateData);
-          
+
           // Trigger calendar refresh
           if (typeof window !== 'undefined') {
             const w: any = window;
@@ -347,12 +354,12 @@ export const EventDialog = ({
               if (w.refreshCalendar) w.refreshCalendar();
             }, 300);
           }
-          
+
           toast({
             title: "Success",
             description: "Recurring event settings updated successfully",
           });
-          
+
           onOpenChange(false);
           return;
         }
