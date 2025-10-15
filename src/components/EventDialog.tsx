@@ -339,8 +339,14 @@ export const EventDialog = ({
           
           await updateSeries(editingEvent.series_id, 'event', updateData);
           
-          setSeriesData(null);
-          setShowSeriesOptions(false);
+          // Trigger calendar refresh
+          if (typeof window !== 'undefined') {
+            const w: any = window;
+            setTimeout(() => {
+              if (w.refreshEvents) w.refreshEvents();
+              if (w.refreshCalendar) w.refreshCalendar();
+            }, 300);
+          }
           
           toast({
             title: "Success",
