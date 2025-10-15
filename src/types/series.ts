@@ -11,6 +11,7 @@ export interface BaseSeries {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  rrule?: string; // RFC 5545 compliant RRULE string for calendar integration
 }
 
 export interface TaskSeries extends BaseSeries {

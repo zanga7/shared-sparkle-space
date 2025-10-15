@@ -280,6 +280,7 @@ export type Database = {
           location: string | null
           original_series_id: string | null
           recurrence_rule: Json
+          rrule: string | null
           series_end: string | null
           series_start: string
           title: string
@@ -298,6 +299,7 @@ export type Database = {
           location?: string | null
           original_series_id?: string | null
           recurrence_rule: Json
+          rrule?: string | null
           series_end?: string | null
           series_start: string
           title: string
@@ -316,6 +318,7 @@ export type Database = {
           location?: string | null
           original_series_id?: string | null
           recurrence_rule?: Json
+          rrule?: string | null
           series_end?: string | null
           series_start?: string
           title?: string
@@ -1221,6 +1224,7 @@ export type Database = {
           original_series_id: string | null
           points: number
           recurrence_rule: Json
+          rrule: string | null
           series_end: string | null
           series_start: string
           task_group: string | null
@@ -1239,6 +1243,7 @@ export type Database = {
           original_series_id?: string | null
           points?: number
           recurrence_rule: Json
+          rrule?: string | null
           series_end?: string | null
           series_start: string
           task_group?: string | null
@@ -1257,6 +1262,7 @@ export type Database = {
           original_series_id?: string | null
           points?: number
           recurrence_rule?: Json
+          rrule?: string | null
           series_end?: string | null
           series_start?: string
           task_group?: string | null

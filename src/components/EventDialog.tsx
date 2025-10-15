@@ -335,13 +335,7 @@ export const EventDialog = ({
           if (showSeriesOptions && recurrenceOptions.enabled) {
             console.log('Updating series recurrence rule:', recurrenceOptions.rule);
             updateData.recurrence_rule = recurrenceOptions.rule;
-
-            // Keep series_end in sync with rule when applicable
-            if (recurrenceOptions.rule.endType === 'on_date' && recurrenceOptions.rule.endDate) {
-              updateData.series_end = new Date(recurrenceOptions.rule.endDate).toISOString();
-            } else if (recurrenceOptions.rule.endType === 'never' || recurrenceOptions.rule.endType === 'after_count') {
-              updateData.series_end = null; // clear explicit end when not using on_date
-            }
+            // Note: series_end is now automatically synced by database trigger
           }
 
           await updateSeries(editingEvent.series_id, 'event', updateData);
