@@ -122,10 +122,10 @@ export const CalendarView = ({
     } else if (viewMode === 'week') {
       return {
         start: startOfWeek(currentDate, {
-          weekStartsOn: 1
+          weekStartsOn: 0
         }),
         end: endOfWeek(currentDate, {
-          weekStartsOn: 1
+          weekStartsOn: 0
         })
       };
     } else {
@@ -282,10 +282,10 @@ export const CalendarView = ({
       if (!task.due_date) return false;
       const taskDate = new Date(task.due_date);
       const weekStart = startOfWeek(currentDate, {
-        weekStartsOn: 1
+        weekStartsOn: 0
       });
       const weekEnd = endOfWeek(currentDate, {
-        weekStartsOn: 1
+        weekStartsOn: 0
       });
       return taskDate >= weekStart && taskDate <= weekEnd;
     });
