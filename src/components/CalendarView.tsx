@@ -136,6 +136,19 @@ export const CalendarView = ({
     }
   }, [currentDate, viewMode]);
   const days = viewMode === 'today' ? [currentDate] : eachDayOfInterval(dateRange);
+  
+  // For month view, pad the beginning with empty days to align with day of week
+  const paddedDays = useMemo(() => {
+    if (viewMode !== 'month') return days;
+    
+    const firstDay = days[0];
+    const dayOfWeek = firstDay.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    
+    // Create padding array with null values for days before the month starts
+    const padding = Array(dayOfWeek).fill(null);
+    
+    return [...padding, ...days];
+  }, [days, viewMode]);
 
   // Generate virtual task instances and merge with regular tasks
   const allTasks = useMemo(() => {
@@ -958,7 +971,12 @@ export const CalendarView = ({
                 </div>)}
 
               {/* Calendar Days */}
-              {days.map(day => {
+              {(viewMode === 'month' ? paddedDays : days).map((day, index) => {
+            // Handle padding days (null values)
+            if (day === null) {
+              return <div key={`padding-${index}`} className="min-h-[120px] p-2 border rounded-md bg-muted/20" />;
+            }
+            
             const dateKey = format(day, 'yyyy-MM-dd');
             const dayTasks = tasksByDate[dateKey] || [];
             const dayEvents = eventsByDate[dateKey] || [];
