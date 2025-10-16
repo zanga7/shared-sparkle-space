@@ -345,7 +345,6 @@ export const EventDialog = ({
             const w: any = window;
             setTimeout(() => {
               if (w.refreshEvents) w.refreshEvents();
-              if (w.refreshCalendar) w.refreshCalendar();
             }, 300);
           }
 
@@ -454,9 +453,9 @@ export const EventDialog = ({
       await deleteSeries(editingEvent.series_id, 'event');
       
       // Trigger calendar refresh
-      if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
+      if (typeof window !== 'undefined' && (window as any).refreshEvents) {
         setTimeout(() => {
-          (window as any).refreshCalendar();
+          (window as any).refreshEvents();
         }, 200);
       }
 
