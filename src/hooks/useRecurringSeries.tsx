@@ -347,11 +347,62 @@ export const useRecurringSeries = (familyId?: string) => {
     }
   };
 
+  // Helper to cascade updates to override exceptions
+  const applyUpdatesToOverrideExceptions = async (
+    seriesId: string,
+    seriesType: 'task' | 'event',
+    changedFields: string[],
+    updates: Partial<TaskSeries | EventSeries>
+  ) => {
+    try {
+      // Fetch all override exceptions for this series
+      const { data: exceptions, error } = await supabase
+        .from('recurrence_exceptions')
+        .select('*')
+        .eq('series_id', seriesId)
+        .eq('series_type', seriesType)
+        .eq('exception_type', 'override');
+
+      if (error) throw error;
+      if (!exceptions || exceptions.length === 0) {
+        console.debug('No override exceptions to update for series:', seriesId);
+        return 0;
+      }
+
+      // Update each exception with only the changed fields
+      const updatePromises = exceptions.map(async (exception) => {
+        const currentOverride = (exception.override_data || {}) as Record<string, any>;
+        const mergedOverride = { ...currentOverride };
+
+        // Only update fields that were actually changed
+        changedFields.forEach(field => {
+          if (field in updates) {
+            mergedOverride[field] = (updates as any)[field];
+          }
+        });
+
+        return supabase
+          .from('recurrence_exceptions')
+          .update({ override_data: mergedOverride })
+          .eq('id', exception.id);
+      });
+
+      await Promise.all(updatePromises);
+      console.debug(`Updated ${exceptions.length} override exceptions with fields:`, changedFields);
+      return exceptions.length;
+    } catch (error) {
+      console.error('Error cascading updates to overrides:', error);
+      throw error;
+    }
+  };
+
   // Update a series (all occurrences) with RRULE regeneration
   const updateSeries = async (
     seriesId: string,
     seriesType: 'task' | 'event',
-    updates: Partial<TaskSeries | EventSeries>
+    updates: Partial<TaskSeries | EventSeries>,
+    cascadeToOverrides: boolean = false,
+    changedFields: string[] = []
   ) => {
     try {
       console.log('Updating series:', seriesId, 'with updates:', updates);
@@ -382,6 +433,18 @@ export const useRecurringSeries = (familyId?: string) => {
       if (error) throw error;
 
       console.debug('Series updated successfully:', { seriesId, updatedRow, updates });
+
+      // Cascade changes to override exceptions if requested
+      if (cascadeToOverrides && changedFields.length > 0) {
+        const overrideCount = await applyUpdatesToOverrideExceptions(
+          seriesId,
+          seriesType,
+          changedFields,
+          updates
+        );
+        console.debug(`Cascaded updates to ${overrideCount} overridden dates`);
+      }
+
       await fetchSeries(); // Refresh data
       
       // Trigger global calendar refresh after series update

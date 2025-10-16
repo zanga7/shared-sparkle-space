@@ -85,6 +85,7 @@ export const EventDialog = ({
   });
   const [showEditScope, setShowEditScope] = useState(false);
   const [editScope, setEditScope] = useState<EditScope>('this_only');
+  const [applyToOverrides, setApplyToOverrides] = useState(false);
   const [showSeriesOptions, setShowSeriesOptions] = useState(false);
   const [seriesData, setSeriesData] = useState<any>(null);
   const [showDeleteSeriesDialog, setShowDeleteSeriesDialog] = useState(false);
@@ -347,7 +348,23 @@ export const EventDialog = ({
             // Note: series_end is now automatically synced by database trigger
           }
 
-          await updateSeries(editingEvent.series_id, 'event', updateData);
+          // Determine which fields changed for cascade
+          const changedFields: string[] = [];
+          if (seriesData) {
+            if (seriesData.title !== eventData.title) changedFields.push('title');
+            if (seriesData.description !== eventData.description) changedFields.push('description');
+            if (seriesData.location !== eventData.location) changedFields.push('location');
+            if (seriesData.is_all_day !== eventData.is_all_day) changedFields.push('is_all_day');
+            if (seriesData.duration_minutes !== updateData.duration_minutes) changedFields.push('duration_minutes');
+            // Compare arrays for attendees
+            const oldAttendees = seriesData.attendee_profiles || [];
+            const newAttendees = eventData.attendees || [];
+            if (JSON.stringify(oldAttendees.sort()) !== JSON.stringify(newAttendees.sort())) {
+              changedFields.push('attendee_profiles');
+            }
+          }
+
+          await updateSeries(editingEvent.series_id, 'event', updateData, applyToOverrides, changedFields);
 
           // Trigger calendar refresh
           if (typeof window !== 'undefined') {
@@ -359,7 +376,9 @@ export const EventDialog = ({
 
           toast({
             title: "Success",
-            description: "Recurring event settings updated successfully",
+            description: applyToOverrides 
+              ? "Recurring event updated, including previously modified dates"
+              : "Recurring event settings updated successfully",
           });
 
           onOpenChange(false);
@@ -435,8 +454,9 @@ export const EventDialog = ({
     }
   };
 
-  const handleEditScopeSelect = (scope: EditScope) => {
+  const handleEditScopeSelect = (scope: EditScope, shouldApplyToOverrides?: boolean) => {
     setEditScope(scope);
+    setApplyToOverrides(shouldApplyToOverrides || false);
     setShowEditScope(false);
     handleSave();
   };

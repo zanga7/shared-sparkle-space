@@ -6,13 +6,16 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Calendar, CalendarDays, CalendarRange } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { useState } from 'react';
 
 export type EditScope = 'this_only' | 'this_and_following' | 'all_occurrences';
 
 interface EditScopeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onScopeSelect: (scope: EditScope) => void;
+  onScopeSelect: (scope: EditScope, applyToOverrides?: boolean) => void;
   itemType?: 'event' | 'task';
   occurrenceDate?: Date;
 }
@@ -24,10 +27,12 @@ export const EditScopeDialog = ({
   itemType = 'event',
   occurrenceDate
 }: EditScopeDialogProps) => {
+  const [applyToOverrides, setApplyToOverrides] = useState(false);
   
   const handleScopeSelect = (scope: EditScope) => {
-    onScopeSelect(scope);
+    onScopeSelect(scope, scope === 'all_occurrences' ? applyToOverrides : false);
     onOpenChange(false);
+    setApplyToOverrides(false); // Reset for next time
   };
 
   const formatDate = (date?: Date) => {
@@ -102,11 +107,31 @@ export const EditScopeDialog = ({
               <div className="flex-1">
                 <div className="font-medium text-base">All occurrences</div>
                 <div className="text-sm text-muted-foreground">
-                  Updates the entire series. Existing overrides will remain as exceptions.
+                  Updates the entire series. You can also apply these changes to previously modified dates.
                 </div>
               </div>
             </div>
           </Button>
+
+          {/* Cascade option for "All occurrences" */}
+          <div className="flex items-start space-x-3 pl-6 pb-2">
+            <Checkbox
+              id="apply-to-overrides"
+              checked={applyToOverrides}
+              onCheckedChange={(checked) => setApplyToOverrides(checked as boolean)}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <Label
+                htmlFor="apply-to-overrides"
+                className="text-sm font-normal cursor-pointer"
+              >
+                Also apply to previously modified dates
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Updates fields you changed (like title) on dates you previously edited individually
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end mt-6">

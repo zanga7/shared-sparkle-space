@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 
 interface RecurringEventManagerProps {
   event: CalendarEvent;
-  onEditScope: (scope: EditScope, eventData: any) => Promise<void>;
+  onEditScope: (scope: EditScope, eventData: any, applyToOverrides?: boolean) => Promise<void>;
 }
 
 /**
@@ -16,7 +16,7 @@ interface RecurringEventManagerProps {
 export const RecurringEventManager = ({ event, onEditScope }: RecurringEventManagerProps) => {
   const { createException, updateSeries, splitSeries, getSeriesById } = useRecurringSeries(event.family_id);
 
-  const handleEditScope = async (scope: EditScope, eventData: any) => {
+  const handleEditScope = async (scope: EditScope, eventData: any, applyToOverrides: boolean = false) => {
     if (!event.series_id || !event.occurrence_date) return;
 
     try {
@@ -63,7 +63,7 @@ export const RecurringEventManager = ({ event, onEditScope }: RecurringEventMana
 
         case 'all_occurrences':
           // Update the entire series
-          await updateSeries(event.series_id, 'event', {
+          const updateData = {
             title: eventData.title,
             description: eventData.description,
             location: eventData.location,
@@ -72,11 +72,16 @@ export const RecurringEventManager = ({ event, onEditScope }: RecurringEventMana
             ),
             is_all_day: eventData.is_all_day,
             attendee_profiles: eventData.attendees || []
-          });
+          };
+
+          // Determine changed fields (assuming all provided fields are changed in this context)
+          const changedFields = Object.keys(updateData).filter(key => updateData[key as keyof typeof updateData] !== undefined);
+
+          await updateSeries(event.series_id, 'event', updateData, applyToOverrides, changedFields);
           break;
       }
 
-      await onEditScope(scope, eventData);
+      await onEditScope(scope, eventData, applyToOverrides);
     } catch (error) {
       console.error('Error handling recurring event edit:', error);
       throw error;
