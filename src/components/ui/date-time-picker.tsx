@@ -91,6 +91,7 @@ export function DateTimePicker({
   const [open, setOpen] = useState(false)
   const [selectedDuration, setSelectedDuration] = useState(60)
   const [hasEndTime, setHasEndTime] = useState(true)
+  const [isMultiDay, setIsMultiDay] = useState(!isSameDay(startDate, endDate))
 
   const timeOptions = generateTimeOptions()
 
@@ -123,8 +124,7 @@ export function DateTimePicker({
   const handleDatePreset = (preset: typeof DATE_PRESETS[0]) => {
     const date = preset.getDate()
     onStartDateChange(date)
-    if (!isSameDay(startDate, endDate)) {
-      // If it was a multi-day event, keep it single day
+    if (!isMultiDay) {
       onEndDateChange(date)
     }
   }
@@ -177,6 +177,10 @@ export function DateTimePicker({
     validateAndFixDates()
   }, [startDate, endDate])
 
+  React.useEffect(() => {
+    setIsMultiDay(!isSameDay(startDate, endDate))
+  }, [startDate, endDate])
+
   return (
     <div className={cn("w-full", className)}>
       <Label>When</Label>
@@ -190,7 +194,7 @@ export function DateTimePicker({
             )}
           >
             <Calendar className="mr-2 h-4 w-4" />
-            {formatChipLabel()}
+            {startDate ? formatChipLabel() : "Click to select date and time"}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
@@ -232,22 +236,66 @@ export function DateTimePicker({
             {/* Calendar */}
             <div>
               <h4 className="text-sm font-medium mb-2">Dates</h4>
-              <CalendarComponent
-                mode="range"
-                selected={{ from: startDate, to: endDate }}
-                onSelect={(range) => {
-                  if (range?.from) {
-                    onStartDateChange(range.from)
-                    onEndDateChange(range.to || range.from)
-                  }
-                }}
-                numberOfMonths={2}
-                className="pointer-events-auto"
-              />
+              {!isMultiDay ? (
+                <>
+                  <CalendarComponent
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        onStartDateChange(date)
+                        onEndDateChange(date)
+                      }
+                    }}
+                    className="pointer-events-auto"
+                  />
+                  {startDate && (
+                    <Badge variant="secondary" className="mt-2 w-full justify-center">
+                      Selected: {format(startDate, 'EEEE, MMM d, yyyy')}
+                    </Badge>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Label className="text-xs text-muted-foreground mb-2 block">Select date range</Label>
+                  <CalendarComponent
+                    mode="range"
+                    selected={{ from: startDate, to: endDate }}
+                    onSelect={(range) => {
+                      if (range?.from) {
+                        onStartDateChange(range.from)
+                        onEndDateChange(range.to || range.from)
+                      }
+                    }}
+                    numberOfMonths={2}
+                    className="pointer-events-auto"
+                  />
+                  {startDate && endDate && !isSameDay(startDate, endDate) && (
+                    <Badge variant="secondary" className="mt-2 w-full justify-center">
+                      {format(startDate, 'MMM d')} – {format(endDate, 'MMM d, yyyy')}
+                    </Badge>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Options */}
             <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="multi-day"
+                  checked={isMultiDay}
+                  onCheckedChange={(checked) => {
+                    setIsMultiDay(checked)
+                    if (!checked) {
+                      // When switching to single-day, collapse end to start
+                      onEndDateChange(startDate)
+                    }
+                  }}
+                />
+                <Label htmlFor="multi-day" className="text-sm">Multi-day event</Label>
+              </div>
+              
               <div className="flex items-center space-x-2">
                 <Switch
                   id="all-day"
@@ -351,7 +399,7 @@ export function DateTimePicker({
                 <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
                   Cancel
                 </Button>
-                <Button size="sm" onClick={() => setOpen(false)}>
+                <Button variant="default" size="sm" onClick={() => setOpen(false)}>
                   Done
                 </Button>
               </div>
