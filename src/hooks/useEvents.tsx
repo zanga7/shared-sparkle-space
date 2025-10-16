@@ -13,7 +13,7 @@ export const useEvents = (familyId?: string) => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
-  const { eventSeries, exceptions, generateSeriesInstances, createEventSeries, createException, updateSeries, splitSeries, deleteSeries } = useRecurringSeries(familyId);
+  const { eventSeries, exceptions, generateSeriesInstances, createEventSeries, createException, updateSeries, splitSeries, deleteSeries, fetchSeries } = useRecurringSeries(familyId);
 
   // Generate virtual event instances from both regular events and series (OPTIMIZED)
   const generateVirtualEvents = (startDate: Date, endDate: Date): CalendarEvent[] => {
@@ -428,6 +428,8 @@ export const useEvents = (familyId?: string) => {
   // Enhanced refresh function that also updates virtual instances
   const refreshEventsAndSeries = async () => {
     console.log('Refreshing events and series data...');
+    // Refresh both series (for virtual events) and regular events
+    await fetchSeries();
     await fetchEvents();
     
     // Trigger calendar refresh if available
