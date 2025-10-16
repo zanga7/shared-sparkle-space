@@ -150,19 +150,22 @@ export const useRecurringSeries = (familyId?: string) => {
       const rruleInstances = generateRRuleInstances({
         startDate,
         endDate,
+        seriesStart, // Pass the series' true start for correct DTSTART
         recurrenceRule: rule,
         exceptions: seriesExceptions,
         maxInstances: 1000
       });
 
-      // Map to SeriesInstance format
-      return rruleInstances.map(instance => ({
-        date: instance.date,
-        isException: instance.isException,
-        exceptionType: instance.exceptionType,
-        overrideData: instance.overrideData,
-        originalData: series
-      }));
+      // Map to SeriesInstance format and filter out any instances before series start
+      return rruleInstances
+        .filter(instance => instance.date >= seriesStart)
+        .map(instance => ({
+          date: instance.date,
+          isException: instance.isException,
+          exceptionType: instance.exceptionType,
+          overrideData: instance.overrideData,
+          originalData: series
+        }));
     } catch (error) {
       console.error('Error generating series instances with RRULE, falling back to legacy method:', error);
       
@@ -399,19 +402,44 @@ export const useRecurringSeries = (familyId?: string) => {
     newSeriesData: Partial<TaskSeries | EventSeries>
   ) => {
     try {
-      // 1. End the original series at the split date
-      const table = seriesType === 'task' ? 'task_series' : 'event_series';
-      await supabase
-        .from(table)
-        .update({ series_end: splitDate.toISOString() })
-        .eq('id', originalSeriesId);
+      console.log('Splitting series at', splitDate);
+      
+      // 1. Get the original series
+      const originalSeries = getSeriesById(originalSeriesId, seriesType);
+      if (!originalSeries) {
+        throw new Error('Original series not found');
+      }
 
-      // 2. Create new series starting from split date
+      // 2. Update the original series to end BEFORE the split date
+      // Create a new recurrence_rule with endType: 'on_date' and endDate = day before split
+      const dayBeforeSplit = new Date(splitDate);
+      dayBeforeSplit.setDate(dayBeforeSplit.getDate() - 1);
+      const endDateStr = format(dayBeforeSplit, 'yyyy-MM-dd');
+      
+      const updatedOriginalRule: RecurrenceRule = {
+        ...originalSeries.recurrence_rule,
+        endType: 'on_date',
+        endDate: endDateStr
+      };
+
+      await updateSeries(originalSeriesId, seriesType, {
+        recurrence_rule: updatedOriginalRule
+      });
+
+      console.log('Original series updated to end on:', endDateStr);
+
+      // 3. Create new series starting from split date
+      // Ensure we have a recurrence_rule for the new series
+      const effectiveRecurrenceRule = newSeriesData.recurrence_rule || originalSeries.recurrence_rule;
+      
       const createData = {
         ...newSeriesData,
+        recurrence_rule: effectiveRecurrenceRule,
         series_start: splitDate.toISOString(),
         original_series_id: originalSeriesId
       };
+
+      console.log('Creating new series starting from:', splitDate.toISOString());
 
       let res;
       if (seriesType === 'task') {

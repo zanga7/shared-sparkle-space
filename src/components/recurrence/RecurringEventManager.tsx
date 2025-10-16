@@ -23,10 +23,13 @@ export const RecurringEventManager = ({ event, onEditScope }: RecurringEventMana
       switch (scope) {
         case 'this_only':
           // Create an exception for this specific occurrence
+          // Use timezone-safe date formatting
+          const exceptionDateStr = format(new Date(event.start_date), 'yyyy-MM-dd');
+          
           await createException({
             series_id: event.series_id,
             series_type: 'event',
-            exception_date: event.occurrence_date,
+            exception_date: exceptionDateStr,
             exception_type: 'override',
             override_data: eventData,
             created_by: event.created_by

@@ -297,15 +297,23 @@ export const EventDialog = ({
         }
         
         if (editScope === 'this_only') {
+          // Use timezone-safe date formatting for exception_date
+          const exceptionDateStr = format(new Date(editingEvent.start_date), 'yyyy-MM-dd');
+          
           await createException({
             series_id: editingEvent.series_id,
             series_type: 'event',
-            exception_date: editingEvent.occurrence_date || format(startDate, 'yyyy-MM-dd'),
+            exception_date: exceptionDateStr,
             exception_type: 'override',
             override_data: eventData,
             created_by: editingEvent.created_by
           });
         } else if (editScope === 'this_and_following') {
+          // Ensure we pass the recurrence_rule to the new series
+          const effectiveRule = (showSeriesOptions && recurrenceOptions.enabled)
+            ? recurrenceOptions.rule
+            : seriesData?.recurrence_rule;
+          
           await splitSeries(editingEvent.series_id, 'event', startDate, {
             title: eventData.title,
             description: eventData.description,
@@ -315,7 +323,7 @@ export const EventDialog = ({
             attendee_profiles: eventData.attendees,
             family_id: eventData.family_id,
             created_by: editingEvent.created_by,
-            recurrence_rule: recurrenceOptions.rule,
+            recurrence_rule: effectiveRule,
             series_start: eventData.start_date,
             is_active: true
           });

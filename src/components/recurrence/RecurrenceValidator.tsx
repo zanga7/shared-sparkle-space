@@ -58,6 +58,7 @@ export const RecurrenceValidator = ({
             const instances = generateInstances({
               recurrenceRule: rule,
               startDate: startDate,
+              seriesStart: startDate, // Use same date for validation test
               endDate: new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000), // 1 year
               exceptions: []
             });

@@ -2,6 +2,7 @@ import { RRule, RRuleSet, rrulestr } from 'rrule';
 import { toRRULE } from './rruleConverter';
 import { RecurrenceRule } from '@/types/recurrence';
 import { RecurrenceException } from '@/types/series';
+import { format } from 'date-fns';
 
 /**
  * Generates instances of a recurring series using rrule.js
@@ -10,6 +11,7 @@ import { RecurrenceException } from '@/types/series';
 export interface InstanceGenerationOptions {
   startDate: Date;
   endDate: Date;
+  seriesStart: Date; // NEW: The true start of the series for DTSTART
   recurrenceRule: RecurrenceRule;
   exceptions?: RecurrenceException[];
   maxInstances?: number;
@@ -29,20 +31,21 @@ export function generateInstances(options: InstanceGenerationOptions): Generated
   const {
     startDate,
     endDate,
+    seriesStart,
     recurrenceRule,
     exceptions = [],
     maxInstances = 1000,
   } = options;
 
   try {
-    // Create RRULE string from recurrence rule
-    const rruleString = toRRULE(recurrenceRule, startDate);
+    // Create RRULE string from recurrence rule using the series' true start
+    const rruleString = toRRULE(recurrenceRule, seriesStart);
     
     // Create RRuleSet to handle exceptions
     const rruleSet = new RRuleSet();
     
-    // Add the main recurrence rule
-    const mainRule = rrulestr(rruleString, { dtstart: startDate });
+    // Add the main recurrence rule with seriesStart as DTSTART
+    const mainRule = rrulestr(rruleString, { dtstart: seriesStart });
     rruleSet.rrule(mainRule);
 
     // Add exception dates (EXDATE) for skipped instances
@@ -64,7 +67,8 @@ export function generateInstances(options: InstanceGenerationOptions): Generated
 
     // Map to GeneratedInstance format and apply overrides
     const result: GeneratedInstance[] = limitedInstances.map(date => {
-      const dateStr = date.toISOString().split('T')[0];
+      // Use timezone-safe date formatting for local-day matching
+      const dateStr = format(date, 'yyyy-MM-dd');
       
       // Check if this date has an override exception
       const overrideException = exceptions.find(
