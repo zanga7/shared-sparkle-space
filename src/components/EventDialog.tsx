@@ -462,15 +462,25 @@ export const EventDialog = ({
   };
 
   const handleSubmit = () => {
+    console.log('EventDialog handleSubmit:', {
+      isVirtual: editingEvent?.isVirtual,
+      series_id: editingEvent?.series_id,
+      showSeriesOptions,
+      editingEvent
+    });
+    
     if (editingEvent?.isVirtual && editingEvent?.series_id) {
       if (showSeriesOptions) {
         // We're editing the series itself
+        console.log('Editing series directly, calling handleSave');
         handleSave();
       } else {
         // Show edit scope dialog for instance edits
+        console.log('Showing EditScopeDialog for instance edit');
         setShowEditScope(true);
       }
     } else {
+      console.log('Not a virtual event or no series_id, calling handleSave directly');
       handleSave();
     }
   };
