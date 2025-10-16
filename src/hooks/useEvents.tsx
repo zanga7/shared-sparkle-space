@@ -52,8 +52,9 @@ export const useEvents = (familyId?: string) => {
             startISO = override.start_date;
             endISO = override.end_date;
           } else if (isAllDay) {
-            startISO = startOfDay(instance.date).toISOString();
-            endISO = endOfDay(instance.date).toISOString();
+            // Use midnight UTC for all-day events (consistent with storage)
+            startISO = format(instance.date, 'yyyy-MM-dd') + 'T00:00:00Z';
+            endISO = format(instance.date, 'yyyy-MM-dd') + 'T23:59:59Z';
           } else {
             startISO = instance.date.toISOString();
             endISO = new Date(instance.date.getTime() + (series.duration_minutes * 60 * 1000)).toISOString();
@@ -94,7 +95,11 @@ export const useEvents = (familyId?: string) => {
       });
     });
     
-    return virtualEvents.sort((a, b) => 
+    // De-duplicate by event ID to prevent transient doubles during refresh
+    const eventMap = new Map<string, CalendarEvent>();
+    virtualEvents.forEach(event => eventMap.set(event.id, event));
+
+    return Array.from(eventMap.values()).sort((a, b) => 
       new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
     );
   };

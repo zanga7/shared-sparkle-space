@@ -246,11 +246,12 @@ export const EventDialog = ({
       return;
     }
 
+    // For all-day events, use midnight UTC to prevent timezone shifts
     const calculatedStartDate = isAllDay 
-      ? startDate.toISOString()
+      ? format(startDate, 'yyyy-MM-dd') + 'T00:00:00Z'
       : new Date(`${format(startDate, 'yyyy-MM-dd')}T${startTime}`).toISOString();
     const calculatedEndDate = isAllDay
-      ? endDate.toISOString()
+      ? format(endDate, 'yyyy-MM-dd') + 'T23:59:59Z'
       : new Date(`${format(endDate, 'yyyy-MM-dd')}T${endTime}`).toISOString();
 
     if (new Date(calculatedEndDate) < new Date(calculatedStartDate)) {
@@ -297,8 +298,8 @@ export const EventDialog = ({
         }
         
         if (editScope === 'this_only') {
-          // Use timezone-safe date formatting for exception_date
-          const exceptionDateStr = format(new Date(editingEvent.start_date), 'yyyy-MM-dd');
+          // Use occurrence_date for precise exception targeting
+          const exceptionDateStr = editingEvent.occurrence_date || format(new Date(editingEvent.start_date), 'yyyy-MM-dd');
           
           await createException({
             series_id: editingEvent.series_id,

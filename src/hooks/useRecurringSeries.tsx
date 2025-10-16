@@ -147,6 +147,14 @@ export const useRecurringSeries = (familyId?: string) => {
     );
 
     try {
+      console.debug('Generating instances:', {
+        seriesId: series.id,
+        seriesStart: series.series_start,
+        isAllDay: (series as any).is_all_day,
+        frequency: rule.frequency,
+        weekdays: rule.weekdays
+      });
+      
       // Use RRULE-based instance generation for accuracy and RFC 5545 compliance
       const rruleInstances = generateRRuleInstances({
         startDate,
@@ -158,7 +166,7 @@ export const useRecurringSeries = (familyId?: string) => {
       });
 
       // Map to SeriesInstance format and filter out any instances before series start
-      return rruleInstances
+      const instances = rruleInstances
         .filter(instance => instance.date >= seriesStart)
         .map(instance => ({
           date: instance.date,
@@ -167,6 +175,9 @@ export const useRecurringSeries = (familyId?: string) => {
           overrideData: instance.overrideData,
           originalData: series
         }));
+      
+      console.debug('Generated instance count:', instances.length);
+      return instances;
     } catch (error) {
       console.error('Error generating series instances with RRULE, falling back to legacy method:', error);
       
@@ -361,14 +372,16 @@ export const useRecurringSeries = (familyId?: string) => {
         };
       }
       
-      const { error } = await supabase
+      const { data: updatedRow, error } = await supabase
         .from(table)
         .update(updateData as any)
-        .eq('id', seriesId);
+        .eq('id', seriesId)
+        .select()
+        .single();
 
       if (error) throw error;
 
-      console.log('Series updated successfully, refreshing data...');
+      console.debug('Series updated successfully:', { seriesId, updatedRow, updates });
       await fetchSeries(); // Refresh data
       
       // Trigger global calendar refresh after series update
