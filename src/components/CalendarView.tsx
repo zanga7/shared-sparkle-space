@@ -953,8 +953,8 @@ export const CalendarView = ({
         // Week/Month Grid View
         <div className={cn("grid gap-2", viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-7')}>
               {/* Day Headers */}
-              {days.slice(0, 7).map(day => <div key={format(day, 'E')} className="p-2 text-center font-medium text-sm border-b">
-                  {format(day, 'EEE')}
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(dayName => <div key={dayName} className="p-2 text-center font-medium text-sm border-b">
+                  {dayName}
                 </div>)}
 
               {/* Calendar Days */}
