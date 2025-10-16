@@ -140,9 +140,10 @@ export const useRecurringSeries = (familyId?: string) => {
     const seriesStart = new Date(series.series_start);
 
     // Get exceptions for this series
-    const seriesExceptions = exceptions.filter(e => 
-      e.series_id === series.id && 
-      ('series_type' in series ? e.series_type === 'task' : e.series_type === 'event')
+    // Get exceptions for this series (determine type by shape)
+    const isTaskSeries = (series as any).points !== undefined;
+    const seriesExceptions = exceptions.filter(
+      (e) => e.series_id === series.id && e.series_type === (isTaskSeries ? 'task' : 'event')
     );
 
     try {

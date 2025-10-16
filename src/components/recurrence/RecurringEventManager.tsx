@@ -14,7 +14,7 @@ interface RecurringEventManagerProps {
  * This manages the different edit scopes and calls appropriate series functions
  */
 export const RecurringEventManager = ({ event, onEditScope }: RecurringEventManagerProps) => {
-  const { createException, updateSeries, splitSeries } = useRecurringSeries();
+  const { createException, updateSeries, splitSeries, getSeriesById } = useRecurringSeries(event.family_id);
 
   const handleEditScope = async (scope: EditScope, eventData: any) => {
     if (!event.series_id || !event.occurrence_date) return;
@@ -24,7 +24,7 @@ export const RecurringEventManager = ({ event, onEditScope }: RecurringEventMana
         case 'this_only':
           // Create an exception for this specific occurrence
           // Use timezone-safe date formatting
-          const exceptionDateStr = format(new Date(event.start_date), 'yyyy-MM-dd');
+          const exceptionDateStr = event.occurrence_date || format(new Date(event.start_date), 'yyyy-MM-dd');
           
           await createException({
             series_id: event.series_id,
@@ -39,6 +39,8 @@ export const RecurringEventManager = ({ event, onEditScope }: RecurringEventMana
         case 'this_and_following':
           // Split the series at this occurrence
           const splitDate = new Date(event.start_date);
+          const originalSeries = getSeriesById(event.series_id, 'event');
+          const effectiveRule = (eventData?.recurrence_options?.rule) || originalSeries?.recurrence_rule;
           await splitSeries(
             event.series_id,
             'event',
@@ -54,11 +56,7 @@ export const RecurringEventManager = ({ event, onEditScope }: RecurringEventMana
               attendee_profiles: eventData.attendees || [],
               family_id: event.family_id,
               created_by: event.created_by,
-              recurrence_rule: {
-                frequency: 'weekly',
-                interval: 1,
-                endType: 'never'
-              } // Default rule - would need to be properly configured
+              recurrence_rule: effectiveRule
             }
           );
           break;
