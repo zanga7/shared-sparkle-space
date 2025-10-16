@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -60,6 +62,7 @@ export const CalendarView = ({
     status: 'all',
     taskType: 'all'
   });
+  const [showTasks, setShowTasks] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
   const [selectedEventDate, setSelectedEventDate] = useState<Date | null>(null);
@@ -207,6 +210,11 @@ export const CalendarView = ({
 
   // Group filtered tasks by date
   const tasksByDate = useMemo(() => {
+    // If showTasks is false, return empty object
+    if (!showTasks) {
+      return {};
+    }
+    
     const grouped: {
       [key: string]: Task[];
     } = {};
@@ -220,7 +228,7 @@ export const CalendarView = ({
       }
     });
     return grouped;
-  }, [filteredTasks]);
+  }, [filteredTasks, showTasks]);
 
   // Group events by date - handle multi-day events using virtual events
   const eventsByDate = useMemo(() => {
@@ -763,6 +771,17 @@ export const CalendarView = ({
                   <SelectItem value="one-time">One-time</SelectItem>
                 </SelectContent>
               </Select>
+              
+              <div className="flex items-center gap-2">
+                <Checkbox 
+                  id="show-tasks" 
+                  checked={showTasks}
+                  onCheckedChange={(checked) => setShowTasks(checked as boolean)}
+                />
+                <Label htmlFor="show-tasks" className="text-sm cursor-pointer">
+                  Show Tasks
+                </Label>
+              </div>
             </div>
 
           {/* Auth Debug Panel (development only) */}
