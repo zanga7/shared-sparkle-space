@@ -8,8 +8,16 @@ import { format } from 'date-fns';
  */
 export function toRRULE(rule: RecurrenceRule, dtstart: Date): string {
   try {
-    // For recurrence rules, use local date without time component to avoid timezone shifts
-    const localStart = new Date(dtstart.getFullYear(), dtstart.getMonth(), dtstart.getDate());
+    // Normalize DTSTART to local time (preserves time, avoids timezone shifts)
+    const localStart = new Date(
+      dtstart.getFullYear(),
+      dtstart.getMonth(),
+      dtstart.getDate(),
+      dtstart.getHours(),
+      dtstart.getMinutes(),
+      dtstart.getSeconds(),
+      dtstart.getMilliseconds()
+    );
     
     const options: any = {
       freq: getFrequency(rule.frequency),

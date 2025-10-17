@@ -6,6 +6,11 @@ import { addDays, addWeeks, addMonths, addYears, format, isBefore, isAfter } fro
 import { toRRULE } from '@/utils/rruleConverter';
 import { generateInstances as generateRRuleInstances } from '@/utils/rruleInstanceGenerator';
 
+function parseLocalDateString(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
 export interface TaskSeries {
   id: string;
   family_id: string;
@@ -137,7 +142,11 @@ export const useRecurringSeries = (familyId?: string) => {
     endDate: Date
   ): SeriesInstance[] => {
     const rule = series.recurrence_rule;
-    const seriesStart = new Date(series.series_start);
+    const rawSeriesStart = series.series_start;
+    const isEventSeries = (series as any).is_all_day !== undefined;
+    const seriesStart = isEventSeries && (series as any).is_all_day && /^\d{4}-\d{2}-\d{2}$/.test(rawSeriesStart)
+      ? parseLocalDateString(rawSeriesStart)
+      : new Date(rawSeriesStart);
 
     // Get exceptions for this series
     // Get exceptions for this series (determine type by shape)

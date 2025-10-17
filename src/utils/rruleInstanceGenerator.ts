@@ -25,6 +25,21 @@ export interface GeneratedInstance {
   overrideData?: any;
 }
 
+const normalizeToLocal = (d: Date) => new Date(
+  d.getFullYear(),
+  d.getMonth(),
+  d.getDate(),
+  d.getHours(),
+  d.getMinutes(),
+  d.getSeconds(),
+  d.getMilliseconds()
+);
+
+const parseLocalDateString = (dateStr: string): Date => {
+  const [y, m, dd] = dateStr.split('-').map(Number);
+  return new Date(y, (m || 1) - 1, dd || 1);
+};
+
 /**
  * Generate instances for a date range using rrule.js
  */
@@ -46,26 +61,28 @@ export function generateInstances(options: InstanceGenerationOptions): Generated
     // Create RRuleSet to handle exceptions
     const rruleSet = new RRuleSet();
     
-    // Add the main recurrence rule with seriesStart as DTSTART
-    const mainRule = rrulestr(rruleString, { dtstart: seriesStart });
+    // Add the main recurrence rule with a timezone-normalized DTSTART
+    const dtstartLocal = normalizeToLocal(seriesStart);
+    const mainRule = rrulestr(rruleString, { dtstart: dtstartLocal });
     rruleSet.rrule(mainRule);
 
     // Add exception dates (EXDATE) from both exceptions table AND exdates column
     const skipExceptions = exceptions.filter(ex => ex.exception_type === 'skip');
     skipExceptions.forEach(ex => {
-      const exDate = new Date(ex.exception_date);
+      // exception_date is 'YYYY-MM-DD' => parse as local date to avoid UTC shift
+      const exDate = parseLocalDateString(ex.exception_date);
       rruleSet.exdate(exDate);
     });
     
     // Add exdates from series column (for calendar export compatibility)
     exdates.forEach(exdate => {
-      rruleSet.exdate(exdate);
+      rruleSet.exdate(normalizeToLocal(exdate));
     });
 
     // Generate all instances within the date range
     const instances = rruleSet.between(
-      startDate,
-      endDate,
+      normalizeToLocal(startDate),
+      normalizeToLocal(endDate),
       true // inclusive
     );
 
@@ -115,7 +132,8 @@ export function getNextOccurrence(
 ): Date | null {
   try {
     const rruleString = toRRULE(recurrenceRule, seriesStart);
-    const rrule = rrulestr(rruleString, { dtstart: seriesStart });
+    const dtstartLocal = normalizeToLocal(seriesStart);
+    const rrule = rrulestr(rruleString, { dtstart: dtstartLocal });
     
     const next = rrule.after(afterDate, true);
     return next;
@@ -135,7 +153,8 @@ export function getOccurrences(
 ): Date[] {
   try {
     const rruleString = toRRULE(recurrenceRule, seriesStart);
-    const rrule = rrulestr(rruleString, { dtstart: seriesStart });
+    const dtstartLocal = normalizeToLocal(seriesStart);
+    const rrule = rrulestr(rruleString, { dtstart: dtstartLocal });
     
     return rrule.all((_, i) => i < count);
   } catch (error) {
@@ -154,12 +173,13 @@ export function isOccurrence(
 ): boolean {
   try {
     const rruleString = toRRULE(recurrenceRule, seriesStart);
-    const rrule = rrulestr(rruleString, { dtstart: seriesStart });
+    const dtstartLocal = normalizeToLocal(seriesStart);
+    const rrule = rrulestr(rruleString, { dtstart: dtstartLocal });
     
     // Check if the date matches any occurrence
     const occurrences = rrule.between(
-      new Date(date.getTime() - 1000), // 1 second before
-      new Date(date.getTime() + 1000), // 1 second after
+      new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), Math.max(date.getSeconds() - 1, 0)),
+      new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds() + 1),
       true
     );
     
