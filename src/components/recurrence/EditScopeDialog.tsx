@@ -19,6 +19,7 @@ interface EditScopeDialogProps {
   onScopeSelect: (scope: EditScope, applyToOverrides?: boolean) => void;
   itemType?: 'event' | 'task';
   occurrenceDate?: Date;
+  futureOverrideCount?: number; // NEW: Show warning if future overrides exist
 }
 
 export const EditScopeDialog = ({
@@ -26,12 +27,17 @@ export const EditScopeDialog = ({
   onOpenChange,
   onScopeSelect,
   itemType = 'event',
-  occurrenceDate
+  occurrenceDate,
+  futureOverrideCount = 0
 }: EditScopeDialogProps) => {
   const [applyToOverrides, setApplyToOverrides] = useState(false);
   
   const handleScopeSelect = (scope: EditScope) => {
-    onScopeSelect(scope, scope === 'all_occurrences' ? applyToOverrides : false);
+    // For "This and following", always update future overrides (no checkbox)
+    const shouldApplyToOverrides = scope === 'this_and_following' ? true : 
+                                   scope === 'all_occurrences' ? applyToOverrides : false;
+    
+    onScopeSelect(scope, shouldApplyToOverrides);
     onOpenChange(false);
     setApplyToOverrides(false); // Reset for next time
   };
@@ -55,6 +61,20 @@ export const EditScopeDialog = ({
           </DialogDescription>
         </DialogHeader>
 
+        {/* Smart warning for future overrides */}
+        {futureOverrideCount > 0 && (
+          <div className="rounded-md bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 p-3 mb-2">
+            <div className="flex items-start gap-2">
+              <svg className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                <strong>{futureOverrideCount}</strong> future {futureOverrideCount === 1 ? 'date has' : 'dates have'} custom changes that will be updated
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-3">
 
           {/* This occurrence only */}
@@ -77,7 +97,7 @@ export const EditScopeDialog = ({
             </div>
           </Button>
 
-          {/* This and following */}
+          {/* This and following - UPDATED description */}
           <Button
             variant="outline"
             className="w-full justify-start text-left h-auto p-4 hover:bg-muted/50"
@@ -89,9 +109,9 @@ export const EditScopeDialog = ({
                 <div className="font-medium text-base">This and following</div>
                 <div className="text-sm text-muted-foreground">
                   {occurrenceDate && (
-                    <>Updates from {formatDate(occurrenceDate)} onward, past stays unchanged. </>
+                    <>Updates from {formatDate(occurrenceDate)} onward. </>
                   )}
-                  Creates a new series starting from this occurrence.
+                  All future dates will be updated, including previously modified ones.
                 </div>
               </div>
             </div>

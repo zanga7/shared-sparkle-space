@@ -95,7 +95,7 @@ export const EventDialog = ({
 
   const { toast } = useToast();
   const { user, session } = useAuth();
-  const { createEventSeries, updateSeries, createException, splitSeries, deleteSeries, getSeriesById } = useRecurringSeries(familyId || '');
+  const { createEventSeries, updateSeries, createException, splitSeries, deleteSeries, getSeriesById, skipOccurrence } = useRecurringSeries(familyId || '');
 
   // Get current user's profile ID
   useEffect(() => {
@@ -643,6 +643,62 @@ export const EventDialog = ({
               )}
             </DialogTitle>
           </DialogHeader>
+
+          {/* Enhanced Recurring Event Indicator */}
+          {editingEvent?.isVirtual && editingEvent?.series_id && seriesData && !showSeriesOptions && (
+            <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Repeat className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span className="font-medium text-blue-900 dark:text-blue-100 text-sm">Repeating Event</span>
+              </div>
+              <RecurringEventInfo 
+                rule={seriesData.recurrence_rule}
+                seriesStart={seriesData.series_start}
+                seriesEnd={seriesData.series_end}
+                className="text-blue-700 dark:text-blue-300 text-xs mb-3"
+              />
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEditSeries}
+                  className="text-xs"
+                >
+                  <Settings className="h-3 w-3 mr-1" />
+                  Edit Series
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    if (!editingEvent?.series_id || !currentUserProfileId) return;
+                    
+                    const confirmed = window.confirm(
+                      'Skip this event? It will be hidden from your calendar but the rest of the series will continue.'
+                    );
+                    
+                    if (confirmed) {
+                      await skipOccurrence(
+                        editingEvent.series_id,
+                        'event',
+                        new Date(editingEvent.start_date),
+                        currentUserProfileId
+                      );
+                      onOpenChange(false);
+                    }
+                  }}
+                  className="text-xs"
+                >
+                  <svg className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Skip This Event
+                </Button>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-6">
             <div className="space-y-2">

@@ -273,6 +273,7 @@ export type Database = {
           created_by: string
           description: string | null
           duration_minutes: number
+          exdates: string[] | null
           family_id: string
           id: string
           is_active: boolean | null
@@ -292,6 +293,7 @@ export type Database = {
           created_by: string
           description?: string | null
           duration_minutes?: number
+          exdates?: string[] | null
           family_id: string
           id?: string
           is_active?: boolean | null
@@ -311,6 +313,7 @@ export type Database = {
           created_by?: string
           description?: string | null
           duration_minutes?: number
+          exdates?: string[] | null
           family_id?: string
           id?: string
           is_active?: boolean | null
@@ -848,6 +851,7 @@ export type Database = {
           exception_type: string
           id: string
           override_data: Json | null
+          recurrence_id: string | null
           series_id: string
           series_type: string
         }
@@ -858,6 +862,7 @@ export type Database = {
           exception_type: string
           id?: string
           override_data?: Json | null
+          recurrence_id?: string | null
           series_id: string
           series_type: string
         }
@@ -868,6 +873,7 @@ export type Database = {
           exception_type?: string
           id?: string
           override_data?: Json | null
+          recurrence_id?: string | null
           series_id?: string
           series_type?: string
         }
@@ -1218,6 +1224,7 @@ export type Database = {
           created_at: string | null
           created_by: string
           description: string | null
+          exdates: string[] | null
           family_id: string
           id: string
           is_active: boolean | null
@@ -1237,6 +1244,7 @@ export type Database = {
           created_at?: string | null
           created_by: string
           description?: string | null
+          exdates?: string[] | null
           family_id: string
           id?: string
           is_active?: boolean | null
@@ -1256,6 +1264,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           description?: string | null
+          exdates?: string[] | null
           family_id?: string
           id?: string
           is_active?: boolean | null
@@ -1364,6 +1373,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_exdate_to_series: {
+        Args: { p_exdate: string; p_series_id: string; p_table_name: string }
+        Returns: undefined
+      }
       approve_reward_request: {
         Args: { approval_note_param?: string; request_id_param: string }
         Returns: Json
@@ -1936,6 +1949,10 @@ export type Database = {
       migrate_existing_tokens_to_encrypted: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      remove_exdate_from_series: {
+        Args: { p_exdate: string; p_series_id: string; p_table_name: string }
+        Returns: undefined
       }
       revoke_calendar_integration: {
         Args: { integration_id: string; reason?: string }

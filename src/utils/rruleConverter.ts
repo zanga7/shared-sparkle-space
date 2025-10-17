@@ -1,5 +1,6 @@
 import { RRule, Frequency, Weekday } from 'rrule';
 import { RecurrenceRule, WeekdayKey, OrdinalPosition } from '@/types/recurrence';
+import { format } from 'date-fns';
 
 /**
  * Converts custom RecurrenceRule JSON format to RFC 5545 RRULE string
@@ -42,6 +43,104 @@ export function toRRULE(rule: RecurrenceRule, dtstart: Date): string {
   } catch (error) {
     console.error('Error converting to RRULE:', error);
     throw new Error(`Failed to convert RecurrenceRule to RRULE: ${error}`);
+  }
+}
+
+/**
+ * NEW: Converts RecurrenceRule + EXDATE array to complete RRULE string with exceptions
+ * Includes EXDATE for skipped occurrences (RFC 5545 compliant)
+ */
+export function toRRULEWithExceptions(
+  rule: RecurrenceRule,
+  dtstart: Date,
+  exdates: Date[] = []
+): string {
+  try {
+    const baseRRule = toRRULE(rule, dtstart);
+    
+    if (exdates.length === 0) {
+      return baseRRule;
+    }
+    
+    // Format EXDATE in RFC 5545 format
+    const exdateStrings = exdates
+      .map(date => format(date, "yyyyMMdd'T'HHmmss"))
+      .join(',');
+    
+    // Combine RRULE with EXDATE
+    return `${baseRRule}\nEXDATE:${exdateStrings}`;
+  } catch (error) {
+    console.error('Error generating RRULE with exceptions:', error);
+    throw error;
+  }
+}
+
+/**
+ * NEW: Exports event series to .ics format for external calendar import
+ * Includes RECURRENCE-ID for modified instances
+ */
+export function toICalendar(
+  event: any, // EventSeries
+  exceptions: any[] = [],
+  exdates: Date[] = []
+): string {
+  try {
+    const rrule = toRRULEWithExceptions(
+      event.recurrence_rule,
+      new Date(event.series_start),
+      exdates
+    );
+    
+    // Build .ics file content
+    const ics: string[] = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Family Hub//Recurring Events//EN',
+      'CALSCALE:GREGORIAN',
+      'BEGIN:VEVENT',
+      `UID:${event.id}@familyhub.app`,
+      `DTSTART:${format(new Date(event.series_start), "yyyyMMdd'T'HHmmss")}`,
+      `SUMMARY:${event.title}`,
+    ];
+
+    if (event.description) {
+      ics.push(`DESCRIPTION:${event.description.replace(/\n/g, '\\n')}`);
+    }
+    
+    if (event.location) {
+      ics.push(`LOCATION:${event.location}`);
+    }
+
+    ics.push(rrule);
+    ics.push('END:VEVENT');
+    
+    // Add modified instances (RECURRENCE-ID)
+    const overrides = exceptions.filter(ex => ex.exception_type === 'override');
+    overrides.forEach(override => {
+      const overrideData = override.override_data || {};
+      ics.push('BEGIN:VEVENT');
+      ics.push(`UID:${event.id}@familyhub.app`);
+      ics.push(`RECURRENCE-ID:${format(new Date(override.exception_date), "yyyyMMdd'T'HHmmss")}`);
+      ics.push(`DTSTART:${format(new Date(overrideData.start_date || event.series_start), "yyyyMMdd'T'HHmmss")}`);
+      ics.push(`SUMMARY:${overrideData.title || event.title}`);
+      
+      if (overrideData.description) {
+        ics.push(`DESCRIPTION:${overrideData.description.replace(/\n/g, '\\n')}`);
+      }
+      
+      if (overrideData.location) {
+        ics.push(`LOCATION:${overrideData.location}`);
+      }
+      
+      ics.push('END:VEVENT');
+    });
+    
+    ics.push('END:VCALENDAR');
+    
+    return ics.filter(line => line).join('\r\n');
+  } catch (error) {
+    console.error('Error generating iCalendar format:', error);
+    throw error;
   }
 }
 

@@ -14,6 +14,7 @@ export interface InstanceGenerationOptions {
   seriesStart: Date; // NEW: The true start of the series for DTSTART
   recurrenceRule: RecurrenceRule;
   exceptions?: RecurrenceException[];
+  exdates?: Date[]; // NEW: EXDATE array from series column
   maxInstances?: number;
 }
 
@@ -34,6 +35,7 @@ export function generateInstances(options: InstanceGenerationOptions): Generated
     seriesStart,
     recurrenceRule,
     exceptions = [],
+    exdates = [],
     maxInstances = 1000,
   } = options;
 
@@ -48,11 +50,16 @@ export function generateInstances(options: InstanceGenerationOptions): Generated
     const mainRule = rrulestr(rruleString, { dtstart: seriesStart });
     rruleSet.rrule(mainRule);
 
-    // Add exception dates (EXDATE) for skipped instances
+    // Add exception dates (EXDATE) from both exceptions table AND exdates column
     const skipExceptions = exceptions.filter(ex => ex.exception_type === 'skip');
     skipExceptions.forEach(ex => {
       const exDate = new Date(ex.exception_date);
       rruleSet.exdate(exDate);
+    });
+    
+    // Add exdates from series column (for calendar export compatibility)
+    exdates.forEach(exdate => {
+      rruleSet.exdate(exdate);
     });
 
     // Generate all instances within the date range

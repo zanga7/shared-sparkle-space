@@ -480,7 +480,7 @@ export const useRecurringSeries = (familyId?: string) => {
     }
   };
 
-  // Split a series (this and following)
+  // Split a series (this and following) - ENHANCED to transfer future overrides
   const splitSeries = async (
     originalSeriesId: string,
     seriesType: 'task' | 'event',
@@ -488,7 +488,7 @@ export const useRecurringSeries = (familyId?: string) => {
     newSeriesData: Partial<TaskSeries | EventSeries>
   ) => {
     try {
-      console.log('Splitting series at', splitDate);
+      console.log('[splitSeries] Splitting series at', splitDate);
       
       // 1. Get the original series
       const originalSeries = getSeriesById(originalSeriesId, seriesType);
@@ -497,7 +497,6 @@ export const useRecurringSeries = (familyId?: string) => {
       }
 
       // 2. Update the original series to end BEFORE the split date
-      // Create a new recurrence_rule with endType: 'on_date' and endDate = day before split
       const dayBeforeSplit = new Date(splitDate);
       dayBeforeSplit.setDate(dayBeforeSplit.getDate() - 1);
       const endDateStr = format(dayBeforeSplit, 'yyyy-MM-dd');
@@ -512,10 +511,9 @@ export const useRecurringSeries = (familyId?: string) => {
         recurrence_rule: updatedOriginalRule
       });
 
-      console.log('Original series updated to end on:', endDateStr);
+      console.log('[splitSeries] Original series updated to end on:', endDateStr);
 
       // 3. Create new series starting from split date
-      // Ensure we have a recurrence_rule for the new series
       const effectiveRecurrenceRule = newSeriesData.recurrence_rule || originalSeries.recurrence_rule;
       
       const createData = {
@@ -525,13 +523,73 @@ export const useRecurringSeries = (familyId?: string) => {
         original_series_id: originalSeriesId
       };
 
-      console.log('Creating new series starting from:', splitDate.toISOString());
+      console.log('[splitSeries] Creating new series starting from:', splitDate.toISOString());
 
-      let res;
+      let newSeries;
       if (seriesType === 'task') {
-        res = await createTaskSeries(createData as Omit<TaskSeries, 'id' | 'created_at' | 'updated_at'>);
+        newSeries = await createTaskSeries(createData as Omit<TaskSeries, 'id' | 'created_at' | 'updated_at'>);
       } else {
-        res = await createEventSeries(createData as Omit<EventSeries, 'id' | 'created_at' | 'updated_at'>);
+        newSeries = await createEventSeries(createData as Omit<EventSeries, 'id' | 'created_at' | 'updated_at'>);
+      }
+
+      if (!newSeries) {
+        throw new Error('Failed to create new series');
+      }
+
+      // 4. **NEW**: Transfer all future override exceptions to new series
+      const splitDateStr = format(splitDate, 'yyyy-MM-dd');
+      
+      const { data: futureOverrides, error: fetchError } = await supabase
+        .from('recurrence_exceptions')
+        .select('*')
+        .eq('series_id', originalSeriesId)
+        .eq('series_type', seriesType)
+        .eq('exception_type', 'override')
+        .gte('exception_date', splitDateStr);
+
+      if (fetchError) {
+        console.error('[splitSeries] Error fetching future overrides:', fetchError);
+      } else if (futureOverrides && futureOverrides.length > 0) {
+        console.log(`[splitSeries] Transferring ${futureOverrides.length} future overrides to new series`);
+        
+        // Update each override to point to new series and merge with new series data
+        const updatedOverrides = futureOverrides.map(override => {
+          // Merge new series base data with existing override data
+          const existingOverride = override.override_data as Record<string, any> || {};
+          const mergedOverrideData: Record<string, any> = {
+            ...existingOverride, // Start with existing override
+          };
+          
+          // Apply new series base data (only if defined)
+          Object.keys(newSeriesData).forEach(key => {
+            const value = (newSeriesData as any)[key];
+            if (value !== undefined) {
+              mergedOverrideData[key] = value;
+            }
+          });
+
+          return {
+            id: override.id,
+            series_id: newSeries.id, // Point to new series
+            series_type: override.series_type,
+            exception_date: override.exception_date,
+            exception_type: override.exception_type,
+            override_data: mergedOverrideData,
+            created_by: override.created_by,
+            recurrence_id: override.recurrence_id,
+          };
+        });
+
+        // Batch update all overrides
+        const { error: updateError } = await supabase
+          .from('recurrence_exceptions')
+          .upsert(updatedOverrides, { onConflict: 'id' });
+
+        if (updateError) {
+          console.error('[splitSeries] Error transferring overrides:', updateError);
+        } else {
+          console.log(`[splitSeries] Successfully transferred ${updatedOverrides.length} overrides`);
+        }
       }
 
       // Trigger global refresh for calendar views
@@ -544,12 +602,71 @@ export const useRecurringSeries = (familyId?: string) => {
         }
       }
 
-      return res;
+      toast({
+        title: 'Success',
+        description: 'Series split successfully',
+      });
+
+      return newSeries;
     } catch (error) {
-      console.error('Error splitting series:', error);
+      console.error('[splitSeries] Error:', error);
       toast({
         title: 'Error',
         description: 'Failed to split series',
+        variant: 'destructive'
+      });
+      throw error;
+    }
+  };
+
+  // Skip a single occurrence (creates EXDATE-style exception)
+  const skipOccurrence = async (
+    seriesId: string,
+    seriesType: 'task' | 'event',
+    occurrenceDate: Date,
+    createdBy: string
+  ) => {
+    try {
+      const dateStr = format(occurrenceDate, 'yyyy-MM-dd');
+      
+      // Create skip exception in recurrence_exceptions table
+      await createException({
+        series_id: seriesId,
+        series_type: seriesType,
+        exception_date: dateStr,
+        exception_type: 'skip',
+        created_by: createdBy
+      });
+
+      // Also add to exdates array for RRULE export
+      const tableName = seriesType === 'task' ? 'task_series' : 'event_series';
+      
+      const { error } = await supabase.rpc('add_exdate_to_series', {
+        p_series_id: seriesId,
+        p_table_name: tableName,
+        p_exdate: dateStr
+      });
+
+      if (error) {
+        console.error('[skipOccurrence] Error adding EXDATE:', error);
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Event skipped successfully',
+      });
+
+      // Trigger refresh
+      if (typeof window !== 'undefined') {
+        const w: any = window as any;
+        if (w.refreshEvents) w.refreshEvents();
+        else if (w.refreshCalendar) w.refreshCalendar();
+      }
+    } catch (error) {
+      console.error('[skipOccurrence] Error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to skip occurrence',
         variant: 'destructive'
       });
       throw error;
@@ -615,6 +732,7 @@ export const useRecurringSeries = (familyId?: string) => {
     updateSeries,
     splitSeries,
     deleteSeries,
-    getSeriesById
+    getSeriesById,
+    skipOccurrence, // NEW: Skip occurrence helper
   };
 };
