@@ -474,11 +474,23 @@ export const EventDialog = ({
     }
 
     const calculatedStartDate = isAllDay 
-      ? format(startDate, 'yyyy-MM-dd') + 'T00:00:00Z'
-      : new Date(`${format(startDate, 'yyyy-MM-dd')}T${startTime}`).toISOString();
+      ? format(startDate, 'yyyy-MM-dd')
+      : (() => {
+          const year = startDate.getFullYear();
+          const month = startDate.getMonth();
+          const day = startDate.getDate();
+          const [hours, minutes] = startTime.split(':').map(Number);
+          return new Date(year, month, day, hours, minutes).toISOString();
+        })();
     const calculatedEndDate = isAllDay
-      ? format(endDate, 'yyyy-MM-dd') + 'T23:59:59Z'
-      : new Date(`${format(endDate, 'yyyy-MM-dd')}T${endTime}`).toISOString();
+      ? format(endDate, 'yyyy-MM-dd')
+      : (() => {
+          const year = endDate.getFullYear();
+          const month = endDate.getMonth();
+          const day = endDate.getDate();
+          const [hours, minutes] = endTime.split(':').map(Number);
+          return new Date(year, month, day, hours, minutes).toISOString();
+        })();
 
     if (new Date(calculatedEndDate) < new Date(calculatedStartDate)) {
       toast({ title: "Error", description: "End date/time cannot be before start date/time", variant: "destructive" });
