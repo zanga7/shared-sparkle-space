@@ -1,6 +1,7 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -49,12 +50,12 @@ export const EditScopeDialog = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Change repeating {itemType}</DialogTitle>
+          <DialogDescription>
+            How would you like to apply your changes?
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
-          <p className="text-sm text-muted-foreground mb-6">
-            How would you like to apply your changes?
-          </p>
 
           {/* This occurrence only */}
           <Button

@@ -230,7 +230,8 @@ export const EventDialog = ({
   const handleAllDayChange = (allDay: boolean) => {
     setIsAllDay(allDay);
   };
-  const handleSave = async () => {
+  // Separated save function that takes scope as parameter to avoid stale state
+  const handleSaveWithScope = async (scope: EditScope, shouldApplyToOverrides: boolean) => {
     if (isLoading) return;
     
     setIsLoading(true);
@@ -255,7 +256,6 @@ export const EventDialog = ({
       return;
     }
 
-    // For all-day events, use midnight UTC to prevent timezone shifts
     const calculatedStartDate = isAllDay 
       ? format(startDate, 'yyyy-MM-dd') + 'T00:00:00Z'
       : new Date(`${format(startDate, 'yyyy-MM-dd')}T${startTime}`).toISOString();
@@ -287,27 +287,21 @@ export const EventDialog = ({
 
     try {
       if (editingEvent?.isVirtual && editingEvent?.series_id) {
-        // Validate series_id and created_by are valid UUIDs
         if (!editingEvent.series_id || editingEvent.series_id.trim() === '') {
-          toast({
-            title: "Error",
-            description: "Invalid series ID for recurring event",
-            variant: "destructive",
-          });
+          toast({ title: "Error", description: "Invalid series ID for recurring event", variant: "destructive" });
+          setIsLoading(false);
           return;
         }
         
         if (!editingEvent.created_by || editingEvent.created_by.trim() === '') {
-          toast({
-            title: "Error",
-            description: "Invalid creator ID for recurring event",
-            variant: "destructive",
-          });
+          toast({ title: "Error", description: "Invalid creator ID for recurring event", variant: "destructive" });
+          setIsLoading(false);
           return;
         }
         
-        if (editScope === 'this_only') {
-          // Use occurrence_date for precise exception targeting
+        console.debug('[EventDialog] Saving with scope:', scope, 'applyToOverrides:', shouldApplyToOverrides);
+        
+        if (scope === 'this_only') {
           const exceptionDateStr = editingEvent.occurrence_date || format(new Date(editingEvent.start_date), 'yyyy-MM-dd');
           
           await createException({
@@ -318,8 +312,9 @@ export const EventDialog = ({
             override_data: eventData,
             created_by: editingEvent.created_by
           });
-        } else if (editScope === 'this_and_following') {
-          // Ensure we pass the recurrence_rule to the new series
+          
+          console.debug('[EventDialog] Created override exception for:', exceptionDateStr);
+        } else if (scope === 'this_and_following') {
           const effectiveRule = (showSeriesOptions && recurrenceOptions.enabled)
             ? recurrenceOptions.rule
             : seriesData?.recurrence_rule;
@@ -337,6 +332,8 @@ export const EventDialog = ({
             series_start: eventData.start_date,
             is_active: true
           });
+          
+          console.debug('[EventDialog] Split series at:', startDate);
         } else {
           const updateData: any = {
             title: eventData.title,
@@ -347,16 +344,10 @@ export const EventDialog = ({
             attendee_profiles: eventData.attendees
           };
 
-          console.log('Updating series with attendees:', eventData.attendees);
-
-          // If we're editing the series, also update the recurrence rule
           if (showSeriesOptions && recurrenceOptions.enabled) {
-            console.log('Updating series recurrence rule:', recurrenceOptions.rule);
             updateData.recurrence_rule = recurrenceOptions.rule;
-            // Note: series_end is now automatically synced by database trigger
           }
 
-          // Determine which fields changed for cascade
           const changedFields: string[] = [];
           if (seriesData) {
             if (seriesData.title !== eventData.title) changedFields.push('title');
@@ -364,7 +355,6 @@ export const EventDialog = ({
             if (seriesData.location !== eventData.location) changedFields.push('location');
             if (seriesData.is_all_day !== eventData.is_all_day) changedFields.push('is_all_day');
             if (seriesData.duration_minutes !== updateData.duration_minutes) changedFields.push('duration_minutes');
-            // Compare arrays for attendees
             const oldAttendees = seriesData.attendee_profiles || [];
             const newAttendees = eventData.attendees || [];
             if (JSON.stringify(oldAttendees.sort()) !== JSON.stringify(newAttendees.sort())) {
@@ -372,24 +362,23 @@ export const EventDialog = ({
             }
           }
 
-          await updateSeries(editingEvent.series_id, 'event', updateData, applyToOverrides, changedFields);
+          console.debug('[EventDialog] Updating all occurrences, changed fields:', changedFields, 'cascade:', shouldApplyToOverrides);
+          await updateSeries(editingEvent.series_id, 'event', updateData, shouldApplyToOverrides, changedFields);
 
-          // Trigger calendar refresh
           if (typeof window !== 'undefined') {
             const w: any = window;
-            setTimeout(() => {
-              if (w.refreshEvents) w.refreshEvents();
-            }, 300);
+            setTimeout(() => { if (w.refreshEvents) w.refreshEvents(); }, 300);
           }
 
           toast({
             title: "Success",
-            description: applyToOverrides 
+            description: shouldApplyToOverrides 
               ? "Recurring event updated, including previously modified dates"
               : "Recurring event settings updated successfully",
           });
 
           onOpenChange(false);
+          setIsLoading(false);
           return;
         }
       } else if (recurrenceOptions.enabled) {
@@ -462,31 +451,137 @@ export const EventDialog = ({
     }
   };
 
+  // Regular save function for non-recurring events or series edit
+  const handleSave = async () => {
+    if (isLoading) return;
+    
+    setIsLoading(true);
+    
+    if (!user || !session) {
+      toast({ title: "Authentication Required", description: "Please sign in to create events.", variant: "destructive" });
+      setIsLoading(false);
+      return;
+    }
+    
+    if (!familyId || !currentProfileId || !title.trim()) {
+      toast({
+        title: "Error",
+        description: !familyId ? "Family ID required" : !currentProfileId ? "User profile not found" : "Event title required",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    const calculatedStartDate = isAllDay 
+      ? format(startDate, 'yyyy-MM-dd') + 'T00:00:00Z'
+      : new Date(`${format(startDate, 'yyyy-MM-dd')}T${startTime}`).toISOString();
+    const calculatedEndDate = isAllDay
+      ? format(endDate, 'yyyy-MM-dd') + 'T23:59:59Z'
+      : new Date(`${format(endDate, 'yyyy-MM-dd')}T${endTime}`).toISOString();
+
+    if (new Date(calculatedEndDate) < new Date(calculatedStartDate)) {
+      toast({ title: "Error", description: "End date/time cannot be before start date/time", variant: "destructive" });
+      setIsLoading(false);
+      return;
+    }
+
+    const eventData = {
+      title: title.trim(),
+      description: description.trim(),
+      location: location.trim(),
+      start_date: calculatedStartDate,
+      end_date: calculatedEndDate,
+      is_all_day: isAllDay,
+      attendees: assignees.filter(id => id && id.trim() !== ''),
+      family_id: familyId,
+      recurrence_options: recurrenceOptions.enabled ? recurrenceOptions : null
+    };
+
+    try {
+      if (recurrenceOptions.enabled && !editingEvent) {
+        const createdBy = currentProfileId || currentUserProfileId;
+        if (!createdBy) {
+          toast({ title: "Error", description: "User profile not found for recurring event creation", variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
+
+        const seriesData = {
+          title: eventData.title,
+          description: eventData.description,
+          location: eventData.location,
+          duration_minutes: Math.round((new Date(eventData.end_date).getTime() - new Date(eventData.start_date).getTime()) / (1000 * 60)),
+          is_all_day: eventData.is_all_day,
+          attendee_profiles: eventData.attendees,
+          family_id: eventData.family_id,
+          created_by: createdBy,
+          recurrence_rule: recurrenceOptions.rule,
+          series_start: eventData.start_date,
+          is_active: true
+        };
+        
+        await createEventSeries(seriesData);
+      } else if (showSeriesOptions && editingEvent?.series_id) {
+        // Editing series directly
+        const updateData: any = {
+          title: eventData.title,
+          description: eventData.description,
+          location: eventData.location,
+          duration_minutes: Math.round((new Date(eventData.end_date).getTime() - new Date(eventData.start_date).getTime()) / (1000 * 60)),
+          is_all_day: eventData.is_all_day,
+          attendee_profiles: eventData.attendees
+        };
+
+        if (recurrenceOptions.enabled) {
+          updateData.recurrence_rule = recurrenceOptions.rule;
+        }
+
+        const changedFields: string[] = [];
+        if (seriesData) {
+          if (seriesData.title !== eventData.title) changedFields.push('title');
+          if (seriesData.description !== eventData.description) changedFields.push('description');
+          if (seriesData.location !== eventData.location) changedFields.push('location');
+          if (seriesData.is_all_day !== eventData.is_all_day) changedFields.push('is_all_day');
+          if (seriesData.duration_minutes !== updateData.duration_minutes) changedFields.push('duration_minutes');
+          const oldAttendees = seriesData.attendee_profiles || [];
+          const newAttendees = eventData.attendees || [];
+          if (JSON.stringify(oldAttendees.sort()) !== JSON.stringify(newAttendees.sort())) {
+            changedFields.push('attendee_profiles');
+          }
+        }
+
+        await updateSeries(editingEvent.series_id, 'event', updateData, applyToOverrides, changedFields);
+      } else {
+        if (onSave) {
+          onSave(eventData);
+        } else {
+          const { createEvent } = useEvents(familyId);
+          await createEvent(eventData, currentProfileId || currentUserProfileId || '');
+        }
+      }
+
+      toast({ title: "Success", description: editingEvent ? "Event updated" : "Event created" });
+      onOpenChange(false);
+    } catch (error: any) {
+      const isAuthError = error.message?.includes('permission') || error.message?.includes('policy') || 
+                        error.code === '42501' || error.message?.includes('RLS');
+      toast({ title: "Error", description: isAuthError ? "Authentication required" : "Failed to save event", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleEditScopeSelect = (scope: EditScope, shouldApplyToOverrides?: boolean) => {
-    setEditScope(scope);
-    setApplyToOverrides(shouldApplyToOverrides || false);
     setShowEditScope(false);
-    handleSave();
+    handleSaveWithScope(scope, shouldApplyToOverrides || false);
   };
 
   const handleSubmit = () => {
-    console.log('EventDialog handleSubmit:', {
-      isVirtual: editingEvent?.isVirtual,
-      series_id: editingEvent?.series_id,
-      showSeriesOptions,
-      editingEvent
-    });
-    
-    if (editingEvent?.isVirtual && editingEvent?.series_id) {
-      if (showSeriesOptions) {
-        // We're editing the series itself
-        console.log('Editing series directly, calling handleSave');
-        handleSave();
-      } else {
-        // Show edit scope dialog for instance edits
-        console.log('Showing EditScopeDialog for instance edit');
-        setShowEditScope(true);
-      }
+    if (editingEvent?.isVirtual && editingEvent?.series_id && !showSeriesOptions) {
+      // Always show scope dialog for recurring instance edits
+      setShowEditScope(true);
+      return;
     } else {
       console.log('Not a virtual event or no series_id, calling handleSave directly');
       handleSave();

@@ -314,19 +314,28 @@ export const useRecurringSeries = (familyId?: string) => {
     }
   };
 
-  // Create an exception (skip or override)
+  // Create an exception (skip or override) - now with upsert to handle existing overrides
   const createException = async (exceptionData: Omit<RecurrenceException, 'id' | 'created_at'>) => {
     try {
+      // Use upsert to handle existing exceptions for the same date
       const { data, error } = await supabase
         .from('recurrence_exceptions')
-        .insert(exceptionData)
+        .upsert(exceptionData, {
+          onConflict: 'series_id,series_type,exception_date'
+        })
         .select()
         .single();
 
       if (error) throw error;
 
-      await fetchSeries(); // Refresh data
-      // Trigger global refresh for calendar views
+      console.debug('[createException] Upserted exception:', {
+        series_id: exceptionData.series_id,
+        exception_date: exceptionData.exception_date,
+        exception_type: exceptionData.exception_type
+      });
+
+      await fetchSeries();
+      
       if (typeof window !== 'undefined') {
         const w: any = window as any;
         if (typeof w.refreshEvents === 'function') {
