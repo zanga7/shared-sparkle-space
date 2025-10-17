@@ -131,6 +131,13 @@ export const EventDialog = ({
 
   useEffect(() => {
     if (editingEvent) {
+      console.log('[EventDialog] Opening event:', {
+        title: editingEvent.title,
+        isVirtual: editingEvent.isVirtual,
+        series_id: editingEvent.series_id,
+        occurrence_date: editingEvent.occurrence_date
+      });
+      
       setTitle(editingEvent.title || '');
       setDescription(editingEvent.description || '');
       setLocation(editingEvent.location || '');
@@ -148,6 +155,7 @@ export const EventDialog = ({
       // Load series data for virtual events
       if (editingEvent.isVirtual && editingEvent.series_id) {
         const series = getSeriesById(editingEvent.series_id, 'event');
+        console.log('[EventDialog] Series data loaded:', series);
         if (series) {
           setSeriesData(series);
           setRecurrenceOptions({
