@@ -56,8 +56,9 @@ export const useEvents = (familyId?: string) => {
             startISO = format(instance.date, 'yyyy-MM-dd') + 'T00:00:00Z';
             endISO = format(instance.date, 'yyyy-MM-dd') + 'T23:59:59Z';
           } else {
-            startISO = instance.date.toISOString();
-            endISO = new Date(instance.date.getTime() + (series.duration_minutes * 60 * 1000)).toISOString();
+            // Use local-time ISO without timezone to prevent day shifting in UI
+            startISO = format(instance.date, "yyyy-MM-dd'T'HH:mm:ss");
+            endISO = format(new Date(instance.date.getTime() + (series.duration_minutes * 60 * 1000)), "yyyy-MM-dd'T'HH:mm:ss");
           }
 
           // Use override attendees when provided
@@ -91,6 +92,14 @@ export const useEvents = (familyId?: string) => {
             exceptionType: instance.exceptionType
           };
         
+        // Debug: verify local vs stored values for recurring instances
+        console.debug('[VirtualEvent]', {
+          title: virtualEvent.title,
+          instanceLocal: format(instance.date, "EEE yyyy-MM-dd HH:mm"),
+          startISO,
+          endISO
+        });
+        
         virtualEvents.push(virtualEvent);
       });
     });
@@ -103,7 +112,6 @@ export const useEvents = (familyId?: string) => {
       new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
     );
   };
-
   const fetchEvents = async () => {
     if (!familyId) {
       return;
