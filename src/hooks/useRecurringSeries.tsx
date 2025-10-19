@@ -339,6 +339,12 @@ export const useRecurringSeries = (familyId?: string) => {
   // Create an exception (skip or override) - now with upsert to handle existing overrides
   const createException = async (exceptionData: Omit<RecurrenceException, 'id' | 'created_at'>) => {
     try {
+      console.debug('[createException] Creating/updating exception:', {
+        series_id: exceptionData.series_id,
+        exception_date: exceptionData.exception_date,
+        exception_type: exceptionData.exception_type
+      });
+
       // Use upsert to handle existing exceptions for the same date
       const { data, error } = await supabase
         .from('recurrence_exceptions')
@@ -348,7 +354,10 @@ export const useRecurringSeries = (familyId?: string) => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[createException] Error creating exception:', error);
+        throw error;
+      }
 
       console.debug('[createException] Upserted exception:', {
         series_id: exceptionData.series_id,

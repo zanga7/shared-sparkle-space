@@ -394,13 +394,31 @@ export const useEvents = (familyId?: string) => {
           const seriesId = parts.slice(0, 5).join('-'); // Reconstruct UUID
           const dateStr = parts.slice(5).join('-'); // Get date part
           
+          console.debug('[deleteEvent] Deleting virtual event:', { seriesId, dateStr });
+          
+          // Get current user's profile to use as created_by
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
+            throw new Error('User not authenticated');
+          }
+
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
+
+          if (!profile) {
+            throw new Error('User profile not found');
+          }
+          
           // Create a 'skip' exception for this occurrence
           await createException({
             series_id: seriesId,
             series_type: 'event',
             exception_date: dateStr,
             exception_type: 'skip',
-            created_by: (await supabase.auth.getUser()).data.user?.id || ''
+            created_by: profile.id
           });
           
           // Refresh events to show changes immediately
