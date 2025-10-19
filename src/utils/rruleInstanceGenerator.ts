@@ -40,6 +40,10 @@ const parseLocalDateString = (dateStr: string): Date => {
   return new Date(y, (m || 1) - 1, dd || 1);
 };
 
+// Ensure any RRULE string won't force UTC DTSTART parsing
+const stripDTSTART = (s: string): string =>
+  s.split('\n').filter((l) => !l.startsWith('DTSTART')).join('\n');
+
 /**
  * Generate instances for a date range using rrule.js
  */
@@ -56,7 +60,8 @@ export function generateInstances(options: InstanceGenerationOptions): Generated
 
   try {
     // Create RRULE string from recurrence rule using the series' true start
-    const rruleString = toRRULE(recurrenceRule, seriesStart);
+    const rawRruleString = toRRULE(recurrenceRule, seriesStart);
+    const rruleString = stripDTSTART(rawRruleString);
     
     // Create RRuleSet to handle exceptions
     const rruleSet = new RRuleSet();
@@ -131,7 +136,8 @@ export function getNextOccurrence(
   seriesStart: Date
 ): Date | null {
   try {
-    const rruleString = toRRULE(recurrenceRule, seriesStart);
+    const rawRruleString = toRRULE(recurrenceRule, seriesStart);
+    const rruleString = stripDTSTART(rawRruleString);
     const dtstartLocal = normalizeToLocal(seriesStart);
     const rrule = rrulestr(rruleString, { dtstart: dtstartLocal });
     
@@ -152,7 +158,8 @@ export function getOccurrences(
   count: number
 ): Date[] {
   try {
-    const rruleString = toRRULE(recurrenceRule, seriesStart);
+    const rawRruleString = toRRULE(recurrenceRule, seriesStart);
+    const rruleString = stripDTSTART(rawRruleString);
     const dtstartLocal = normalizeToLocal(seriesStart);
     const rrule = rrulestr(rruleString, { dtstart: dtstartLocal });
     
@@ -172,7 +179,8 @@ export function isOccurrence(
   seriesStart: Date
 ): boolean {
   try {
-    const rruleString = toRRULE(recurrenceRule, seriesStart);
+    const rawRruleString = toRRULE(recurrenceRule, seriesStart);
+    const rruleString = stripDTSTART(rawRruleString);
     const dtstartLocal = normalizeToLocal(seriesStart);
     const rrule = rrulestr(rruleString, { dtstart: dtstartLocal });
     

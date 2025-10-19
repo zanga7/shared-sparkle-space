@@ -50,7 +50,9 @@ export function toRRULE(rule: RecurrenceRule, dtstart: Date): string {
     // If endType is 'never', no additional options needed
 
     const rrule = new RRule(options);
-    return rrule.toString();
+    const str = rrule.toString();
+    const onlyRRULE = str.split('\n').find((l) => l.startsWith('RRULE')) ?? str;
+    return onlyRRULE;
   } catch (error) {
     console.error('Error converting to RRULE:', error);
     throw new Error(`Failed to convert RecurrenceRule to RRULE: ${error}`);
