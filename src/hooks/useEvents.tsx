@@ -37,6 +37,11 @@ export const useEvents = (familyId?: string) => {
     eventSeries.forEach(series => {
       const instances = generateSeriesInstances(series, startDate, endDate);
       
+      // Compute the series' original local time-of-day once
+      const seriesStartLocal = new Date(series.series_start);
+      const sh = seriesStartLocal.getHours();
+      const sm = seriesStartLocal.getMinutes();
+      
       instances.forEach(instance => {
         if (instance.exceptionType === 'skip') return;
         
@@ -56,9 +61,18 @@ export const useEvents = (familyId?: string) => {
             startISO = format(instance.date, 'yyyy-MM-dd') + 'T00:00:00Z';
             endISO = format(instance.date, 'yyyy-MM-dd') + 'T23:59:59Z';
           } else {
-            // Use local-time ISO without timezone to prevent day shifting in UI
-            startISO = format(instance.date, "yyyy-MM-dd'T'HH:mm:ss");
-            endISO = format(new Date(instance.date.getTime() + (series.duration_minutes * 60 * 1000)), "yyyy-MM-dd'T'HH:mm:ss");
+            // Reconstruct local wall-time from occurrence date + series' original time
+            const startLocal = new Date(
+              instance.date.getFullYear(),
+              instance.date.getMonth(),
+              instance.date.getDate(),
+              sh, sm, 0, 0
+            );
+            startISO = format(startLocal, "yyyy-MM-dd'T'HH:mm:ss");
+            endISO = format(
+              new Date(startLocal.getTime() + series.duration_minutes * 60000),
+              "yyyy-MM-dd'T'HH:mm:ss"
+            );
           }
 
           // Use override attendees when provided
@@ -95,7 +109,9 @@ export const useEvents = (familyId?: string) => {
         // Debug: verify local vs stored values for recurring instances
         console.debug('[VirtualEvent]', {
           title: virtualEvent.title,
-          instanceLocal: format(instance.date, "EEE yyyy-MM-dd HH:mm"),
+          instanceUTC: instance.date.toISOString(),
+          occurrenceLocalDay: format(instance.date, "EEE yyyy-MM-dd"),
+          seriesLocalTime: `${String(sh).padStart(2,'0')}:${String(sm).padStart(2,'0')}`,
           startISO,
           endISO
         });

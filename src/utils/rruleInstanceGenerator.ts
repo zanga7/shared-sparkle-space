@@ -25,19 +25,14 @@ export interface GeneratedInstance {
   overrideData?: any;
 }
 
-const normalizeToLocal = (d: Date) => new Date(
-  d.getFullYear(),
-  d.getMonth(),
-  d.getDate(),
-  d.getHours(),
-  d.getMinutes(),
-  d.getSeconds(),
-  d.getMilliseconds()
+// Convert a local date to UTC date-only (00:00:00 UTC on that calendar day)
+const toUTCDateOnly = (d: Date): Date => new Date(
+  Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0)
 );
 
 const parseLocalDateString = (dateStr: string): Date => {
   const [y, m, dd] = dateStr.split('-').map(Number);
-  return new Date(y, (m || 1) - 1, dd || 1);
+  return new Date(Date.UTC(y, (m || 1) - 1, dd || 1, 0, 0, 0, 0));
 };
 
 // Ensure any RRULE string won't force UTC DTSTART parsing
@@ -66,38 +61,49 @@ export function generateInstances(options: InstanceGenerationOptions): Generated
     // Create RRuleSet to handle exceptions
     const rruleSet = new RRuleSet();
     
-    // Add the main recurrence rule with a timezone-normalized DTSTART
-    const dtstartLocal = normalizeToLocal(seriesStart);
-    const mainRule = rrulestr(rruleString, { dtstart: dtstartLocal });
+    // Add the main recurrence rule with UTC date-only DTSTART
+    const dtstartUTC = toUTCDateOnly(seriesStart);
+    const mainRule = rrulestr(rruleString, { dtstart: dtstartUTC });
     rruleSet.rrule(mainRule);
 
     // Add exception dates (EXDATE) from both exceptions table AND exdates column
     const skipExceptions = exceptions.filter(ex => ex.exception_type === 'skip');
     skipExceptions.forEach(ex => {
-      // exception_date is 'YYYY-MM-DD' => parse as local date to avoid UTC shift
+      // exception_date is 'YYYY-MM-DD' => parse as UTC date-only
       const exDate = parseLocalDateString(ex.exception_date);
       rruleSet.exdate(exDate);
     });
     
     // Add exdates from series column (for calendar export compatibility)
     exdates.forEach(exdate => {
-      rruleSet.exdate(normalizeToLocal(exdate));
+      rruleSet.exdate(toUTCDateOnly(exdate));
     });
 
-    // Generate all instances within the date range
-    const instances = rruleSet.between(
-      normalizeToLocal(startDate),
-      normalizeToLocal(endDate),
-      true // inclusive
-    );
+    // Generate all instances within the date range (use UTC window)
+    const startUTC = toUTCDateOnly(startDate);
+    const endUTC = new Date(Date.UTC(
+      endDate.getFullYear(),
+      endDate.getMonth(),
+      endDate.getDate(),
+      23, 59, 59, 999
+    ));
+    
+    const instances = rruleSet.between(startUTC, endUTC, true);
 
     // Limit to max instances for performance
     const limitedInstances = instances.slice(0, maxInstances);
 
-    // Map to GeneratedInstance format and apply overrides
-    const result: GeneratedInstance[] = limitedInstances.map(date => {
+    // Map to GeneratedInstance format - convert UTC occurrences to local date-only
+    const result: GeneratedInstance[] = limitedInstances.map(utcOcc => {
+      // Extract the UTC calendar day and create a local date for it
+      const localDay = new Date(
+        utcOcc.getUTCFullYear(),
+        utcOcc.getUTCMonth(),
+        utcOcc.getUTCDate()
+      );
+      
       // Use timezone-safe date formatting for local-day matching
-      const dateStr = format(date, 'yyyy-MM-dd');
+      const dateStr = format(localDay, 'yyyy-MM-dd');
       
       // Check if this date has an override exception
       const overrideException = exceptions.find(
@@ -107,7 +113,7 @@ export function generateInstances(options: InstanceGenerationOptions): Generated
 
       if (overrideException) {
         return {
-          date,
+          date: localDay,
           isException: true,
           exceptionType: 'override',
           overrideData: overrideException.override_data,
@@ -115,7 +121,7 @@ export function generateInstances(options: InstanceGenerationOptions): Generated
       }
 
       return {
-        date,
+        date: localDay,
         isException: false,
       };
     });
@@ -138,11 +144,20 @@ export function getNextOccurrence(
   try {
     const rawRruleString = toRRULE(recurrenceRule, seriesStart);
     const rruleString = stripDTSTART(rawRruleString);
-    const dtstartLocal = normalizeToLocal(seriesStart);
-    const rrule = rrulestr(rruleString, { dtstart: dtstartLocal });
+    const dtstartUTC = toUTCDateOnly(seriesStart);
+    const rrule = rrulestr(rruleString, { dtstart: dtstartUTC });
     
-    const next = rrule.after(afterDate, true);
-    return next;
+    const afterUTC = toUTCDateOnly(afterDate);
+    const nextUTC = rrule.after(afterUTC, true);
+    
+    if (!nextUTC) return null;
+    
+    // Convert UTC occurrence to local date-only
+    return new Date(
+      nextUTC.getUTCFullYear(),
+      nextUTC.getUTCMonth(),
+      nextUTC.getUTCDate()
+    );
   } catch (error) {
     console.error('Error getting next occurrence:', error);
     return null;
@@ -160,10 +175,17 @@ export function getOccurrences(
   try {
     const rawRruleString = toRRULE(recurrenceRule, seriesStart);
     const rruleString = stripDTSTART(rawRruleString);
-    const dtstartLocal = normalizeToLocal(seriesStart);
-    const rrule = rrulestr(rruleString, { dtstart: dtstartLocal });
+    const dtstartUTC = toUTCDateOnly(seriesStart);
+    const rrule = rrulestr(rruleString, { dtstart: dtstartUTC });
     
-    return rrule.all((_, i) => i < count);
+    const utcOccurrences = rrule.all((_, i) => i < count);
+    
+    // Convert UTC occurrences to local date-only
+    return utcOccurrences.map(utcOcc => new Date(
+      utcOcc.getUTCFullYear(),
+      utcOcc.getUTCMonth(),
+      utcOcc.getUTCDate()
+    ));
   } catch (error) {
     console.error('Error getting occurrences:', error);
     return [];
@@ -181,13 +203,14 @@ export function isOccurrence(
   try {
     const rawRruleString = toRRULE(recurrenceRule, seriesStart);
     const rruleString = stripDTSTART(rawRruleString);
-    const dtstartLocal = normalizeToLocal(seriesStart);
-    const rrule = rrulestr(rruleString, { dtstart: dtstartLocal });
+    const dtstartUTC = toUTCDateOnly(seriesStart);
+    const rrule = rrulestr(rruleString, { dtstart: dtstartUTC });
     
-    // Check if the date matches any occurrence
+    // Check if the date matches any occurrence using UTC window
+    const targetUTC = toUTCDateOnly(date);
     const occurrences = rrule.between(
-      new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), Math.max(date.getSeconds() - 1, 0)),
-      new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds() + 1),
+      targetUTC,
+      new Date(targetUTC.getTime() + 86400000 - 1), // end of UTC day
       true
     );
     
