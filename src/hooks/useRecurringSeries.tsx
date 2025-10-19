@@ -174,9 +174,17 @@ export const useRecurringSeries = (familyId?: string) => {
         maxInstances: 1000
       });
 
-      // Map to SeriesInstance format and filter out any instances before series start
+      // Compare only the calendar date portion to avoid filtering out first occurrence
+      // when series starts later in the day (e.g., 9:00 AM vs midnight instance)
+      const seriesStartDateOnly = new Date(
+        seriesStart.getFullYear(),
+        seriesStart.getMonth(),
+        seriesStart.getDate()
+      );
+
+      // Map to SeriesInstance format and filter out any instances before series start date
       const instances = rruleInstances
-        .filter(instance => instance.date >= seriesStart)
+        .filter(instance => instance.date >= seriesStartDateOnly)
         .map(instance => ({
           date: instance.date,
           isException: instance.isException,
@@ -185,7 +193,12 @@ export const useRecurringSeries = (familyId?: string) => {
           originalData: series
         }));
       
-      console.debug('Generated instance count:', instances.length);
+      console.debug('Generated instances:', {
+        seriesStart,
+        seriesStartDateOnly,
+        firstInstance: instances[0]?.date,
+        totalCount: instances.length
+      });
       return instances;
     } catch (error) {
       console.error('Error generating series instances with RRULE, falling back to legacy method:', error);
