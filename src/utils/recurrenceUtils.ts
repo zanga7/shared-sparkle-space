@@ -160,51 +160,51 @@ export const generateRecurrencePreview = (
 ): RecurrencePreview => {
   const nextOccurrences: Date[] = [];
   const warnings: string[] = [];
-  
+
+  // Show up to 3, starting WITH the first scheduled occurrence (startDate)
+  const maxToShow = 3;
   let currentDate = new Date(startDate);
-  let count = 0;
-  const maxOccurrences = 10; // Limit preview generation
-  
-  // Generate next occurrences
-  while (count < maxOccurrences && nextOccurrences.length < 3) {
-    if (count > 0) { // Skip the first iteration to get future dates
+  let produced = 0;
+
+  // Respect end conditions
+  const totalAllowed = (rule.endType === 'after_count' && rule.endCount)
+    ? rule.endCount
+    : Number.POSITIVE_INFINITY;
+  const untilDate = (rule.endType === 'on_date' && rule.endDate)
+    ? new Date(rule.endDate)
+    : null;
+
+  while (produced < maxToShow && produced < totalAllowed) {
+    // Stop if we've passed the end date
+    if (untilDate && currentDate > untilDate) break;
+
+    // Include the current occurrence
+    nextOccurrences.push(new Date(currentDate));
+    produced++;
+
+    // Generate the next occurrence if we still need more
+    if (produced < maxToShow && produced < totalAllowed) {
       currentDate = getNextOccurrence(currentDate, rule, {
         skipWeekends: taskOptions?.skipWeekends,
         isFromCompletion: taskOptions?.repeatFrom === 'completion'
       });
     }
-    
-    // Check if we've passed the end date
-    if (rule.endType === 'on_date' && rule.endDate) {
-      if (currentDate > new Date(rule.endDate)) break;
-    }
-    
-    // Check if we've exceeded the count
-    if (rule.endType === 'after_count' && rule.endCount) {
-      if (count >= rule.endCount) break;
-    }
-    
-    if (count > 0) {
-      nextOccurrences.push(new Date(currentDate));
-    }
-    
-    count++;
-    
+
     // Safety break
-    if (count > 1000) {
+    if (produced > 1000) {
       warnings.push('Preview limited to prevent infinite loop');
       break;
     }
   }
-  
+
   // Generate human-readable summary
   const summary = generateSummaryText(rule, startDate, taskOptions);
-  
+
   // Add warnings for edge cases
   if (rule.frequency === 'monthly' && rule.monthDay && rule.monthDay > 28) {
     warnings.push('Some months may not have day ' + rule.monthDay);
   }
-  
+
   if (taskOptions?.rotateBetweenMembers && (!taskOptions.memberOrder || taskOptions.memberOrder.length < 2)) {
     warnings.push('Member rotation requires at least 2 assigned members');
   }
