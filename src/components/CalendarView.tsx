@@ -365,8 +365,8 @@ export const CalendarView = ({
     const task = allTasks.find(t => t.id === itemId);
     if (task?.isVirtual) {
       toast({
-        title: 'Cannot Move Recurring Task',
-        description: 'Edit the recurring task to change its schedule',
+        title: 'Cannot Move Series Task',
+        description: 'Edit the series task to change its schedule',
         variant: 'destructive'
       });
       return;
@@ -780,7 +780,7 @@ export const CalendarView = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="recurring">Recurring</SelectItem>
+                  <SelectItem value="recurring">Series</SelectItem>
                   <SelectItem value="one-time">One-time</SelectItem>
                 </SelectContent>
               </Select>
@@ -1036,11 +1036,11 @@ export const CalendarView = ({
                                     {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
                                     {event.isMultiDay && ` - ${format(new Date(event.originalEnd), 'MMM d')}`}
                                   </span>
-                                  {/* Recurrence Indicator */}
-                                  {event.recurrence_options?.enabled && <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600 ml-1">
-                                      <Repeat className="h-2.5 w-2.5 mr-0.5" />
-                                      Repeats
-                                    </Badge>}
+                                   {/* Recurrence Indicator */}
+                                   {event.recurrence_options?.enabled && <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600 ml-1">
+                                       <Repeat className="h-2.5 w-2.5 mr-0.5" />
+                                       Series
+                                     </Badge>}
                                 </div>}
                              </div>}
                              </Draggable>)}
