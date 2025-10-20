@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { flushSync } from 'react-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { RecurrenceRule } from '@/types/recurrence';
@@ -82,47 +81,45 @@ export const useRecurringSeries = (familyId?: string) => {
     
     setLoading(true);
     try {
-      // Fetch task series
-      const { data: taskSeriesData, error: taskError } = await supabase
-        .from('task_series')
-        .select('*')
-        .eq('family_id', familyId)
-        .eq('is_active', true);
+      // Parallelize all database queries for faster loading
+      const [
+        { data: taskSeriesData, error: taskError },
+        { data: eventSeriesData, error: eventError },
+        { data: exceptionsData, error: exceptionsError }
+      ] = await Promise.all([
+        supabase
+          .from('task_series')
+          .select('*')
+          .eq('family_id', familyId)
+          .eq('is_active', true),
+        supabase
+          .from('event_series')
+          .select('*')
+          .eq('family_id', familyId)
+          .eq('is_active', true),
+        supabase
+          .from('recurrence_exceptions')
+          .select('*')
+      ]);
 
       if (taskError) throw taskError;
-
-      // Fetch event series
-      const { data: eventSeriesData, error: eventError } = await supabase
-        .from('event_series')
-        .select('*')
-        .eq('family_id', familyId)
-        .eq('is_active', true);
-
       if (eventError) throw eventError;
-
-      // Fetch exceptions
-      const { data: exceptionsData, error: exceptionsError } = await supabase
-        .from('recurrence_exceptions')
-        .select('*');
-
       if (exceptionsError) throw exceptionsError;
 
-      // Force synchronous state commit for immediate React updates
-      flushSync(() => {
-        setTaskSeries([...(taskSeriesData || []).map(item => ({
-          ...item,
-          recurrence_rule: item.recurrence_rule as unknown as RecurrenceRule
-        }))]);
-        setEventSeries([...(eventSeriesData || []).map(item => ({
-          ...item,
-          recurrence_rule: item.recurrence_rule as unknown as RecurrenceRule
-        }))]);
-        setExceptions([...(exceptionsData || []).map(item => ({
-          ...item,
-          series_type: item.series_type as 'task' | 'event',
-          exception_type: item.exception_type as 'skip' | 'override'
-        }))]);
-      });
+      // Update state normally (React batches these automatically)
+      setTaskSeries((taskSeriesData || []).map(item => ({
+        ...item,
+        recurrence_rule: item.recurrence_rule as unknown as RecurrenceRule
+      })));
+      setEventSeries((eventSeriesData || []).map(item => ({
+        ...item,
+        recurrence_rule: item.recurrence_rule as unknown as RecurrenceRule
+      })));
+      setExceptions((exceptionsData || []).map(item => ({
+        ...item,
+        series_type: item.series_type as 'task' | 'event',
+        exception_type: item.exception_type as 'skip' | 'override'
+      })));
     } catch (error) {
       console.error('Error fetching series:', error);
       toast({

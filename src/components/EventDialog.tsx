@@ -546,17 +546,21 @@ export const EventDialog = ({
         const series = await createEventSeries(seriesData);
         console.debug('[EventDialog handleSave] Series created:', series.id);
         
-        // CRITICAL: Call parent's onSave to trigger calendar refresh
+        // Close dialog immediately for better UX
+        toast({ title: "Success", description: "Recurring event created" });
+        onOpenChange(false);
+        
+        // Trigger refresh asynchronously (non-blocking)
         if (onSave) {
-          console.debug('[EventDialog handleSave] Calling onSave with recurring event data');
-          await Promise.resolve(onSave({ 
+          console.debug('[EventDialog handleSave] Triggering async refresh');
+          onSave({ 
             ...eventData, 
             series_id: series.id, 
             isRecurring: true 
-          }));
-        } else {
-          console.warn('[EventDialog handleSave] No onSave callback provided!');
+          });
         }
+        setIsLoading(false);
+        return;
       } else if (showSeriesOptions && editingEvent?.series_id) {
         // Editing series directly
         const updateData: any = {
