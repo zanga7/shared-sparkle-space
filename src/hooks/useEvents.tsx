@@ -259,6 +259,11 @@ export const useEvents = (familyId?: string) => {
         await fetchSeries(); // Ensure series state is updated
         await fetchEvents(); // Refresh regular events too
         
+        // Trigger calendar refresh to show virtual events immediately
+        if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
+          (window as any).refreshCalendar();
+        }
+        
         toast({
           title: 'Success',
           description: 'Recurring event series created successfully',
