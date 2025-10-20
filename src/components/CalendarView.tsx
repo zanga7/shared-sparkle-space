@@ -22,7 +22,7 @@ import { useEvents } from '@/hooks/useEvents';
 import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { useTaskSeries, VirtualTaskInstance } from '@/hooks/useTaskSeries';
 import { EventDialog } from '@/components/EventDialog';
-import { AuthDebugPanel } from '@/components/AuthDebugPanel';
+
 import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
 import { CalendarEvent } from '@/types/event';
 interface CalendarViewProps {
@@ -797,8 +797,6 @@ export const CalendarView = ({
               </div>
             </div>
 
-          {/* Auth Debug Panel (development only) */}
-          {process.env.NODE_ENV === 'development' && <AuthDebugPanel />}
 
           {/* Debug Panel */}
             {showDebugInfo && process.env.NODE_ENV === 'development' && (
