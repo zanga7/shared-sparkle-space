@@ -77,6 +77,7 @@ export const CalendarView = ({
   } = useToast();
   const {
     events,
+    eventSeries, // Track for React dependency
     createEvent,
     updateEvent,
     deleteEvent,
@@ -287,7 +288,7 @@ export const CalendarView = ({
       }
     });
     return grouped;
-  }, [events, generateVirtualEvents, dateRange, viewMode]);
+  }, [events, eventSeries, generateVirtualEvents, dateRange, viewMode]);
 
   // Calculate analytics
   const analytics = useMemo(() => {

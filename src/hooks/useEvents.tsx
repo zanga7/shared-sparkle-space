@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarEvent } from '@/types/event';
@@ -16,7 +16,7 @@ export const useEvents = (familyId?: string) => {
   const { eventSeries, exceptions, generateSeriesInstances, createEventSeries, createException, updateSeries, splitSeries, deleteSeries, fetchSeries } = useRecurringSeries(familyId);
 
   // Generate virtual event instances from both regular events and series (OPTIMIZED)
-  const generateVirtualEvents = (startDate: Date, endDate: Date): CalendarEvent[] => {
+  const generateVirtualEvents = useCallback((startDate: Date, endDate: Date): CalendarEvent[] => {
     const virtualEvents: CalendarEvent[] = [];
     const normalizedStart = startOfDay(startDate);
     const normalizedEnd = endOfDay(endDate);
@@ -127,7 +127,7 @@ export const useEvents = (familyId?: string) => {
     return Array.from(eventMap.values()).sort((a, b) => 
       new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
     );
-  };
+  }, [events, eventSeries, exceptions, generateSeriesInstances]);
   const fetchEvents = async () => {
     if (!familyId) {
       return;
@@ -258,11 +258,6 @@ export const useEvents = (familyId?: string) => {
         // Now also refresh events to ensure calendar has the latest data
         await fetchSeries(); // Ensure series state is updated
         await fetchEvents(); // Refresh regular events too
-        
-        // Trigger calendar refresh to show virtual events immediately
-        if (typeof window !== 'undefined' && (window as any).refreshCalendar) {
-          (window as any).refreshCalendar();
-        }
         
         toast({
           title: 'Success',
@@ -506,6 +501,7 @@ export const useEvents = (familyId?: string) => {
 
   return {
     events,
+    eventSeries, // Export for React dependency tracking
     loading,
     createEvent,
     updateEvent,

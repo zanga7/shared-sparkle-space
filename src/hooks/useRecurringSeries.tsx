@@ -106,19 +106,20 @@ export const useRecurringSeries = (familyId?: string) => {
 
       if (exceptionsError) throw exceptionsError;
 
-      setTaskSeries((taskSeriesData || []).map(item => ({
+      // Use new array references for React reactivity
+      setTaskSeries([...(taskSeriesData || []).map(item => ({
         ...item,
         recurrence_rule: item.recurrence_rule as unknown as RecurrenceRule
-      })));
-      setEventSeries((eventSeriesData || []).map(item => ({
+      }))]);
+      setEventSeries([...(eventSeriesData || []).map(item => ({
         ...item,
         recurrence_rule: item.recurrence_rule as unknown as RecurrenceRule
-      })));
-      setExceptions((exceptionsData || []).map(item => ({
+      }))]);
+      setExceptions([...(exceptionsData || []).map(item => ({
         ...item,
         series_type: item.series_type as 'task' | 'event',
         exception_type: item.exception_type as 'skip' | 'override'
-      })));
+      }))]);
     } catch (error) {
       console.error('Error fetching series:', error);
       toast({
