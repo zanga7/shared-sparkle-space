@@ -513,6 +513,7 @@ export const useEvents = (familyId?: string) => {
     createException,
     updateSeries,
     splitSeries,
-    deleteSeries
+    deleteSeries,
+    fetchSeries // Export for triggering series refresh
   };
 };

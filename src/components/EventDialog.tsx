@@ -409,7 +409,16 @@ export const EventDialog = ({
         };
         
         try {
-          await createEventSeries(seriesData);
+          const series = await createEventSeries(seriesData);
+          
+          // Call parent's onSave callback to trigger refresh
+          if (onSave) {
+            onSave({ 
+              ...eventData, 
+              series_id: series.id, 
+              isRecurring: true 
+            });
+          }
         } catch (error: any) {
           const isAuthError = error.message?.includes('permission') || error.message?.includes('policy') || 
                             error.code === '42501' || error.message?.includes('RLS');

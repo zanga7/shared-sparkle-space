@@ -82,7 +82,8 @@ export const CalendarView = ({
     updateEvent,
     deleteEvent,
     refreshEvents,
-    generateVirtualEvents
+    generateVirtualEvents,
+    fetchSeries // For refreshing series on recurring event creation
   } = useEvents(familyId);
 
   // Initialize task series hook
@@ -1104,6 +1105,14 @@ export const CalendarView = ({
             title: 'Success',
             description: 'Event updated successfully'
           });
+        } else if (eventData.isRecurring) {
+          // Handle recurring event (series already created in dialog)
+          console.log('Recurring event created, refreshing series data');
+          await fetchSeries(); // Refresh series to show virtual events
+          toast({
+            title: 'Success',
+            description: 'Recurring event created successfully'
+          });
         } else {
           // Create new event - MUST pass the currentProfileId
           console.log('Creating event from main calendar with creator:', currentProfileId);
@@ -1116,7 +1125,7 @@ export const CalendarView = ({
             is_all_day: eventData.is_all_day,
             attendees: eventData.attendees,
             recurrence_options: eventData.recurrence_options
-          }, currentProfileId); // THIS WAS MISSING!
+          }, currentProfileId);
 
           if (result) {
             console.log('Event created successfully from main calendar');

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { RecurrenceRule } from '@/types/recurrence';
@@ -106,20 +107,22 @@ export const useRecurringSeries = (familyId?: string) => {
 
       if (exceptionsError) throw exceptionsError;
 
-      // Use new array references for React reactivity
-      setTaskSeries([...(taskSeriesData || []).map(item => ({
-        ...item,
-        recurrence_rule: item.recurrence_rule as unknown as RecurrenceRule
-      }))]);
-      setEventSeries([...(eventSeriesData || []).map(item => ({
-        ...item,
-        recurrence_rule: item.recurrence_rule as unknown as RecurrenceRule
-      }))]);
-      setExceptions([...(exceptionsData || []).map(item => ({
-        ...item,
-        series_type: item.series_type as 'task' | 'event',
-        exception_type: item.exception_type as 'skip' | 'override'
-      }))]);
+      // Force synchronous state commit for immediate React updates
+      flushSync(() => {
+        setTaskSeries([...(taskSeriesData || []).map(item => ({
+          ...item,
+          recurrence_rule: item.recurrence_rule as unknown as RecurrenceRule
+        }))]);
+        setEventSeries([...(eventSeriesData || []).map(item => ({
+          ...item,
+          recurrence_rule: item.recurrence_rule as unknown as RecurrenceRule
+        }))]);
+        setExceptions([...(exceptionsData || []).map(item => ({
+          ...item,
+          series_type: item.series_type as 'task' | 'event',
+          exception_type: item.exception_type as 'skip' | 'override'
+        }))]);
+      });
     } catch (error) {
       console.error('Error fetching series:', error);
       toast({
