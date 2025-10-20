@@ -253,14 +253,17 @@ export const useEvents = (familyId?: string) => {
         };
         
         const series = await createEventSeries(seriesData);
-        await fetchEvents(); // Refresh to include new virtual instances
+        
+        // Wait for series to be fetched (createEventSeries already calls fetchSeries internally)
+        // Now also refresh events to ensure calendar has the latest data
+        await fetchSeries(); // Ensure series state is updated
+        await fetchEvents(); // Refresh regular events too
         
         toast({
           title: 'Success',
           description: 'Recurring event series created successfully',
         });
         
-        // Calendar will refresh via React Query invalidation
         return series;
       } else {
         // Create as regular one-time event
