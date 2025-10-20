@@ -521,6 +521,7 @@ export const EventDialog = ({
 
     try {
       if (recurrenceOptions.enabled && !editingEvent) {
+        console.debug('[EventDialog handleSave] Creating new recurring event');
         const createdBy = currentProfileId || currentUserProfileId;
         if (!createdBy) {
           toast({ title: "Error", description: "User profile not found for recurring event creation", variant: "destructive" });
@@ -542,7 +543,20 @@ export const EventDialog = ({
           is_active: true
         };
         
-        await createEventSeries(seriesData);
+        const series = await createEventSeries(seriesData);
+        console.debug('[EventDialog handleSave] Series created:', series.id);
+        
+        // CRITICAL: Call parent's onSave to trigger calendar refresh
+        if (onSave) {
+          console.debug('[EventDialog handleSave] Calling onSave with recurring event data');
+          await Promise.resolve(onSave({ 
+            ...eventData, 
+            series_id: series.id, 
+            isRecurring: true 
+          }));
+        } else {
+          console.warn('[EventDialog handleSave] No onSave callback provided!');
+        }
       } else if (showSeriesOptions && editingEvent?.series_id) {
         // Editing series directly
         const updateData: any = {
@@ -574,8 +588,9 @@ export const EventDialog = ({
 
         await updateSeries(editingEvent.series_id, 'event', updateData, applyToOverrides, changedFields);
       } else {
+        console.debug('[EventDialog handleSave] Creating non-recurring event');
         if (onSave) {
-          onSave(eventData);
+          await Promise.resolve(onSave(eventData));
         } else {
           const { createEvent } = useEvents(familyId);
           await createEvent(eventData, currentProfileId || currentUserProfileId || '');

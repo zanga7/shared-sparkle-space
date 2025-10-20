@@ -1107,8 +1107,10 @@ export const CalendarView = ({
           });
         } else if (eventData.isRecurring) {
           // Handle recurring event (series already created in dialog)
-          console.log('Recurring event created, refreshing series data');
+          console.debug('[CalendarView onSave] Recurring event created with series_id:', eventData.series_id);
+          console.debug('[CalendarView onSave] Fetching series to refresh virtual events...');
           await fetchSeries(); // Refresh series to show virtual events
+          console.debug('[CalendarView onSave] Series fetched successfully');
           toast({
             title: 'Success',
             description: 'Recurring event created successfully'
@@ -1135,8 +1137,9 @@ export const CalendarView = ({
             });
           }
         }
-        console.log('Refreshing calendar after event save');
+        console.debug('[CalendarView onSave] Refreshing calendar after event save');
         await refreshEvents();
+        console.debug('[CalendarView onSave] Calendar refreshed, closing dialog');
         setIsEventDialogOpen(false);
         setSelectedEventDate(null);
         setDefaultMember('');
