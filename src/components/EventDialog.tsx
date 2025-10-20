@@ -413,11 +413,11 @@ export const EventDialog = ({
           
           // Call parent's onSave callback to trigger refresh
           if (onSave) {
-            onSave({ 
+            await Promise.resolve(onSave({ 
               ...eventData, 
               series_id: series.id, 
               isRecurring: true 
-            });
+            }));
           }
         } catch (error: any) {
           const isAuthError = error.message?.includes('permission') || error.message?.includes('policy') || 
@@ -433,7 +433,7 @@ export const EventDialog = ({
         }
       } else {
         if (onSave) {
-          onSave(eventData);
+          await Promise.resolve(onSave(eventData));
         } else {
           const { createEvent } = useEvents(familyId);
           await createEvent(eventData, currentProfileId || currentUserProfileId || '');
