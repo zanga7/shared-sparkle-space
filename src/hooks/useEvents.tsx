@@ -16,7 +16,7 @@ export const useEvents = (familyId?: string) => {
   const { eventSeries, exceptions, generateSeriesInstances, createEventSeries, createException, updateSeries, splitSeries, deleteSeries, fetchSeries } = useRecurringSeries(familyId);
 
   // Generate virtual event instances from both regular events and series (OPTIMIZED)
-  const generateVirtualEvents = useCallback((startDate: Date, endDate: Date): CalendarEvent[] => {
+  const generateVirtualEvents = useCallback((startDate: Date, endDate: Date, profilesMap?: Map<string, any>): CalendarEvent[] => {
     const virtualEvents: CalendarEvent[] = [];
     const normalizedStart = startOfDay(startDate);
     const normalizedEnd = endOfDay(endDate);
@@ -90,14 +90,17 @@ export const useEvents = (familyId?: string) => {
             created_by: series.created_by,
             created_at: series.created_at,
             updated_at: series.updated_at,
-            attendees: attendeeProfiles.map(profileId => ({
-              id: crypto.randomUUID(),
-              event_id: `${series.id}-${format(instance.date, 'yyyy-MM-dd')}`,
-              profile_id: profileId,
-              added_by: series.created_by,
-              added_at: new Date().toISOString(),
-              profile: { id: profileId, display_name: '', role: 'child' as const, color: 'sky' }
-            })),
+            attendees: attendeeProfiles.map(profileId => {
+              const profile = profilesMap?.get(profileId) || { id: profileId, display_name: 'Unknown', role: 'child' as const, color: 'sky' };
+              return {
+                id: crypto.randomUUID(),
+                event_id: `${series.id}-${format(instance.date, 'yyyy-MM-dd')}`,
+                profile_id: profileId,
+                added_by: series.created_by,
+                added_at: new Date().toISOString(),
+                profile
+              };
+            }),
             recurrence_options: null,
             isVirtual: true,
             series_id: series.id,
@@ -128,6 +131,31 @@ export const useEvents = (familyId?: string) => {
       new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
     );
   }, [events, eventSeries, exceptions, generateSeriesInstances]);
+  
+  // Fetch profiles for virtual event generation
+  const [profilesMap, setProfilesMap] = useState<Map<string, any>>(new Map());
+  
+  const fetchProfiles = async () => {
+    if (!familyId) return;
+    
+    try {
+      const { data: profilesData, error } = await supabase
+        .from('profiles')
+        .select('id, display_name, role, color')
+        .eq('family_id', familyId);
+      
+      if (error) throw error;
+      
+      const map = new Map((profilesData || []).map(p => [p.id, p]));
+      setProfilesMap(map);
+    } catch (error) {
+      console.error('Error fetching profiles:', error);
+    }
+  };
+  
+  useEffect(() => {
+    fetchProfiles();
+  }, [familyId]);
   const fetchEvents = async () => {
     if (!familyId) {
       return;
@@ -499,6 +527,11 @@ export const useEvents = (familyId?: string) => {
     fetchEvents();
   }, [familyId]);
 
+  // Wrapper to pass profilesMap automatically
+  const generateVirtualEventsWithProfiles = useCallback((startDate: Date, endDate: Date) => {
+    return generateVirtualEvents(startDate, endDate, profilesMap);
+  }, [generateVirtualEvents, profilesMap]);
+
   return {
     events,
     eventSeries, // Export for React dependency tracking
@@ -507,7 +540,7 @@ export const useEvents = (familyId?: string) => {
     updateEvent,
     deleteEvent,
     refreshEvents: refreshEventsAndSeries,
-    generateVirtualEvents, // Export the virtual events generator
+    generateVirtualEvents: generateVirtualEventsWithProfiles, // Export the virtual events generator with profiles
     // Series management functions
     createEventSeries,
     createException,
