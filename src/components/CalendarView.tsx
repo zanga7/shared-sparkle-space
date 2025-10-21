@@ -749,12 +749,6 @@ export const CalendarView = ({
                 <BarChart3 className="h-4 w-4" />
               </Button>
               
-              {/* Debug Toggle (development only) */}
-              {process.env.NODE_ENV === 'development' && (
-                <Button variant="outline" size="sm" onClick={() => setShowDebugInfo(!showDebugInfo)}>
-                  <Eye className="h-4 w-4" />
-                </Button>
-              )}
 
               {/* View Mode Toggle */}
               <div className="flex border rounded-md">
