@@ -365,9 +365,9 @@ export const CalendarView = ({
     }
   };
 
-  // Debounced refresh for smoother UX
+  // Debounced refresh for smoother UX - increased delay for drag animation
   const debouncedRefresh = useCallback(() => {
-    const timer = setTimeout(() => refreshEvents(), 300);
+    const timer = setTimeout(() => refreshEvents(), 500);
     return () => clearTimeout(timer);
   }, [refreshEvents]);
 
@@ -428,15 +428,17 @@ export const CalendarView = ({
         
         if (error) throw error;
         
-        // Clear optimistic update after success
-        setOptimisticEventUpdates(prev => {
-          const next = new Map(prev);
-          next.delete(eventId);
-          return next;
-        });
-        
-        // Debounced refresh to avoid flicker
+        // Debounced refresh - clear optimistic update AFTER refresh completes
         debouncedRefresh();
+        
+        // Clear optimistic update after delay (ensuring animation completes)
+        setTimeout(() => {
+          setOptimisticEventUpdates(prev => {
+            const next = new Map(prev);
+            next.delete(eventId);
+            return next;
+          });
+        }, 600); // Slightly longer than refresh delay
         
         toast({
           title: 'Event Rescheduled',
@@ -967,8 +969,28 @@ export const CalendarView = ({
                             {memberTasks.map((task, index) => renderTask(task, index))}
                             
                              {/* Events */}
-                             {memberEvents.map((event, eventIndex) => <Draggable key={`event-${event.id}-${format(currentDate, 'yyyy-MM-dd')}`} draggableId={`event-${event.id}`} index={memberTasks.length + eventIndex}>
-                                 {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("group p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs hover:shadow-md cursor-move transition-all", snapshot.isDragging && "shadow-lg rotate-2")} onClick={() => handleEditEvent(event)}>
+                             {memberEvents.map((event, eventIndex) => {
+                               // Only allow dragging the first day of multi-day events
+                               const isDragDisabled = event.isMultiDay && !event.isFirstDay;
+                               
+                               return <Draggable 
+                                 key={`event-${event.id}-${format(currentDate, 'yyyy-MM-dd')}`} 
+                                 draggableId={`event-${event.id}`} 
+                                 index={memberTasks.length + eventIndex}
+                                 isDragDisabled={isDragDisabled}
+                               >
+                                 {(provided, snapshot) => <div 
+                                   ref={provided.innerRef} 
+                                   {...provided.draggableProps} 
+                                   {...provided.dragHandleProps} 
+                                   className={cn(
+                                     "group p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs hover:shadow-md transition-all", 
+                                     !isDragDisabled && "cursor-move",
+                                     isDragDisabled && "cursor-default",
+                                     snapshot.isDragging && "shadow-lg rotate-2"
+                                   )} 
+                                   onClick={() => handleEditEvent(event)}
+                                 >
                                 <div className="flex items-center justify-between">
                                   <span className="font-medium text-purple-700">{event.title}</span>
                                   <div className="flex items-center gap-1">
@@ -989,7 +1011,8 @@ export const CalendarView = ({
                                     </p>
                                   </div>}
                                </div>}
-                               </Draggable>)}
+                              </Draggable>
+                             })}
                              
                              {provided.placeholder}
                             
@@ -1030,7 +1053,8 @@ export const CalendarView = ({
             const completedCount = dayTasks.filter(t => t.task_completions?.length).length;
             const totalCount = dayTasks.length;
             return <Droppable key={dateKey} droppableId={dateKey}>
-                    {(provided, snapshot) => <div ref={provided.innerRef} {...provided.droppableProps} onClick={() => handleDayClick(day)} className={cn("min-h-[120px] p-2 border rounded-md transition-all cursor-pointer group hover:bg-accent/50", isToday(day) && "bg-blue-50 border-blue-200", !isSameMonth(day, currentDate) && viewMode === 'month' && "opacity-50 bg-gray-50", snapshot.isDraggingOver && "bg-green-50 border-green-300 scale-[1.02] shadow-md ring-2 ring-green-200")}>
+                    {(provided, snapshot) => <div ref={provided.innerRef} {...provided.droppableProps} onClick={() => handleDayClick(day)} className={cn("min-h-[120px] p-2 border rounded-md transition-all cursor-pointer group hover:bg-accent/50", isToday(day) && "bg-blue-50 border-blue-200", !isSameMonth(day, currentDate) && viewMode === 'month' && "opacity-50 bg-gray-50", snapshot.isDraggingOver && "bg-green-50/50 border-green-400 scale-[1.01] shadow-lg ring-2 ring-green-300/40")}>
+
                         {/* Day Number & Progress */}
                         <div className="flex items-center justify-between mb-2">
                           <span className={cn("text-sm font-medium", isToday(day) && "text-blue-600")}>
@@ -1054,8 +1078,32 @@ export const CalendarView = ({
                           {dayTasks.map((task, index) => renderTask(task, index))}
                           
                            {/* Events */}
-                           {dayEvents.map((event, eventIndex) => <Draggable key={`event-${event.id}-${dateKey}`} draggableId={`event-${event.id}`} index={dayTasks.length + eventIndex}>
-                               {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("group p-2 mb-1 text-xs hover:shadow-md cursor-move transition-all border", "bg-purple-50 border-purple-200 text-purple-700", event.isMultiDay && !event.isFirstDay && !event.isLastDay && "rounded-none border-l-0 border-r-0", event.isMultiDay && event.isFirstDay && "rounded-r-none border-r-0", event.isMultiDay && event.isLastDay && "rounded-l-none border-l-0", !event.isMultiDay && "rounded-md", snapshot.isDragging && "shadow-lg rotate-2 scale-105")} onClick={e => {
+                           {dayEvents.map((event, eventIndex) => {
+                             // Only allow dragging the first day of multi-day events
+                             const isDragDisabled = event.isMultiDay && !event.isFirstDay;
+                             
+                             return <Draggable 
+                               key={`event-${event.id}-${dateKey}`} 
+                               draggableId={`event-${event.id}`} 
+                               index={dayTasks.length + eventIndex}
+                               isDragDisabled={isDragDisabled}
+                             >
+                               {(provided, snapshot) => <div 
+                                 ref={provided.innerRef} 
+                                 {...provided.draggableProps} 
+                                 {...provided.dragHandleProps} 
+                                 className={cn(
+                                   "group p-2 mb-1 text-xs hover:shadow-md transition-all border", 
+                                   "bg-purple-50 border-purple-200 text-purple-700", 
+                                   event.isMultiDay && !event.isFirstDay && !event.isLastDay && "rounded-none border-l-0 border-r-0", 
+                                   event.isMultiDay && event.isFirstDay && "rounded-r-none border-r-0", 
+                                   event.isMultiDay && event.isLastDay && "rounded-l-none border-l-0", 
+                                   !event.isMultiDay && "rounded-md",
+                                   !isDragDisabled && "cursor-move",
+                                   isDragDisabled && "cursor-default",
+                                   snapshot.isDragging && "shadow-lg rotate-2 scale-105"
+                                 )} 
+                                 onClick={e => {
                       e.stopPropagation();
                       handleEditEvent(event);
                     }}>
@@ -1089,8 +1137,9 @@ export const CalendarView = ({
                                        Series
                                      </Badge>}
                                 </div>}
-                             </div>}
-                             </Draggable>)}
+                                 </div>}
+                             </Draggable>
+                           })}
                            
                            {provided.placeholder}
                          </div>
