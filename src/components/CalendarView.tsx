@@ -744,12 +744,6 @@ export const CalendarView = ({
             </CardTitle>
             
             <div className="flex items-center gap-2">
-              {/* Analytics Toggle */}
-              <Button variant="outline" size="sm" onClick={() => setShowAnalytics(!showAnalytics)}>
-                <BarChart3 className="h-4 w-4" />
-              </Button>
-              
-
               {/* View Mode Toggle */}
               <div className="flex border rounded-md">
                 <Button variant={viewMode === 'today' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('today')} className="rounded-r-none">
