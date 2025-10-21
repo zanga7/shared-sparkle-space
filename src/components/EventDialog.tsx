@@ -66,6 +66,7 @@ export const EventDialog = ({
   defaultDate,
   currentProfileId
 }: EventDialogProps) => {
+  const [isEditMode, setIsEditMode] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
@@ -138,6 +139,9 @@ export const EventDialog = ({
         occurrence_date: editingEvent.occurrence_date
       });
       
+      // Start in view mode when opening an existing event
+      setIsEditMode(false);
+      
       setTitle(editingEvent.title || '');
       setDescription(editingEvent.description || '');
       setLocation(editingEvent.location || '');
@@ -174,6 +178,9 @@ export const EventDialog = ({
         });
       }
     } else {
+      // Creating new event - start in edit mode
+      setIsEditMode(true);
+      
       // Reset all form state
       setTitle('');
       setDescription('');
@@ -674,7 +681,7 @@ export const EventDialog = ({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Calendar className="w-5 h-5" />
-              {editingEvent ? 'Edit Event' : 'Create Event'}
+              {!editingEvent ? 'Create Event' : isEditMode ? 'Edit Event' : title || 'Event Details'}
               {editingEvent?.series_id && (
                 <Badge variant="secondary" className="ml-2">
                   <Repeat className="w-3 h-3 mr-1" />
@@ -684,8 +691,95 @@ export const EventDialog = ({
             </DialogTitle>
           </DialogHeader>
 
-          {/* Enhanced Recurring Event Indicator */}
-          {editingEvent?.isVirtual && editingEvent?.series_id && seriesData && !showSeriesOptions && (
+          {/* VIEW MODE - Clean minimal design */}
+          {editingEvent && !isEditMode && (
+            <div className="space-y-6">
+              {/* Title */}
+              <div>
+                <h2 className="text-2xl font-semibold text-foreground mb-1">{title}</h2>
+                {editingEvent.series_id && seriesData && (
+                  <RecurringEventInfo 
+                    rule={seriesData.recurrence_rule}
+                    seriesStart={seriesData.series_start}
+                    seriesEnd={seriesData.series_end}
+                    className="text-sm text-muted-foreground"
+                  />
+                )}
+              </div>
+
+              {/* Date & Time */}
+              <div className="flex items-start gap-3 text-sm">
+                <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <div className="font-medium text-foreground">
+                    {format(startDate, 'EEEE, MMMM d, yyyy')}
+                  </div>
+                  <div className="text-muted-foreground mt-1">
+                    {isAllDay ? (
+                      'All day'
+                    ) : (
+                      <>
+                        {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}
+                        {startDate.getDate() !== endDate.getDate() && (
+                          <span className="ml-1">
+                            ({format(endDate, 'MMM d')})
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Location */}
+              {location && (
+                <div className="flex items-start gap-3 text-sm">
+                  <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
+                  <div className="text-foreground">{location}</div>
+                </div>
+              )}
+
+              {/* Attendees */}
+              {assignees.length > 0 && (
+                <div className="flex items-start gap-3 text-sm">
+                  <Users className="w-5 h-5 text-muted-foreground mt-0.5" />
+                  <div className="flex flex-wrap gap-2">
+                    {assignees.map(assigneeId => {
+                      const member = familyMembers.find(m => m.id === assigneeId);
+                      return member ? (
+                        <Badge key={assigneeId} variant="secondary" className="text-xs">
+                          {member.display_name}
+                        </Badge>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Description */}
+              {description && (
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{description}</p>
+                </div>
+              )}
+
+              {/* Edit Button - Bottom Right */}
+              <div className="flex justify-end pt-6">
+                <Button
+                  onClick={() => setIsEditMode(true)}
+                  className="min-w-[100px]"
+                >
+                  Edit
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* EDIT MODE - Form fields */}
+          {(!editingEvent || isEditMode) && (
+            <div className="space-y-6">
+              {/* Enhanced Recurring Event Indicator */}
+              {editingEvent?.isVirtual && editingEvent?.series_id && seriesData && !showSeriesOptions && (
             <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Repeat className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -738,10 +832,9 @@ export const EventDialog = ({
                 </Button>
               </div>
             </div>
-          )}
+              )}
 
-          <div className="space-y-6">
-            <div className="space-y-2">
+              <div className="space-y-2">
               <Label htmlFor="title">Title *</Label>
               <Input
                 id="title"
@@ -920,7 +1013,7 @@ export const EventDialog = ({
 
             <div className="flex justify-between pt-4">
               <div>
-                {onDelete && editingEvent && (
+                {onDelete && editingEvent && !isEditMode && (
                   <Button
                     variant="destructive"
                     onClick={onDelete}
@@ -932,16 +1025,29 @@ export const EventDialog = ({
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => onOpenChange(false)}
+                  onClick={() => {
+                    if (editingEvent && isEditMode) {
+                      // Cancel editing, go back to view mode
+                      setIsEditMode(false);
+                    } else {
+                      // Close dialog
+                      onOpenChange(false);
+                    }
+                  }}
+                  disabled={isLoading}
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleSubmit} disabled={isLoading}>
-                  {isLoading ? 'Saving...' : showSeriesOptions ? 'Update Series' : editingEvent ? 'Update Event' : 'Create Event'}
+                <Button 
+                  onClick={handleSubmit}
+                  disabled={isLoading || !title.trim()}
+                >
+                  {isLoading ? 'Saving...' : (editingEvent && isEditMode ? 'Save' : showSeriesOptions ? 'Update Series' : editingEvent ? 'Update Event' : 'Create Event')}
                 </Button>
               </div>
             </div>
-          </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
