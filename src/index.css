@@ -127,6 +127,15 @@ All colors MUST be HSL.
   scroll-behavior: smooth;
 }
 
+/* Ensure toast container doesn't block calendar interactions */
+[data-sonner-toaster] {
+  pointer-events: none !important;
+}
+
+[data-sonner-toast] {
+  pointer-events: auto !important;
+}
+
 /* Hide scrollbar for cleaner look while keeping functionality */
 .touch-pan-x::-webkit-scrollbar {
   height: 4px;

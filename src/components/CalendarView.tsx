@@ -440,10 +440,11 @@ export const CalendarView = ({
           });
         }, 600); // Slightly longer than refresh delay
         
-        toast({
-          title: 'Event Rescheduled',
-          description: `${event.title} moved to ${format(newStartDate, 'MMM d')}`
-        });
+            toast({
+              title: 'Event Rescheduled',
+              description: `${event.title} moved to ${format(newStartDate, 'MMM d')}`,
+              duration: 2000
+            });
       } else {
         // Handle task drag and drop (existing logic)
         const {
@@ -970,8 +971,7 @@ export const CalendarView = ({
                             
                              {/* Events */}
                              {memberEvents.map((event, eventIndex) => {
-                               // Only allow dragging the first day of multi-day events
-                               const isDragDisabled = event.isMultiDay && !event.isFirstDay;
+                               const isDragDisabled = event.isMultiDay ? !event.isFirstDay : false;
                                
                                return <Draggable 
                                  key={`event-${event.id}-${format(currentDate, 'yyyy-MM-dd')}`} 
@@ -986,9 +986,9 @@ export const CalendarView = ({
                                    className={cn(
                                      "group p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs hover:shadow-md transition-all", 
                                      !isDragDisabled && "cursor-move",
-                                     isDragDisabled && "cursor-default",
-                                     snapshot.isDragging && "shadow-lg rotate-2"
-                                   )} 
+                                     isDragDisabled && "cursor-not-allowed opacity-70",
+                                     snapshot.isDragging && "shadow-lg rotate-2 z-[9999]"
+                                   )}
                                    onClick={() => handleEditEvent(event)}
                                  >
                                 <div className="flex items-center justify-between">
@@ -1079,8 +1079,15 @@ export const CalendarView = ({
                           
                            {/* Events */}
                            {dayEvents.map((event, eventIndex) => {
-                             // Only allow dragging the first day of multi-day events
-                             const isDragDisabled = event.isMultiDay && !event.isFirstDay;
+                             const isDragDisabled = event.isMultiDay ? !event.isFirstDay : false;
+                             
+                             console.log('Event drag status:', {
+                               eventId: event.id,
+                               title: event.title,
+                               isMultiDay: event.isMultiDay,
+                               isFirstDay: event.isFirstDay,
+                               isDragDisabled
+                             });
                              
                              return <Draggable 
                                key={`event-${event.id}-${dateKey}`} 
@@ -1100,9 +1107,9 @@ export const CalendarView = ({
                                    event.isMultiDay && event.isLastDay && "rounded-l-none border-l-0", 
                                    !event.isMultiDay && "rounded-md",
                                    !isDragDisabled && "cursor-move",
-                                   isDragDisabled && "cursor-default",
-                                   snapshot.isDragging && "shadow-lg rotate-2 scale-105"
-                                 )} 
+                                   isDragDisabled && "cursor-not-allowed opacity-70",
+                                   snapshot.isDragging && "shadow-lg rotate-2 scale-105 z-[9999]"
+                                 )}
                                  onClick={e => {
                       e.stopPropagation();
                       handleEditEvent(event);
