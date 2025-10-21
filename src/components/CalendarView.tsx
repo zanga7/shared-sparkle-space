@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -72,6 +72,7 @@ export const CalendarView = ({
   const [pendingTaskCompletion, setPendingTaskCompletion] = useState<Task | null>(null);
   const [memberRequiringPin, setMemberRequiringPin] = useState<Profile | null>(null);
   const [showDebugInfo, setShowDebugInfo] = useState(false);
+  const [optimisticEventUpdates, setOptimisticEventUpdates] = useState<Map<string, CalendarEvent>>(new Map());
   const {
     toast
   } = useToast();
@@ -245,7 +246,7 @@ export const CalendarView = ({
     return grouped;
   }, [filteredTasks, showTasks]);
 
-  // Group events by date - handle multi-day events using virtual events
+  // Group events by date - handle multi-day events using virtual events with optimistic updates
   const eventsByDate = useMemo(() => {
     const grouped: {
       [key: string]: (CalendarEvent & {
@@ -259,7 +260,15 @@ export const CalendarView = ({
 
     // Use generateVirtualEvents for combined event + series view
     const allEvents = generateVirtualEvents ? generateVirtualEvents(dateRange.start, dateRange.end) : events;
-    allEvents.forEach((event: CalendarEvent) => {
+    
+    // ✨ Merge optimistic updates with real events
+    const eventsWithOptimistic = allEvents.map((event: CalendarEvent) => 
+      optimisticEventUpdates.has(event.id) 
+        ? optimisticEventUpdates.get(event.id)! 
+        : event
+    );
+    
+    eventsWithOptimistic.forEach((event: CalendarEvent) => {
       if (event.start_date) {
         const startDate = new Date(event.start_date);
         const endDate = event.end_date ? new Date(event.end_date) : startDate;
@@ -289,7 +298,7 @@ export const CalendarView = ({
       }
     });
     return grouped;
-  }, [events, eventSeries, generateVirtualEvents, dateRange, viewMode]);
+  }, [events, eventSeries, generateVirtualEvents, dateRange, optimisticEventUpdates]);
 
   // Calculate analytics
   const analytics = useMemo(() => {
@@ -356,7 +365,13 @@ export const CalendarView = ({
     }
   };
 
-  // Handle drag and drop
+  // Debounced refresh for smoother UX
+  const debouncedRefresh = useCallback(() => {
+    const timer = setTimeout(() => refreshEvents(), 300);
+    return () => clearTimeout(timer);
+  }, [refreshEvents]);
+
+  // Handle drag and drop with optimistic updates
   const handleDragEnd = async (result: any) => {
     if (!result.destination) return;
     const itemId = result.draggableId;
@@ -394,14 +409,35 @@ export const CalendarView = ({
           newStartDate.setHours(originalStart.getHours(), originalStart.getMinutes(), originalStart.getSeconds());
         }
         const newEndDate = new Date(newStartDate.getTime() + duration);
+        
+        // ✨ OPTIMISTIC UPDATE - Update UI immediately
+        const updatedEvent = {
+          ...event,
+          start_date: newStartDate.toISOString(),
+          end_date: newEndDate.toISOString()
+        };
+        setOptimisticEventUpdates(prev => new Map(prev).set(eventId, updatedEvent));
+        
+        // Update database in background
         const {
           error
         } = await supabase.from('events').update({
           start_date: newStartDate.toISOString(),
           end_date: newEndDate.toISOString()
         }).eq('id', eventId);
+        
         if (error) throw error;
-        await refreshEvents();
+        
+        // Clear optimistic update after success
+        setOptimisticEventUpdates(prev => {
+          const next = new Map(prev);
+          next.delete(eventId);
+          return next;
+        });
+        
+        // Debounced refresh to avoid flicker
+        debouncedRefresh();
+        
         toast({
           title: 'Event Rescheduled',
           description: `${event.title} moved to ${format(newStartDate, 'MMM d')}`
@@ -421,10 +457,21 @@ export const CalendarView = ({
         onTaskUpdated();
       }
     } catch (error) {
-      console.error('Error rescheduling task:', error);
+      console.error('Error rescheduling:', error);
+      
+      // ✨ REVERT optimistic update on error
+      if (isEvent) {
+        const eventId = itemId.replace('event-', '');
+        setOptimisticEventUpdates(prev => {
+          const next = new Map(prev);
+          next.delete(eventId);
+          return next;
+        });
+      }
+      
       toast({
         title: 'Error',
-        description: 'Failed to reschedule task',
+        description: 'Failed to reschedule. Changes reverted.',
         variant: 'destructive'
       });
     }
@@ -920,8 +967,8 @@ export const CalendarView = ({
                             {memberTasks.map((task, index) => renderTask(task, index))}
                             
                              {/* Events */}
-                             {memberEvents.map((event, eventIndex) => <Draggable key={`event-${event.id}`} draggableId={`event-${event.id}`} index={memberTasks.length + eventIndex}>
-                                 {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("group p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs hover:shadow-md cursor-move transition-all", snapshot.isDragging && "shadow-lg rotate-1")} onClick={() => handleEditEvent(event)}>
+                             {memberEvents.map((event, eventIndex) => <Draggable key={`event-${event.id}-${format(currentDate, 'yyyy-MM-dd')}`} draggableId={`event-${event.id}`} index={memberTasks.length + eventIndex}>
+                                 {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("group p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs hover:shadow-md cursor-move transition-all", snapshot.isDragging && "shadow-lg rotate-2")} onClick={() => handleEditEvent(event)}>
                                 <div className="flex items-center justify-between">
                                   <span className="font-medium text-purple-700">{event.title}</span>
                                   <div className="flex items-center gap-1">
@@ -983,7 +1030,7 @@ export const CalendarView = ({
             const completedCount = dayTasks.filter(t => t.task_completions?.length).length;
             const totalCount = dayTasks.length;
             return <Droppable key={dateKey} droppableId={dateKey}>
-                    {(provided, snapshot) => <div ref={provided.innerRef} {...provided.droppableProps} onClick={() => handleDayClick(day)} className={cn("min-h-[120px] p-2 border rounded-md transition-colors cursor-pointer group hover:bg-accent/50", isToday(day) && "bg-blue-50 border-blue-200", !isSameMonth(day, currentDate) && viewMode === 'month' && "opacity-50 bg-gray-50", snapshot.isDraggingOver && "bg-green-50 border-green-300")}>
+                    {(provided, snapshot) => <div ref={provided.innerRef} {...provided.droppableProps} onClick={() => handleDayClick(day)} className={cn("min-h-[120px] p-2 border rounded-md transition-all cursor-pointer group hover:bg-accent/50", isToday(day) && "bg-blue-50 border-blue-200", !isSameMonth(day, currentDate) && viewMode === 'month' && "opacity-50 bg-gray-50", snapshot.isDraggingOver && "bg-green-50 border-green-300 scale-[1.02] shadow-md ring-2 ring-green-200")}>
                         {/* Day Number & Progress */}
                         <div className="flex items-center justify-between mb-2">
                           <span className={cn("text-sm font-medium", isToday(day) && "text-blue-600")}>
@@ -1007,8 +1054,8 @@ export const CalendarView = ({
                           {dayTasks.map((task, index) => renderTask(task, index))}
                           
                            {/* Events */}
-                           {dayEvents.map((event, eventIndex) => <Draggable key={`event-${event.id}-${format(day, 'yyyy-MM-dd')}`} draggableId={`event-${event.id}`} index={dayTasks.length + eventIndex}>
-                               {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("group p-2 mb-1 text-xs hover:shadow-md cursor-move transition-all border", "bg-purple-50 border-purple-200 text-purple-700", event.isMultiDay && !event.isFirstDay && !event.isLastDay && "rounded-none border-l-0 border-r-0", event.isMultiDay && event.isFirstDay && "rounded-r-none border-r-0", event.isMultiDay && event.isLastDay && "rounded-l-none border-l-0", !event.isMultiDay && "rounded-md", snapshot.isDragging && "shadow-lg rotate-1")} onClick={e => {
+                           {dayEvents.map((event, eventIndex) => <Draggable key={`event-${event.id}-${dateKey}`} draggableId={`event-${event.id}`} index={dayTasks.length + eventIndex}>
+                               {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("group p-2 mb-1 text-xs hover:shadow-md cursor-move transition-all border", "bg-purple-50 border-purple-200 text-purple-700", event.isMultiDay && !event.isFirstDay && !event.isLastDay && "rounded-none border-l-0 border-r-0", event.isMultiDay && event.isFirstDay && "rounded-r-none border-r-0", event.isMultiDay && event.isLastDay && "rounded-l-none border-l-0", !event.isMultiDay && "rounded-md", snapshot.isDragging && "shadow-lg rotate-2 scale-105")} onClick={e => {
                       e.stopPropagation();
                       handleEditEvent(event);
                     }}>
