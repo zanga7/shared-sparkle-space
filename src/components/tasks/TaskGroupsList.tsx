@@ -163,21 +163,19 @@ export const TaskGroupsList = ({
                         <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}
+                          {...provided.dragHandleProps}
                           className={cn(
                             "transition-all duration-200 group relative",
-                            snapshot.isDragging && "shadow-xl rotate-2 scale-105 z-50 ring-2 ring-primary/30"
+                            snapshot.isDragging && "shadow-xl rotate-2 scale-105 z-50 ring-2 ring-primary/30",
+                            !isCompleted && "cursor-grab active:cursor-grabbing"
                           )}
                         >
-                          {/* Drag Handle */}
+                          {/* Visual Drag Indicator */}
                           {!isCompleted && (
                             <div
-                              {...provided.dragHandleProps}
-                              data-drag-handle="true"
-                              className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing z-20 bg-background/90 backdrop-blur-sm rounded p-1.5 border border-border/50 shadow-sm"
-                              onClick={(e) => e.stopPropagation()}
-                              onMouseDown={(e) => e.stopPropagation()}
+                              className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 bg-background/90 backdrop-blur-sm rounded p-1.5 border border-border/50 shadow-sm pointer-events-none"
                             >
-                              <svg width="10" height="10" viewBox="0 0 10 10" className="text-muted-foreground pointer-events-none">
+                              <svg width="10" height="10" viewBox="0 0 10 10" className="text-muted-foreground">
                                 <circle cx="2" cy="2" r="0.8" fill="currentColor"/>
                                 <circle cx="5" cy="2" r="0.8" fill="currentColor"/>
                                 <circle cx="8" cy="2" r="0.8" fill="currentColor"/>

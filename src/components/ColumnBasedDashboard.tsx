@@ -703,6 +703,9 @@ const ColumnBasedDashboard = () => {
 
       const validGroups = ['morning', 'midday', 'evening', 'general'];
       
+      // Normalize group aliases
+      const normalizeGroup = (g: string): string => g === 'afternoon' ? 'evening' : g;
+      
       // Check if it's a member ID only (36 characters UUID)
       if (id.length === 36 && id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
         return { memberId: id, group: null };
@@ -716,7 +719,8 @@ const ColumnBasedDashboard = () => {
         const remainder = parts.slice(5).join('-'); // e.g. "pending-morning" | "completed-general"
         
         if (memberId.length === 36 && memberId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-          const group = remainder.replace(/^pending-/, '').replace(/^completed-/, '');
+          const rawGroup = remainder.replace(/^pending-/, '').replace(/^completed-/, '');
+          const group = normalizeGroup(rawGroup); // Normalize afternoon → evening
           
           if (validGroups.includes(group)) {
             return { memberId, group };
@@ -725,7 +729,8 @@ const ColumnBasedDashboard = () => {
       }
       
       // Check if it's just a group name (for member view) possibly prefixed with pending-/completed-
-      const potentialGroup = id.replace(/^pending-/, '').replace(/^completed-/, '');
+      const rawPotentialGroup = id.replace(/^pending-/, '').replace(/^completed-/, '');
+      const potentialGroup = normalizeGroup(rawPotentialGroup); // Normalize afternoon → evening
       
       if (validGroups.includes(potentialGroup)) {
         return { memberId: null, group: potentialGroup };
