@@ -316,6 +316,16 @@ const Lists = () => {
   };
 
   const archiveList = async (list: List) => {
+    // Prevent archiving personal lists
+    if (isPersonalList(list)) {
+      toast({
+        title: 'Cannot archive',
+        description: 'Personal lists cannot be archived',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('lists')
@@ -344,6 +354,16 @@ const Lists = () => {
   };
 
   const deleteList = async (list: List) => {
+    // Prevent deleting personal lists
+    if (isPersonalList(list)) {
+      toast({
+        title: 'Cannot delete',
+        description: 'Personal lists cannot be deleted',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     if (!window.confirm(`Are you sure you want to delete "${list.name}"? This action cannot be undone.`)) {
       return;
     }
@@ -442,6 +462,7 @@ const Lists = () => {
               key={list.id}
               list={list}
               profile={profile!}
+              isPersonalList={isPersonalList(list)}
               onEditList={setEditingList}
               onDuplicateList={duplicateList}
               onArchiveList={archiveList}

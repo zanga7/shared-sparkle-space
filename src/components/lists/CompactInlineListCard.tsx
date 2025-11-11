@@ -77,6 +77,7 @@ interface List {
 interface CompactInlineListCardProps {
   list: List;
   profile: Profile;
+  isPersonalList: boolean;
   onEditList: (list: List) => void;
   onDuplicateList: (list: List) => void;
   onArchiveList: (list: List) => void;
@@ -88,6 +89,7 @@ interface CompactInlineListCardProps {
 export function CompactInlineListCard({ 
   list, 
   profile, 
+  isPersonalList,
   onEditList,
   onDuplicateList,
   onArchiveList,
@@ -387,27 +389,31 @@ export function CompactInlineListCard({
                   <Copy className="h-4 w-4 mr-2" />
                   Duplicate
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onArchiveList(list)}>
-                  {list.is_archived ? (
-                    <>
-                      <ArchiveRestore className="h-4 w-4 mr-2" />
-                      Restore
-                    </>
-                  ) : (
-                    <>
-                      <Archive className="h-4 w-4 mr-2" />
-                      Archive
-                    </>
-                  )}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={() => onDeleteList(list)}
-                  className="text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
+                {!isPersonalList && (
+                  <>
+                    <DropdownMenuItem onClick={() => onArchiveList(list)}>
+                      {list.is_archived ? (
+                        <>
+                          <ArchiveRestore className="h-4 w-4 mr-2" />
+                          Restore
+                        </>
+                      ) : (
+                        <>
+                          <Archive className="h-4 w-4 mr-2" />
+                          Archive
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => onDeleteList(list)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

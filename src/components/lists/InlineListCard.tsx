@@ -78,6 +78,7 @@ interface List {
 interface InlineListCardProps {
   list: List;
   profile: Profile;
+  isPersonalList?: boolean;
   onEditList: (list: List) => void;
   onDuplicateList: (list: List) => void;
   onArchiveList: (list: List) => void;
@@ -88,6 +89,7 @@ interface InlineListCardProps {
 export function InlineListCard({ 
   list, 
   profile, 
+  isPersonalList = false,
   onEditList,
   onDuplicateList,
   onArchiveList,
@@ -383,15 +385,19 @@ export function InlineListCard({
                 <DropdownMenuItem onClick={() => onDuplicateList(list)}>
                   Duplicate
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onArchiveList(list)}>
-                  {list.is_archived ? 'Restore' : 'Archive'}
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onDeleteList(list)}
-                  className="text-destructive"
-                >
-                  Delete
-                </DropdownMenuItem>
+                {!isPersonalList && (
+                  <>
+                    <DropdownMenuItem onClick={() => onArchiveList(list)}>
+                      {list.is_archived ? 'Restore' : 'Archive'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => onDeleteList(list)}
+                      className="text-destructive"
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
