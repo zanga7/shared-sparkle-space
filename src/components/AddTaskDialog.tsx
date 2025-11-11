@@ -110,6 +110,7 @@ export const AddTaskDialog = ({
   useEffect(() => {
     if (preselectedTaskGroup) {
       const normalized = preselectedTaskGroup === 'afternoon' ? 'evening' : preselectedTaskGroup;
+      console.log('📋 Setting task group from preselected:', { preselectedTaskGroup, normalized });
       setFormData(prev => ({ 
         ...prev, 
         task_group: normalized
@@ -140,6 +141,13 @@ export const AddTaskDialog = ({
     
     try {
       const normalizedGroup = formData.task_group === 'afternoon' ? 'evening' : formData.task_group;
+      console.log('💾 Creating task with:', { 
+        originalGroup: formData.task_group, 
+        normalizedGroup,
+        title: formData.title,
+        assignees: formData.assignees 
+      });
+      
       if (recurrenceEnabled && taskRecurrenceOptions.enabled) {
         // Create as task series for recurring tasks
         const seriesData = {
@@ -201,7 +209,12 @@ export const AddTaskDialog = ({
           .select('id')
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ Task creation error:', error);
+          throw error;
+        }
+        
+        console.log('✅ Task created successfully:', taskResult);
 
         // Handle task assignment
         if (formData.assignees.length > 0 && taskResult) {

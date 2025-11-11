@@ -1072,6 +1072,7 @@ const ColumnBasedDashboard = () => {
   };
 
   const handleAddTaskForMember = (memberId: string, group?: TaskGroup) => {
+    console.log('🎯 handleAddTaskForMember called with:', { memberId, group });
     setSelectedMemberForTask(memberId);
     setSelectedTaskGroup(group || null);
     setIsAddDialogOpen(true);
