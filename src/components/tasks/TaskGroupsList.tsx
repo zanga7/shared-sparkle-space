@@ -75,7 +75,7 @@ export const TaskGroupsList = ({
     switch (group) {
       case 'morning': return 'Morning';
       case 'midday': return 'Midday';
-      case 'evening': return 'Afternoon';
+      case 'evening': return 'Evening';
       case 'general': return 'General';
     }
   };

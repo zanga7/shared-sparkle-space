@@ -25,6 +25,7 @@ import { MemberDashboard } from './MemberDashboard';
 import { RewardsGallery } from '@/components/rewards/RewardsGallery';
 import { ChildAuthProvider } from '@/hooks/useChildAuth';
 import Lists from '@/pages/Lists';
+import { TaskGroupsList } from '@/components/tasks/TaskGroupsList';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -899,11 +900,11 @@ const ColumnBasedDashboard = () => {
         const midday = new Date(today);
         midday.setHours(15, 0, 0, 0);
         return midday.toISOString();
-      case 'afternoon':
+      case 'evening':
         // Set to 11:59 PM today
-        const afternoon = new Date(today);
-        afternoon.setHours(23, 59, 0, 0);
-        return afternoon.toISOString();
+        const evening = new Date(today);
+        evening.setHours(23, 59, 0, 0);
+        return evening.toISOString();
       case 'general':
       default:
         return null; // No specific due date for general tasks
@@ -961,12 +962,12 @@ const ColumnBasedDashboard = () => {
   };
 
   // Time-based task grouping
-  type TaskGroup = 'morning' | 'midday' | 'afternoon' | 'general';
+  type TaskGroup = 'morning' | 'midday' | 'evening' | 'general';
   
   const getTaskGroup = (task: Task): TaskGroup => {
     // Priority 1: Use task_group field if explicitly set
     if (task.task_group) {
-      const validGroups = ['morning', 'midday', 'afternoon', 'general'];
+      const validGroups = ['morning', 'midday', 'evening', 'general'];
       if (validGroups.includes(task.task_group)) {
         return task.task_group as TaskGroup;
       }
@@ -980,7 +981,7 @@ const ColumnBasedDashboard = () => {
     
     if (hour >= 0 && hour < 11) return 'morning';
     if (hour >= 11 && hour < 15) return 'midday';
-    if (hour >= 15 && hour < 24) return 'afternoon';
+    if (hour >= 15 && hour < 24) return 'evening';
     return 'general';
   };
   
@@ -988,7 +989,7 @@ const ColumnBasedDashboard = () => {
     switch (group) {
       case 'morning': return Sun;
       case 'midday': return Clock3;
-      case 'afternoon': return Moon;
+      case 'evening': return Moon;
       case 'general': return FileText;
     }
   };
@@ -997,7 +998,7 @@ const ColumnBasedDashboard = () => {
     switch (group) {
       case 'morning': return 'Morning';
       case 'midday': return 'Midday';
-      case 'afternoon': return 'Afternoon';
+      case 'evening': return 'Evening';
       case 'general': return 'General';
     }
   };
@@ -1009,7 +1010,7 @@ const ColumnBasedDashboard = () => {
     switch (group) {
       case 'morning': return hour >= 6 && hour < 12;
       case 'midday': return hour >= 11 && hour < 16;
-      case 'afternoon': return hour >= 15 || hour < 6;
+      case 'evening': return hour >= 15 || hour < 6;
       case 'general': return true; // Always open
     }
   };
@@ -1018,7 +1019,7 @@ const ColumnBasedDashboard = () => {
     const groups: Record<TaskGroup, Task[]> = {
       morning: [],
       midday: [],
-      afternoon: [],
+      evening: [],
       general: []
     };
     
@@ -1214,230 +1215,81 @@ const ColumnBasedDashboard = () => {
                      );
 
                      return (
-                       <Card key={member.id} className={cn(
-                         "flex-shrink-0 w-72 sm:w-80 h-fit border-2",
-                         getMemberColorClasses(member.color).border,
-                         getMemberColorClasses(member.color).bgSoft
-                       )}>
-                         <CardHeader className={cn(
-                           "pb-3 border-b",
-                           getMemberColorClasses(member.color).border
-                         )}>
-                           <div className="flex items-center gap-3">
-                              <UserAvatar
-                                name={member.display_name}
-                                color={member.color}
-                                size="md"
-                                className="sm:h-10 sm:w-10"
-                              />
-                              <div className="min-w-0 flex-1">
-                                <CardTitle className="text-base sm:text-lg truncate">{member.display_name}</CardTitle>
-                                <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
-                                  <Badge variant={member.role === 'parent' ? 'default' : 'secondary'} className="text-xs">
-                                    {member.role}
-                                  </Badge>
-                                  <span className="truncate">{member.total_points} pts</span>
-                                </div>
+                        <Card key={member.id} className={cn(
+                          "flex-shrink-0 w-72 sm:w-80 h-fit border-2 group",
+                          getMemberColorClasses(member.color).border,
+                          getMemberColorClasses(member.color).bgSoft
+                        )}>
+                            <CardHeader className={cn(
+                             "pb-3 border-b",
+                             getMemberColorClasses(member.color).border
+                           )}>
+                            <div className="flex items-center gap-3">
+                               <UserAvatar
+                                 name={member.display_name}
+                                 color={member.color}
+                                 size="md"
+                                 className="sm:h-10 sm:w-10"
+                               />
+                               <div className="min-w-0 flex-1">
+                                 <CardTitle className="text-base sm:text-lg truncate">{member.display_name}</CardTitle>
+                                 <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                                   <Badge variant={member.role === 'parent' ? 'default' : 'secondary'} className="text-xs">
+                                     {member.role}
+                                   </Badge>
+                                   <span className="truncate">{member.total_points} pts</span>
+                                 </div>
+                              </div>
                              </div>
-                            </div>
-                             <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
-                               <span>{pendingTasks.length} pending</span>
-                               <span>{completedTasks.length} completed</span>
-                             </div>
-                          </CardHeader>
+                              <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
+                                <span>{pendingTasks.length} pending</span>
+                                <span>{completedTasks.length} completed</span>
+                              </div>
+                            </CardHeader>
 
-                           <div className="group">
-                           <Droppable droppableId={member.id}>
-                             {(provided, snapshot) => (
-                               <CardContent
-                                className={cn(
-                                  "space-y-3 transition-colors",
-                                  snapshot.isDraggingOver && "bg-accent/50"
-                                )}
-                                ref={provided.innerRef}
-                                {...provided.droppableProps}
-                              >
-                                  {memberTasks.length === 0 ? (
-                                    <div className="text-center py-6 sm:py-8 text-muted-foreground min-h-[100px]">
-                                      <Clock className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
-                                      <p className="text-xs sm:text-sm px-2">
-                                        {snapshot.isDraggingOver ? 'Drop task here to assign' : 'No tasks assigned'}
-                                      </p>
-                                    </div>
-                                 ) : (
-                                   (() => {
-                                     const taskGroups = groupTasksByTime(memberTasks);
-                                     const defaultOpenGroups = (['morning', 'midday', 'afternoon', 'general'] as TaskGroup[])
-                                       .filter(group => shouldGroupBeOpenByDefault(group) || taskGroups[group].length > 0)
-                                       .map(group => `${member.id}-${group}`);
-                                     
-                                     return (
-                                       <div className="min-h-[100px]">
-                                        <Accordion type="multiple" defaultValue={defaultOpenGroups} className="space-y-1 mb-4">
-                                          {(['morning', 'midday', 'afternoon', 'general'] as TaskGroup[]).map(group => {
-                                            const groupTasks = taskGroups[group];
-                                            if (groupTasks.length === 0 && profile.role !== 'parent') return null;
-                                            
-                                            const completedGroupTasks = groupTasks.filter(task => 
-                                              task.task_completions && task.task_completions.length > 0
-                                            );
-                                            const progress = groupTasks.length > 0 ? (completedGroupTasks.length / groupTasks.length) * 100 : 0;
-                                            const IconComponent = getTaskGroupIcon(group);
-                                            
-                                            return (
-                                              <AccordionItem key={group} value={`${member.id}-${group}`} className="border rounded-md">
-                                               <AccordionTrigger className={cn(
-                                                 "px-3 py-2 hover:no-underline",
-                                                 getMemberColorClasses(member.color).bg,
-                                                 getMemberColorClasses(member.color).border,
-                                                 "border-b"
-                                               )}>
-                                                   <div className="flex items-center gap-2 flex-1">
-                                                     <IconComponent className={cn("h-4 w-4", getMemberColorClasses(member.color).text)} />
-                                                     <span className={cn("text-sm font-semibold", getMemberColorClasses(member.color).text)}>{getTaskGroupTitle(group)}</span>
-                                                    <div className="flex items-center gap-2 ml-auto mr-2">
-                                                      <span className="text-xs text-muted-foreground">
-                                                        {completedGroupTasks.length}/{groupTasks.length}
-                                                      </span>
-                                                      {groupTasks.length > 0 && (
-                                                        <Progress value={progress} className="w-12 h-1" />
-                                                      )}
-                                                    </div>
-                                                  </div>
-                                                </AccordionTrigger>
-                                                 <AccordionContent className="px-3 pb-3 pt-1">
-                                                   <Droppable droppableId={`${member.id}-${group}`}>
-                                                     {(provided, snapshot) => (
-                                                       <div
-                                                         ref={provided.innerRef}
-                                                         {...provided.droppableProps}
-                                                         className={cn(
-                                                           "space-y-2 min-h-[60px] transition-colors",
-                                                           snapshot.isDraggingOver && "bg-accent/50 rounded-lg"
-                                                         )}
-                                                        >
-                                                           {groupTasks.length === 0 ? (
-                                                             <div className="text-center py-4 text-muted-foreground">
-                                                               {snapshot.isDraggingOver ? (
-                                                                 <p className="text-xs">Drop task here</p>
-                                                               ) : (
-                                                                 <div className="space-y-2">
-                                                                   <p className="text-xs">No tasks in this group</p>
-                                                                   <div className="text-xs text-muted-foreground">
-                                                                     Drag tasks here or create new ones
-                                                                   </div>
-                                                                 </div>
-                                                               )}
-                                                             </div>
-                                                           ) : (
-                                                             groupTasks.map((task, index) => {
-                                                               // Use group-specific index instead of global index for stability
-                                                               return (
-                                                                 <Draggable key={task.id} draggableId={task.id} index={index}>
-                                                                    {(provided, snapshot) => (
-                                                                     <div
-                                                                       ref={provided.innerRef}
-                                                                       {...provided.draggableProps}
-                                                                       className={cn(
-                                                                         "transition-all duration-200 group relative",
-                                                                         snapshot.isDragging && "shadow-xl rotate-2 scale-105 z-50 ring-2 ring-primary/30"
-                                                                       )}
-                                                                     >
-                                                                       {/* Drag Handle - moved to bottom right */}
-                                                                       <div
-                                                                         {...provided.dragHandleProps}
-                                                                         data-drag-handle="true"
-                                                                         className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing z-20 bg-background/90 backdrop-blur-sm rounded p-1.5 border border-border/50 shadow-sm"
-                                                                         onClick={(e) => e.stopPropagation()}
-                                                                         onMouseDown={(e) => e.stopPropagation()}
-                                                                       >
-                                                                         <svg width="10" height="10" viewBox="0 0 10 10" className="text-muted-foreground pointer-events-none">
-                                                                           <circle cx="2" cy="2" r="0.8" fill="currentColor"/>
-                                                                           <circle cx="5" cy="2" r="0.8" fill="currentColor"/>
-                                                                           <circle cx="8" cy="2" r="0.8" fill="currentColor"/>
-                                                                           <circle cx="2" cy="5" r="0.8" fill="currentColor"/>
-                                                                           <circle cx="5" cy="5" r="0.8" fill="currentColor"/>
-                                                                           <circle cx="8" cy="5" r="0.8" fill="currentColor"/>
-                                                                           <circle cx="2" cy="8" r="0.8" fill="currentColor"/>
-                                                                           <circle cx="5" cy="8" r="0.8" fill="currentColor"/>
-                                                                           <circle cx="8" cy="8" r="0.8" fill="currentColor"/>
-                                                                         </svg>
-                                                                       </div>
-                                                                       <EnhancedTaskItem
-                                                                         task={task}
-                                                                         allTasks={tasks}
-                                                                         familyMembers={familyMembers}
-                                                                         onToggle={(task) => {
-                                                                           if (activeMemberId !== member.id) {
-                                                                             toast({
-                                                                               title: 'Access Denied',
-                                                                               description: 'You can only complete tasks from your own task column.',
-                                                                               variant: 'destructive'
-                                                                             });
-                                                                             return;
-                                                                           }
-                                                                           handleTaskToggle(task);
-                                                                         }}
-                                                                         onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                                                         onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
-                                                                         showActions={profile.role === 'parent' && !snapshot.isDragging}
-                                                                        />
-                                                                      </div>
-                                                                    )}
-                                                                 </Draggable>
-                                                              );
-                                                            })
-                                                          )}
-                                                          {provided.placeholder}
-                                                         
-                                                         {/* Add Task Button for this group */}
-                                                         {profile.role === 'parent' && (
-                                                           <div className="pt-2 border-t border-dashed">
-                                                             <AddButton
-                                                               className={cn(
-                                                                 "w-full text-xs",
-                                                                 getMemberColorClasses(member.color).border,
-                                                                 getMemberColorClasses(member.color).text
-                                                               )}
-                                                               text={`Add ${getTaskGroupTitle(group)} Task`}
-                                                               onClick={() => handleAddTaskForMember(member.id, group)}
-                                                             />
-                                                           </div>
-                                                         )}
-                                                       </div>
-                                                     )}
-                                                   </Droppable>
-                                                 </AccordionContent>
-                                              </AccordionItem>
-                                            );
-                                          })}
-                                         </Accordion>
-                                        </div>
-                                      );
-                                     })()
+                             <CardContent className="p-0">
+                               <TaskGroupsList
+                                 tasks={memberTasks}
+                                 allTasks={tasks}
+                                 familyMembers={familyMembers}
+                                 onTaskToggle={(task) => {
+                                   if (dashboardMode && activeMemberId !== member.id) {
+                                     toast({
+                                       title: 'Access Denied',
+                                       description: 'You can only complete tasks from your own task column.',
+                                       variant: 'destructive'
+                                     });
+                                     return;
+                                   }
+                                   handleTaskToggle(task);
+                                 }}
+                                 onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
+                                 onDeleteTask={profile.role === 'parent' ? setDeletingTask : undefined}
+                                 onAddTask={(group) => handleAddTaskForMember(member.id, group)}
+                                 onDragEnd={handleDragEnd}
+                                 showActions={profile.role === 'parent'}
+                                 memberId={member.id}
+                                 memberColor={member.color}
+                                 droppableIdPrefix={`${member.id}-`}
+                               />
+                             </CardContent>
+                             
+                             {/* Add Task Button at Member Level */}
+                             {profile.role === 'parent' && (
+                               <div className="px-4 pb-4">
+                                 <AddButton
+                                   className={cn(
+                                     "w-full text-xs opacity-0 group-hover:opacity-75 transition-opacity",
+                                     getMemberColorClasses(member.color).border,
+                                     getMemberColorClasses(member.color).text
                                    )}
-                                   
-                                   {/* Add Task Button at Member Level */}
-                                   {profile.role === 'parent' && (
-                                     <div className="pt-2 mt-4 border-t border-muted/50">
-                                       <AddButton
-                                         className={cn(
-                                           "w-full text-xs opacity-0 group-hover:opacity-75 transition-opacity",
-                                           getMemberColorClasses(member.color).border,
-                                           getMemberColorClasses(member.color).text
-                                         )}
-                                         text="Add Task"
-                                         showIcon={true}
-                                         onClick={() => handleAddTaskForMember(member.id)}
-                                       />
-                                     </div>
-                                   )}
-                                   
-                               </CardContent>
+                                   text="Add Task"
+                                   showIcon={true}
+                                   onClick={() => handleAddTaskForMember(member.id)}
+                                 />
+                               </div>
                              )}
-                           </Droppable>
-                           </div>
-                        </Card>
+                         </Card>
                      );
                    })}
 

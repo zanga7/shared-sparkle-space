@@ -444,7 +444,7 @@ export const EditTaskDialog = ({
                 <option value="general">General</option>
                 <option value="morning">Morning</option>
                 <option value="midday">Midday</option>
-                <option value="afternoon">Afternoon</option>
+                <option value="evening">Evening</option>
               </select>
             </div>
 

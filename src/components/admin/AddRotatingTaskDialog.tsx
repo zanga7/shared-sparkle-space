@@ -26,7 +26,7 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
   const [weeklyDays, setWeeklyDays] = useState<number[]>([1]); // Monday by default
   const [monthlyDay, setMonthlyDay] = useState(1);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [taskGroup, setTaskGroup] = useState<'morning' | 'midday' | 'afternoon' | 'general'>('general');
+  const [taskGroup, setTaskGroup] = useState<'morning' | 'midday' | 'evening' | 'general'>('general');
   const [allowMultipleCompletions, setAllowMultipleCompletions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -223,14 +223,14 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
 
           <div>
             <Label>Task Group</Label>
-            <Select value={taskGroup} onValueChange={(value: 'morning' | 'midday' | 'afternoon' | 'general') => setTaskGroup(value)}>
+            <Select value={taskGroup} onValueChange={(value: 'morning' | 'midday' | 'evening' | 'general') => setTaskGroup(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="morning">Morning</SelectItem>
                 <SelectItem value="midday">Midday</SelectItem>
-                <SelectItem value="afternoon">Afternoon</SelectItem>
+                <SelectItem value="evening">Evening</SelectItem>
                 <SelectItem value="general">General</SelectItem>
               </SelectContent>
             </Select>

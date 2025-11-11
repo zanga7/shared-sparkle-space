@@ -45,7 +45,7 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
   const [weeklyDays, setWeeklyDays] = useState<number[]>([1]);
   const [monthlyDay, setMonthlyDay] = useState(1);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [taskGroup, setTaskGroup] = useState<'morning' | 'midday' | 'afternoon' | 'general'>('general');
+  const [taskGroup, setTaskGroup] = useState<'morning' | 'midday' | 'evening' | 'general'>('general');
   const [allowMultipleCompletions, setAllowMultipleCompletions] = useState(false);
   const [currentMemberIndex, setCurrentMemberIndex] = useState(0);
   const [isActive, setIsActive] = useState(true);
@@ -305,14 +305,14 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
 
           <div>
             <Label>Task Group</Label>
-            <Select value={taskGroup} onValueChange={(value: 'morning' | 'midday' | 'afternoon' | 'general') => setTaskGroup(value)}>
+            <Select value={taskGroup} onValueChange={(value: 'morning' | 'midday' | 'evening' | 'general') => setTaskGroup(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="morning">Morning</SelectItem>
                 <SelectItem value="midday">Midday</SelectItem>
-                <SelectItem value="afternoon">Afternoon</SelectItem>
+                <SelectItem value="evening">Evening</SelectItem>
                 <SelectItem value="general">General</SelectItem>
               </SelectContent>
             </Select>

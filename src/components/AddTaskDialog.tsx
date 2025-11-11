@@ -417,10 +417,10 @@ export const AddTaskDialog = ({
                     Midday (11 AM - 3 PM)
                   </div>
                 </SelectItem>
-                <SelectItem value="afternoon">
+                <SelectItem value="evening">
                   <div className="flex items-center gap-2">
                     <Moon className="h-4 w-4" />
-                    Afternoon (3 PM onwards)
+                    Evening (3 PM onwards)
                   </div>
                 </SelectItem>
                 <SelectItem value="general">
