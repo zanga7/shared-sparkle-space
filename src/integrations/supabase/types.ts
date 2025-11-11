@@ -23,7 +23,7 @@ export type Database = {
           entity_type: string
           family_id: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           new_data: Json | null
           old_data: Json | null
           user_agent: string | null
@@ -36,7 +36,7 @@ export type Database = {
           entity_type: string
           family_id: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_data?: Json | null
           old_data?: Json | null
           user_agent?: string | null
@@ -49,7 +49,7 @@ export type Database = {
           entity_type?: string
           family_id?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_data?: Json | null
           old_data?: Json | null
           user_agent?: string | null
@@ -69,12 +69,12 @@ export type Database = {
           access_token: string
           calendar_id: string | null
           created_at: string
-          created_ip: unknown | null
+          created_ip: unknown
           expires_at: string | null
           id: string
           integration_type: string
           is_active: boolean
-          last_access_ip: unknown | null
+          last_access_ip: unknown
           last_token_refresh: string | null
           profile_id: string
           refresh_token: string | null
@@ -86,12 +86,12 @@ export type Database = {
           access_token: string
           calendar_id?: string | null
           created_at?: string
-          created_ip?: unknown | null
+          created_ip?: unknown
           expires_at?: string | null
           id?: string
           integration_type: string
           is_active?: boolean
-          last_access_ip?: unknown | null
+          last_access_ip?: unknown
           last_token_refresh?: string | null
           profile_id: string
           refresh_token?: string | null
@@ -103,12 +103,12 @@ export type Database = {
           access_token?: string
           calendar_id?: string | null
           created_at?: string
-          created_ip?: unknown | null
+          created_ip?: unknown
           expires_at?: string | null
           id?: string
           integration_type?: string
           is_active?: boolean
-          last_access_ip?: unknown | null
+          last_access_ip?: unknown
           last_token_refresh?: string | null
           profile_id?: string
           refresh_token?: string | null
@@ -125,7 +125,7 @@ export type Database = {
           error_message: string | null
           id: string
           integration_id: string
-          ip_address: unknown | null
+          ip_address: unknown
           success: boolean
           user_agent: string | null
           user_id: string
@@ -136,7 +136,7 @@ export type Database = {
           error_message?: string | null
           id?: string
           integration_id: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           success?: boolean
           user_agent?: string | null
           user_id: string
@@ -147,7 +147,7 @@ export type Database = {
           error_message?: string | null
           id?: string
           integration_id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           success?: boolean
           user_agent?: string | null
           user_id?: string
@@ -1381,25 +1381,25 @@ export type Database = {
         Args: { approval_note_param?: string; request_id_param: string }
         Returns: Json
       }
-      audit_calendar_token_security: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      audit_calendar_token_security: { Args: never; Returns: Json }
       authenticate_child_pin: {
         Args: { pin_attempt: string; profile_id_param: string }
         Returns: Json
       }
-      authenticate_member_pin_dashboard: {
-        Args:
-          | {
+      authenticate_member_pin_dashboard:
+        | {
+            Args: { pin_attempt: string; profile_id_param: string }
+            Returns: Json
+          }
+        | {
+            Args: {
               device_id_param?: string
               pin_param: string
               pin_type_param?: string
               profile_id_param: string
             }
-          | { pin_attempt: string; profile_id_param: string }
-        Returns: Json
-      }
+            Returns: Json
+          }
       can_access_calendar_integration: {
         Args: { integration_profile_id: string }
         Returns: boolean
@@ -1408,10 +1408,7 @@ export type Database = {
         Args: { device_id_param?: string; profile_id_param: string }
         Returns: boolean
       }
-      check_profile_status: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      check_profile_status: { Args: never; Returns: Json }
       check_token_access_rate_limit: {
         Args: {
           integration_id: string
@@ -1494,22 +1491,13 @@ export type Database = {
         Args: { denial_note_param?: string; request_id_param: string }
         Returns: Json
       }
-      encrypt_calendar_token: {
-        Args: { token_value: string }
-        Returns: string
-      }
-      encrypt_google_photos_tokens: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      encrypt_calendar_token: { Args: { token_value: string }; Returns: string }
+      encrypt_google_photos_tokens: { Args: never; Returns: Json }
       encrypt_oauth_token: {
         Args: { token_type?: string; token_value: string }
         Returns: string
       }
-      fix_my_missing_profile: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      fix_my_missing_profile: { Args: never; Returns: Json }
       generate_rotating_task_instance: {
         Args: { rotating_task_id: string }
         Returns: string
@@ -1528,7 +1516,7 @@ export type Database = {
         }[]
       }
       get_calendar_integrations_metadata: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           calendar_id: string
           created_at: string
@@ -1547,7 +1535,7 @@ export type Database = {
         }[]
       }
       get_calendar_integrations_safe: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           calendar_id: string
           created_at: string
@@ -1575,16 +1563,10 @@ export type Database = {
           severity: string
         }[]
       }
-      get_calendar_security_final_status: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      get_calendar_security_status: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      get_calendar_security_final_status: { Args: never; Returns: Json }
+      get_calendar_security_status: { Args: never; Returns: Json }
       get_calendar_security_summary: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           access_count_7_days: number
           created_at: string
@@ -1624,14 +1606,8 @@ export type Database = {
           security_status: string
         }[]
       }
-      get_current_user_family_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_user_family_id_safe: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_current_user_family_id: { Args: never; Returns: string }
+      get_current_user_family_id_safe: { Args: never; Returns: string }
       get_decrypted_calendar_tokens: {
         Args: { integration_id_param: string }
         Returns: {
@@ -1651,7 +1627,7 @@ export type Database = {
         }[]
       }
       get_family_profiles_metadata: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           calendar_edit_permission: string
@@ -1677,7 +1653,7 @@ export type Database = {
         }[]
       }
       get_family_profiles_safe: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           calendar_edit_permission: string
@@ -1702,7 +1678,7 @@ export type Database = {
         }[]
       }
       get_family_profiles_secure: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           can_add_for_parents: boolean
@@ -1727,7 +1703,7 @@ export type Database = {
         }[]
       }
       get_google_photos_integrations_metadata: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           album_id: string
           album_name: string
@@ -1783,12 +1759,9 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_token_encryption_status: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      get_token_encryption_status: { Args: never; Returns: Json }
       get_user_calendar_integrations: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           calendar_id: string
           created_at: string
@@ -1805,7 +1778,7 @@ export type Database = {
         }[]
       }
       get_user_calendar_integrations_metadata: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           calendar_id: string
           created_at: string
@@ -1828,7 +1801,7 @@ export type Database = {
         }[]
       }
       get_user_calendar_integrations_safe: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           calendar_id: string
           created_at: string
@@ -1846,7 +1819,7 @@ export type Database = {
         }[]
       }
       get_user_calendar_integrations_secure: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           calendar_id: string
           created_at: string
@@ -1862,22 +1835,13 @@ export type Database = {
           updated_at: string
         }[]
       }
-      get_user_family_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      hash_pin: {
-        Args: { pin_text: string }
-        Returns: string
-      }
+      get_user_family_id: { Args: never; Returns: string }
+      hash_pin: { Args: { pin_text: string }; Returns: string }
       is_calendar_integration_owner: {
         Args: { integration_id: string }
         Returns: boolean
       }
-      is_current_user_parent: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      is_current_user_parent: { Args: never; Returns: boolean }
       is_parent_in_same_family: {
         Args: { target_profile_id: string }
         Returns: boolean
@@ -1942,14 +1906,8 @@ export type Database = {
         }
         Returns: undefined
       }
-      mark_reward_claimed: {
-        Args: { request_id_param: string }
-        Returns: Json
-      }
-      migrate_existing_tokens_to_encrypted: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      mark_reward_claimed: { Args: { request_id_param: string }; Returns: Json }
+      migrate_existing_tokens_to_encrypted: { Args: never; Returns: Json }
       remove_exdate_from_series: {
         Args: { p_exdate: string; p_series_id: string; p_table_name: string }
         Returns: undefined
@@ -2027,16 +1985,13 @@ export type Database = {
         }
         Returns: Json
       }
-      validate_and_cleanup_tokens: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      validate_and_cleanup_tokens: { Args: never; Returns: Json }
       validate_calendar_token_access: {
         Args: { integration_id: string; requesting_user_id?: string }
         Returns: boolean
       }
       validate_token_encryption: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           is_secure: boolean
           table_name: string
