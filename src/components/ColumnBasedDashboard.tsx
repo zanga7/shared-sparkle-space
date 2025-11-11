@@ -667,8 +667,6 @@ const ColumnBasedDashboard = () => {
       taskId: draggableId,
       source: source.droppableId,
       destination: destination?.droppableId,
-      sourceIndex: source.index,
-      destinationIndex: destination?.index
     });
 
     // If dropped outside a droppable area
@@ -695,11 +693,12 @@ const ColumnBasedDashboard = () => {
       });
       return;
     }
-    
-    console.log('Drag end - task found:', task.title, 'source:', source.droppableId, 'destination:', destination.droppableId);
+
+    // Store original state for rollback
+    const previousTasks = [...tasks];
     
     // Parse droppable IDs to handle both member columns and group containers
-    const parseDroppableId = (id: string) => {
+    const parseDroppableId = (id: string): { memberId: string | null; group: string | null } => {
       if (id === 'unassigned') return { memberId: null, group: null };
       
       // Check if it's a member ID only (36 characters UUID)
@@ -719,7 +718,14 @@ const ColumnBasedDashboard = () => {
         }
       }
       
-      console.error('Invalid droppable ID format:', id, 'Expected: UUID or UUID-group');
+      // Check if it's just a group name (for member view)
+      const validGroups = ['morning', 'midday', 'evening', 'general'];
+      const potentialGroup = id.replace('pending-', '').replace('completed-', '');
+      if (validGroups.includes(potentialGroup)) {
+        return { memberId: null, group: potentialGroup };
+      }
+      
+      console.error('Invalid droppable ID format:', id, 'Expected: UUID, UUID-group, or group name');
       return { memberId: null, group: null };
     };
     
@@ -727,61 +733,92 @@ const ColumnBasedDashboard = () => {
     const destInfo = parseDroppableId(destination.droppableId);
     
     console.log('Parsed source:', sourceInfo, 'destination:', destInfo);
+
+    // Validate parsed IDs before proceeding
+    if (sourceInfo.memberId === null && sourceInfo.group === null && source.droppableId !== 'unassigned') {
+      console.error('Failed to parse source droppable ID:', source.droppableId);
+      toast({
+        title: 'Error',
+        description: 'Invalid drag operation. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (destInfo.memberId === null && destInfo.group === null && destination.droppableId !== 'unassigned') {
+      console.error('Failed to parse destination droppable ID:', destination.droppableId);
+      toast({
+        title: 'Error',
+        description: 'Invalid drop location. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     try {
       const updateData: any = {};
       let needsUpdate = false;
       
       // Handle member assignment change
-      if (sourceInfo.memberId !== destInfo.memberId) {
-        // First, remove existing task assignees
-        const { error: deleteError } = await supabase
-          .from('task_assignees')
-          .delete()
-          .eq('task_id', taskId);
-
-        if (deleteError) throw deleteError;
-
-        // Update the main task assignment for backward compatibility
-        updateData.assigned_to = destInfo.memberId;
-        needsUpdate = true;
-
-        // If assigning to a specific member, create new task_assignee record
-        if (destInfo.memberId) {
-          const { error: insertError } = await supabase
+      if (sourceInfo.memberId !== destInfo.memberId && destInfo.memberId !== null) {
+        try {
+          // First, remove existing task assignees
+          const { error: deleteError } = await supabase
             .from('task_assignees')
-            .insert({
-              task_id: taskId,
-              profile_id: destInfo.memberId,
-              assigned_by: profile?.id
-            });
+            .delete()
+            .eq('task_id', taskId);
 
-          if (insertError) throw insertError;
+          if (deleteError) {
+            console.error('Error deleting task assignees:', deleteError);
+            throw deleteError;
+          }
+
+          // Update the main task assignment for backward compatibility
+          updateData.assigned_to = destInfo.memberId;
+          needsUpdate = true;
+
+          // If assigning to a specific member, create new task_assignee record
+          if (destInfo.memberId) {
+            const { error: insertError } = await supabase
+              .from('task_assignees')
+              .insert({
+                task_id: taskId,
+                profile_id: destInfo.memberId,
+                assigned_by: profile?.id
+              });
+
+            if (insertError) {
+              console.error('Error inserting task assignee:', insertError);
+              throw insertError;
+            }
+          }
+        } catch (assignError) {
+          console.error('Failed to update task assignment:', assignError);
+          throw new Error('Failed to update task assignment');
         }
       }
       
       // Handle task group change
       if (destInfo.group && destInfo.group !== sourceInfo.group) {
         console.log('Updating task group from', sourceInfo.group, 'to', destInfo.group);
-        // Set both task_group and due_date for consistency
         updateData.task_group = destInfo.group;
         updateData.due_date = getGroupDueDate(destInfo.group as TaskGroup);
         needsUpdate = true;
       }
       
       if (needsUpdate) {
-        console.log('Update data:', updateData);
+        console.log('Applying update:', updateData);
 
-        // Optimistically update local state first for immediate visual feedback
-        setTasks(prevTasks => prevTasks.map(task => {
-          if (task.id === taskId) {
+        // Optimistically update local state
+        setTasks(prevTasks => prevTasks.map(t => {
+          if (t.id === taskId) {
             return {
-              ...task,
+              ...t,
               ...updateData,
               // Update assignees if member changed
-              ...(destInfo.memberId !== sourceInfo.memberId && {
+              ...(destInfo.memberId !== sourceInfo.memberId && destInfo.memberId && {
                 assigned_to: destInfo.memberId,
-                assignees: destInfo.memberId ? [{
+                assignees: [{
                   id: crypto.randomUUID(),
                   profile_id: destInfo.memberId,
                   assigned_at: new Date().toISOString(),
@@ -792,11 +829,11 @@ const ColumnBasedDashboard = () => {
                     role: 'child' as const,
                     color: 'gray'
                   }
-                }] : []
+                }]
               })
             };
           }
-          return task;
+          return t;
         }));
 
         // Update the task in database
@@ -815,10 +852,10 @@ const ColumnBasedDashboard = () => {
         const assignedMember = familyMembers.find(m => m.id === destInfo.memberId);
         let toastMessage = '';
         
-        if (sourceInfo.memberId !== destInfo.memberId) {
-          toastMessage = destInfo.memberId 
-            ? `Task assigned to ${assignedMember?.display_name || 'member'}`
-            : 'Task moved to unassigned pool';
+        if (sourceInfo.memberId !== destInfo.memberId && destInfo.memberId) {
+          toastMessage = `Task assigned to ${assignedMember?.display_name || 'member'}`;
+        } else if (destInfo.memberId === null && sourceInfo.memberId !== null) {
+          toastMessage = 'Task moved to unassigned';
         }
         
         if (destInfo.group && destInfo.group !== sourceInfo.group) {
@@ -827,17 +864,18 @@ const ColumnBasedDashboard = () => {
         }
 
         toast({
-          title: 'Task updated successfully',
+          title: 'Task updated',
           description: toastMessage,
         });
       }
     } catch (error) {
-      console.error('Error updating task:', error);
-      // Rollback optimistic update on error by refreshing from database
-      refreshTasksOnly();
+      console.error('Error in drag and drop operation:', error);
+      // Immediately rollback to previous state
+      setTasks(previousTasks);
+      
       toast({
-        title: 'Error',
-        description: 'Failed to update task. Changes have been reverted.',
+        title: 'Failed to move task',
+        description: error instanceof Error ? error.message : 'Please try again.',
         variant: 'destructive',
       });
     }

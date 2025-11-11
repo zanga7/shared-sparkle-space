@@ -100,7 +100,7 @@ export const MemberTasksWidget = ({
     }
 
     // Parse droppable IDs (format: "pending-groupname" or "completed-groupname")
-    const parseDroppableId = (id: string) => {
+    const parseDroppableId = (id: string): { status: string | null; group: string | null } => {
       const parts = id.split('-');
       if (parts.length >= 2) {
         const status = parts[0]; // 'pending' or 'completed'
@@ -112,6 +112,17 @@ export const MemberTasksWidget = ({
 
     const sourceInfo = parseDroppableId(source.droppableId);
     const destInfo = parseDroppableId(destination.droppableId);
+
+    // Validate parsed IDs
+    if (!destInfo.status || !destInfo.group) {
+      console.error('Failed to parse destination droppable ID:', destination.droppableId);
+      toast({
+        title: 'Error',
+        description: 'Invalid drop location. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     // Don't allow moving to completed section via drag
     if (destInfo.status === 'completed') {
@@ -129,12 +140,15 @@ export const MemberTasksWidget = ({
 
       // Handle task group change
       if (destInfo.group && destInfo.group !== sourceInfo.group) {
+        console.log('Updating task group from', sourceInfo.group, 'to', destInfo.group);
         updateData.task_group = destInfo.group;
         updateData.due_date = getGroupDueDate(destInfo.group as TaskGroup);
         needsUpdate = true;
       }
 
       if (needsUpdate) {
+        console.log('Applying update:', updateData);
+        
         // Update database
         const { error: updateError } = await supabase
           .from('tasks')
@@ -142,8 +156,11 @@ export const MemberTasksWidget = ({
           .eq('id', taskId);
 
         if (updateError) {
+          console.error('Database update error:', updateError);
           throw updateError;
         }
+
+        console.log('Task update successful');
 
         toast({
           title: 'Task Updated',
@@ -156,12 +173,17 @@ export const MemberTasksWidget = ({
         }, 100);
       }
     } catch (error) {
-      console.error('Error updating task:', error);
+      console.error('Error in drag and drop operation:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to update task. Please try again.',
+        title: 'Failed to move task',
+        description: error instanceof Error ? error.message : 'Please try again.',
         variant: 'destructive',
       });
+      
+      // Force refresh to restore correct state
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('task-updated'));
+      }, 100);
     }
   };
 
