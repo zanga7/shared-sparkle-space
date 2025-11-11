@@ -165,10 +165,17 @@ export const TaskGroupsList = ({
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
                           className={cn(
-                            "transition-all duration-200 group relative",
+                            "transition-all duration-200 group relative select-none",
                             snapshot.isDragging && "shadow-xl rotate-2 scale-105 z-50 ring-2 ring-primary/30",
                             !isCompleted && "cursor-grab active:cursor-grabbing"
                           )}
+                          onMouseDown={(e) => {
+                            // Allow drag from anywhere except buttons and interactive elements
+                            const target = e.target as HTMLElement;
+                            if (target.closest('button') || target.closest('a')) {
+                              e.stopPropagation();
+                            }
+                          }}
                         >
                           {/* Visual Drag Indicator */}
                           {!isCompleted && (

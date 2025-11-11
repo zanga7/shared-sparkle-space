@@ -54,15 +54,15 @@ export const EnhancedTaskItem = ({
   return (
     <div 
       className={cn(
-        "group relative border rounded-lg p-3 transition-all hover:shadow-md cursor-pointer",
+        "group relative border rounded-lg p-3 transition-all hover:shadow-md",
         isCompleted && "bg-muted/30",
         isOverdue && "border-destructive/50 bg-destructive/5",
         onEdit && "hover:bg-muted/20"
       )}
       onClick={onEdit ? (e) => {
-        // Don't trigger if clicking on buttons, interactive elements, or drag handle
+        // Don't trigger if clicking on buttons or interactive elements
         const target = e.target as HTMLElement;
-        if (target.closest('button') || target.closest('[data-drag-handle]')) return;
+        if (target.closest('button')) return;
         onEdit(task);
       } : undefined}
     >
