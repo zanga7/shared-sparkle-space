@@ -45,7 +45,7 @@ export const TaskGroupsList = ({
     const groups = {
       morning: tasks.filter(task => task.task_group === 'morning'),
       midday: tasks.filter(task => task.task_group === 'midday'),
-      evening: tasks.filter(task => task.task_group === 'evening'),
+      evening: tasks.filter(task => task.task_group === 'evening' || task.task_group === 'afternoon'),
       general: tasks.filter(task => !task.task_group || task.task_group === 'general')
     };
     return groups;
