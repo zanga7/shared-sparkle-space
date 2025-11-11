@@ -97,8 +97,6 @@ export const TaskGroupsList = ({
     groupTasks: Task[],
     groupType: 'pending' | 'completed'
   ) => {
-    if (groupTasks.length === 0) return null;
-
     const Icon = getTaskGroupIcon(group);
     const groupTitle = getTaskGroupTitle(group);
     const isCompleted = groupType === 'completed';
@@ -232,9 +230,7 @@ export const TaskGroupsList = ({
 
   const defaultOpenValues = [
     'morning', 'midday', 'evening', 'general'
-  ]
-    .filter(group => shouldGroupBeOpenByDefault(group as TaskGroup))
-    .map(group => `${droppableIdPrefix}pending-${group}`);
+  ].map(group => `${droppableIdPrefix}pending-${group}`);
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
