@@ -723,12 +723,13 @@ const ColumnBasedDashboard = () => {
         console.log('🔸 Remainder after UUID:', remainder);
         
         if (memberId.length === 36 && memberId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-          const group = remainder.replace(/^pending-/, '').replace(/^completed-/, '');
-          console.log('🔸 Extracted group:', group, 'Is valid?', validGroups.includes(group));
-          
-          if (validGroups.includes(group)) {
-            console.log('✅ Parsed as member+group:', { memberId, group });
-            return { memberId, group };
+           let group = remainder.replace(/^pending-/, '').replace(/^completed-/, '');
+           if (group === 'afternoon') group = 'evening';
+           console.log('🔸 Extracted group:', group, 'Is valid?', validGroups.includes(group));
+           
+           if (validGroups.includes(group)) {
+             console.log('✅ Parsed as member+group:', { memberId, group });
+             return { memberId, group };
           } else {
             console.error('❌ Group not in validGroups:', group, 'Valid groups:', validGroups);
           }
@@ -738,12 +739,13 @@ const ColumnBasedDashboard = () => {
       }
       
       // Check if it's just a group name (for member view) possibly prefixed with pending-/completed-
-      const potentialGroup = id.replace(/^pending-/, '').replace(/^completed-/, '');
-      console.log('🔸 Checking as standalone group:', potentialGroup);
-      
-      if (validGroups.includes(potentialGroup)) {
-        console.log('✅ Parsed as standalone group:', { memberId: null, group: potentialGroup });
-        return { memberId: null, group: potentialGroup };
+       const potentialGroup = id.replace(/^pending-/, '').replace(/^completed-/, '');
+       const normalizedGroup = potentialGroup === 'afternoon' ? 'evening' : potentialGroup;
+       console.log('🔸 Checking as standalone group:', normalizedGroup);
+       
+       if (validGroups.includes(normalizedGroup)) {
+         console.log('✅ Parsed as standalone group:', { memberId: null, group: normalizedGroup });
+         return { memberId: null, group: normalizedGroup };
       }
       
       console.error('❌ Invalid droppable ID format:', id, 'Expected: UUID, UUID-group, or group name');

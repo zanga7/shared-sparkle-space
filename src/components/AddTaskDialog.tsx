@@ -109,9 +109,10 @@ export const AddTaskDialog = ({
   // Handle preselected task group
   useEffect(() => {
     if (preselectedTaskGroup) {
+      const normalized = preselectedTaskGroup === 'afternoon' ? 'evening' : preselectedTaskGroup;
       setFormData(prev => ({ 
         ...prev, 
-        task_group: preselectedTaskGroup
+        task_group: normalized
       }));
     }
   }, [preselectedTaskGroup]);
@@ -138,6 +139,7 @@ export const AddTaskDialog = ({
     setLoading(true);
     
     try {
+      const normalizedGroup = formData.task_group === 'afternoon' ? 'evening' : formData.task_group;
       if (recurrenceEnabled && taskRecurrenceOptions.enabled) {
         // Create as task series for recurring tasks
         const seriesData = {
@@ -146,7 +148,7 @@ export const AddTaskDialog = ({
           title: formData.title.trim(),
           description: formData.description.trim() || null,
           points: formData.points,
-          task_group: formData.task_group,
+           task_group: normalizedGroup,
           completion_rule: formData.completion_rule,
           recurrence_rule: taskRecurrenceOptions.rule,
           series_start: (formData.due_date || new Date()).toISOString(),
@@ -187,12 +189,13 @@ export const AddTaskDialog = ({
           assigned_to: formData.assignees.length === 1 ? formData.assignees[0] : null,
           due_date: formData.due_date?.toISOString() || null,
           completion_rule: formData.completion_rule,
-          task_group: formData.task_group,
+          task_group: normalizedGroup,
           family_id: familyId,
           created_by: profileId,
           recurrence_options: null
         };
 
+        console.log('📝 Creating task with data:', taskData);
         const { data: taskResult, error } = await supabase
           .from('tasks')
           .insert(taskData)
@@ -296,11 +299,11 @@ export const AddTaskDialog = ({
 
       setOpen(false);
       onTaskCreated();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating task:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create task',
+        description: `Failed to create task${error?.message ? `: ${error.message}` : ''}`,
         variant: 'destructive'
       });
     } finally {
