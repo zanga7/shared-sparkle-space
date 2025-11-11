@@ -700,27 +700,30 @@ const ColumnBasedDashboard = () => {
     // Parse droppable IDs to handle both member columns and group containers
     const parseDroppableId = (id: string): { memberId: string | null; group: string | null } => {
       if (id === 'unassigned') return { memberId: null, group: null };
+
+      const validGroups = ['morning', 'midday', 'evening', 'general'];
       
       // Check if it's a member ID only (36 characters UUID)
       if (id.length === 36 && id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
         return { memberId: id, group: null };
       }
       
-      // Check if it's a member-group combination (UUID-group format)
+      // Check if it's a member + group combination (UUID-pending-<group> or UUID-completed-<group>)
       const parts = id.split('-');
-      if (parts.length >= 6) { // UUID has 5 parts when split by -, plus group makes 6+
+      if (parts.length >= 6) { // UUID has 5 parts when split by '-', plus group makes 6+
         const memberId = parts.slice(0, 5).join('-'); // Reconstruct UUID
-        const group = parts.slice(5).join('-'); // Get group name (could have dashes)
+        const remainder = parts.slice(5).join('-'); // e.g. "pending-morning" | "completed-general"
         
-        // Validate that it's a proper UUID format and length
         if (memberId.length === 36 && memberId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-          return { memberId, group };
+          const group = remainder.replace(/^pending-/, '').replace(/^completed-/, '');
+          if (validGroups.includes(group)) {
+            return { memberId, group };
+          }
         }
       }
       
-      // Check if it's just a group name (for member view)
-      const validGroups = ['morning', 'midday', 'evening', 'general'];
-      const potentialGroup = id.replace('pending-', '').replace('completed-', '');
+      // Check if it's just a group name (for member view) possibly prefixed with pending-/completed-
+      const potentialGroup = id.replace(/^pending-/, '').replace(/^completed-/, '');
       if (validGroups.includes(potentialGroup)) {
         return { memberId: null, group: potentialGroup };
       }
