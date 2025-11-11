@@ -52,7 +52,7 @@ export const MemberTasksWidget = ({
     : 0;
 
   // Type definition for task groups
-  type TaskGroup = 'morning' | 'midday' | 'evening' | 'general';
+  type TaskGroup = 'morning' | 'midday' | 'evening' | 'afternoon' | 'general';
 
   // Helper function to get due date based on task group
   const getGroupDueDate = (group: TaskGroup): string | null => {
@@ -67,6 +67,7 @@ export const MemberTasksWidget = ({
         const midday = new Date(today);
         midday.setHours(15, 0, 0, 0);
         return midday.toISOString();
+      case 'afternoon':
       case 'evening':
         const evening = new Date(today);
         evening.setHours(23, 59, 0, 0);
