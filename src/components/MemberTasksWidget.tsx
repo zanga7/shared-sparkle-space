@@ -6,7 +6,7 @@ import { getMemberColorClasses } from '@/lib/utils';
 import { Users } from 'lucide-react';
 import { Task, Profile } from '@/types/task';
 import { cn } from '@/lib/utils';
-import { DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -216,17 +216,19 @@ export const MemberTasksWidget = ({
           </div>
         ) : (
           <div className="h-full overflow-y-auto">
-            <TaskGroupsList
-              tasks={memberTasks}
-              allTasks={tasks}
-              familyMembers={familyMembers}
-              onTaskToggle={onTaskComplete}
-              onEditTask={profile.role === 'parent' ? onEditTask : undefined}
-              onDragEnd={handleDragEnd}
-              showActions={profile.role === 'parent'}
-              memberId={member.id}
-              memberColor={member.color}
-            />
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <TaskGroupsList
+                tasks={memberTasks}
+                allTasks={tasks}
+                familyMembers={familyMembers}
+                onTaskToggle={onTaskComplete}
+                onEditTask={profile.role === 'parent' ? onEditTask : undefined}
+                onDragEnd={handleDragEnd}
+                showActions={profile.role === 'parent'}
+                memberId={member.id}
+                memberColor={member.color}
+              />
+            </DragDropContext>
           </div>
         )}
       </CardContent>
