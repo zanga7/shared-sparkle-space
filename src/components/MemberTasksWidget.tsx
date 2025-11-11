@@ -1,15 +1,12 @@
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AddButton } from '@/components/ui/add-button';
-import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
+import { TaskGroupsList } from '@/components/tasks/TaskGroupsList';
 import { getMemberColorClasses } from '@/lib/utils';
-import { Users, Plus } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { Task, Profile } from '@/types/task';
 import { cn } from '@/lib/utils';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { DropResult } from 'react-beautiful-dnd';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -54,20 +51,6 @@ export const MemberTasksWidget = ({
     ? Math.round((completedTasks.length / memberTasks.length) * 100) 
     : 0;
 
-  // Group tasks by task_group field
-  const groupTasks = (tasks: Task[]) => {
-    const groups = {
-      morning: tasks.filter(task => task.task_group === 'morning'),
-      midday: tasks.filter(task => task.task_group === 'midday'),
-      evening: tasks.filter(task => task.task_group === 'evening'),
-      general: tasks.filter(task => !task.task_group || task.task_group === 'general')
-    };
-    return groups;
-  };
-
-  const pendingGroups = groupTasks(pendingTasks);
-  const completedGroups = groupTasks(completedTasks);
-
   // Type definition for task groups
   type TaskGroup = 'morning' | 'midday' | 'evening' | 'general';
 
@@ -105,7 +88,7 @@ export const MemberTasksWidget = ({
     }
 
     const taskId = draggableId;
-    const task = tasks.find(t => t.id === taskId);
+    const task = memberTasks.find(t => t.id === taskId);
     
     if (!task) {
       toast({
@@ -167,13 +150,10 @@ export const MemberTasksWidget = ({
           description: `Task moved to ${destInfo.group}`,
         });
 
-        // Trigger refresh
-        if (onTaskComplete) {
-          // Using this callback to trigger refresh in parent
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('task-updated'));
-          }, 100);
-        }
+        // Trigger parent component refresh
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('task-updated'));
+        }, 100);
       }
     } catch (error) {
       console.error('Error updating task:', error);
@@ -183,87 +163,6 @@ export const MemberTasksWidget = ({
         variant: 'destructive',
       });
     }
-  };
-
-  const renderTaskGroup = (groupName: string, groupTasks: Task[], groupType: 'pending' | 'completed') => {
-    if (groupTasks.length === 0) return null;
-
-    const groupTitle = groupName.charAt(0).toUpperCase() + groupName.slice(1);
-    const isCompleted = groupType === 'completed';
-    
-    return (
-      <AccordionItem value={`${groupType}-${groupName}`} key={`${groupType}-${groupName}`}>
-        <AccordionTrigger className="text-sm font-medium">
-          {groupTitle} ({groupTasks.length})
-        </AccordionTrigger>
-        <AccordionContent>
-          <Droppable droppableId={`${groupType}-${groupName}`} isDropDisabled={isCompleted}>
-            {(provided, snapshot) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className={cn(
-                  "space-y-2 min-h-[60px] transition-colors",
-                  snapshot.isDraggingOver && !isCompleted && "bg-accent/50 rounded-lg p-2"
-                )}
-              >
-                {groupTasks.map((task, index) => (
-                  <Draggable 
-                    key={task.id} 
-                    draggableId={task.id} 
-                    index={index}
-                    isDragDisabled={isCompleted}
-                  >
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        className={cn(
-                          "transition-all duration-200 group relative",
-                          snapshot.isDragging && "shadow-xl rotate-2 scale-105 z-50 ring-2 ring-primary/30"
-                        )}
-                      >
-                        {/* Drag Handle - appears on hover */}
-                        {!isCompleted && (
-                          <div
-                            {...provided.dragHandleProps}
-                            data-drag-handle="true"
-                            className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing z-20 bg-background/90 backdrop-blur-sm rounded p-1.5 border border-border/50 shadow-sm"
-                            onClick={(e) => e.stopPropagation()}
-                            onMouseDown={(e) => e.stopPropagation()}
-                          >
-                            <svg width="10" height="10" viewBox="0 0 10 10" className="text-muted-foreground pointer-events-none">
-                              <circle cx="2" cy="2" r="0.8" fill="currentColor"/>
-                              <circle cx="5" cy="2" r="0.8" fill="currentColor"/>
-                              <circle cx="8" cy="2" r="0.8" fill="currentColor"/>
-                              <circle cx="2" cy="5" r="0.8" fill="currentColor"/>
-                              <circle cx="5" cy="5" r="0.8" fill="currentColor"/>
-                              <circle cx="8" cy="5" r="0.8" fill="currentColor"/>
-                              <circle cx="2" cy="8" r="0.8" fill="currentColor"/>
-                              <circle cx="5" cy="8" r="0.8" fill="currentColor"/>
-                              <circle cx="8" cy="8" r="0.8" fill="currentColor"/>
-                            </svg>
-                          </div>
-                        )}
-                        <EnhancedTaskItem
-                          task={task}
-                          allTasks={tasks}
-                          familyMembers={familyMembers}
-                          onToggle={(task) => onTaskComplete(task)}
-                          onEdit={profile.role === 'parent' ? onEditTask : undefined}
-                          showActions={profile.role === 'parent' && !snapshot.isDragging}
-                        />
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </AccordionContent>
-      </AccordionItem>
-    );
   };
 
   return (
@@ -294,30 +193,19 @@ export const MemberTasksWidget = ({
             <p>No tasks assigned</p>
           </div>
         ) : (
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <div className="h-full overflow-y-auto">
-              <Accordion type="multiple" defaultValue={[
-                'pending-morning', 'pending-midday', 'pending-evening', 'pending-general',
-                'completed-morning', 'completed-midday', 'completed-evening', 'completed-general'
-              ]} className="space-y-2">
-                {/* Pending Tasks */}
-                {renderTaskGroup('morning', pendingGroups.morning, 'pending')}
-                {renderTaskGroup('midday', pendingGroups.midday, 'pending')}
-                {renderTaskGroup('evening', pendingGroups.evening, 'pending')}
-                {renderTaskGroup('general', pendingGroups.general, 'pending')}
-                
-                {/* Show completed tasks if any */}
-                {completedTasks.length > 0 && (
-                  <>
-                    {renderTaskGroup('morning', completedGroups.morning.slice(0, 2), 'completed')}
-                    {renderTaskGroup('midday', completedGroups.midday.slice(0, 2), 'completed')}
-                    {renderTaskGroup('evening', completedGroups.evening.slice(0, 2), 'completed')}
-                    {renderTaskGroup('general', completedGroups.general.slice(0, 2), 'completed')}
-                  </>
-                )}
-              </Accordion>
-            </div>
-          </DragDropContext>
+          <div className="h-full overflow-y-auto">
+            <TaskGroupsList
+              tasks={memberTasks}
+              allTasks={tasks}
+              familyMembers={familyMembers}
+              onTaskToggle={onTaskComplete}
+              onEditTask={profile.role === 'parent' ? onEditTask : undefined}
+              onDragEnd={handleDragEnd}
+              showActions={profile.role === 'parent'}
+              memberId={member.id}
+              memberColor={member.color}
+            />
+          </div>
         )}
       </CardContent>
     </Card>
