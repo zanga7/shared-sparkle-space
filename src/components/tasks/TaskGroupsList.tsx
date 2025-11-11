@@ -2,7 +2,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { AddButton } from '@/components/ui/add-button';
 import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
 import { Progress } from '@/components/ui/progress';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Task, Profile } from '@/types/task';
 import { cn, getMemberColorClasses } from '@/lib/utils';
 import { Sun, Clock3, Moon, FileText } from 'lucide-react';
@@ -233,28 +233,26 @@ export const TaskGroupsList = ({
   ].map(group => `${droppableIdPrefix}pending-${group}`);
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <Accordion 
-        type="multiple" 
-        defaultValue={defaultOpenValues}
-        className="space-y-2"
-      >
-        {/* Pending Tasks */}
-        {renderTaskGroup('morning', pendingGroups.morning, 'pending')}
-        {renderTaskGroup('midday', pendingGroups.midday, 'pending')}
-        {renderTaskGroup('evening', pendingGroups.evening, 'pending')}
-        {renderTaskGroup('general', pendingGroups.general, 'pending')}
-        
-        {/* Completed Tasks - limited display */}
-        {completedTasks.length > 0 && (
-          <>
-            {renderTaskGroup('morning', completedGroups.morning.slice(0, 2), 'completed')}
-            {renderTaskGroup('midday', completedGroups.midday.slice(0, 2), 'completed')}
-            {renderTaskGroup('evening', completedGroups.evening.slice(0, 2), 'completed')}
-            {renderTaskGroup('general', completedGroups.general.slice(0, 2), 'completed')}
-          </>
-        )}
-      </Accordion>
-    </DragDropContext>
+    <Accordion 
+      type="multiple" 
+      defaultValue={defaultOpenValues}
+      className="space-y-2"
+    >
+      {/* Pending Tasks */}
+      {renderTaskGroup('morning', pendingGroups.morning, 'pending')}
+      {renderTaskGroup('midday', pendingGroups.midday, 'pending')}
+      {renderTaskGroup('evening', pendingGroups.evening, 'pending')}
+      {renderTaskGroup('general', pendingGroups.general, 'pending')}
+      
+      {/* Completed Tasks - limited display */}
+      {completedTasks.length > 0 && (
+        <>
+          {renderTaskGroup('morning', completedGroups.morning.slice(0, 2), 'completed')}
+          {renderTaskGroup('midday', completedGroups.midday.slice(0, 2), 'completed')}
+          {renderTaskGroup('evening', completedGroups.evening.slice(0, 2), 'completed')}
+          {renderTaskGroup('general', completedGroups.general.slice(0, 2), 'completed')}
+        </>
+      )}
+    </Accordion>
   );
 };
