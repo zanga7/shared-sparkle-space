@@ -195,7 +195,6 @@ export const AddTaskDialog = ({
           recurrence_options: null
         };
 
-        console.log('📝 Creating task with data:', taskData);
         const { data: taskResult, error } = await supabase
           .from('tasks')
           .insert(taskData)

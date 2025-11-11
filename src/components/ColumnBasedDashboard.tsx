@@ -699,66 +699,44 @@ const ColumnBasedDashboard = () => {
     
     // Parse droppable IDs to handle both member columns and group containers
     const parseDroppableId = (id: string): { memberId: string | null; group: string | null } => {
-      console.log('🔍 Parsing droppable ID:', id);
-      
       if (id === 'unassigned') return { memberId: null, group: null };
 
       const validGroups = ['morning', 'midday', 'evening', 'general'];
       
       // Check if it's a member ID only (36 characters UUID)
       if (id.length === 36 && id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        console.log('✅ Parsed as member-only:', { memberId: id, group: null });
         return { memberId: id, group: null };
       }
       
       // Check if it's a member + group combination (UUID-pending-<group> or UUID-completed-<group>)
       const parts = id.split('-');
-      console.log('🔸 Split into parts:', parts, 'Length:', parts.length);
       
       if (parts.length >= 6) { // UUID has 5 parts when split by '-', plus group makes 6+
         const memberId = parts.slice(0, 5).join('-'); // Reconstruct UUID
         const remainder = parts.slice(5).join('-'); // e.g. "pending-morning" | "completed-general"
         
-        console.log('🔸 Reconstructed memberId:', memberId);
-        console.log('🔸 Remainder after UUID:', remainder);
-        
         if (memberId.length === 36 && memberId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-           let group = remainder.replace(/^pending-/, '').replace(/^completed-/, '');
-           if (group === 'afternoon') group = 'evening';
-           console.log('🔸 Extracted group:', group, 'Is valid?', validGroups.includes(group));
-           
-           if (validGroups.includes(group)) {
-             console.log('✅ Parsed as member+group:', { memberId, group });
-             return { memberId, group };
-          } else {
-            console.error('❌ Group not in validGroups:', group, 'Valid groups:', validGroups);
+          const group = remainder.replace(/^pending-/, '').replace(/^completed-/, '');
+          
+          if (validGroups.includes(group)) {
+            return { memberId, group };
           }
-        } else {
-          console.error('❌ Invalid UUID format:', memberId);
         }
       }
       
       // Check if it's just a group name (for member view) possibly prefixed with pending-/completed-
-       const potentialGroup = id.replace(/^pending-/, '').replace(/^completed-/, '');
-       const normalizedGroup = potentialGroup === 'afternoon' ? 'evening' : potentialGroup;
-       console.log('🔸 Checking as standalone group:', normalizedGroup);
-       
-       if (validGroups.includes(normalizedGroup)) {
-         console.log('✅ Parsed as standalone group:', { memberId: null, group: normalizedGroup });
-         return { memberId: null, group: normalizedGroup };
+      const potentialGroup = id.replace(/^pending-/, '').replace(/^completed-/, '');
+      
+      if (validGroups.includes(potentialGroup)) {
+        return { memberId: null, group: potentialGroup };
       }
       
-      console.error('❌ Invalid droppable ID format:', id, 'Expected: UUID, UUID-group, or group name');
+      console.error('Invalid droppable ID format:', id);
       return { memberId: null, group: null };
     };
     
-    console.log('🎯 DRAG EVENT - Source:', source.droppableId, 'Destination:', destination.droppableId);
-    
     const sourceInfo = parseDroppableId(source.droppableId);
     const destInfo = parseDroppableId(destination.droppableId);
-    
-    console.log('📊 Parsed source:', sourceInfo);
-    console.log('📊 Parsed destination:', destInfo);
 
     // Validate parsed IDs before proceeding
     if (sourceInfo.memberId === null && sourceInfo.group === null && source.droppableId !== 'unassigned') {
@@ -826,16 +804,12 @@ const ColumnBasedDashboard = () => {
       
       // Handle task group change
       if (destInfo.group && destInfo.group !== sourceInfo.group) {
-        console.log('🔄 Updating task group from', sourceInfo.group, 'to', destInfo.group);
-        const newDueDate = getGroupDueDate(destInfo.group as TaskGroup);
-        console.log('📅 New due date for', destInfo.group, ':', newDueDate);
         updateData.task_group = destInfo.group;
-        updateData.due_date = newDueDate;
+        updateData.due_date = getGroupDueDate(destInfo.group as TaskGroup);
         needsUpdate = true;
       }
       
       if (needsUpdate) {
-        console.log('💾 Applying update to task', taskId, ':', updateData);
 
         // Optimistically update local state
         setTasks(prevTasks => prevTasks.map(t => {
