@@ -35,7 +35,6 @@ const navigationItems = [
   { label: 'Tasks', value: 'columns', icon: Users },
   { label: 'Lists', value: 'lists', icon: List },
   { label: 'Calendar', value: 'calendar', icon: Calendar },
-  { label: 'Rewards', value: 'rewards', icon: Gift },
 ];
 
 export function NavigationHeader({ 
