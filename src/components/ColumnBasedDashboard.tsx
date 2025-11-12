@@ -684,10 +684,10 @@ const ColumnBasedDashboard = () => {
           .single();
 
         if (rotatingTask?.allow_multiple_completions) {
-          console.log('🔄 Generating next instance for rotating task with multiple completions');
-          
-          // Invoke the edge function to generate the next task
-          await supabase.functions.invoke('generate-rotating-tasks');
+          console.log('🔄 Generating next instance for rotating task with multiple completions (targeted)');
+          await supabase.functions.invoke('generate-rotating-tasks', {
+            body: { rotating_task_id: rotatingTask.id }
+          });
         }
       } catch (rotatingError) {
         // Not a rotating task or error checking - ignore and continue

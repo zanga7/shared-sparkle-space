@@ -35,12 +35,38 @@ Deno.serve(async (req) => {
 
     console.log('🔄 Starting rotating tasks generation...');
 
-    // Get all active rotating tasks
-    const { data: rotatingTasks, error: fetchError } = await supabaseClient
+    // Optional filter from request body to process a single rotating task
+    const contentType = req.headers.get('content-type') || '';
+    let filter: { id?: string; name?: string; family_id?: string } = {};
+    if (contentType.includes('application/json')) {
+      try {
+        const body = await req.json();
+        if (body?.rotating_task_id) filter.id = body.rotating_task_id;
+        if (body?.task_name) filter.name = body.task_name;
+        if (body?.family_id) filter.family_id = body.family_id;
+      } catch (_) {
+        // ignore JSON parse errors
+      }
+    }
+
+    let query = supabaseClient
       .from('rotating_tasks')
       .select('*')
       .eq('is_active', true)
       .eq('is_paused', false);
+
+    if (filter.id) {
+      query = query.eq('id', filter.id);
+      console.log(`🎯 Filtering rotating task by id: ${filter.id}`);
+    } else {
+      if (filter.name) query = query.eq('name', filter.name);
+      if (filter.family_id) query = query.eq('family_id', filter.family_id);
+      if (filter.name || filter.family_id) {
+        console.log('🎯 Filtering rotating tasks by name/family', filter);
+      }
+    }
+
+    const { data: rotatingTasks, error: fetchError } = await query;
 
     if (fetchError) {
       console.error('Error fetching rotating tasks:', fetchError);
