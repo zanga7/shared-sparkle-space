@@ -28,6 +28,7 @@ export const MemberTasksWidget = ({
   tasks,
   familyMembers,
   profile,
+  onTaskUpdated,
   onEditTask,
   onTaskComplete,
   onAddTask
@@ -144,6 +145,7 @@ export const MemberTasksWidget = ({
         });
 
         // Trigger parent component refresh
+        onTaskUpdated();
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('task-updated'));
         }, 100);
