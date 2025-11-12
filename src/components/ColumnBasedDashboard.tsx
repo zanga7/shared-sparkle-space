@@ -46,7 +46,7 @@ import {
   getTaskGroup,
   groupTasksByTime 
 } from '@/utils/taskGroupUtils';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
 import { MemberSwitchDialog } from '@/components/dashboard/MemberSwitchDialog';

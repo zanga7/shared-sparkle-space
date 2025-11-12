@@ -15,7 +15,7 @@ import { EventAttendeesDisplay } from '@/components/ui/event-attendees-display';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addWeeks, addMonths, addDays, subWeeks, subMonths, subDays, isSameDay, isToday, isPast, isSameMonth } from 'date-fns';
 import { cn, getMemberColorClasses } from '@/lib/utils';
 import { Task, Profile } from '@/types/task';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEvents } from '@/hooks/useEvents';

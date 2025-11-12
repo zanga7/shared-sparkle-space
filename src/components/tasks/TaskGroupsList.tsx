@@ -2,7 +2,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { AddButton } from '@/components/ui/add-button';
 import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
 import { Progress } from '@/components/ui/progress';
-import { Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Task, Profile } from '@/types/task';
 import { TaskGroup, TASK_GROUPS_ORDER } from '@/types/taskGroup';
 import { 
@@ -101,7 +101,7 @@ export const TaskGroupsList = ({
             </div>
           </div>
         </AccordionTrigger>
-        <AccordionContent className="px-3 pb-3 pt-1">
+        <AccordionContent forceMount className="px-3 pb-3 pt-1">
           <Droppable droppableId={droppableId} isDropDisabled={isCompleted}>
             {(provided, snapshot) => (
               <div

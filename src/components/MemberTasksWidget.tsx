@@ -8,7 +8,7 @@ import { Task, Profile } from '@/types/task';
 import { TaskGroup } from '@/types/taskGroup';
 import { getGroupDueDate } from '@/utils/taskGroupUtils';
 import { cn } from '@/lib/utils';
-import { DragDropContext, DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, DropResult } from '@hello-pangea/dnd';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 

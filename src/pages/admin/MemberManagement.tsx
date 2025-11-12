@@ -28,7 +28,7 @@ import { ExtendedProfile, ColorSwatch, ColorSwatches } from '@/types/admin';
 import { format } from 'date-fns';
 import { AddMemberDialog } from '@/components/admin/AddMemberDialog';
 import { SetChildPinDialog } from '@/components/admin/SetChildPinDialog';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 const MemberManagement = () => {
   const { user } = useAuth();
