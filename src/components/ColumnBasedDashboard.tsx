@@ -285,6 +285,44 @@ const ColumnBasedDashboard = () => {
     };
   }, [profile?.family_id]);
 
+  // Subscribe to task_completions to detect when rotating tasks complete and trigger rotation
+  useEffect(() => {
+    if (!profile?.family_id) return;
+
+    const completionsChannel = supabase
+      .channel('task-completions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'task_completions',
+        },
+        async (payload) => {
+          console.log('🔔 Task completion detected via realtime:', payload.new);
+          
+          // Update the completed task in local state
+          const completedTaskId = (payload as any).new.task_id;
+          setTasks((prev) => {
+            return prev.map((t) => {
+              if (t.id === completedTaskId) {
+                return {
+                  ...t,
+                  task_completions: [...(t.task_completions || []), payload.new as any]
+                };
+              }
+              return t;
+            });
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(completionsChannel);
+    };
+  }, [profile?.family_id]);
+
   // Ensure today's rotating tasks exist once per load (idempotent)
   useEffect(() => {
     if (!profile?.family_id || ensuredRotationTodayRef.current) return;
