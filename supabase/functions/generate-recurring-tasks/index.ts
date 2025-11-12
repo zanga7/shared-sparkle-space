@@ -71,6 +71,7 @@ Deno.serve(async (req) => {
           due_date: nextDueDate.toISOString(),
           created_by: series.created_by,
           series_id: series.id,
+          task_group: series.task_group === 'afternoon' ? 'evening' : series.task_group,
           is_repeating: false // Individual instances are not repeating
         })
 

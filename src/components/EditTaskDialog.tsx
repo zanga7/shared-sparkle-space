@@ -122,7 +122,7 @@ export const EditTaskDialog = ({
         title: formData.title.trim(),
         description: formData.description.trim() || null,
         points: formData.points,
-        task_group: formData.task_group,
+        task_group: formData.task_group === 'afternoon' ? 'evening' : formData.task_group,
         assignees: formData.assignees,
         due_date: formData.due_date,
         recurrence_options: recurrenceEnabled ? taskRecurrenceOptions : null

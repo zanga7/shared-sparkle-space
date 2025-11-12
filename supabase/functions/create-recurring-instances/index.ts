@@ -152,7 +152,7 @@ serve(async (req) => {
           due_date: nextDate.toISOString(),
           family_id: task.family_id,
           created_by: task.created_by,
-          task_group: task.task_group,
+          task_group: task.task_group === 'afternoon' ? 'evening' : task.task_group,
           completion_rule: task.completion_rule,
           recurrence_options: null // Future instances don't need recurrence
         });
