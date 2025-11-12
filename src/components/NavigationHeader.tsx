@@ -55,10 +55,10 @@ export function NavigationHeader({
 
   return (
     <header className="w-full border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between relative">
+      <div className="w-full px-2 sm:px-4 lg:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4 relative">
         {/* Main Navigation - Only show if Dashboard Mode is enabled OR in member view */}
         {dashboardModeEnabled && (
-          <nav className="flex items-center space-x-1">
+          <nav className="flex items-center space-x-1 flex-shrink-0">
             {navigationItems.map((item) => {
               const IconComponent = item.icon;
               return (
@@ -68,14 +68,14 @@ export function NavigationHeader({
                   size="sm"
                   onClick={() => onTabChange(item.value)}
                   className={cn(
-                    "h-9 px-3 font-medium transition-colors",
+                    "h-8 sm:h-9 px-2 sm:px-3 font-medium transition-colors",
                     activeTab === item.value 
                       ? "bg-primary text-primary-foreground shadow-sm" 
                       : "text-muted-foreground hover:text-foreground hover:bg-accent"
                   )}
                 >
-                  <IconComponent className="mr-2 h-4 w-4" />
-                  {item.label}
+                  <IconComponent className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{item.label}</span>
                 </Button>
               );
             })}
@@ -84,14 +84,14 @@ export function NavigationHeader({
         
         {/* Message when Dashboard Mode is disabled */}
         {!dashboardModeEnabled && (
-          <div className="flex items-center space-x-2 text-muted-foreground">
-            <Users className="h-4 w-4" />
-            <span className="text-sm font-medium">Member Dashboards Only</span>
+          <div className="flex items-center space-x-2 text-muted-foreground flex-shrink-0">
+            <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="text-xs sm:text-sm font-medium">Member Dashboards Only</span>
           </div>
         )}
 
         {/* Member Management & Settings */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-1 sm:space-x-2 flex-1 justify-end mr-12 overflow-x-auto">
           {dashboardMode && activeMember && activeMember.require_pin_to_complete_tasks ? (
             <>
               {/* Dashboard Mode with PIN: Active Member + Member Switcher */}
@@ -101,33 +101,33 @@ export function NavigationHeader({
                 variant="outline"
                 size="sm"
                 onClick={() => onMemberSwitch && onMemberSwitch(null)}
-                className="h-9 px-3 font-medium"
+                className="h-8 sm:h-9 px-2 sm:px-3 font-medium flex-shrink-0"
               >
-                <ArrowLeftRight className="mr-2 h-4 w-4" />
-                Switch
+                <ArrowLeftRight className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Switch</span>
               </Button>
             </>
           ) : (
             <>
               {/* Member selection for dashboard views */}
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto">
                 {familyMembers.map((member) => (
                   <Button
                     key={member.id}
                     variant={selectedMember === member.id && viewMode === 'member' ? "default" : "ghost"}
                     size="sm"
                     onClick={() => onMemberSelect(member.id)}
-                    className="h-9 px-2 font-medium flex items-center space-x-2"
+                    className="h-8 sm:h-9 px-1 sm:px-2 font-medium flex items-center space-x-1 sm:space-x-2 flex-shrink-0"
                   >
                     <UserAvatar 
                       name={member.display_name} 
                       color={member.color} 
                       size="sm" 
                     />
-                    <span className="hidden sm:inline">{member.display_name}</span>
+                    <span className="hidden md:inline text-xs sm:text-sm">{member.display_name}</span>
                     <Badge 
                       variant="secondary" 
-                      className="ml-1 text-xs font-semibold bg-background/80"
+                      className="text-[10px] sm:text-xs font-semibold bg-background/80 px-1 sm:px-1.5"
                     >
                       {member.total_points}
                     </Badge>
@@ -136,7 +136,6 @@ export function NavigationHeader({
               </div>
             </>
           )}
-
         </div>
         
         {/* Settings - Fixed to top right corner */}
@@ -144,9 +143,9 @@ export function NavigationHeader({
           variant="ghost"
           size="sm"
           onClick={onSettingsClick}
-          className="h-9 w-9 p-0 absolute right-4 top-1/2 -translate-y-1/2"
+          className="h-8 sm:h-9 w-8 sm:w-9 p-0 absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 flex-shrink-0"
         >
-          <Settings className="h-4 w-4" />
+          <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
         </Button>
       </div>
     </header>
