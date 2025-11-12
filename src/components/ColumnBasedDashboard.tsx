@@ -418,15 +418,17 @@ const ColumnBasedDashboard = () => {
       const completerId = dashboardMode && activeMemberId ? activeMemberId : profile.id;
       const completerProfile = familyMembers.find(m => m.id === completerId) || profile;
       
-      // Check if completer is allowed to complete this task
-      const isAssignee = assignees.some(assignee => assignee.id === completerId);
-      if (assignees.length > 0 && !isAssignee) {
-        toast({
-          title: 'Cannot Complete Task',
-          description: 'Only assigned members can complete this task.',
-          variant: 'destructive'
-        });
-        return;
+      // Check if completer is allowed to complete this task (only enforce when NOT in dashboard mode)
+      if (!dashboardMode) {
+        const isAssignee = assignees.some(assignee => assignee.id === completerId);
+        if (assignees.length > 0 && !isAssignee) {
+          toast({
+            title: 'Cannot Complete Task',
+            description: 'Only assigned members can complete this task.',
+            variant: 'destructive'
+          });
+          return;
+        }
       }
       
       // Determine point recipients based on completion rule
