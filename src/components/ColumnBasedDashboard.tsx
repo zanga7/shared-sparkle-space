@@ -223,6 +223,68 @@ const ColumnBasedDashboard = () => {
     };
   }, [profile?.family_id]);
 
+  // Subscribe to task_assignees inserts to hydrate assignees after rotating task generation
+  useEffect(() => {
+    if (!profile?.family_id) return;
+
+    const assigneesChannel = supabase
+      .channel('task-assignees-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'task_assignees',
+        },
+        async (payload) => {
+          try {
+            // Fetch the full task with relations once an assignee is added
+            const { data: taskData } = await supabase
+              .from('tasks')
+              .select(`
+                id,
+                title,
+                description,
+                points,
+                due_date,
+                assigned_to,
+                created_by,
+                completion_rule,
+                task_group,
+                family_id,
+                assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
+                assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
+                task_completions(id, completed_at, completed_by)
+              `)
+              .eq('id', (payload as any).new.task_id)
+              .single();
+
+            if (!taskData || taskData.family_id !== profile.family_id) return;
+
+            setTasks((prev) => {
+              const idx = prev.findIndex((t) => t.id === taskData.id);
+              const normalized = {
+                ...taskData,
+                completion_rule: (taskData.completion_rule || 'everyone') as 'any_one' | 'everyone',
+              };
+              if (idx === -1) return [...prev, normalized];
+              const copy = prev.slice();
+              copy[idx] = { ...copy[idx], ...normalized };
+              return copy;
+            });
+          } catch (e) {
+            console.error('Failed to update task after assignee insert', e);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(assigneesChannel);
+    };
+  }, [profile?.family_id]);
+
+
   const cleanupDuplicateRotatingTasksToday = async (familyId: string) => {
     try {
       const start = new Date();
