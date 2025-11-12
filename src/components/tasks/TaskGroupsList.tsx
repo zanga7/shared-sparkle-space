@@ -126,44 +126,23 @@ export const TaskGroupsList = ({
                         <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}
+                          {...provided.dragHandleProps}
                           className={cn(
-                            "transition-all duration-200 relative flex items-start gap-2",
+                            "transition-all duration-200",
                             snapshot.isDragging && "shadow-xl rotate-2 scale-105 z-50 ring-2 ring-primary/30"
                           )}
                         >
-                          {/* Dedicated Drag Handle */}
-                          {!isTaskCompleted && (
-                            <div
-                              {...provided.dragHandleProps}
-                              className="flex-shrink-0 mt-3 cursor-grab active:cursor-grabbing touch-none"
-                            >
-                              <div className="p-1.5 rounded hover:bg-accent transition-colors">
-                                <svg width="16" height="16" viewBox="0 0 16 16" className="text-muted-foreground">
-                                  <circle cx="4" cy="4" r="1.2" fill="currentColor"/>
-                                  <circle cx="8" cy="4" r="1.2" fill="currentColor"/>
-                                  <circle cx="12" cy="4" r="1.2" fill="currentColor"/>
-                                  <circle cx="4" cy="8" r="1.2" fill="currentColor"/>
-                                  <circle cx="8" cy="8" r="1.2" fill="currentColor"/>
-                                  <circle cx="12" cy="8" r="1.2" fill="currentColor"/>
-                                  <circle cx="4" cy="12" r="1.2" fill="currentColor"/>
-                                  <circle cx="8" cy="12" r="1.2" fill="currentColor"/>
-                                  <circle cx="12" cy="12" r="1.2" fill="currentColor"/>
-                                </svg>
-                              </div>
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <EnhancedTaskItem
-                              task={task}
-                              allTasks={allTasks}
-                              familyMembers={familyMembers}
-                              onToggle={onTaskToggle}
-                              onEdit={onEditTask}
-                              onDelete={onDeleteTask}
-                              showActions={showActions && !snapshot.isDragging}
-                              currentMemberId={memberId}
-                            />
-                          </div>
+                          <EnhancedTaskItem
+                            task={task}
+                            allTasks={allTasks}
+                            familyMembers={familyMembers}
+                            onToggle={onTaskToggle}
+                            onEdit={onEditTask}
+                            onDelete={onDeleteTask}
+                            showActions={showActions && !snapshot.isDragging}
+                            currentMemberId={memberId}
+                            isDragging={snapshot.isDragging}
+                          />
                         </div>
                       )}
                     </Draggable>

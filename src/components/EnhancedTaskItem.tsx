@@ -26,6 +26,7 @@ interface EnhancedTaskItemProps {
   onDelete?: (task: Task) => void;
   showActions?: boolean;
   currentMemberId?: string;
+  isDragging?: boolean;
 }
 
 export const EnhancedTaskItem = ({ 
@@ -36,7 +37,8 @@ export const EnhancedTaskItem = ({
   onEdit, 
   onDelete,
   showActions = true,
-  currentMemberId
+  currentMemberId,
+  isDragging = false
 }: EnhancedTaskItemProps) => {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -59,7 +61,8 @@ export const EnhancedTaskItem = ({
       className={cn(
         "group/task relative border rounded-lg p-3 transition-all hover:shadow-md",
         isCompleted && "bg-muted/30",
-        isOverdue && "border-destructive/50 bg-destructive/5"
+        isOverdue && "border-destructive/50 bg-destructive/5",
+        !isCompleted && "cursor-grab active:cursor-grabbing"
       )}
     >
       <div className="flex items-start gap-2">
@@ -71,6 +74,8 @@ export const EnhancedTaskItem = ({
             e.stopPropagation();
             onToggle(task);
           }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
           className={cn(
             "shrink-0 w-7 h-7 p-0 cursor-pointer transition-all",
             isCompletedByMe 
@@ -110,6 +115,8 @@ export const EnhancedTaskItem = ({
                       e.stopPropagation();
                       onEdit(task);
                     }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
                   >
                     <Edit className="h-3 w-3" />
                   </Button>
@@ -123,6 +130,8 @@ export const EnhancedTaskItem = ({
                       e.stopPropagation();
                       onDelete(task);
                     }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
