@@ -487,6 +487,39 @@ export type Database = {
         }
         Relationships: []
       }
+      holiday_dates: {
+        Row: {
+          created_at: string
+          created_by: string
+          end_date: string
+          family_id: string
+          id: string
+          name: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          end_date: string
+          family_id: string
+          id?: string
+          name: string
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          end_date?: string
+          family_id?: string
+          id?: string
+          name?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       household_settings: {
         Row: {
           auto_return_enabled: boolean
