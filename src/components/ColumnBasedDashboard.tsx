@@ -49,10 +49,11 @@ import {
 } from '@/utils/taskGroupUtils';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useDashboardAuth } from '@/hooks/useDashboardAuth';
+import { useDashboardMode } from '@/hooks/useDashboardMode';
+import { useTaskCompletion } from '@/hooks/useTaskCompletion';
 import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
 import { MemberSwitchDialog } from '@/components/dashboard/MemberSwitchDialog';
 import { MemberSelectorDialog } from '@/components/dashboard/MemberSelectorDialog';
-import { useDashboardMode } from '@/hooks/useDashboardMode';
 
 const ColumnBasedDashboard = () => {
   const { user, signOut } = useAuth();
@@ -96,6 +97,13 @@ const ColumnBasedDashboard = () => {
     canPerformAction,
     isAuthenticating
   } = useDashboardAuth();
+
+  // Task completion hook
+  const { completeTask: completeTaskHandler, uncompleteTask: uncompleteTaskHandler, isCompleting } = useTaskCompletion({
+    currentUserProfile: profile,
+    activeMemberId,
+    isDashboardMode: dashboardMode,
+  });
 
   // Update local state when hook value changes
   useEffect(() => {
@@ -696,155 +704,7 @@ const ColumnBasedDashboard = () => {
   };
 
   const completeTask = async (task: Task) => {
-    if (!profile) return;
-    
-    try {
-      // Dashboard Mode: Check member identity and PIN requirements
-      if (dashboardMode) {
-        // Get all assignees for this task
-        const assignees = task.assignees?.map(a => a.profile) || 
-                         (task.assigned_profile ? [task.assigned_profile] : []);
-        
-        // Check if active member is one of the assignees (for team tasks)
-        if (assignees.length > 0 && activeMemberId) {
-          const isAssignedMember = assignees.some(assignee => assignee.id === activeMemberId);
-          
-          if (!isAssignedMember) {
-            // Show switch dialog to select an assigned member
-            setPendingAction({
-              type: 'complete_task',
-              taskId: task.id,
-              requiredMemberId: assignees[0].id, // Default to first assignee for switch dialog
-              onSuccess: () => executeTaskCompletion(task)
-            });
-            setSwitchDialogOpen(true);
-            return;
-          }
-        }
-        
-        // Check PIN requirements for the active member
-        const memberToCheck = activeMemberId;
-        if (memberToCheck) {
-          const { canProceed, needsPin, profile: memberProfile } = await canPerformAction(memberToCheck, 'task_completion');
-          
-          if (needsPin) {
-            // Show PIN dialog
-            setPendingAction({
-              type: 'complete_task',
-              taskId: task.id,
-              requiredMemberId: memberToCheck,
-              onSuccess: () => executeTaskCompletion(task)
-            });
-            setPinDialogOpen(true);
-            return;
-          }
-          
-          if (!canProceed) {
-            toast({
-              title: 'Cannot Complete Task',
-              description: 'Permission denied for this action.',
-              variant: 'destructive'
-            });
-            return;
-          }
-        }
-      }
-      
-      // Regular mode or dashboard mode with permissions granted
-      await executeTaskCompletion(task);
-    } catch (error) {
-      console.error('Error in completeTask:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to complete task',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const executeTaskCompletion = async (task: Task) => {
-    if (!profile) return;
-    
-    try {
-
-      // Regular task completion logic
-      // Get all assignees for this task (including both old and new format)
-      const assignees = task.assignees?.map(a => a.profile) || 
-                       (task.assigned_profile ? [task.assigned_profile] : []);
-      
-      // Choose who gets the points
-      let completerId = profile.id;
-      if (dashboardMode) {
-        if (activeMemberId) {
-          completerId = activeMemberId;
-        } else if (assignees.length === 1) {
-          // Auto-credit the single assignee if no active member selected
-          completerId = assignees[0].id;
-        }
-      }
-      const completerProfile = familyMembers.find(m => m.id === completerId) || profile;
-      console.log('🧾 Completing task for', { taskId: task.id, completerId, assignees: assignees.map(a => a.id) });
-      
-      // Check if completer is allowed to complete this task (only enforce when NOT in dashboard mode)
-      if (!dashboardMode) {
-        const isAssignee = assignees.some(assignee => assignee.id === completerId);
-        if (assignees.length > 0 && !isAssignee) {
-          toast({
-            title: 'Cannot Complete Task',
-            description: 'Only assigned members can complete this task.',
-            variant: 'destructive'
-          });
-          return;
-        }
-      }
-      
-      // Create task completion record
-      let insertError: any = null;
-      if (dashboardMode && completerId !== profile.id) {
-        // Parent completing on behalf of a member - use RPC to bypass RLS safely
-        const { data, error } = await supabase.rpc('complete_task_for_member', {
-          p_task_id: task.id,
-          p_completed_by: completerId,
-          p_points: 0, // let DB trigger award points once
-        });
-        insertError = error;
-      } else {
-        const { error } = await supabase
-          .from('task_completions')
-          .insert({
-            task_id: task.id,
-            completed_by: completerId,
-            points_earned: task.points
-          });
-        insertError = error;
-      }
-
-      if (insertError) {
-        throw insertError;
-      }
-
-      // Create toast message
-      const toastMessage = dashboardMode && completerProfile.id !== profile.id 
-        ? `${completerProfile.display_name} earned ${task.points} points!`
-        : `You earned ${task.points} points!`;
-
-      toast({
-        title: 'Task Completed!',
-        description: toastMessage,
-      });
-
-      // Update data immediately to avoid realtime delays
-      await fetchUserData();
-
-      console.log('✅ Task completed. Database trigger handling points and rotation.');
-    } catch (error) {
-      console.error('Error completing task:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to complete task',
-        variant: 'destructive'
-      });
-    }
+    await completeTaskHandler(task, refreshTasksOnly);
   };
 
   const uncompleteTask = async (task: Task) => {

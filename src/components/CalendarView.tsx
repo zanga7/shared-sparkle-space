@@ -20,6 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEvents } from '@/hooks/useEvents';
 import { useDashboardAuth } from '@/hooks/useDashboardAuth';
+import { useTaskCompletion } from '@/hooks/useTaskCompletion';
 import { useTaskSeries, VirtualTaskInstance } from '@/hooks/useTaskSeries';
 import { EventDialog } from '@/components/EventDialog';
 
@@ -102,6 +103,13 @@ export const CalendarView = ({
     authenticateMemberPin,
     isAuthenticating
   } = useDashboardAuth();
+
+  // Task completion hook
+  const { completeTask: completeTaskHandler, uncompleteTask: uncompleteTaskHandler, isCompleting } = useTaskCompletion({
+    currentUserProfile: profile || null,
+    activeMemberId,
+    isDashboardMode: dashboardMode,
+  });
 
   // Get member color classes using the global color system
   const getMemberColors = (member: Profile | null) => {
@@ -504,139 +512,25 @@ export const CalendarView = ({
   };
 
   // Handle task completion with PIN protection
-  const completeTask = async (task: Task, event: React.MouseEvent) => {
+  const handleTaskToggle = async (task: Task, event: React.MouseEvent) => {
     event.stopPropagation();
-
+    
     // Use dashboard mode completion handler if available
     if (dashboardMode && onTaskComplete) {
       await onTaskComplete(task);
       return;
     }
 
-    // Fallback to regular completion for non-dashboard mode
-    if (!profile) return;
-    try {
-      // Dashboard Mode: Check PIN requirements for the active member
-      if (dashboardMode && activeMemberId) {
-        const {
-          canProceed,
-          needsPin,
-          profile: memberProfile
-        } = await canPerformAction(activeMemberId, 'task_completion');
-        if (needsPin) {
-          // Store the task to complete after PIN authentication
-          setPendingTaskCompletion(task);
-          setMemberRequiringPin(memberProfile || null);
-          setPinDialogOpen(true);
-          return;
-        }
-        if (!canProceed) {
-          toast({
-            title: 'Cannot Complete Task',
-            description: 'Permission denied for this action.',
-            variant: 'destructive'
-          });
-          return;
-        }
-      }
+    // Determine if task is completed by the relevant user
+    const completerId = (dashboardMode && activeMemberId) ? activeMemberId : profile?.id;
+    if (!completerId) return;
 
-      // Execute task completion
-      await executeTaskCompletion(task);
-    } catch (error) {
-      console.error('Error in completeTask:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to complete task',
-        variant: 'destructive'
-      });
-    }
-  };
+    const isCompleted = task.task_completions?.some(c => c.completed_by === completerId);
 
-  // Execute the actual task completion
-  const executeTaskCompletion = async (task: Task) => {
-    if (!profile) return;
-    try {
-      // Determine who should receive the completion
-      const completerId = (dashboardMode && activeMemberId) ? activeMemberId : profile.id;
-      const completerProfile = familyMembers.find(m => m.id === completerId) || profile;
-
-      // Create task completion record
-      let insertError: any = null;
-      if (dashboardMode && completerId !== profile.id) {
-        // Parent completing on behalf of a member - use RPC to bypass RLS safely
-        const { error } = await supabase.rpc('complete_task_for_member', {
-          p_task_id: task.id,
-          p_completed_by: completerId,
-          p_points: 0, // let DB trigger award points once
-        });
-        insertError = error;
-      } else {
-        const { error } = await supabase
-          .from('task_completions')
-          .insert({
-            task_id: task.id,
-            completed_by: completerId,
-            points_earned: task.points
-          });
-        insertError = error;
-      }
-
-      if (insertError) throw insertError;
-
-      // Toast only – DB triggers handle points and realtime updates
-      const toastMessage = (dashboardMode && completerProfile.id !== profile.id)
-        ? `${completerProfile.display_name} earned ${task.points} points!`
-        : `You earned ${task.points} points!`;
-
-      toast({ title: 'Task Completed!', description: toastMessage });
-
-      onTaskUpdated();
-    } catch (error) {
-      console.error('Error completing task:', error);
-      toast({ title: 'Error', description: 'Failed to complete task', variant: 'destructive' });
-    }
-  };
-  const uncompleteTask = async (task: Task, event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (!profile || !task.task_completions || task.task_completions.length === 0) return;
-    try {
-      // Determine whose completion to remove
-      const completerId = (dashboardMode && activeMemberId) ? activeMemberId : profile.id;
-
-      // Find the completion record by that member
-      const userCompletion = task.task_completions.find(c => c.completed_by === completerId);
-      if (!userCompletion) return;
-
-      // Remove the task completion record
-      let deleteError: any = null;
-      if (dashboardMode && completerId !== profile.id) {
-        const { error } = await supabase.rpc('uncomplete_task_for_member', {
-          p_completion_id: userCompletion.id,
-        });
-        deleteError = error;
-      } else {
-        const { error } = await supabase
-          .from('task_completions')
-          .delete()
-          .eq('id', userCompletion.id);
-        deleteError = error;
-      }
-
-      if (deleteError) throw deleteError;
-
-      toast({ title: 'Task Uncompleted', description: `${task.points} points removed` });
-      onTaskUpdated();
-    } catch (error) {
-      console.error('Error uncompleting task:', error);
-      toast({ title: 'Error', description: 'Failed to uncomplete task', variant: 'destructive' });
-    }
-  };
-  const handleTaskToggle = (task: Task, event: React.MouseEvent) => {
-    const isCompleted = task.task_completions && task.task_completions.length > 0;
     if (isCompleted) {
-      uncompleteTask(task, event);
+      await uncompleteTaskHandler(task, onTaskUpdated);
     } else {
-      completeTask(task, event);
+      await completeTaskHandler(task, onTaskUpdated);
     }
   };
 
@@ -1223,7 +1117,7 @@ export const CalendarView = ({
       }
     }} member={memberRequiringPin} onSuccess={async () => {
       if (pendingTaskCompletion) {
-        await executeTaskCompletion(pendingTaskCompletion);
+        await completeTaskHandler(pendingTaskCompletion, onTaskUpdated);
         setPendingTaskCompletion(null);
         setMemberRequiringPin(null);
       }
