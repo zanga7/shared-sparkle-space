@@ -142,6 +142,7 @@ export const TaskGroupsList = ({
                             showActions={showActions && !snapshot.isDragging}
                             currentMemberId={memberId}
                             isDragging={snapshot.isDragging}
+                            memberColor={memberColor}
                           />
                         </div>
                       )}

@@ -36,7 +36,7 @@ export const MemberEventsWidget = ({
   });
 
   return (
-    <Card className={cn("h-full flex flex-col", memberColors.border)} style={{ borderWidth: '2px' }}>
+    <Card className={cn("h-full flex flex-col", memberColors.border, memberColors.bg10)} style={{ borderWidth: '2px' }}>
       <CardHeader className="pb-4">
         <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
           <Calendar className="h-6 w-6" />

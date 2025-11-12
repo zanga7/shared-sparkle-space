@@ -1350,11 +1350,11 @@ const ColumnBasedDashboard = () => {
                        !task.task_completions || task.task_completions.length === 0
                      );
 
-                     return (
+                      return (
                         <Card key={member.id} className={cn(
                           "flex-shrink-0 w-72 sm:w-80 h-fit border-2 group",
                           getMemberColorClasses(member.color).border,
-                          getMemberColorClasses(member.color).bgSoft
+                          getMemberColorClasses(member.color).bg10
                         )}>
                             <CardHeader className={cn(
                              "pb-3 border-b",

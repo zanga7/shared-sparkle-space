@@ -97,9 +97,9 @@ export const MemberDashboard = ({
     <div className={cn(
       "text-center py-6 sm:py-8 rounded-lg border-2 mb-6",
       memberColors.border,
-      memberColors.bgSoft
+      memberColors.bg10
     )}>
-      <UserAvatar 
+      <UserAvatar
         name={member.display_name} 
         color={member.color} 
         size="lg" 

@@ -13,7 +13,7 @@ import {
   Repeat
 } from 'lucide-react';
 import { format, isAfter, differenceInDays } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, getMemberColorClasses } from '@/lib/utils';
 import { Task, Profile } from '@/types/task';
 import { TaskAssigneesDisplay } from '@/components/ui/task-assignees-display';
 
@@ -27,6 +27,7 @@ interface EnhancedTaskItemProps {
   showActions?: boolean;
   currentMemberId?: string;
   isDragging?: boolean;
+  memberColor?: string;
 }
 
 export const EnhancedTaskItem = ({ 
@@ -38,7 +39,8 @@ export const EnhancedTaskItem = ({
   onDelete,
   showActions = true,
   currentMemberId,
-  isDragging = false
+  isDragging = false,
+  memberColor
 }: EnhancedTaskItemProps) => {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -56,12 +58,16 @@ export const EnhancedTaskItem = ({
 
   const daysUntilDue = getDaysUntilDue();
 
+  // Get member colors if memberColor is provided
+  const memberColors = memberColor ? getMemberColorClasses(memberColor) : null;
+
   return (
     <div 
       className={cn(
         "group/task relative border rounded-lg p-3 transition-all hover:shadow-md",
-        isCompleted && "bg-muted/30",
-        isOverdue && "border-destructive/50 bg-destructive/5",
+        isCompleted && memberColors?.bg20,
+        !isCompleted && memberColors?.bg50,
+        isOverdue && "border-destructive/50",
         !isCompleted && "cursor-grab active:cursor-grabbing"
       )}
     >
