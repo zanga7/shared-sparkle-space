@@ -323,6 +323,45 @@ const ColumnBasedDashboard = () => {
     };
   }, [profile?.family_id]);
 
+  // Subscribe to profile updates to reflect points changes in real-time
+  useEffect(() => {
+    if (!profile?.family_id) return;
+
+    const profilesChannel = supabase
+      .channel('profiles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `family_id=eq.${profile.family_id}`
+        },
+        (payload) => {
+          console.log('🔔 Profile updated via realtime:', payload.new);
+          
+          const updatedProfile = payload.new as Profile;
+          
+          // Update the current user's profile if it's theirs
+          if (updatedProfile.id === profile.id) {
+            setProfile(updatedProfile);
+          }
+          
+          // Update family members list
+          setFamilyMembers((prev) =>
+            prev.map((member) =>
+              member.id === updatedProfile.id ? updatedProfile : member
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(profilesChannel);
+    };
+  }, [profile?.family_id, profile?.id]);
+
   // Ensure today's rotating tasks exist once per load (idempotent)
   useEffect(() => {
     if (!profile?.family_id || ensuredRotationTodayRef.current) return;
