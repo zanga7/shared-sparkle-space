@@ -567,7 +567,7 @@ export const CalendarView = ({
         const { error } = await supabase.rpc('complete_task_for_member', {
           p_task_id: task.id,
           p_completed_by: completerId,
-          p_points: task.points,
+          p_points: 0, // let DB trigger award points once
         });
         insertError = error;
       } else {
