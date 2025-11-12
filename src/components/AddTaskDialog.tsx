@@ -50,14 +50,14 @@ export const AddTaskDialog = ({
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
   const setOpen = externalOnOpenChange || setInternalOpen;
   
-  // Initialize form data with selectedDate if provided
+  // Initialize form data - no due date by default
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     points: 10,
     assigned_to: 'unassigned',
     assignees: [] as string[],
-    due_date: selectedDate || null,
+    due_date: null as Date | null,
     completion_rule: 'everyone' as 'any_one' | 'everyone',
     task_group: preselectedTaskGroup || 'general',
   });
@@ -286,7 +286,7 @@ export const AddTaskDialog = ({
         points: 10,
         assigned_to: 'unassigned',
         assignees: [],
-        due_date: selectedDate || null,
+        due_date: null,
         completion_rule: 'everyone',
         task_group: preselectedTaskGroup || 'general',
       });
@@ -492,33 +492,46 @@ export const AddTaskDialog = ({
 
           <div className="space-y-2">
             <Label>Due Date (Optional)</Label>
-            <Popover>
-              <PopoverTrigger asChild>
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "flex-1 justify-start text-left font-normal",
+                      !formData.due_date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.due_date ? format(formData.due_date, "PPP") : "No due date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.due_date}
+                    onSelect={(date) => {
+                      // Validate the date before setting it
+                      const validDate = date && !isNaN(date.getTime()) ? date : null;
+                      setFormData({ ...formData, due_date: validDate });
+                    }}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              {formData.due_date && (
                 <Button
+                  type="button"
                   variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !formData.due_date && "text-muted-foreground"
-                  )}
+                  size="icon"
+                  onClick={() => setFormData({ ...formData, due_date: null })}
+                  title="Clear due date"
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formData.due_date ? format(formData.due_date, "PPP") : "No due date"}
+                  ×
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={formData.due_date}
-                  onSelect={(date) => {
-                    // Validate the date before setting it
-                    const validDate = date && !isNaN(date.getTime()) ? date : null;
-                    setFormData({ ...formData, due_date: validDate });
-                  }}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
+              )}
+            </div>
           </div>
 
           {/* Recurrence Panel */}

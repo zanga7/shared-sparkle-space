@@ -422,15 +422,29 @@ export const EditTaskDialog = ({
 
             <div>
               <Label htmlFor="due_date">Due Date</Label>
-              <Input
-                id="due_date"
-                type="date"
-                value={formData.due_date ? format(formData.due_date, 'yyyy-MM-dd') : ''}
-                onChange={(e) => setFormData(prev => ({ 
-                  ...prev, 
-                  due_date: e.target.value ? new Date(e.target.value) : null 
-                }))}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="due_date"
+                  type="date"
+                  value={formData.due_date ? format(formData.due_date, 'yyyy-MM-dd') : ''}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    due_date: e.target.value ? new Date(e.target.value) : null 
+                  }))}
+                  className="flex-1"
+                />
+                {formData.due_date && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setFormData(prev => ({ ...prev, due_date: null }))}
+                    title="Clear due date"
+                  >
+                    ×
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div>
