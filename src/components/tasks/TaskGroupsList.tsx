@@ -43,8 +43,8 @@ export const TaskGroupsList = ({
 }: TaskGroupsListProps) => {
   const memberColors = memberColor ? getMemberColorClasses(memberColor) : null;
 
-  // Group tasks by task_group field
-  const groupTasks = (tasks: Task[]) => {
+  // Group all tasks by task_group field (keeping them together)
+  const groupAllTasks = (tasks: Task[]) => {
     const groups = {
       morning: tasks.filter(task => task.task_group === 'morning'),
       midday: tasks.filter(task => task.task_group === 'midday'),
@@ -52,29 +52,33 @@ export const TaskGroupsList = ({
       evening: tasks.filter(task => task.task_group === 'evening'),
       general: tasks.filter(task => !task.task_group || task.task_group === 'general')
     };
+    
+    // Sort each group: pending tasks first, then completed tasks
+    Object.keys(groups).forEach(key => {
+      const groupKey = key as TaskGroup;
+      groups[groupKey] = groups[groupKey].sort((a, b) => {
+        const aCompleted = a.task_completions && a.task_completions.length > 0;
+        const bCompleted = b.task_completions && b.task_completions.length > 0;
+        
+        // Pending tasks come before completed tasks
+        if (!aCompleted && bCompleted) return -1;
+        if (aCompleted && !bCompleted) return 1;
+        return 0;
+      });
+    });
+    
     return groups;
   };
 
-  const pendingTasks = tasks.filter(task => 
-    !task.task_completions || task.task_completions.length === 0
-  );
-  
-  const completedTasks = tasks.filter(task => 
-    task.task_completions && task.task_completions.length > 0
-  );
-
-  const pendingGroups = groupTasks(pendingTasks);
-  const completedGroups = groupTasks(completedTasks);
+  const taskGroups = groupAllTasks(tasks);
 
   const renderTaskGroup = (
     group: TaskGroup,
-    groupTasks: Task[],
-    groupType: 'pending' | 'completed'
+    groupTasks: Task[]
   ) => {
     const Icon = getTaskGroupIcon(group);
     const groupTitle = getTaskGroupTitle(group);
-    const isCompleted = groupType === 'completed';
-    const droppableId = `${droppableIdPrefix}${groupType}-${group}`;
+    const droppableId = `${droppableIdPrefix}${group}`;
     
     const completedGroupTasks = groupTasks.filter(task => 
       task.task_completions && task.task_completions.length > 0
@@ -102,14 +106,14 @@ export const TaskGroupsList = ({
           </div>
         </AccordionTrigger>
         <AccordionContent forceMount className="px-3 pb-3 pt-1">
-          <Droppable droppableId={droppableId} isDropDisabled={isCompleted}>
+          <Droppable droppableId={droppableId}>
             {(provided, snapshot) => (
               <div
                 ref={provided.innerRef}
                 {...provided.droppableProps}
                 className={cn(
                   "space-y-2 min-h-[60px] transition-colors",
-                  snapshot.isDraggingOver && !isCompleted && "bg-accent/50 rounded-lg"
+                  snapshot.isDraggingOver && "bg-accent/50 rounded-lg"
                 )}
               >
                 {groupTasks.length === 0 ? (
@@ -126,13 +130,15 @@ export const TaskGroupsList = ({
                     )}
                   </div>
                 ) : (
-                  groupTasks.map((task, index) => (
-                    <Draggable 
-                      key={task.id} 
-                      draggableId={task.id} 
-                      index={index}
-                      isDragDisabled={isCompleted}
-                    >
+                  groupTasks.map((task, index) => {
+                    const isTaskCompleted = task.task_completions && task.task_completions.length > 0;
+                    return (
+                      <Draggable 
+                        key={task.id} 
+                        draggableId={task.id} 
+                        index={index}
+                        isDragDisabled={isTaskCompleted}
+                      >
                       {(provided, snapshot) => (
                         <div
                           ref={provided.innerRef}
@@ -143,7 +149,7 @@ export const TaskGroupsList = ({
                           )}
                         >
                           {/* Dedicated Drag Handle */}
-                          {!isCompleted && (
+                          {!isTaskCompleted && (
                             <div
                               {...provided.dragHandleProps}
                               className="flex-shrink-0 mt-3 cursor-grab active:cursor-grabbing touch-none"
@@ -177,12 +183,13 @@ export const TaskGroupsList = ({
                         </div>
                       )}
                     </Draggable>
-                  ))
+                  );
+                  })
                 )}
                 {provided.placeholder}
                 
                 {/* Add Task Button for this group */}
-                {!isCompleted && onAddTask && showActions && (
+                {onAddTask && showActions && (
                   <div className="pt-2 border-t border-dashed">
                     <AddButton
                       className={cn(
@@ -203,7 +210,7 @@ export const TaskGroupsList = ({
     );
   };
 
-  const defaultOpenValues = TASK_GROUPS_ORDER.map(group => `${droppableIdPrefix}pending-${group}`);
+  const defaultOpenValues = TASK_GROUPS_ORDER.map(group => `${droppableIdPrefix}${group}`);
 
   return (
     <Accordion 
@@ -211,23 +218,12 @@ export const TaskGroupsList = ({
       defaultValue={defaultOpenValues}
       className="space-y-2"
     >
-      {/* Pending Tasks */}
-      {renderTaskGroup('morning', pendingGroups.morning, 'pending')}
-      {renderTaskGroup('midday', pendingGroups.midday, 'pending')}
-      {renderTaskGroup('afternoon', pendingGroups.afternoon, 'pending')}
-      {renderTaskGroup('evening', pendingGroups.evening, 'pending')}
-      {renderTaskGroup('general', pendingGroups.general, 'pending')}
-      
-      {/* Completed Tasks - limited display */}
-      {completedTasks.length > 0 && (
-        <>
-          {renderTaskGroup('morning', completedGroups.morning.slice(0, 2), 'completed')}
-          {renderTaskGroup('midday', completedGroups.midday.slice(0, 2), 'completed')}
-          {renderTaskGroup('afternoon', completedGroups.afternoon.slice(0, 2), 'completed')}
-          {renderTaskGroup('evening', completedGroups.evening.slice(0, 2), 'completed')}
-          {renderTaskGroup('general', completedGroups.general.slice(0, 2), 'completed')}
-        </>
-      )}
+      {/* All task groups with pending tasks first, completed tasks below */}
+      {renderTaskGroup('morning', taskGroups.morning)}
+      {renderTaskGroup('midday', taskGroups.midday)}
+      {renderTaskGroup('afternoon', taskGroups.afternoon)}
+      {renderTaskGroup('evening', taskGroups.evening)}
+      {renderTaskGroup('general', taskGroups.general)}
     </Accordion>
   );
 };
