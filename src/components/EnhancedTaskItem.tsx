@@ -184,25 +184,6 @@ export const EnhancedTaskItem = ({
                 {(task as any).isVirtual ? 'Series' : 'Repeats'}
               </Badge>
             )}
-
-            {/* Completion Status */}
-            {(isCompleted || ((task as any).isVirtual && (task as any).isException && (task as any).exceptionType === 'override' && (task as any).overrideData?.completed)) && (
-              <Badge variant="default" className="text-xs py-0 h-5 bg-green-500">
-                <CheckCircle2 className="h-2.5 w-2.5 mr-1" />
-                {(() => {
-                  if ((task as any).isVirtual && (task as any).overrideData?.completed) {
-                    const completerId = (task as any).overrideData.completed_by;
-                    const completer = familyMembers.find(m => m.id === completerId);
-                    return `Completed by ${completer?.display_name || 'someone'}`;
-                  } else if (task.completion_rule === 'any_one' && task.task_completions?.length) {
-                    const completion = task.task_completions[0];
-                    const completer = familyMembers.find(m => m.id === completion.completed_by);
-                    return `Completed by ${completer?.display_name || 'someone'}`;
-                  }
-                  return 'Done';
-                })()}
-              </Badge>
-            )}
           </div>
         </div>
       </div>
