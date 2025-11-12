@@ -1241,12 +1241,13 @@ const ColumnBasedDashboard = () => {
     // Add unassigned tasks category
     tasksByMember.set('unassigned', []);
     
-    // Generate virtual task instances from task series (for next 30 days)
+    // Generate virtual task instances from task series (only for today)
     const today = new Date();
-    const endDate = new Date(today);
-    endDate.setDate(endDate.getDate() + 30);
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
     
-    const virtualInstances = generateVirtualTaskInstances(today, endDate);
+    const virtualInstances = generateVirtualTaskInstances(today, tomorrow);
     
     // Map virtual instances to Task format
     const virtualTasks: Task[] = virtualInstances.map(vTask => ({
