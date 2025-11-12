@@ -809,10 +809,63 @@ const ColumnBasedDashboard = () => {
     }
   };
 
+  const initiateTaskDeletion = async (task: Task) => {
+    // Check if this is a rotating task
+    const { data: rotatingTask } = await supabase
+      .from('rotating_tasks')
+      .select('id, name, allow_multiple_completions')
+      .eq('name', task.title)
+      .eq('family_id', profile?.family_id)
+      .eq('is_active', true)
+      .single();
+
+    // If it's a rotating task and dashboard mode is enabled, require parent PIN
+    if (rotatingTask && dashboardMode) {
+      // Only parents can delete rotating tasks
+      if (profile?.role !== 'parent') {
+        toast({
+          title: 'Permission Denied',
+          description: 'Only parents can delete rotating tasks.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Require PIN confirmation
+      setPendingAction({
+        type: 'complete_task', // Reusing this type for deletion
+        taskId: task.id,
+        requiredMemberId: profile.id,
+        onSuccess: () => {
+          setDeletingTask(task);
+          // Store rotating task info for later
+          (task as any).isRotatingTask = true;
+        }
+      });
+      setPinDialogOpen(true);
+      return;
+    }
+
+    // Regular task deletion (no PIN needed)
+    setDeletingTask(task);
+  };
+
   const deleteTask = async () => {
     if (!deletingTask) return;
 
+    const isRotatingTask = (deletingTask as any).isRotatingTask;
+
     try {
+      // Check if this is a rotating task before deletion
+      const { data: rotatingTask } = await supabase
+        .from('rotating_tasks')
+        .select('id, name, allow_multiple_completions, current_member_index, member_order')
+        .eq('name', deletingTask.title)
+        .eq('family_id', profile?.family_id)
+        .eq('is_active', true)
+        .single();
+
+      // Delete the task
       const { error } = await supabase
         .from('tasks')
         .delete()
@@ -830,6 +883,25 @@ const ColumnBasedDashboard = () => {
       setDeletingTask(null);
       // Remove from local state instead of full refresh
       setTasks(prevTasks => prevTasks.filter(t => t.id !== deletingTask.id));
+
+      // If this was a rotating task, generate the next instance
+      if (rotatingTask) {
+        console.log('🔄 Generating next instance for deleted rotating task');
+        try {
+          await supabase.functions.invoke('generate-rotating-tasks');
+          toast({
+            title: 'Next Task Generated',
+            description: 'The task has been reassigned to the next person in rotation.',
+          });
+        } catch (genError) {
+          console.error('Failed to generate next rotating task:', genError);
+          toast({
+            title: 'Warning',
+            description: 'Task deleted but failed to generate next instance.',
+            variant: 'destructive'
+          });
+        }
+      }
     } catch (error) {
       console.error('Error deleting task:', error);
       toast({
@@ -1380,7 +1452,7 @@ const ColumnBasedDashboard = () => {
                                   familyMembers={familyMembers}
                                   onTaskToggle={handleTaskToggle}
                                  onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
-                                 onDeleteTask={profile.role === 'parent' ? setDeletingTask : undefined}
+                                 onDeleteTask={profile.role === 'parent' ? initiateTaskDeletion : undefined}
                                  onAddTask={(group) => handleAddTaskForMember(member.id, group)}
                                  onDragEnd={handleDragEnd}
                                  showActions={profile.role === 'parent'}
@@ -1462,7 +1534,7 @@ const ColumnBasedDashboard = () => {
                                           familyMembers={familyMembers}
                                           onToggle={handleTaskToggle}
                                           onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                          onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
+                                          onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
                                           showActions={profile.role === 'parent' && !snapshot.isDragging}
                                         />
                                       </div>
@@ -1565,7 +1637,7 @@ const ColumnBasedDashboard = () => {
                                     familyMembers={familyMembers}
                                     onToggle={handleTaskToggle}
                                     onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                    onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
+                                    onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
                                     showActions={profile.role === 'parent'}
                                   />
                                 ))}
@@ -1577,7 +1649,7 @@ const ColumnBasedDashboard = () => {
                                     familyMembers={familyMembers}
                                     onToggle={handleTaskToggle}
                                     onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                    onDelete={profile.role === 'parent' ? setDeletingTask : undefined}
+                                    onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
                                     showActions={profile.role === 'parent'}
                                   />
                                 ))}
