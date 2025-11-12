@@ -134,8 +134,8 @@ export const EnhancedTaskItem = ({
           {/* Compact Badges and Indicators */}
           <div className="flex items-center gap-1 flex-wrap">
             {/* Points with Award Info */}
-            <Badge variant="outline" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
-              <Target className="h-2 w-2" />
+            <Badge variant="outline" className="text-[0.72rem] py-0 h-5 flex items-center gap-1">
+              <Target className="h-2.5 w-2.5" />
               {task.points} pts
               {(() => {
                 const assignees = task.assignees?.map(a => a.profile) || 
