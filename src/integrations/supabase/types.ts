@@ -489,6 +489,7 @@ export type Database = {
       }
       household_settings: {
         Row: {
+          auto_return_enabled: boolean
           auto_return_timeout_minutes: number | null
           created_at: string
           dashboard_mode_enabled: boolean | null
@@ -501,6 +502,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_return_enabled?: boolean
           auto_return_timeout_minutes?: number | null
           created_at?: string
           dashboard_mode_enabled?: boolean | null
@@ -513,6 +515,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_return_enabled?: boolean
           auto_return_timeout_minutes?: number | null
           created_at?: string
           dashboard_mode_enabled?: boolean | null

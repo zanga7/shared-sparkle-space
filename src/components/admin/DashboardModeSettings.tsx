@@ -11,6 +11,7 @@ import { Smartphone, Timer } from 'lucide-react';
 
 interface DashboardSettings {
   dashboard_mode_enabled: boolean;
+  auto_return_enabled: boolean;
   auto_return_timeout_minutes: number;
 }
 
@@ -18,6 +19,7 @@ export const DashboardModeSettings = React.memo(() => {
   const { profile } = useAdminContext();
   const [settings, setSettings] = useState<DashboardSettings>({
     dashboard_mode_enabled: false,
+    auto_return_enabled: true,
     auto_return_timeout_minutes: 10
   });
   const [loading, setLoading] = useState(true);
@@ -36,13 +38,14 @@ export const DashboardModeSettings = React.memo(() => {
     try {
       const { data, error } = await supabase
         .from('household_settings')
-        .select('dashboard_mode_enabled, auto_return_timeout_minutes')
+        .select('dashboard_mode_enabled, auto_return_enabled, auto_return_timeout_minutes')
         .eq('family_id', profile.family_id)
         .single();
 
       if (data) {
         setSettings({
           dashboard_mode_enabled: data.dashboard_mode_enabled || false,
+          auto_return_enabled: data.auto_return_enabled !== false,
           auto_return_timeout_minutes: data.auto_return_timeout_minutes || 10
         });
       }
@@ -63,6 +66,7 @@ export const DashboardModeSettings = React.memo(() => {
         .upsert({
           family_id: profile.family_id,
           dashboard_mode_enabled: settings.dashboard_mode_enabled,
+          auto_return_enabled: settings.auto_return_enabled,
           auto_return_timeout_minutes: settings.auto_return_timeout_minutes
         });
 
@@ -134,30 +138,48 @@ export const DashboardModeSettings = React.memo(() => {
           </div>
 
           {/* Auto Return Timeout */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Timer className="h-4 w-4" />
-              <Label className="text-base font-medium">Auto Return Timeout</Label>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Minutes of inactivity before returning to main dashboard view
-            </p>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                min="1"
-                max="60"
-                value={settings.auto_return_timeout_minutes}
-                onChange={(e) => 
-                  setSettings(prev => ({ 
-                    ...prev, 
-                    auto_return_timeout_minutes: parseInt(e.target.value) || 10 
-                  }))
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Timer className="h-4 w-4" />
+                  <Label className="text-base font-medium">Auto Return Timeout</Label>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Automatically return to main dashboard after inactivity
+                </p>
+              </div>
+              <Switch
+                checked={settings.auto_return_enabled}
+                onCheckedChange={(checked) => 
+                  setSettings(prev => ({ ...prev, auto_return_enabled: checked }))
                 }
-                className="w-20"
               />
-              <span className="text-sm text-muted-foreground">minutes</span>
             </div>
+            
+            {settings.auto_return_enabled && (
+              <div className="pl-6 space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Minutes of inactivity before returning to main dashboard view
+                </p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="60"
+                    value={settings.auto_return_timeout_minutes}
+                    onChange={(e) => 
+                      setSettings(prev => ({ 
+                        ...prev, 
+                        auto_return_timeout_minutes: parseInt(e.target.value) || 10 
+                      }))
+                    }
+                    className="w-20"
+                  />
+                  <span className="text-sm text-muted-foreground">minutes</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end">
