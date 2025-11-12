@@ -98,14 +98,14 @@ export const EnhancedTaskItem = ({
               )}
             </div>
 
-            {/* Action Buttons */}
+            {/* Action Buttons - Only visible on hover */}
             {showActions && !isCompleted && (
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0">
+              <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 flex items-center gap-1 shrink-0">
                 {onEdit && (
                   <Button 
                     size="sm" 
                     variant="ghost" 
-                    className="h-6 w-6 p-0"
+                    className="h-6 w-6 p-0 hover:bg-accent"
                     onClick={(e) => {
                       e.stopPropagation();
                       onEdit(task);
@@ -118,7 +118,7 @@ export const EnhancedTaskItem = ({
                   <Button 
                     size="sm" 
                     variant="ghost" 
-                    className="h-6 w-6 p-0"
+                    className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
                     onClick={(e) => {
                       e.stopPropagation();
                       onDelete(task);
