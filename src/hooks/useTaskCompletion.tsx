@@ -80,11 +80,10 @@ export const useTaskCompletion = ({
         // Self-completion - direct insert (trigger will set points_earned)
         const { error } = await supabase
           .from('task_completions')
-          .insert([{
-            task_id: task.id,
-            completed_by: completerId,
-            points_earned: 0, // Trigger will override this
-          }]);
+          .insert([
+            // Use a loosely-typed payload so we don't send points_earned
+            { task_id: task.id, completed_by: completerId } as any
+          ]);
         insertError = error;
       }
 
