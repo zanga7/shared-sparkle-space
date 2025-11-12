@@ -342,15 +342,17 @@ const ColumnBasedDashboard = () => {
           
           const updatedProfile = payload.new as Profile;
           
-          // Update the current user's profile if it's theirs
+          // Update the current profile if it's the user's profile
           if (updatedProfile.id === profile.id) {
-            setProfile(updatedProfile);
+            setProfile(prev => prev ? { ...prev, total_points: updatedProfile.total_points } : null);
           }
           
           // Update family members list
-          setFamilyMembers((prev) =>
-            prev.map((member) =>
-              member.id === updatedProfile.id ? updatedProfile : member
+          setFamilyMembers(prev =>
+            prev.map(member =>
+              member.id === updatedProfile.id
+                ? { ...member, total_points: updatedProfile.total_points }
+                : member
             )
           );
         }
