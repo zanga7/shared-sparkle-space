@@ -702,6 +702,9 @@ const ColumnBasedDashboard = () => {
           await supabase.functions.invoke('generate-rotating-tasks', {
             body: { rotating_task_id: rotatingTask.id }
           });
+          
+          // Refetch tasks immediately to show the new task and prevent duplicates
+          await fetchUserData();
         }
       } catch (rotatingError) {
         // Not a rotating task or error checking - ignore and continue
