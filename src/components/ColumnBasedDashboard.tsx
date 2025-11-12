@@ -153,6 +153,7 @@ const ColumnBasedDashboard = () => {
 
   const hasFetchedRef = useRef(false);
   const isFetchingRef = useRef(false);
+  const ensuredRotationTodayRef = useRef(false);
 
   useEffect(() => {
     if (user && !profile && !hasFetchedRef.current && !isFetchingRef.current) {
@@ -284,6 +285,22 @@ const ColumnBasedDashboard = () => {
     };
   }, [profile?.family_id]);
 
+  // Ensure today's rotating tasks exist once per load (idempotent)
+  useEffect(() => {
+    if (!profile?.family_id || ensuredRotationTodayRef.current) return;
+    ensuredRotationTodayRef.current = true;
+    (async () => {
+      try {
+        console.log('🔁 Ensuring rotating tasks exist for today');
+        await supabase.functions.invoke('generate-rotating-tasks', {
+          body: { family_id: profile.family_id }
+        });
+        await fetchUserData();
+      } catch (e) {
+        console.warn('Could not ensure rotating tasks for today:', e);
+      }
+    })();
+  }, [profile?.family_id]);
 
   const cleanupDuplicateRotatingTasksToday = async (familyId: string) => {
     try {
