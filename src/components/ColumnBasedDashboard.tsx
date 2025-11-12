@@ -713,8 +713,7 @@ const ColumnBasedDashboard = () => {
         })
       );
 
-      // Check if this is a rotating task with allow_multiple_completions
-      // If so, generate the next instance immediately
+      // Check if this is a rotating task and generate the next instance immediately
       try {
         const { data: rotatingTask } = await supabase
           .from('rotating_tasks')
@@ -725,13 +724,13 @@ const ColumnBasedDashboard = () => {
           .eq('is_paused', false)
           .single();
 
-        if (rotatingTask?.allow_multiple_completions) {
-          console.log('🔄 Generating next instance for rotating task with multiple completions (targeted)');
+        if (rotatingTask) {
+          console.log('🔄 Generating next instance for rotating task:', task.title);
           await supabase.functions.invoke('generate-rotating-tasks', {
             body: { rotating_task_id: rotatingTask.id }
           });
           
-          // Refetch tasks immediately to show the new task and prevent duplicates
+          // Refetch tasks immediately to show the new task
           await fetchUserData();
         }
       } catch (rotatingError) {
