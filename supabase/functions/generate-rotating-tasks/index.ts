@@ -188,7 +188,26 @@ Deno.serve(async (req) => {
       const taskGroup = rotatingTask.task_group || 'general';
       const dueDate = getDueDateForGroup(taskGroup);
 
-      // Create the task instance
+      // Optimistic concurrency: reserve the rotation slot before creating the task.
+      // If another invocation already rotated, this update will affect 0 rows and we skip.
+      const nextIndex = (usedIndex + 1) % len;
+      const { data: rotationReserved, error: reserveError } = await supabaseClient
+        .from('rotating_tasks')
+        .update({
+          current_member_index: nextIndex,
+          updated_at: now.toISOString()
+        })
+        .eq('id', rotatingTask.id)
+        .eq('current_member_index', usedIndex)
+        .select()
+        .single();
+
+      if (reserveError || !rotationReserved) {
+        console.log(`⚠️  Concurrency detected or rotation already processed for ${rotatingTask.name}. Skipping creation.`);
+        continue;
+      }
+
+      // Create the task instance (after successfully reserving rotation)
       const { data: newTask, error: createError } = await supabaseClient
         .from('tasks')
         .insert({
@@ -206,6 +225,11 @@ Deno.serve(async (req) => {
 
       if (createError) {
         console.error(`❌ Error creating task ${rotatingTask.name}:`, createError);
+        // Roll back reserved rotation since task creation failed
+        await supabaseClient
+          .from('rotating_tasks')
+          .update({ current_member_index: usedIndex, updated_at: now.toISOString() })
+          .eq('id', rotatingTask.id);
         continue;
       }
 
@@ -220,30 +244,20 @@ Deno.serve(async (req) => {
 
       if (assignError) {
         console.error(`❌ Error assigning task ${rotatingTask.name}:`, assignError);
-        // Delete the task if assignment failed
+        // Delete the task if assignment failed and roll back rotation
         await supabaseClient.from('tasks').delete().eq('id', newTask.id);
+        await supabaseClient
+          .from('rotating_tasks')
+          .update({ current_member_index: usedIndex, updated_at: now.toISOString() })
+          .eq('id', rotatingTask.id);
         continue;
       }
 
       console.log(`✅ Created task ${rotatingTask.name} for member ${targetMemberId}`);
       generatedCount++;
 
-      // Rotate to next member after the one we used
-      const nextIndex = (usedIndex + 1) % len;
-
-      const { error: updateError } = await supabaseClient
-        .from('rotating_tasks')
-        .update({ 
-          current_member_index: nextIndex,
-          updated_at: now.toISOString()
-        })
-        .eq('id', rotatingTask.id);
-
-      if (updateError) {
-        console.error(`⚠️  Error rotating index for ${rotatingTask.name}:`, updateError);
-      } else {
-        console.log(`🔄 Rotated ${rotatingTask.name} to member index ${nextIndex}`);
-      }
+      // Rotation already reserved optimistically above. Proceeding.
+      console.log(`🔄 Rotation reserved for ${rotatingTask.name}`);
     }
 
     console.log(`\n✨ Generation complete: ${generatedCount} tasks created`);
