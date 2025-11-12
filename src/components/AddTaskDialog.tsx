@@ -346,7 +346,7 @@ export const AddTaskDialog = ({
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {selectedDate ? `Create Task for ${format(selectedDate, 'MMM d, yyyy')}` : 'Create New Task'}
