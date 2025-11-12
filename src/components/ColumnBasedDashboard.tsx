@@ -1349,12 +1349,6 @@ const ColumnBasedDashboard = () => {
                                />
                                <div className="min-w-0 flex-1">
                                  <CardTitle className="text-base sm:text-lg truncate">{member.display_name}</CardTitle>
-                                 <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
-                                   <Badge variant={member.role === 'parent' ? 'default' : 'secondary'} className="text-xs">
-                                     {member.role}
-                                   </Badge>
-                                   <span className="truncate">{member.total_points} pts</span>
-                                 </div>
                               </div>
                              </div>
                               <Progress 
