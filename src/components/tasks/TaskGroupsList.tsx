@@ -137,40 +137,43 @@ export const TaskGroupsList = ({
                         <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}
-                          {...provided.dragHandleProps}
                           className={cn(
-                            "transition-all duration-200 group relative",
-                            snapshot.isDragging && "shadow-xl rotate-2 scale-105 z-50 ring-2 ring-primary/30",
-                            !isCompleted && "cursor-grab active:cursor-grabbing"
+                            "transition-all duration-200 relative flex items-start gap-2",
+                            snapshot.isDragging && "shadow-xl rotate-2 scale-105 z-50 ring-2 ring-primary/30"
                           )}
                         >
-                          {/* Visual Drag Indicator */}
+                          {/* Dedicated Drag Handle */}
                           {!isCompleted && (
                             <div
-                              className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 bg-background/90 backdrop-blur-sm rounded p-1.5 border border-border/50 shadow-sm pointer-events-none"
+                              {...provided.dragHandleProps}
+                              className="flex-shrink-0 mt-3 cursor-grab active:cursor-grabbing touch-none"
                             >
-                              <svg width="10" height="10" viewBox="0 0 10 10" className="text-muted-foreground">
-                                <circle cx="2" cy="2" r="0.8" fill="currentColor"/>
-                                <circle cx="5" cy="2" r="0.8" fill="currentColor"/>
-                                <circle cx="8" cy="2" r="0.8" fill="currentColor"/>
-                                <circle cx="2" cy="5" r="0.8" fill="currentColor"/>
-                                <circle cx="5" cy="5" r="0.8" fill="currentColor"/>
-                                <circle cx="8" cy="5" r="0.8" fill="currentColor"/>
-                                <circle cx="2" cy="8" r="0.8" fill="currentColor"/>
-                                <circle cx="5" cy="8" r="0.8" fill="currentColor"/>
-                                <circle cx="8" cy="8" r="0.8" fill="currentColor"/>
-                              </svg>
+                              <div className="p-1.5 rounded hover:bg-accent transition-colors">
+                                <svg width="16" height="16" viewBox="0 0 16 16" className="text-muted-foreground">
+                                  <circle cx="4" cy="4" r="1.2" fill="currentColor"/>
+                                  <circle cx="8" cy="4" r="1.2" fill="currentColor"/>
+                                  <circle cx="12" cy="4" r="1.2" fill="currentColor"/>
+                                  <circle cx="4" cy="8" r="1.2" fill="currentColor"/>
+                                  <circle cx="8" cy="8" r="1.2" fill="currentColor"/>
+                                  <circle cx="12" cy="8" r="1.2" fill="currentColor"/>
+                                  <circle cx="4" cy="12" r="1.2" fill="currentColor"/>
+                                  <circle cx="8" cy="12" r="1.2" fill="currentColor"/>
+                                  <circle cx="12" cy="12" r="1.2" fill="currentColor"/>
+                                </svg>
+                              </div>
                             </div>
                           )}
-                          <EnhancedTaskItem
-                            task={task}
-                            allTasks={allTasks}
-                            familyMembers={familyMembers}
-                            onToggle={onTaskToggle}
-                            onEdit={onEditTask}
-                            onDelete={onDeleteTask}
-                            showActions={showActions && !snapshot.isDragging}
-                          />
+                          <div className="flex-1 min-w-0">
+                            <EnhancedTaskItem
+                              task={task}
+                              allTasks={allTasks}
+                              familyMembers={familyMembers}
+                              onToggle={onTaskToggle}
+                              onEdit={onEditTask}
+                              onDelete={onDeleteTask}
+                              showActions={showActions && !snapshot.isDragging}
+                            />
+                          </div>
                         </div>
                       )}
                     </Draggable>
