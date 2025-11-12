@@ -90,11 +90,37 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // If allow_multiple_completions is false and task exists, skip
-      if (!rotatingTask.allow_multiple_completions && existingTasks && existingTasks.length > 0) {
-        console.log(`⏭️  Task ${rotatingTask.name} already exists for today`);
+      // Always skip if task already exists for this member today (idempotent per member/day)
+      if (existingTasks && existingTasks.length > 0) {
+        console.log(`⏭️  Task ${rotatingTask.name} already exists for member ${currentMemberId} today`);
         continue;
       }
+
+      // Calculate due_date based on task_group
+      const getDueDateForGroup = (group: string): string | null => {
+        const today = new Date();
+        
+        switch (group) {
+          case 'morning':
+            today.setHours(11, 0, 0, 0);
+            return today.toISOString();
+          case 'midday':
+            today.setHours(15, 0, 0, 0);
+            return today.toISOString();
+          case 'afternoon':
+            today.setHours(18, 0, 0, 0);
+            return today.toISOString();
+          case 'evening':
+            today.setHours(23, 59, 0, 0);
+            return today.toISOString();
+          case 'general':
+          default:
+            return null;
+        }
+      };
+
+      const taskGroup = rotatingTask.task_group || 'general';
+      const dueDate = getDueDateForGroup(taskGroup);
 
       // Create the task instance
       const { data: newTask, error: createError } = await supabaseClient
@@ -105,7 +131,8 @@ Deno.serve(async (req) => {
           description: rotatingTask.description,
           points: rotatingTask.points,
           created_by: rotatingTask.member_order[0], // Use first member as creator
-          task_group: rotatingTask.task_group || 'general',
+          task_group: taskGroup,
+          due_date: dueDate,
           completion_rule: 'everyone'
         })
         .select()
