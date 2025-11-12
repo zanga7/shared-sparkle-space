@@ -68,6 +68,8 @@ export const DashboardModeSettings = React.memo(() => {
           dashboard_mode_enabled: settings.dashboard_mode_enabled,
           auto_return_enabled: settings.auto_return_enabled,
           auto_return_timeout_minutes: settings.auto_return_timeout_minutes
+        }, {
+          onConflict: 'family_id'
         });
 
       if (error) throw error;
