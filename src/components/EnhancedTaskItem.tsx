@@ -25,6 +25,7 @@ interface EnhancedTaskItemProps {
   onEdit?: (task: Task) => void;
   onDelete?: (task: Task) => void;
   showActions?: boolean;
+  currentMemberId?: string;
 }
 
 export const EnhancedTaskItem = ({ 
@@ -34,13 +35,15 @@ export const EnhancedTaskItem = ({
   onToggle, 
   onEdit, 
   onDelete,
-  showActions = true 
+  showActions = true,
+  currentMemberId
 }: EnhancedTaskItemProps) => {
   const [showDetails, setShowDetails] = useState(false);
 
   const isCompleted = task.task_completions && task.task_completions.length > 0;
   const isOverdue = task.due_date && isAfter(new Date(), new Date(task.due_date)) && !isCompleted;
   const assignedProfile = familyMembers.find(member => member.id === task.assigned_to);
+  const isCompletedByMe = (task.task_completions || []).some(c => c.completed_by === currentMemberId);
 
   // Get days until due
   const getDaysUntilDue = () => {
@@ -63,18 +66,21 @@ export const EnhancedTaskItem = ({
         {/* Complete/Uncomplete Button */}
         <Button 
           size="sm" 
-          variant={isCompleted ? "default" : "outline"}
+          variant={isCompletedByMe ? "default" : "outline"}
           onClick={(e) => {
             e.stopPropagation();
             onToggle(task);
           }}
           className={cn(
             "shrink-0 w-7 h-7 p-0 cursor-pointer transition-all",
-            isCompleted 
+            isCompletedByMe 
               ? "bg-green-500 hover:bg-green-600 hover:scale-110 active:scale-95" 
               : "hover:border-green-500 hover:text-green-500"
           )}
-          title={isCompleted ? "Click to uncomplete and remove points" : "Click to complete and earn points"}
+          title={isCompletedByMe 
+            ? "Click to uncomplete and remove points" 
+            : (isCompleted ? "Already completed by someone; click to attempt your completion" : "Click to complete and earn points")
+          }
         >
           <CheckCircle2 className="h-3 w-3" />
         </Button>

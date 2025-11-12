@@ -178,6 +178,7 @@ export const TaskGroupsList = ({
                               onEdit={onEditTask}
                               onDelete={onDeleteTask}
                               showActions={showActions && !snapshot.isDragging}
+                              currentMemberId={memberId}
                             />
                           </div>
                         </div>

@@ -147,18 +147,40 @@ export const useTaskCompletion = ({
         return false;
       }
 
-      // Find the completion record for this completer
-      const completion = task.task_completions?.find(
+      // Find the completion record for this completer (prefer local state, fallback to DB)
+      let completion = task.task_completions?.find(
         (c) => c.completed_by === completerId
       );
 
       if (!completion) {
-        toast({
-          title: "Error",
-          description: "No completion found to remove",
-          variant: "destructive",
-        });
-        return false;
+        const { data: rows, error: fetchCompletionError } = await supabase
+          .from('task_completions')
+          .select('id, completed_at')
+          .eq('task_id', task.id)
+          .eq('completed_by', completerId)
+          .order('completed_at', { ascending: false })
+          .limit(1);
+
+        if (fetchCompletionError) {
+          console.error('Error fetching latest completion:', fetchCompletionError);
+          toast({
+            title: "Error",
+            description: fetchCompletionError.message || "Failed to find completion to remove",
+            variant: "destructive",
+          });
+          return false;
+        }
+
+        if (!rows || rows.length === 0) {
+          toast({
+            title: "Error",
+            description: "No completion found to remove",
+            variant: "destructive",
+          });
+          return false;
+        }
+
+        completion = rows[0] as any;
       }
 
       // Always use RPC to ensure points are properly handled
