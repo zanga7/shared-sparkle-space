@@ -192,7 +192,16 @@ const ColumnBasedDashboard = () => {
           filter: `family_id=eq.${profile.family_id}`
         },
         async (payload) => {
-          console.log('🔔 New task detected via realtime:', payload.new);
+          console.log('🔔 [REALTIME] New task INSERT detected:', {
+            taskId: payload.new.id,
+            title: payload.new.title,
+            rotating_task_id: payload.new.rotating_task_id
+          });
+          
+          // Add delay to ensure task_assignees are committed by database triggers
+          // This is crucial for rotating tasks which create task + assignee atomically
+          await new Promise(resolve => setTimeout(resolve, 100));
+          console.log('⏱️ [REALTIME] Waited 100ms, now fetching full task data...');
           
           // Fetch full task data with relations
           const { data: newTaskData } = await supabase
@@ -215,16 +224,27 @@ const ColumnBasedDashboard = () => {
             .single();
 
           if (newTaskData) {
+            console.log('✅ [REALTIME] Task data fetched:', {
+              taskId: newTaskData.id,
+              title: newTaskData.title,
+              assigneesCount: newTaskData.assignees?.length || 0,
+              assignees: newTaskData.assignees?.map(a => a.profile?.display_name)
+            });
+            
             setTasks(prevTasks => {
               // Check if task already exists
               if (prevTasks.some(t => t.id === newTaskData.id)) {
+                console.log('⚠️ [REALTIME] Task already exists, skipping add');
                 return prevTasks;
               }
+              console.log('➕ [REALTIME] Adding task to state');
               return [...prevTasks, {
                 ...newTaskData,
                 completion_rule: (newTaskData.completion_rule || 'everyone') as 'any_one' | 'everyone'
               }];
             });
+          } else {
+            console.error('❌ [REALTIME] Failed to fetch task data');
           }
         }
       )
@@ -250,6 +270,11 @@ const ColumnBasedDashboard = () => {
         },
         async (payload) => {
           try {
+            console.log('🔔 [REALTIME] Task assignee INSERT detected:', {
+              taskId: (payload as any).new.task_id,
+              profileId: (payload as any).new.profile_id
+            });
+            
             // Fetch the full task with relations once an assignee is added
             const { data: taskData } = await supabase
               .from('tasks')
@@ -271,7 +296,15 @@ const ColumnBasedDashboard = () => {
               .eq('id', (payload as any).new.task_id)
               .single();
 
-            if (!taskData || taskData.family_id !== profile.family_id) return;
+            if (!taskData || taskData.family_id !== profile.family_id) {
+              console.log('⚠️ [REALTIME] Task not in family or not found');
+              return;
+            }
+
+            console.log('✅ [REALTIME] Task assignee data fetched:', {
+              taskId: taskData.id,
+              assigneesCount: taskData.assignees?.length || 0
+            });
 
             setTasks((prev) => {
               const idx = prev.findIndex((t) => t.id === taskData.id);
@@ -279,13 +312,17 @@ const ColumnBasedDashboard = () => {
                 ...taskData,
                 completion_rule: (taskData.completion_rule || 'everyone') as 'any_one' | 'everyone',
               };
-              if (idx === -1) return [...prev, normalized];
+              if (idx === -1) {
+                console.log('➕ [REALTIME] Task not in state, adding it');
+                return [...prev, normalized];
+              }
+              console.log('🔄 [REALTIME] Updating existing task with assignees');
               const copy = prev.slice();
               copy[idx] = { ...copy[idx], ...normalized };
               return copy;
             });
           } catch (e) {
-            console.error('Failed to update task after assignee insert', e);
+            console.error('❌ [REALTIME] Failed to update task after assignee insert', e);
           }
         }
       )
@@ -310,13 +347,17 @@ const ColumnBasedDashboard = () => {
           table: 'task_completions',
         },
         async (payload) => {
-          console.log('🔔 Task completion detected via realtime:', payload.new);
+          console.log('🔔 [REALTIME] Task completion INSERT detected:', {
+            taskId: (payload as any).new.task_id,
+            completedBy: (payload as any).new.completed_by
+          });
           
           // Update the completed task in local state
           const completedTaskId = (payload as any).new.task_id;
           setTasks((prev) => {
             return prev.map((t) => {
               if (t.id === completedTaskId) {
+                console.log('✅ [REALTIME] Marking task as completed in state');
                 return {
                   ...t,
                   task_completions: [...(t.task_completions || []), payload.new as any]
@@ -335,7 +376,10 @@ const ColumnBasedDashboard = () => {
           table: 'task_completions',
         },
         async (payload) => {
-          console.log('🔔 Task uncompletion detected via realtime:', payload.old);
+          console.log('🔔 [REALTIME] Task completion DELETE detected:', {
+            completionId: (payload as any).old.id,
+            taskId: (payload as any).old.task_id
+          });
           
           // Remove the completion from local state
           const deletedCompletionId = (payload as any).old.id;
@@ -343,6 +387,7 @@ const ColumnBasedDashboard = () => {
           setTasks((prev) => {
             return prev.map((t) => {
               if (t.id === taskId) {
+                console.log('✅ [REALTIME] Unmarking task as completed in state');
                 return {
                   ...t,
                   task_completions: (t.task_completions || []).filter(
