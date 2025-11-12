@@ -1357,10 +1357,10 @@ const ColumnBasedDashboard = () => {
                                  </div>
                               </div>
                              </div>
-                              <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
-                                <span>{pendingTasks.length} pending</span>
-                                <span>{completedTasks.length} completed</span>
-                              </div>
+                              <Progress 
+                                value={memberTasks.length > 0 ? Math.round((completedTasks.length / memberTasks.length) * 100) : 0} 
+                                className="h-3"
+                              />
                             </CardHeader>
 
                              <CardContent className="p-0">
