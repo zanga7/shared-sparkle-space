@@ -58,48 +58,83 @@ Deno.serve(async (req) => {
 
     for (const rotatingTask of (rotatingTasks as RotatingTask[]) || []) {
       console.log(`\n🔍 Processing: ${rotatingTask.name}`);
-      
-      // Check if this task should be generated today
-      const shouldGenerate = shouldGenerateToday(rotatingTask, now);
-      
-      if (!shouldGenerate) {
-        console.log(`⏭️  Skipping ${rotatingTask.name} - not due today`);
+      // Determine which member should receive a task now
+      const len = rotatingTask.member_order.length;
+      if (len === 0) {
+        console.log(`❌ No members defined for ${rotatingTask.name}`);
         continue;
       }
 
-      // Get current assignee
-      const currentMemberId = rotatingTask.member_order[rotatingTask.current_member_index];
-      
-      if (!currentMemberId) {
-        console.log(`❌ No member at index ${rotatingTask.current_member_index} for ${rotatingTask.name}`);
-        continue;
-      }
+      // Helper: check if any task with this title exists today (regardless of assignee)
+      const anyTaskExistsToday = async (): Promise<boolean> => {
+        const { data: existing, error } = await supabaseClient
+          .from('tasks')
+          .select('id')
+          .eq('family_id', rotatingTask.family_id)
+          .eq('title', rotatingTask.name)
+          .gte('created_at', `${today}T00:00:00Z`)
+          .lte('created_at', `${today}T23:59:59Z`);
+        if (error) {
+          console.error(`Error checking series-level existing tasks for ${rotatingTask.name}:`, error);
+          return true; // fail-safe: avoid duplicate creation on error
+        }
+        return (existing && existing.length > 0);
+      };
 
-      // Check if task already exists for today assigned to this specific member
-      const { data: existingTasks, error: checkError } = await supabaseClient
-        .from('tasks')
-        .select('id, task_assignees!inner(profile_id)')
-        .eq('family_id', rotatingTask.family_id)
-        .eq('title', rotatingTask.name)
-        .eq('task_assignees.profile_id', currentMemberId)
-        .gte('created_at', `${today}T00:00:00Z`)
-        .lte('created_at', `${today}T23:59:59Z`);
+      let targetMemberId: string | null = null;
+      let usedIndex = rotatingTask.current_member_index;
 
-      if (checkError) {
-        console.error(`Error checking existing tasks for ${rotatingTask.name}:`, checkError);
-        continue;
-      }
+      if (!rotatingTask.allow_multiple_completions) {
+        // Single instance per day for the series
+        const exists = await anyTaskExistsToday();
+        if (exists) {
+          console.log(`⏭️  ${rotatingTask.name}: a task already exists today (single-instance mode)`);
+          continue;
+        }
+        // Assign to current member index
+        targetMemberId = rotatingTask.member_order[rotatingTask.current_member_index] || null;
+        if (!targetMemberId) {
+          console.log(`❌ No member at index ${rotatingTask.current_member_index} for ${rotatingTask.name}`);
+          continue;
+        }
+        usedIndex = rotatingTask.current_member_index;
+      } else {
+        // Multiple completions allowed: find the next member who doesn't have one today
+        for (let i = 0; i < len; i++) {
+          const idx = (rotatingTask.current_member_index + i) % len;
+          const candidateId = rotatingTask.member_order[idx];
+          if (!candidateId) continue;
 
-      // Always skip if task already exists for this member today (idempotent per member/day)
-      if (existingTasks && existingTasks.length > 0) {
-        console.log(`⏭️  Task ${rotatingTask.name} already exists for member ${currentMemberId} today`);
-        continue;
+          const { data: existingForMember, error: checkError } = await supabaseClient
+            .from('tasks')
+            .select('id, task_assignees!inner(profile_id)')
+            .eq('family_id', rotatingTask.family_id)
+            .eq('title', rotatingTask.name)
+            .eq('task_assignees.profile_id', candidateId)
+            .gte('created_at', `${today}T00:00:00Z`)
+            .lte('created_at', `${today}T23:59:59Z`);
+
+          if (checkError) {
+            console.error(`Error checking existing tasks for ${rotatingTask.name} and member ${candidateId}:`, checkError);
+            continue;
+          }
+
+          if (!existingForMember || existingForMember.length === 0) {
+            targetMemberId = candidateId;
+            usedIndex = idx;
+            break;
+          }
+        }
+
+        if (!targetMemberId) {
+          console.log(`⏭️  ${rotatingTask.name}: all members already have a task today`);
+          continue;
+        }
       }
 
       // Calculate due_date based on task_group
       const getDueDateForGroup = (group: string): string | null => {
         const today = new Date();
-        
         switch (group) {
           case 'morning':
             today.setHours(11, 0, 0, 0);
@@ -143,12 +178,12 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Assign to current member
+      // Assign to target member
       const { error: assignError } = await supabaseClient
         .from('task_assignees')
         .insert({
           task_id: newTask.id,
-          profile_id: currentMemberId,
+          profile_id: targetMemberId,
           assigned_by: rotatingTask.member_order[0]
         });
 
@@ -159,12 +194,12 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      console.log(`✅ Created task ${rotatingTask.name} for member ${currentMemberId}`);
+      console.log(`✅ Created task ${rotatingTask.name} for member ${targetMemberId}`);
       generatedCount++;
 
-      // Rotate to next member
-      const nextIndex = (rotatingTask.current_member_index + 1) % rotatingTask.member_order.length;
-      
+      // Rotate to next member after the one we used
+      const nextIndex = (usedIndex + 1) % len;
+
       const { error: updateError } = await supabaseClient
         .from('rotating_tasks')
         .update({ 
