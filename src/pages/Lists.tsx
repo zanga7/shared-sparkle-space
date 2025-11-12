@@ -14,7 +14,6 @@ import { CompactInlineListCard } from '@/components/lists/CompactInlineListCard'
 import { CreateListDialog } from '@/components/lists/CreateListDialog';
 import { EditListDialog } from '@/components/lists/EditListDialog';
 import { CategoryManager } from '@/components/lists/CategoryManager';
-import { DashboardModeGuard } from '@/components/DashboardModeGuard';
 
 interface Category {
   id: string;
@@ -405,8 +404,7 @@ const Lists = () => {
   }
 
   return (
-    <DashboardModeGuard>
-      <div className="min-h-screen bg-background p-4">
+    <div className="min-h-screen bg-background p-4">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
@@ -512,14 +510,13 @@ const Lists = () => {
           />
         )}
 
-        <CategoryManager
-          open={isCategoryManagerOpen}
-          onOpenChange={setIsCategoryManagerOpen}
-          familyId={profile?.family_id || ''}
-          onCategoryUpdated={handleCategoryUpdated}
-        />
-      </div>
-    </DashboardModeGuard>
+      <CategoryManager
+        open={isCategoryManagerOpen}
+        onOpenChange={setIsCategoryManagerOpen}
+        familyId={profile?.family_id || ''}
+        onCategoryUpdated={handleCategoryUpdated}
+      />
+    </div>
   );
 };
 
