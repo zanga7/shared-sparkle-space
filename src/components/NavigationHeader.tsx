@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Settings, Users, List, Calendar, Gift, ArrowLeftRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ActiveMemberChip } from '@/components/dashboard/ActiveMemberChip';
+import { useDashboardMode } from '@/hooks/useDashboardMode';
 
 interface Profile {
   id: string;
@@ -50,33 +51,44 @@ export function NavigationHeader({
   viewMode = 'everyone'
 }: NavigationHeaderProps) {
   const activeMember = familyMembers.find(m => m.id === activeMemberId);
+  const { dashboardModeEnabled } = useDashboardMode();
 
   return (
     <header className="w-full border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Main Navigation */}
-        <nav className="flex items-center space-x-1">
-          {navigationItems.map((item) => {
-            const IconComponent = item.icon;
-            return (
-              <Button
-                key={item.value}
-                variant={activeTab === item.value ? "default" : "ghost"}
-                size="sm"
-                onClick={() => onTabChange(item.value)}
-                className={cn(
-                  "h-9 px-3 font-medium transition-colors",
-                  activeTab === item.value 
-                    ? "bg-primary text-primary-foreground shadow-sm" 
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                )}
-              >
-                <IconComponent className="mr-2 h-4 w-4" />
-                {item.label}
-              </Button>
-            );
-          })}
-        </nav>
+        {/* Main Navigation - Only show if Dashboard Mode is enabled OR in member view */}
+        {dashboardModeEnabled && (
+          <nav className="flex items-center space-x-1">
+            {navigationItems.map((item) => {
+              const IconComponent = item.icon;
+              return (
+                <Button
+                  key={item.value}
+                  variant={activeTab === item.value ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => onTabChange(item.value)}
+                  className={cn(
+                    "h-9 px-3 font-medium transition-colors",
+                    activeTab === item.value 
+                      ? "bg-primary text-primary-foreground shadow-sm" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  )}
+                >
+                  <IconComponent className="mr-2 h-4 w-4" />
+                  {item.label}
+                </Button>
+              );
+            })}
+          </nav>
+        )}
+        
+        {/* Message when Dashboard Mode is disabled */}
+        {!dashboardModeEnabled && (
+          <div className="flex items-center space-x-2 text-muted-foreground">
+            <Users className="h-4 w-4" />
+            <span className="text-sm font-medium">Member Dashboards Only</span>
+          </div>
+        )}
 
         {/* Member Management & Settings */}
         <div className="flex items-center space-x-3">

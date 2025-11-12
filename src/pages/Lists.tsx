@@ -14,6 +14,7 @@ import { CompactInlineListCard } from '@/components/lists/CompactInlineListCard'
 import { CreateListDialog } from '@/components/lists/CreateListDialog';
 import { EditListDialog } from '@/components/lists/EditListDialog';
 import { CategoryManager } from '@/components/lists/CategoryManager';
+import { DashboardModeGuard } from '@/components/DashboardModeGuard';
 
 interface Category {
   id: string;
@@ -404,119 +405,121 @@ const Lists = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Lists</h1>
-            <p className="text-muted-foreground">Manage your family shopping, camping, and to-do lists</p>
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setIsCategoryManagerOpen(true)} 
-              className="gap-2"
-            >
-              <Hash className="h-4 w-4" />
-              Manage Categories
-            </Button>
-            <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              New List
-            </Button>
-          </div>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search lists..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <Tabs value={selectedFilter} onValueChange={setSelectedFilter} className="mb-6">
-          <TabsList className="grid w-full h-auto" style={{ gridTemplateColumns: `repeat(${categories.length + 3}, 1fr)` }}>
-            <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
-            {categories.map((category) => (
-              <TabsTrigger key={category.id} value={category.id} className="flex-1">
-                {category.name}
-              </TabsTrigger>
-            ))}
-            <TabsTrigger value="personal" className="flex-1">Personal</TabsTrigger>
-            <TabsTrigger value="archived" className="flex-1">Archived</TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        {/* Lists Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredLists.map((list) => (
-            <CompactInlineListCard
-              key={list.id}
-              list={list}
-              profile={profile!}
-              isPersonalList={isPersonalList(list)}
-              onEditList={setEditingList}
-              onDuplicateList={duplicateList}
-              onArchiveList={archiveList}
-              onDeleteList={deleteList}
-              onListUpdated={handleListUpdated}
-              onListItemsUpdated={handleListItemsUpdated}
-            />
-          ))}
-        </div>
-
-        {filteredLists.length === 0 && (
-          <div className="text-center py-12">
-            <div className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No lists found</h3>
-            <p className="text-muted-foreground mb-4">
-              {searchQuery 
-                ? "No lists match your search criteria"
-                : "Create your first list to get organized"
-              }
-            </p>
-            {!searchQuery && (
+    <DashboardModeGuard>
+      <div className="min-h-screen bg-background p-4">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold">Lists</h1>
+              <p className="text-muted-foreground">Manage your family shopping, camping, and to-do lists</p>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsCategoryManagerOpen(true)} 
+                className="gap-2"
+              >
+                <Hash className="h-4 w-4" />
+                Manage Categories
+              </Button>
               <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
                 <Plus className="h-4 w-4" />
-                Create List
+                New List
               </Button>
-            )}
+            </div>
           </div>
-        )}
-      </div>
 
-      {/* Dialogs */}
-      <CreateListDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        onListCreated={handleListCreated}
-        profile={profile!}
-      />
+          {/* Search and Filters */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search lists..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
 
-      {editingList && (
-        <EditListDialog
-          list={editingList}
-          open={!!editingList}
-          onOpenChange={(open) => !open && setEditingList(null)}
-          onListUpdated={handleListUpdated}
+          {/* Tabs */}
+          <Tabs value={selectedFilter} onValueChange={setSelectedFilter} className="mb-6">
+            <TabsList className="grid w-full h-auto" style={{ gridTemplateColumns: `repeat(${categories.length + 3}, 1fr)` }}>
+              <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
+              {categories.map((category) => (
+                <TabsTrigger key={category.id} value={category.id} className="flex-1">
+                  {category.name}
+                </TabsTrigger>
+              ))}
+              <TabsTrigger value="personal" className="flex-1">Personal</TabsTrigger>
+              <TabsTrigger value="archived" className="flex-1">Archived</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {/* Lists Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredLists.map((list) => (
+              <CompactInlineListCard
+                key={list.id}
+                list={list}
+                profile={profile!}
+                isPersonalList={isPersonalList(list)}
+                onEditList={setEditingList}
+                onDuplicateList={duplicateList}
+                onArchiveList={archiveList}
+                onDeleteList={deleteList}
+                onListUpdated={handleListUpdated}
+                onListItemsUpdated={handleListItemsUpdated}
+              />
+            ))}
+          </div>
+
+          {filteredLists.length === 0 && (
+            <div className="text-center py-12">
+              <div className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">No lists found</h3>
+              <p className="text-muted-foreground mb-4">
+                {searchQuery 
+                  ? "No lists match your search criteria"
+                  : "Create your first list to get organized"
+                }
+              </p>
+              {!searchQuery && (
+                <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create List
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Dialogs */}
+        <CreateListDialog
+          open={isCreateDialogOpen}
+          onOpenChange={setIsCreateDialogOpen}
+          onListCreated={handleListCreated}
+          profile={profile!}
         />
-      )}
 
-      <CategoryManager
-        open={isCategoryManagerOpen}
-        onOpenChange={setIsCategoryManagerOpen}
-        familyId={profile?.family_id || ''}
-        onCategoryUpdated={handleCategoryUpdated}
-      />
-    </div>
+        {editingList && (
+          <EditListDialog
+            list={editingList}
+            open={!!editingList}
+            onOpenChange={(open) => !open && setEditingList(null)}
+            onListUpdated={handleListUpdated}
+          />
+        )}
+
+        <CategoryManager
+          open={isCategoryManagerOpen}
+          onOpenChange={setIsCategoryManagerOpen}
+          familyId={profile?.family_id || ''}
+          onCategoryUpdated={handleCategoryUpdated}
+        />
+      </div>
+    </DashboardModeGuard>
   );
 };
 

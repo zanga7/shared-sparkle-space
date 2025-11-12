@@ -51,6 +51,7 @@ import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
 import { MemberSwitchDialog } from '@/components/dashboard/MemberSwitchDialog';
 import { MemberSelectorDialog } from '@/components/dashboard/MemberSelectorDialog';
+import { useDashboardMode } from '@/hooks/useDashboardMode';
 
 const ColumnBasedDashboard = () => {
   const { user, signOut } = useAuth();
@@ -71,26 +72,9 @@ const ColumnBasedDashboard = () => {
   const [viewMode, setViewMode] = useState<'everyone' | 'member'>('everyone'); // Track if showing everyone or specific member
   const [selectedTaskGroup, setSelectedTaskGroup] = useState<string | null>(null);
   
-  // Dashboard mode state  
-  const [dashboardMode, setDashboardMode] = useState(false);
-  
-  // Load dashboard mode setting
-  useEffect(() => {
-    const loadDashboardMode = async () => {
-      if (profile?.family_id) {
-        const { data } = await supabase
-          .from('household_settings')
-          .select('dashboard_mode_enabled')
-          .eq('family_id', profile.family_id)
-          .single();
-        
-        if (data) {
-          setDashboardMode(data.dashboard_mode_enabled || false);
-        }
-      }
-    };
-    loadDashboardMode();
-  }, [profile?.family_id]);
+  // Dashboard mode state using hook
+  const { dashboardModeEnabled } = useDashboardMode();
+  const dashboardMode = dashboardModeEnabled;
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [switchDialogOpen, setSwitchDialogOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<{
@@ -131,6 +115,10 @@ const ColumnBasedDashboard = () => {
 
   // Handle tab changes - clear member selection when switching to tab view
   const handleTabChange = (tab: string) => {
+    // If Dashboard Mode is disabled, block tab navigation
+    if (!dashboardMode) {
+      return;
+    }
     setActiveTab(tab);
     setSelectedMemberFilter(null); // Clear member selection
     setViewMode('everyone');
@@ -140,13 +128,26 @@ const ColumnBasedDashboard = () => {
   const handleMemberSelect = (memberId: string | null) => {
     setSelectedMemberFilter(memberId);
     if (memberId === null) {
-      setViewMode('everyone');
-      setActiveTab('columns'); // Reset to default tab
+      // Only allow "everyone" view if Dashboard Mode is enabled
+      if (dashboardMode) {
+        setViewMode('everyone');
+        setActiveTab('columns'); // Reset to default tab
+      }
     } else {
       setViewMode('member');
       setActiveTab(''); // Clear active tab when viewing member dashboard
     }
   };
+
+  // Force member view when Dashboard Mode is disabled
+  useEffect(() => {
+    if (!dashboardMode && profile && viewMode === 'everyone') {
+      // Automatically switch to the authenticated user's member view
+      setViewMode('member');
+      setSelectedMemberFilter(profile.id);
+      setActiveTab('');
+    }
+  }, [dashboardMode, profile, viewMode]);
 
   const hasFetchedRef = useRef(false);
   const isFetchingRef = useRef(false);
