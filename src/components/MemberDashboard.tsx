@@ -27,6 +27,7 @@ interface MemberDashboardProps {
   onEditTask?: (task: Task) => void;
   activeMemberId: string | null;
   dashboardMode: boolean;
+  setTasks?: React.Dispatch<React.SetStateAction<Task[]>>;
 }
 
 const WIDGET_SECTIONS = [
@@ -44,7 +45,8 @@ export const MemberDashboard = ({
   onTaskUpdated,
   onEditTask,
   activeMemberId,
-  dashboardMode
+  dashboardMode,
+  setTasks
 }: MemberDashboardProps) => {
   const [emblaRef, emblaApi] = useEmblaCarousel({ 
     align: 'start', 
@@ -156,6 +158,7 @@ export const MemberDashboard = ({
       onAddTask={() => setIsTaskDialogOpen(true)}
       activeMemberId={activeMemberId}
       isDashboardMode={dashboardMode}
+      setTasks={setTasks}
     />
   );
 

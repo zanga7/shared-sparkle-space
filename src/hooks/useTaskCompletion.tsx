@@ -8,12 +8,14 @@ interface UseTaskCompletionProps {
   currentUserProfile: Profile | null;
   activeMemberId?: string | null;
   isDashboardMode?: boolean;
+  setTasks?: React.Dispatch<React.SetStateAction<Task[]>>;
 }
 
 export const useTaskCompletion = ({
   currentUserProfile,
   activeMemberId,
   isDashboardMode = false,
+  setTasks,
 }: UseTaskCompletionProps) => {
   const [completingTasks, setCompletingTasks] = useState<Set<string>>(new Set());
   const { canPerformAction, authenticateMemberPin } = useDashboardAuth();
@@ -63,7 +65,31 @@ export const useTaskCompletion = ({
         }
       }
 
-      // Optimistic UI update - show immediate feedback
+      // Optimistic UI update - update local state immediately
+      const optimisticCompletion = {
+        id: crypto.randomUUID(),
+        task_id: task.id,
+        completed_by: completerId,
+        points_earned: task.points,
+        completed_at: new Date().toISOString(),
+        approved_by: null,
+        approved_at: null,
+      };
+
+      if (setTasks) {
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === task.id
+              ? {
+                  ...t,
+                  task_completions: [...(t.task_completions || []), optimisticCompletion],
+                }
+              : t
+          )
+        );
+      }
+
+      // Show immediate feedback
       toast({
         title: "Task Completed!",
         description: `+${task.points} points earned`,
@@ -77,6 +103,22 @@ export const useTaskCompletion = ({
 
       if (insertError) {
         console.error('Error completing task:', insertError);
+        
+        // Rollback optimistic update
+        if (setTasks) {
+          setTasks((prev) =>
+            prev.map((t) =>
+              t.id === task.id
+                ? {
+                    ...t,
+                    task_completions: (t.task_completions || []).filter(
+                      (c) => c.id !== optimisticCompletion.id
+                    ),
+                  }
+                : t
+            )
+          );
+        }
         
         // Check if it's a duplicate completion
         if (insertError.code === '23505') {
@@ -95,7 +137,7 @@ export const useTaskCompletion = ({
         return false;
       }
 
-      // Realtime will handle final state sync, no need to call onSuccess
+      // Realtime will handle final state sync with correct data from DB
       return true;
 
     } catch (error) {
@@ -159,7 +201,23 @@ export const useTaskCompletion = ({
         return false;
       }
 
-      // Optimistic UI update
+      // Optimistic UI update - remove completion immediately
+      if (setTasks) {
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === task.id
+              ? {
+                  ...t,
+                  task_completions: (t.task_completions || []).filter(
+                    (c) => c.id !== completion.id
+                  ),
+                }
+              : t
+          )
+        );
+      }
+
+      // Show immediate feedback
       toast({
         title: "Task Uncompleted",
         description: `-${task.points} points removed`,
@@ -172,6 +230,21 @@ export const useTaskCompletion = ({
 
       if (error) {
         console.error('Error uncompleting task:', error);
+        
+        // Rollback optimistic update
+        if (setTasks) {
+          setTasks((prev) =>
+            prev.map((t) =>
+              t.id === task.id
+                ? {
+                    ...t,
+                    task_completions: [...(t.task_completions || []), completion],
+                  }
+                : t
+            )
+          );
+        }
+        
         toast({
           title: "Error",
           description: error.message || "Failed to uncomplete task",
@@ -180,7 +253,7 @@ export const useTaskCompletion = ({
         return false;
       }
 
-      // Realtime will handle final state sync, no need to call onSuccess
+      // Realtime will handle final state sync with correct data from DB
       return true;
 
     } catch (error) {

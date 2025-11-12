@@ -103,6 +103,7 @@ const ColumnBasedDashboard = () => {
     currentUserProfile: profile,
     activeMemberId,
     isDashboardMode: dashboardMode,
+    setTasks,
   });
 
   // Update local state when hook value changes
@@ -317,6 +318,62 @@ const ColumnBasedDashboard = () => {
                 return {
                   ...t,
                   task_completions: [...(t.task_completions || []), payload.new as any]
+                };
+              }
+              return t;
+            });
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'task_completions',
+        },
+        async (payload) => {
+          console.log('🔔 Task uncompletion detected via realtime:', payload.old);
+          
+          // Remove the completion from local state
+          const deletedCompletionId = (payload as any).old.id;
+          const taskId = (payload as any).old.task_id;
+          setTasks((prev) => {
+            return prev.map((t) => {
+              if (t.id === taskId) {
+                return {
+                  ...t,
+                  task_completions: (t.task_completions || []).filter(
+                    (c) => c.id !== deletedCompletionId
+                  )
+                };
+              }
+              return t;
+            });
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'task_completions',
+        },
+        async (payload) => {
+          console.log('🔔 Task completion updated via realtime:', payload.new);
+          
+          // Update the completion in local state
+          const updatedCompletion = payload.new as any;
+          const taskId = updatedCompletion.task_id;
+          setTasks((prev) => {
+            return prev.map((t) => {
+              if (t.id === taskId) {
+                return {
+                  ...t,
+                  task_completions: (t.task_completions || []).map((c) =>
+                    c.id === updatedCompletion.id ? updatedCompletion : c
+                  )
                 };
               }
               return t;
@@ -1321,6 +1378,7 @@ const ColumnBasedDashboard = () => {
                 onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
                 activeMemberId={activeMemberId}
                 dashboardMode={dashboardMode}
+                setTasks={setTasks}
               />
             );
           })()

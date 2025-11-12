@@ -24,6 +24,7 @@ interface MemberTasksWidgetProps {
   onAddTask: () => void;
   activeMemberId?: string | null;
   isDashboardMode?: boolean;
+  setTasks?: React.Dispatch<React.SetStateAction<Task[]>>;
 }
 
 export const MemberTasksWidget = ({
@@ -35,7 +36,8 @@ export const MemberTasksWidget = ({
   onEditTask,
   onAddTask,
   activeMemberId,
-  isDashboardMode = false
+  isDashboardMode = false,
+  setTasks
 }: MemberTasksWidgetProps) => {
   const { toast } = useToast();
   const memberColors = getMemberColorClasses(member.color);
@@ -43,7 +45,8 @@ export const MemberTasksWidget = ({
   const { completeTask, uncompleteTask, isCompleting } = useTaskCompletion({
     currentUserProfile: profile,
     activeMemberId: activeMemberId || member.id,
-    isDashboardMode
+    isDashboardMode,
+    setTasks
   });
 
   const handleTaskToggle = async (task: Task) => {
