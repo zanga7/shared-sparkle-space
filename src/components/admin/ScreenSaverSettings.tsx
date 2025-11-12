@@ -26,6 +26,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminContext } from '@/contexts/AdminContext';
 import { cn } from '@/lib/utils';
+import { ScreenSaverPreviewModal } from './ScreenSaverPreviewModal';
 
 interface ScreenSaverImage {
   id: string;
@@ -77,6 +78,7 @@ export const ScreenSaverSettings = () => {
   const [googleAlbums, setGoogleAlbums] = useState<GooglePhotosAlbum[]>([]);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     if (profile?.family_id && !profileLoading) {
@@ -525,7 +527,7 @@ export const ScreenSaverSettings = () => {
               <Settings className="h-4 w-4 mr-2" />
               Save Settings
             </Button>
-            <Button variant="outline" onClick={() => window.open('/screensaver-preview', '_blank', 'fullscreen=yes')}>
+            <Button variant="outline" onClick={() => setShowPreview(true)}>
               <Play className="h-4 w-4 mr-2" />
               Test
             </Button>
@@ -687,6 +689,13 @@ export const ScreenSaverSettings = () => {
           )}
         </CardContent>
       </Card>
+
+      <ScreenSaverPreviewModal
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
+        settings={settings}
+        images={images}
+      />
     </div>
   );
 };
