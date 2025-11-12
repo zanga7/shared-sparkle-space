@@ -110,7 +110,20 @@ Deno.serve(async (req) => {
       };
 
       let targetMemberId: string | null = null;
-      let usedIndex = rotatingTask.current_member_index;
+      const originalIndex = rotatingTask.current_member_index;
+      let selectedIndex = originalIndex;
+
+      // Helper: verify candidate exists in profiles for this family
+      const candidateIsValid = async (profileId: string | null): Promise<boolean> => {
+        if (!profileId) return false;
+        const { data, error } = await supabaseClient
+          .from('profiles')
+          .select('id')
+          .eq('id', profileId)
+          .eq('family_id', rotatingTask.family_id)
+          .single();
+        return !!data && !error;
+      };
 
       if (!rotatingTask.allow_multiple_completions) {
         // Single instance per day for the series
@@ -119,19 +132,33 @@ Deno.serve(async (req) => {
           console.log(`⏭️  ${rotatingTask.name}: an incomplete task already exists today (single-instance mode)`);
           continue;
         }
-        // Assign to current member index
-        targetMemberId = rotatingTask.member_order[rotatingTask.current_member_index] || null;
+
+        // Find the first valid member starting from current index
+        for (let i = 0; i < len; i++) {
+          const idx = (originalIndex + i) % len;
+          const candidateId = rotatingTask.member_order[idx] || null;
+          if (await candidateIsValid(candidateId)) {
+            targetMemberId = candidateId;
+            selectedIndex = idx;
+            break;
+          }
+        }
+
         if (!targetMemberId) {
-          console.log(`❌ No member at index ${rotatingTask.current_member_index} for ${rotatingTask.name}`);
+          console.log(`❌ No valid members found in rotation for ${rotatingTask.name}`);
           continue;
         }
-        usedIndex = rotatingTask.current_member_index;
       } else {
         // Multiple completions allowed: find the next member who doesn't have an incomplete task today
         for (let i = 0; i < len; i++) {
-          const idx = (rotatingTask.current_member_index + i) % len;
+          const idx = (originalIndex + i) % len;
           const candidateId = rotatingTask.member_order[idx];
           if (!candidateId) continue;
+
+          // Ensure candidate exists
+          if (!(await candidateIsValid(candidateId))) {
+            continue;
+          }
 
           const { data: existingForMember, error: checkError } = await supabaseClient
             .from('tasks')
@@ -152,13 +179,13 @@ Deno.serve(async (req) => {
 
           if (!hasIncompleteTask) {
             targetMemberId = candidateId;
-            usedIndex = idx;
+            selectedIndex = idx;
             break;
           }
         }
 
         if (!targetMemberId) {
-          console.log(`⏭️  ${rotatingTask.name}: all members already have incomplete tasks today`);
+          console.log(`⏭️  ${rotatingTask.name}: all members already have incomplete tasks today or are invalid`);
           continue;
         }
       }
@@ -190,7 +217,7 @@ Deno.serve(async (req) => {
 
       // Optimistic concurrency: reserve the rotation slot before creating the task.
       // If another invocation already rotated, this update will affect 0 rows and we skip.
-      const nextIndex = (usedIndex + 1) % len;
+      const nextIndex = (selectedIndex + 1) % len;
       const { data: rotationReserved, error: reserveError } = await supabaseClient
         .from('rotating_tasks')
         .update({
@@ -198,7 +225,7 @@ Deno.serve(async (req) => {
           updated_at: now.toISOString()
         })
         .eq('id', rotatingTask.id)
-        .eq('current_member_index', usedIndex)
+        .eq('current_member_index', originalIndex)
         .select()
         .single();
 
@@ -228,7 +255,7 @@ Deno.serve(async (req) => {
         // Roll back reserved rotation since task creation failed
         await supabaseClient
           .from('rotating_tasks')
-          .update({ current_member_index: usedIndex, updated_at: now.toISOString() })
+          .update({ current_member_index: originalIndex, updated_at: now.toISOString() })
           .eq('id', rotatingTask.id);
         continue;
       }
@@ -248,7 +275,7 @@ Deno.serve(async (req) => {
         await supabaseClient.from('tasks').delete().eq('id', newTask.id);
         await supabaseClient
           .from('rotating_tasks')
-          .update({ current_member_index: usedIndex, updated_at: now.toISOString() })
+          .update({ current_member_index: originalIndex, updated_at: now.toISOString() })
           .eq('id', rotatingTask.id);
         continue;
       }
