@@ -89,33 +89,33 @@ export const AddTaskDialog = ({
     }
   }, [selectedDate]);
 
-  // Handle preselected member
+  // Handle preselected member - reset when dialog opens or member changes
   useEffect(() => {
-    if (preselectedMemberId && preselectedMemberId !== 'unassigned') {
+    if (open && preselectedMemberId && preselectedMemberId !== 'unassigned') {
       setFormData(prev => ({ 
         ...prev, 
         assigned_to: preselectedMemberId,
         assignees: [preselectedMemberId]
       }));
-    } else if (preselectedMemberId === 'unassigned') {
+    } else if (open && preselectedMemberId === 'unassigned') {
       setFormData(prev => ({ 
         ...prev, 
         assigned_to: 'unassigned',
         assignees: []
       }));
     }
-  }, [preselectedMemberId]);
+  }, [open, preselectedMemberId]);
 
-  // Handle preselected task group
+  // Handle preselected task group - reset when dialog opens or group changes
   useEffect(() => {
-    if (preselectedTaskGroup) {
+    if (open && preselectedTaskGroup) {
       console.log('📋 Setting task group from preselected:', { preselectedTaskGroup });
       setFormData(prev => ({ 
         ...prev, 
         task_group: preselectedTaskGroup
       }));
     }
-  }, [preselectedTaskGroup]);
+  }, [open, preselectedTaskGroup]);
 
   // Update task group when changed
   const handleTaskGroupChange = (group: string) => {
