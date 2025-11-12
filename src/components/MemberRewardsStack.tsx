@@ -61,7 +61,7 @@ export const MemberRewardsStack = ({ member }: MemberRewardsStackProps) => {
   };
 
   return (
-    <Card className={cn("h-full", memberColors.border, memberColors.bg10)} style={{ borderWidth: '2px' }}>
+    <Card className={cn("h-full", memberColors.bg10)}>
       <CardHeader className="pb-4">
         <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
           <Gift className="h-6 w-6" />

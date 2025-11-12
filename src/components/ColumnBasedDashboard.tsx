@@ -1352,8 +1352,7 @@ const ColumnBasedDashboard = () => {
 
                       return (
                         <Card key={member.id} className={cn(
-                          "flex-shrink-0 w-72 sm:w-80 h-fit border-2 group",
-                          getMemberColorClasses(member.color).border,
+                          "flex-shrink-0 w-72 sm:w-80 h-fit group",
                           getMemberColorClasses(member.color).bg10
                         )}>
                             <CardHeader className={cn(

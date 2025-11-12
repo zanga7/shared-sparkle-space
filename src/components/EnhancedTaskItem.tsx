@@ -64,10 +64,10 @@ export const EnhancedTaskItem = ({
   return (
     <div 
       className={cn(
-        "group/task relative border rounded-lg p-3 transition-all hover:shadow-md",
+        "group/task relative rounded-lg p-3 transition-all hover:shadow-md",
         isCompleted && memberColors?.bg20,
         !isCompleted && memberColors?.bg50,
-        isOverdue && "border-destructive/50",
+        isOverdue && "ring-1 ring-destructive/50",
         !isCompleted && "cursor-grab active:cursor-grabbing"
       )}
     >

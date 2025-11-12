@@ -201,7 +201,7 @@ export const MemberPersonalListsEnhanced = ({
   const completedAssignedItems = assignedListItems.filter(item => item.is_completed);
 
   return (
-    <Card className={cn("h-full flex flex-col", memberColors.border, memberColors.bg10)} style={{ borderWidth: '2px' }}>
+    <Card className={cn("h-full flex flex-col", memberColors.bg10)}>
       <CardHeader className="pb-4">
         <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
           <List className="h-6 w-6" />

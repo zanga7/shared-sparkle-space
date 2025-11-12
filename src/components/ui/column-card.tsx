@@ -54,8 +54,6 @@ const ColumnCard = React.forwardRef<HTMLDivElement, ColumnCardProps>(
         className={cn(
           "flex-shrink-0 w-72 sm:w-80 h-fit",
           variant === 'member' && memberColors && [
-            "border-2",
-            memberColors.border,
             memberColors.bg10
           ],
           className

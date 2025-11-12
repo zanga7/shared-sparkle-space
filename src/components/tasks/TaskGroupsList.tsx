@@ -102,7 +102,7 @@ export const TaskGroupsList = ({
                 ref={provided.innerRef}
                 {...provided.droppableProps}
                 className={cn(
-                  "space-y-2 min-h-[60px] transition-colors",
+                  "space-y-1 min-h-[60px] transition-colors",
                   snapshot.isDraggingOver && "bg-accent/50 rounded-lg"
                 )}
               >

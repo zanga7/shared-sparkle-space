@@ -557,7 +557,7 @@ export const CalendarView = ({
     const isDragDisabled = task.isVirtual || false;
     
     return <Draggable key={task.id} draggableId={task.id} index={index} isDragDisabled={isDragDisabled}>
-        {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("p-2 mb-1 rounded-md border text-xs transition-all hover:shadow-md group relative", onEditTask ? "cursor-pointer hover:ring-2 hover:ring-primary/20" : !isDragDisabled && "cursor-move", isCompleted ? memberColors.bg20 : memberColors.bg50, memberColors.border, isCompleted && "opacity-60 line-through", isOverdue && "border-red-300", snapshot.isDragging && "shadow-lg rotate-2", isDragDisabled && "cursor-pointer")}>
+        {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("p-2 mb-1 rounded-md text-xs transition-all hover:shadow-md group relative", onEditTask ? "cursor-pointer hover:ring-2 hover:ring-primary/20" : !isDragDisabled && "cursor-move", isCompleted ? memberColors.bg20 : memberColors.bg50, isCompleted && "opacity-60 line-through", isOverdue && "ring-1 ring-destructive/50", snapshot.isDragging && "shadow-lg rotate-2", isDragDisabled && "cursor-pointer")}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1 min-w-0" onClick={e => handleTaskClick(task, e)}>
                 <button onClick={e => handleTaskToggle(task, e)} className={cn("h-3 w-3 flex-shrink-0 rounded-full border transition-colors hover:scale-110", isCompleted ? "bg-green-500 border-green-500 text-white" : "border-gray-300 hover:border-green-400")}>
@@ -795,7 +795,7 @@ export const CalendarView = ({
               });
               const memberColors = getMemberColors(member);
               return <Droppable key={member.id} droppableId={member.id}>
-                      {(provided, snapshot) => <Card className={cn("transition-colors border-2", memberColors.bg10, memberColors.border, snapshot.isDraggingOver && "ring-2 ring-primary/20")}>
+                      {(provided, snapshot) => <Card className={cn("transition-colors", memberColors.bg10, snapshot.isDraggingOver && "ring-2 ring-primary/20")}>
                           <CardHeader className="pb-3">
                             <div className="flex items-center gap-2">
                               <UserAvatar name={member.display_name} color={member.color} size="sm" />
