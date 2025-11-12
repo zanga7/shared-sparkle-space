@@ -833,8 +833,8 @@ const ColumnBasedDashboard = () => {
         description: toastMessage,
       });
 
-      // Rely on realtime to reflect completion; no optimistic fake IDs to avoid UUID errors
-
+      // Update data immediately to avoid realtime delays
+      await fetchUserData();
 
       console.log('✅ Task completed. Database trigger handling points and rotation.');
     } catch (error) {
@@ -891,6 +891,9 @@ const ColumnBasedDashboard = () => {
             : t
         )
       );
+      
+      // Refresh data to ensure UI and points are in sync
+      await fetchUserData();
       
       console.log('✅ Task uncompleted. Database trigger handling point removal.');
     } catch (error) {
