@@ -164,7 +164,7 @@ export const EditTaskDialog = ({
       description: updateData.description,
       points: updateData.points,
       assigned_to: updateData.assignees.length === 1 ? updateData.assignees[0] : null,
-      due_date: updateData.due_date?.toISOString() || task.due_date,
+      due_date: updateData.due_date ? updateData.due_date.toISOString() : null,
       task_group: updateData.task_group,
       recurrence_options: updateData.recurrence_options ? {
         ...updateData.recurrence_options,
