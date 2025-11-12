@@ -25,6 +25,8 @@ interface MemberTasksWidgetProps {
   activeMemberId?: string | null;
   isDashboardMode?: boolean;
   setTasks?: React.Dispatch<React.SetStateAction<Task[]>>;
+  setProfile?: React.Dispatch<React.SetStateAction<Profile | null>>;
+  setFamilyMembers?: React.Dispatch<React.SetStateAction<Profile[]>>;
 }
 
 export const MemberTasksWidget = ({
@@ -37,7 +39,9 @@ export const MemberTasksWidget = ({
   onAddTask,
   activeMemberId,
   isDashboardMode = false,
-  setTasks
+  setTasks,
+  setProfile,
+  setFamilyMembers
 }: MemberTasksWidgetProps) => {
   const { toast } = useToast();
   const memberColors = getMemberColorClasses(member.color);
@@ -46,7 +50,9 @@ export const MemberTasksWidget = ({
     currentUserProfile: profile,
     activeMemberId: activeMemberId || member.id,
     isDashboardMode,
-    setTasks
+    setTasks,
+    setProfile,
+    setFamilyMembers
   });
 
   const handleTaskToggle = async (task: Task) => {

@@ -104,6 +104,8 @@ const ColumnBasedDashboard = () => {
     activeMemberId,
     isDashboardMode: dashboardMode,
     setTasks,
+    setProfile,
+    setFamilyMembers,
   });
 
   // Update local state when hook value changes
@@ -1379,6 +1381,8 @@ const ColumnBasedDashboard = () => {
                 activeMemberId={activeMemberId}
                 dashboardMode={dashboardMode}
                 setTasks={setTasks}
+                setProfile={setProfile}
+                setFamilyMembers={setFamilyMembers}
               />
             );
           })()

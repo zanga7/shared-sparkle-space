@@ -9,6 +9,8 @@ interface UseTaskCompletionProps {
   activeMemberId?: string | null;
   isDashboardMode?: boolean;
   setTasks?: React.Dispatch<React.SetStateAction<Task[]>>;
+  setProfile?: React.Dispatch<React.SetStateAction<Profile | null>>;
+  setFamilyMembers?: React.Dispatch<React.SetStateAction<Profile[]>>;
 }
 
 export const useTaskCompletion = ({
@@ -16,6 +18,8 @@ export const useTaskCompletion = ({
   activeMemberId,
   isDashboardMode = false,
   setTasks,
+  setProfile,
+  setFamilyMembers,
 }: UseTaskCompletionProps) => {
   const [completingTasks, setCompletingTasks] = useState<Set<string>>(new Set());
   const { canPerformAction, authenticateMemberPin } = useDashboardAuth();
@@ -89,6 +93,23 @@ export const useTaskCompletion = ({
         );
       }
 
+      // Optimistically update points for the completer
+      if (setProfile && currentUserProfile?.id === completerId) {
+        setProfile((prev) =>
+          prev ? { ...prev, total_points: prev.total_points + task.points } : null
+        );
+      }
+      
+      if (setFamilyMembers) {
+        setFamilyMembers((prev) =>
+          prev.map((member) =>
+            member.id === completerId
+              ? { ...member, total_points: member.total_points + task.points }
+              : member
+          )
+        );
+      }
+
       // Show immediate feedback
       toast({
         title: "Task Completed!",
@@ -104,7 +125,7 @@ export const useTaskCompletion = ({
       if (insertError) {
         console.error('Error completing task:', insertError);
         
-        // Rollback optimistic update
+        // Rollback optimistic update for tasks
         if (setTasks) {
           setTasks((prev) =>
             prev.map((t) =>
@@ -116,6 +137,23 @@ export const useTaskCompletion = ({
                     ),
                   }
                 : t
+            )
+          );
+        }
+
+        // Rollback optimistic points update
+        if (setProfile && currentUserProfile?.id === completerId) {
+          setProfile((prev) =>
+            prev ? { ...prev, total_points: prev.total_points - task.points } : null
+          );
+        }
+        
+        if (setFamilyMembers) {
+          setFamilyMembers((prev) =>
+            prev.map((member) =>
+              member.id === completerId
+                ? { ...member, total_points: member.total_points - task.points }
+                : member
             )
           );
         }
@@ -217,6 +255,23 @@ export const useTaskCompletion = ({
         );
       }
 
+      // Optimistically update points for the completer (subtract)
+      if (setProfile && currentUserProfile?.id === completerId) {
+        setProfile((prev) =>
+          prev ? { ...prev, total_points: prev.total_points - task.points } : null
+        );
+      }
+      
+      if (setFamilyMembers) {
+        setFamilyMembers((prev) =>
+          prev.map((member) =>
+            member.id === completerId
+              ? { ...member, total_points: member.total_points - task.points }
+              : member
+          )
+        );
+      }
+
       // Show immediate feedback
       toast({
         title: "Task Uncompleted",
@@ -231,7 +286,7 @@ export const useTaskCompletion = ({
       if (error) {
         console.error('Error uncompleting task:', error);
         
-        // Rollback optimistic update
+        // Rollback optimistic update for tasks
         if (setTasks) {
           setTasks((prev) =>
             prev.map((t) =>
@@ -241,6 +296,23 @@ export const useTaskCompletion = ({
                     task_completions: [...(t.task_completions || []), completion],
                   }
                 : t
+            )
+          );
+        }
+
+        // Rollback optimistic points update (add back)
+        if (setProfile && currentUserProfile?.id === completerId) {
+          setProfile((prev) =>
+            prev ? { ...prev, total_points: prev.total_points + task.points } : null
+          );
+        }
+        
+        if (setFamilyMembers) {
+          setFamilyMembers((prev) =>
+            prev.map((member) =>
+              member.id === completerId
+                ? { ...member, total_points: member.total_points + task.points }
+                : member
             )
           );
         }

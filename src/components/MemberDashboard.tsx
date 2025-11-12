@@ -28,6 +28,8 @@ interface MemberDashboardProps {
   activeMemberId: string | null;
   dashboardMode: boolean;
   setTasks?: React.Dispatch<React.SetStateAction<Task[]>>;
+  setProfile?: React.Dispatch<React.SetStateAction<Profile | null>>;
+  setFamilyMembers?: React.Dispatch<React.SetStateAction<Profile[]>>;
 }
 
 const WIDGET_SECTIONS = [
@@ -46,7 +48,9 @@ export const MemberDashboard = ({
   onEditTask,
   activeMemberId,
   dashboardMode,
-  setTasks
+  setTasks,
+  setProfile,
+  setFamilyMembers
 }: MemberDashboardProps) => {
   const [emblaRef, emblaApi] = useEmblaCarousel({ 
     align: 'start', 
@@ -159,6 +163,8 @@ export const MemberDashboard = ({
       activeMemberId={activeMemberId}
       isDashboardMode={dashboardMode}
       setTasks={setTasks}
+      setProfile={setProfile}
+      setFamilyMembers={setFamilyMembers}
     />
   );
 
