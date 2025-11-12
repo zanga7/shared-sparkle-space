@@ -250,7 +250,7 @@ const ColumnBasedDashboard = () => {
       // Fetch today's tasks for those names with assignees
       const { data: todaysTasks, error: tasksError } = await supabase
         .from('tasks')
-        .select('id, title, created_at, due_date, task_assignees!inner(profile_id)')
+        .select('id, title, created_at, due_date, task_assignees!inner(profile_id), task_completions(id)')
         .eq('family_id', familyId)
         .in('title', names)
         .gte('created_at', startISO)
@@ -261,7 +261,7 @@ const ColumnBasedDashboard = () => {
         return;
       }
 
-      type Row = { id: string; title: string; created_at: string; due_date: string | null; task_assignees: { profile_id: string }[] };
+      type Row = { id: string; title: string; created_at: string; due_date: string | null; task_assignees: { profile_id: string }[]; task_completions?: { id: string }[] };
       const rows = (todaysTasks as unknown as Row[]) || [];
       const groups = new Map<string, Row[]>();
 
@@ -275,13 +275,24 @@ const ColumnBasedDashboard = () => {
       const toDelete: string[] = [];
       for (const [_, list] of groups) {
         if (list.length <= 1) continue;
-        const withDue = list.filter(r => !!r.due_date);
+
+        const isIncomplete = (r: Row) => !r.task_completions || r.task_completions.length === 0;
+        const incomplete = list.filter(isIncomplete);
+
         let keep: Row;
-        if (withDue.length > 0) {
-          keep = withDue.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+        if (incomplete.length > 0) {
+          // Prefer keeping an incomplete task (oldest to avoid churn)
+          keep = incomplete.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
         } else {
-          keep = list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+          // All completed: keep the oldest with due date if any, else oldest
+          const withDue = list.filter(r => !!r.due_date);
+          if (withDue.length > 0) {
+            keep = withDue.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+          } else {
+            keep = list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+          }
         }
+
         for (const r of list) {
           if (r.id !== keep.id) toDelete.push(r.id);
         }
