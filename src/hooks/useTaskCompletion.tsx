@@ -175,53 +175,25 @@ export const useTaskCompletion = ({
         return false;
       }
 
-      // If this was a rotating task, proactively fetch the next instance to avoid any realtime races
+      // If this was a rotating task, trigger generation of next instance
       try {
         const rotatingTaskId = (task as any).rotating_task_id as string | undefined;
-        if (rotatingTaskId && setTasks) {
-          // small delay to allow DB triggers to create task + assignee
-          await new Promise((r) => setTimeout(r, 150));
-          const startOfDay = new Date();
-          startOfDay.setHours(0, 0, 0, 0);
-          const { data: nextTasks } = await supabase
-            .from('tasks')
-            .select(`
-              id,
-              title,
-              description,
-              points,
-              due_date,
-              assigned_to,
-              created_by,
-              completion_rule,
-              task_group,
-              family_id,
-              rotating_task_id,
-              assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
-              assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
-              task_completions(id, completed_at, completed_by)
-            `)
-            .eq('rotating_task_id', rotatingTaskId)
-            .gte('created_at', startOfDay.toISOString())
-            .order('created_at', { ascending: false })
-            .limit(1);
+        if (rotatingTaskId) {
+          console.log('🔄 Triggering next rotating task generation for:', rotatingTaskId);
+          
+          // Call the edge function to generate the next task
+          const { data, error } = await supabase.functions.invoke('generate-rotating-tasks', {
+            body: { rotating_task_id: rotatingTaskId }
+          });
 
-          const nextTask = nextTasks?.[0];
-          if (nextTask) {
-            setTasks((prev) => {
-              if (prev.some((t) => t.id === nextTask.id)) return prev;
-              return [
-                ...prev,
-                {
-                  ...nextTask,
-                  completion_rule: (nextTask.completion_rule || 'everyone') as 'any_one' | 'everyone',
-                },
-              ];
-            });
+          if (error) {
+            console.error('Error generating next rotating task:', error);
+          } else {
+            console.log('✅ Next rotating task generated:', data);
           }
         }
       } catch (e) {
-        console.warn('Rotating-task proactive fetch failed (non-fatal):', e);
+        console.warn('Rotating-task generation failed (non-fatal):', e);
       }
 
       return true;
