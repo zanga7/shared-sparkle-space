@@ -141,8 +141,10 @@ const ColumnBasedDashboard = () => {
     setSelectedMemberFilter(memberId);
     if (memberId === null) {
       setViewMode('everyone');
+      setActiveTab('columns'); // Reset to default tab
     } else {
       setViewMode('member');
+      setActiveTab(''); // Clear active tab when viewing member dashboard
     }
   };
 
