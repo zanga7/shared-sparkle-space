@@ -1504,6 +1504,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      complete_task_for_member: {
+        Args: { p_completed_by: string; p_points: number; p_task_id: string }
+        Returns: Json
+      }
       create_audit_log: {
         Args: {
           p_action: string
@@ -2041,6 +2045,10 @@ export type Database = {
           family_id_param: string
           refresh_token_param?: string
         }
+        Returns: Json
+      }
+      uncomplete_task_for_member: {
+        Args: { p_completion_id: string }
         Returns: Json
       }
       update_calendar_integration_secure: {

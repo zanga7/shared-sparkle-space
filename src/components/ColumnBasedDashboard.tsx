@@ -783,17 +783,29 @@ const ColumnBasedDashboard = () => {
         }
       }
       
-      // Create task completion record - the database trigger will handle points
-      const { error } = await supabase
-        .from('task_completions')
-        .insert({
-          task_id: task.id,
-          completed_by: completerId, // Use the actual completer (active member in dashboard mode)
-          points_earned: task.points
+      // Create task completion record
+      let insertError: any = null;
+      if (dashboardMode && completerId !== profile.id) {
+        // Parent completing on behalf of a member - use RPC to bypass RLS safely
+        const { data, error } = await supabase.rpc('complete_task_for_member', {
+          p_task_id: task.id,
+          p_completed_by: completerId,
+          p_points: task.points,
         });
+        insertError = error;
+      } else {
+        const { error } = await supabase
+          .from('task_completions')
+          .insert({
+            task_id: task.id,
+            completed_by: completerId,
+            points_earned: task.points
+          });
+        insertError = error;
+      }
 
-      if (error) {
-        throw error;
+      if (insertError) {
+        throw insertError;
       }
 
       // Create toast message
@@ -819,8 +831,6 @@ const ColumnBasedDashboard = () => {
         )
       );
 
-      // The database trigger will automatically award points and handle rotation
-      // Real-time subscriptions will update the UI when ready
       console.log('✅ Task completed. Database trigger handling points and rotation.');
     } catch (error) {
       console.error('Error completing task:', error);
@@ -844,14 +854,23 @@ const ColumnBasedDashboard = () => {
         return;
       }
 
-      // Delete the task completion record - the database trigger will handle point removal
-      const { error } = await supabase
-        .from('task_completions')
-        .delete()
-        .eq('id', userCompletion.id);
+      // Delete the task completion record - use RPC in dashboard mode on behalf of member
+      let deleteError: any = null;
+      if (dashboardMode && completerId !== profile.id) {
+        const { data, error } = await supabase.rpc('uncomplete_task_for_member', {
+          p_completion_id: userCompletion.id,
+        });
+        deleteError = error;
+      } else {
+        const { error } = await supabase
+          .from('task_completions')
+          .delete()
+          .eq('id', userCompletion.id);
+        deleteError = error;
+      }
 
-      if (error) {
-        throw error;
+      if (deleteError) {
+        throw deleteError;
       }
 
       toast({
