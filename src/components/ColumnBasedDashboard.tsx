@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, CheckCircle, Clock, Edit, Trash2, Calendar, List, Users, Gift, Settings, Sun, Clock3, Moon, FileText } from 'lucide-react';
+import { Plus, CheckCircle, Clock, Edit, Trash2, Calendar, List, Users, Gift, Settings } from 'lucide-react';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { AddButton } from '@/components/ui/add-button';
 import { format } from 'date-fns';
@@ -37,6 +37,15 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Task, Profile } from '@/types/task';
+import { TaskGroup, VALID_TASK_GROUPS } from '@/types/taskGroup';
+import { 
+  getTaskGroupIcon, 
+  getTaskGroupTitle, 
+  shouldGroupBeOpenByDefault,
+  getGroupDueDate,
+  getTaskGroup,
+  groupTasksByTime 
+} from '@/utils/taskGroupUtils';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
@@ -700,8 +709,6 @@ const ColumnBasedDashboard = () => {
     // Parse droppable IDs to handle both member columns and group containers
     const parseDroppableId = (id: string): { memberId: string | null; group: string | null } => {
       if (id === 'unassigned') return { memberId: null, group: null };
-
-      const validGroups = ['morning', 'midday', 'afternoon', 'evening', 'general'];
       
       // Check if it's a member ID only (36 characters UUID)
       if (id.length === 36 && id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
@@ -718,7 +725,7 @@ const ColumnBasedDashboard = () => {
         if (memberId.length === 36 && memberId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
           const group = remainder.replace(/^pending-/, '').replace(/^completed-/, '');
           
-          if (validGroups.includes(group)) {
+          if (VALID_TASK_GROUPS.includes(group as TaskGroup)) {
             return { memberId, group };
           }
         }
@@ -727,7 +734,7 @@ const ColumnBasedDashboard = () => {
       // Check if it's just a group name (for member view) possibly prefixed with pending-/completed-
       const potentialGroup = id.replace(/^pending-/, '').replace(/^completed-/, '');
       
-      if (validGroups.includes(potentialGroup)) {
+      if (VALID_TASK_GROUPS.includes(potentialGroup as TaskGroup)) {
         return { memberId: null, group: potentialGroup };
       }
       
@@ -925,36 +932,6 @@ const ColumnBasedDashboard = () => {
     }
   };
 
-  // Helper function to get due date based on task group
-  const getGroupDueDate = (group: TaskGroup): string | null => {
-    const today = new Date();
-    
-    switch (group) {
-      case 'morning':
-        // Set to 11 AM today
-        const morning = new Date(today);
-        morning.setHours(11, 0, 0, 0);
-        return morning.toISOString();
-      case 'midday':
-        // Set to 3 PM today  
-        const midday = new Date(today);
-        midday.setHours(15, 0, 0, 0);
-        return midday.toISOString();
-      case 'afternoon':
-        // Set to 6 PM today
-        const afternoon = new Date(today);
-        afternoon.setHours(18, 0, 0, 0);
-        return afternoon.toISOString();
-      case 'evening':
-        // Set to 11:59 PM today
-        const evening = new Date(today);
-        evening.setHours(23, 59, 0, 0);
-        return evening.toISOString();
-      case 'general':
-      default:
-        return null; // No specific due date for general tasks
-    }
-  };
 
   // Get tasks organized by family member with filtering
   const getTasksByMember = () => {
@@ -1004,81 +981,6 @@ const ColumnBasedDashboard = () => {
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
-  // Time-based task grouping
-  type TaskGroup = 'morning' | 'midday' | 'afternoon' | 'evening' | 'general';
-  
-  const getTaskGroup = (task: Task): TaskGroup => {
-    // Priority 1: Use task_group field if explicitly set
-    if (task.task_group) {
-      const validGroups = ['morning', 'midday', 'afternoon', 'evening', 'general'];
-      if (validGroups.includes(task.task_group)) {
-        return task.task_group as TaskGroup;
-      }
-    }
-    
-    // Priority 2: Fall back to due_date calculation for backwards compatibility
-    if (!task.due_date) return 'general';
-    
-    const dueDate = new Date(task.due_date);
-    const hour = dueDate.getHours();
-    
-    if (hour >= 0 && hour < 11) return 'morning';
-    if (hour >= 11 && hour < 15) return 'midday';
-    if (hour >= 15 && hour < 18) return 'afternoon';
-    if (hour >= 18 && hour < 24) return 'evening';
-    return 'general';
-  };
-  
-  const getTaskGroupIcon = (group: TaskGroup) => {
-    switch (group) {
-      case 'morning': return Sun;
-      case 'midday': return Clock3;
-      case 'afternoon': return Clock3;
-      case 'evening': return Moon;
-      case 'general': return FileText;
-    }
-  };
-  
-  const getTaskGroupTitle = (group: TaskGroup) => {
-    switch (group) {
-      case 'morning': return 'Morning';
-      case 'midday': return 'Midday';
-      case 'afternoon': return 'Afternoon';
-      case 'evening': return 'Evening';
-      case 'general': return 'General';
-    }
-  };
-  
-  const shouldGroupBeOpenByDefault = (group: TaskGroup): boolean => {
-    const now = new Date();
-    const hour = now.getHours();
-    
-    switch (group) {
-      case 'morning': return hour >= 6 && hour < 12;
-      case 'midday': return hour >= 11 && hour < 16;
-      case 'afternoon': return hour >= 15 && hour < 19;
-      case 'evening': return hour >= 18 || hour < 6;
-      case 'general': return true; // Always open
-    }
-  };
-  
-  const groupTasksByTime = (tasks: Task[]) => {
-    const groups: Record<TaskGroup, Task[]> = {
-      morning: [],
-      midday: [],
-      afternoon: [],
-      evening: [],
-      general: []
-    };
-    
-    tasks.forEach(task => {
-      const group = getTaskGroup(task);
-      groups[group].push(task);
-    });
-    
-    return groups;
   };
 
   const handleAddTaskForMember = (memberId: string, group?: TaskGroup) => {

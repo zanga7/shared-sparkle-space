@@ -4,10 +4,13 @@ import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
 import { Progress } from '@/components/ui/progress';
 import { Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Task, Profile } from '@/types/task';
+import { TaskGroup, TASK_GROUPS_ORDER } from '@/types/taskGroup';
+import { 
+  getTaskGroupIcon, 
+  getTaskGroupTitle, 
+  shouldGroupBeOpenByDefault 
+} from '@/utils/taskGroupUtils';
 import { cn, getMemberColorClasses } from '@/lib/utils';
-import { Sun, Clock3, Moon, FileText } from 'lucide-react';
-
-type TaskGroup = 'morning' | 'midday' | 'afternoon' | 'evening' | 'general';
 
 interface TaskGroupsListProps {
   tasks: Task[];
@@ -62,39 +65,6 @@ export const TaskGroupsList = ({
 
   const pendingGroups = groupTasks(pendingTasks);
   const completedGroups = groupTasks(completedTasks);
-
-  const getTaskGroupIcon = (group: TaskGroup) => {
-    switch (group) {
-      case 'morning': return Sun;
-      case 'midday': return Clock3;
-      case 'afternoon': return Clock3;
-      case 'evening': return Moon;
-      case 'general': return FileText;
-    }
-  };
-
-  const getTaskGroupTitle = (group: TaskGroup) => {
-    switch (group) {
-      case 'morning': return 'Morning';
-      case 'midday': return 'Midday';
-      case 'afternoon': return 'Afternoon';
-      case 'evening': return 'Evening';
-      case 'general': return 'General';
-    }
-  };
-
-  const shouldGroupBeOpenByDefault = (group: TaskGroup): boolean => {
-    const now = new Date();
-    const hour = now.getHours();
-    
-    switch (group) {
-      case 'morning': return hour >= 6 && hour < 12;
-      case 'midday': return hour >= 11 && hour < 16;
-      case 'afternoon': return hour >= 15 && hour < 19;
-      case 'evening': return hour >= 18 || hour < 6;
-      case 'general': return true; // Always open
-    }
-  };
 
   const renderTaskGroup = (
     group: TaskGroup,
@@ -237,9 +207,7 @@ export const TaskGroupsList = ({
     );
   };
 
-  const defaultOpenValues = [
-    'morning', 'midday', 'evening', 'general'
-  ].map(group => `${droppableIdPrefix}pending-${group}`);
+  const defaultOpenValues = TASK_GROUPS_ORDER.map(group => `${droppableIdPrefix}pending-${group}`);
 
   return (
     <Accordion 
@@ -250,6 +218,7 @@ export const TaskGroupsList = ({
       {/* Pending Tasks */}
       {renderTaskGroup('morning', pendingGroups.morning, 'pending')}
       {renderTaskGroup('midday', pendingGroups.midday, 'pending')}
+      {renderTaskGroup('afternoon', pendingGroups.afternoon, 'pending')}
       {renderTaskGroup('evening', pendingGroups.evening, 'pending')}
       {renderTaskGroup('general', pendingGroups.general, 'pending')}
       
@@ -258,6 +227,7 @@ export const TaskGroupsList = ({
         <>
           {renderTaskGroup('morning', completedGroups.morning.slice(0, 2), 'completed')}
           {renderTaskGroup('midday', completedGroups.midday.slice(0, 2), 'completed')}
+          {renderTaskGroup('afternoon', completedGroups.afternoon.slice(0, 2), 'completed')}
           {renderTaskGroup('evening', completedGroups.evening.slice(0, 2), 'completed')}
           {renderTaskGroup('general', completedGroups.general.slice(0, 2), 'completed')}
         </>

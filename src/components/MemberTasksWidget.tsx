@@ -5,6 +5,8 @@ import { TaskGroupsList } from '@/components/tasks/TaskGroupsList';
 import { getMemberColorClasses } from '@/lib/utils';
 import { Users } from 'lucide-react';
 import { Task, Profile } from '@/types/task';
+import { TaskGroup } from '@/types/taskGroup';
+import { getGroupDueDate } from '@/utils/taskGroupUtils';
 import { cn } from '@/lib/utils';
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import { supabase } from '@/integrations/supabase/client';
@@ -50,36 +52,6 @@ export const MemberTasksWidget = ({
   const progressPercentage = memberTasks.length > 0 
     ? Math.round((completedTasks.length / memberTasks.length) * 100) 
     : 0;
-
-  // Type definition for task groups
-  type TaskGroup = 'morning' | 'midday' | 'evening' | 'afternoon' | 'general';
-
-  // Helper function to get due date based on task group
-  const getGroupDueDate = (group: TaskGroup): string | null => {
-    const today = new Date();
-    
-    switch (group) {
-      case 'morning':
-        const morning = new Date(today);
-        morning.setHours(11, 0, 0, 0);
-        return morning.toISOString();
-      case 'midday':
-        const midday = new Date(today);
-        midday.setHours(15, 0, 0, 0);
-        return midday.toISOString();
-      case 'afternoon':
-        const afternoon = new Date(today);
-        afternoon.setHours(18, 0, 0, 0);
-        return afternoon.toISOString();
-      case 'evening':
-        const evening = new Date(today);
-        evening.setHours(23, 59, 0, 0);
-        return evening.toISOString();
-      case 'general':
-      default:
-        return null;
-    }
-  };
 
   // Handle drag end for task reordering and group changes
   const handleDragEnd = async (result: DropResult) => {
