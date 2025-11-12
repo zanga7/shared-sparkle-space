@@ -66,26 +66,11 @@ export const useTaskCompletion = ({
         }
       }
 
-      // Determine completion method based on context
-      let insertError: any = null;
-
-      if (isDashboardMode && completerId !== currentUserProfile?.id) {
-        // Parent completing on behalf of member - use RPC
-        const { error } = await supabase.rpc('complete_task_for_member', {
-          p_task_id: task.id,
-          p_completed_by: completerId,
-        });
-        insertError = error;
-      } else {
-        // Self-completion - direct insert (trigger will set points_earned)
-        const { error } = await supabase
-          .from('task_completions')
-          .insert([
-            // Use a loosely-typed payload so we don't send points_earned
-            { task_id: task.id, completed_by: completerId } as any
-          ]);
-        insertError = error;
-      }
+      // Always use RPC to ensure points are properly handled
+      const { error: insertError } = await supabase.rpc('complete_task_for_member', {
+        p_task_id: task.id,
+        p_completed_by: completerId,
+      });
 
       if (insertError) {
         console.error('Error completing task:', insertError);
@@ -176,37 +161,19 @@ export const useTaskCompletion = ({
         return false;
       }
 
-      // Use RPC if parent is acting on behalf of child
-      if (isDashboardMode && completerId !== currentUserProfile?.id) {
-        const { error } = await supabase.rpc('uncomplete_task_for_member', {
-          p_completion_id: completion.id,
+      // Always use RPC to ensure points are properly handled
+      const { error } = await supabase.rpc('uncomplete_task_for_member', {
+        p_completion_id: completion.id,
+      });
+
+      if (error) {
+        console.error('Error uncompleting task:', error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to uncomplete task",
+          variant: "destructive",
         });
-
-        if (error) {
-          console.error('Error uncompleting task:', error);
-          toast({
-            title: "Error",
-            description: error.message || "Failed to uncomplete task",
-            variant: "destructive",
-          });
-          return false;
-        }
-      } else {
-        // Self-uncompletion - direct delete
-        const { error } = await supabase
-          .from('task_completions')
-          .delete()
-          .eq('id', completion.id);
-
-        if (error) {
-          console.error('Error uncompleting task:', error);
-          toast({
-            title: "Error",
-            description: error.message || "Failed to uncomplete task",
-            variant: "destructive",
-          });
-          return false;
-        }
+        return false;
       }
 
       toast({
