@@ -556,123 +556,79 @@ export const CalendarView = ({
   const executeTaskCompletion = async (task: Task) => {
     if (!profile) return;
     try {
-      // Get all assignees for this task (including both old and new format)
-      const assignees = task.assignees?.map(a => a.profile) || (task.assigned_profile ? [task.assigned_profile] : []);
-
-      // If no specific assignees, anyone can complete it and only they get points
-      const pointRecipients = assignees.length > 0 ? assignees : [profile];
+      // Determine who should receive the completion
+      const completerId = (dashboardMode && activeMemberId) ? activeMemberId : profile.id;
+      const completerProfile = familyMembers.find(m => m.id === completerId) || profile;
 
       // Create task completion record
-      const {
-        error
-      } = await supabase.from('task_completions').insert({
-        task_id: task.id,
-        completed_by: profile.id,
-        points_earned: task.points
-      });
-      if (error) {
-        throw error;
-      }
-
-      // Award points to all assignees (or just the completer if no assignees)
-      const pointUpdates = pointRecipients.map(async recipient => {
-        const currentProfile = familyMembers.find(m => m.id === recipient.id);
-        if (currentProfile) {
-          return supabase.from('profiles').update({
-            total_points: currentProfile.total_points + task.points
-          }).eq('id', recipient.id);
-        }
-      });
-      const updateResults = await Promise.all(pointUpdates.filter(Boolean));
-
-      // Check for errors in point updates
-      const updateErrors = updateResults.filter(result => result?.error);
-      if (updateErrors.length > 0) {
-        throw new Error('Failed to update some points');
-      }
-
-      // Create toast message based on point distribution
-      let toastMessage;
-      if (pointRecipients.length === 1 && pointRecipients[0].id === profile.id) {
-        toastMessage = `You earned ${task.points} points!`;
-      } else if (pointRecipients.length === 1) {
-        toastMessage = `${pointRecipients[0].display_name} earned ${task.points} points!`;
+      let insertError: any = null;
+      if (dashboardMode && completerId !== profile.id) {
+        // Parent completing on behalf of a member - use RPC to bypass RLS safely
+        const { error } = await supabase.rpc('complete_task_for_member', {
+          p_task_id: task.id,
+          p_completed_by: completerId,
+          p_points: task.points,
+        });
+        insertError = error;
       } else {
-        const names = pointRecipients.map(p => p.display_name).join(', ');
-        toastMessage = `${task.points} points awarded to: ${names}`;
+        const { error } = await supabase
+          .from('task_completions')
+          .insert({
+            task_id: task.id,
+            completed_by: completerId,
+            points_earned: task.points
+          });
+        insertError = error;
       }
-      toast({
-        title: 'Task Completed!',
-        description: toastMessage
-      });
+
+      if (insertError) throw insertError;
+
+      // Toast only – DB triggers handle points and realtime updates
+      const toastMessage = (dashboardMode && completerProfile.id !== profile.id)
+        ? `${completerProfile.display_name} earned ${task.points} points!`
+        : `You earned ${task.points} points!`;
+
+      toast({ title: 'Task Completed!', description: toastMessage });
+
       onTaskUpdated();
     } catch (error) {
       console.error('Error completing task:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to complete task',
-        variant: 'destructive'
-      });
+      toast({ title: 'Error', description: 'Failed to complete task', variant: 'destructive' });
     }
   };
   const uncompleteTask = async (task: Task, event: React.MouseEvent) => {
     event.stopPropagation();
     if (!profile || !task.task_completions || task.task_completions.length === 0) return;
     try {
-      // Find the completion record by the current user
-      const userCompletion = task.task_completions.find(completion => completion.completed_by === profile.id);
-      if (!userCompletion) {
-        return;
-      }
+      // Determine whose completion to remove
+      const completerId = (dashboardMode && activeMemberId) ? activeMemberId : profile.id;
 
-      // Get all assignees who received points
-      const assignees = task.assignees?.map(a => a.profile) || (task.assigned_profile ? [task.assigned_profile] : [profile]);
+      // Find the completion record by that member
+      const userCompletion = task.task_completions.find(c => c.completed_by === completerId);
+      if (!userCompletion) return;
 
-      // Remove the specific task completion record
-      const {
-        error
-      } = await supabase.from('task_completions').delete().eq('id', userCompletion.id);
-      if (error) {
-        throw error;
-      }
-
-      // Remove points from all assignees who received them
-      const pointUpdates = assignees.map(async recipient => {
-        const currentProfile = familyMembers.find(m => m.id === recipient.id);
-        if (currentProfile) {
-          return supabase.from('profiles').update({
-            total_points: currentProfile.total_points - task.points
-          }).eq('id', recipient.id);
-        }
-      });
-      const updateResults = await Promise.all(pointUpdates.filter(Boolean));
-
-      // Check for errors in point updates
-      const updateErrors = updateResults.filter(result => result?.error);
-      if (updateErrors.length > 0) {
-        throw new Error('Failed to update some points');
-      }
-
-      // Create toast message based on point removal
-      let toastMessage;
-      if (assignees.length === 1) {
-        toastMessage = `${task.points} points removed`;
+      // Remove the task completion record
+      let deleteError: any = null;
+      if (dashboardMode && completerId !== profile.id) {
+        const { error } = await supabase.rpc('uncomplete_task_for_member', {
+          p_completion_id: userCompletion.id,
+        });
+        deleteError = error;
       } else {
-        const names = assignees.map(p => p.display_name).join(', ');
-        toastMessage = `${task.points} points removed from: ${names}`;
+        const { error } = await supabase
+          .from('task_completions')
+          .delete()
+          .eq('id', userCompletion.id);
+        deleteError = error;
       }
-      toast({
-        title: 'Task Uncompleted',
-        description: toastMessage
-      });
+
+      if (deleteError) throw deleteError;
+
+      toast({ title: 'Task Uncompleted', description: `${task.points} points removed` });
       onTaskUpdated();
     } catch (error) {
       console.error('Error uncompleting task:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to uncomplete task',
-        variant: 'destructive'
-      });
+      toast({ title: 'Error', description: 'Failed to uncomplete task', variant: 'destructive' });
     }
   };
   const handleTaskToggle = (task: Task, event: React.MouseEvent) => {
