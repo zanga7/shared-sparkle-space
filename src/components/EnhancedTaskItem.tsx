@@ -132,10 +132,10 @@ export const EnhancedTaskItem = ({
           </div>
 
           {/* Compact Badges and Indicators */}
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1 flex-wrap">
             {/* Points with Award Info */}
-            <Badge variant="outline" className="text-xs py-0 h-5 flex items-center gap-1">
-              <Target className="h-2.5 w-2.5" />
+            <Badge variant="outline" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
+              <Target className="h-2 w-2" />
               {task.points} pts
               {(() => {
                 const assignees = task.assignees?.map(a => a.profile) || 
@@ -164,12 +164,12 @@ export const EnhancedTaskItem = ({
             {!isCompleted && task.due_date && (
               <Badge 
                 variant={isOverdue ? "destructive" : daysUntilDue === 0 ? "default" : "outline"} 
-                className="text-xs py-0 h-5 flex items-center gap-1"
+                className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5"
               >
                 {isOverdue ? (
-                  <AlertTriangle className="h-2.5 w-2.5" />
+                  <AlertTriangle className="h-2 w-2" />
                 ) : (
-                  <Calendar className="h-2.5 w-2.5" />
+                  <Calendar className="h-2 w-2" />
                 )}
                 {isOverdue ? 'Overdue' : 
                  daysUntilDue === 0 ? 'Today' :
@@ -181,8 +181,8 @@ export const EnhancedTaskItem = ({
 
             {/* Recurrence Indicator */}
             {(task.recurrence_options?.enabled || (task as any).isVirtual) && (
-              <Badge variant="outline" className="text-xs py-0 h-5 flex items-center gap-1">
-                <Repeat className="h-2.5 w-2.5" />
+              <Badge variant="outline" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
+                <Repeat className="h-2 w-2" />
                 {(task as any).isVirtual ? 'Series' : 'Repeats'}
               </Badge>
             )}
