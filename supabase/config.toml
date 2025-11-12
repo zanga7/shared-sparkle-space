@@ -3,3 +3,6 @@ project_id = "timefstlnqojqidllokb"
 # The function is authenticated by default. Add explicit section for clarity.
 [functions.generate-rotating-tasks]
 verify_jwt = true
+
+[functions.cleanup-completed-tasks]
+verify_jwt = false
