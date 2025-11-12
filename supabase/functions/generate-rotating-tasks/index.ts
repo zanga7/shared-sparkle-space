@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
       query = query.eq('id', filter.id);
       console.log(`🎯 Filtering rotating task by id: ${filter.id}`);
     } else {
-      if (filter.name) query = query.eq('name', filter.name);
+      if (filter.name) query = query.ilike('name', filter.name);
       if (filter.family_id) query = query.eq('family_id', filter.family_id);
       if (filter.name || filter.family_id) {
         console.log('🎯 Filtering rotating tasks by name/family', filter);

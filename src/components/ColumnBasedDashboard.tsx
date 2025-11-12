@@ -777,27 +777,34 @@ const ColumnBasedDashboard = () => {
 
       // Check if this is a rotating task and generate the next instance immediately
       try {
-        const { data: rotatingTask } = await supabase
+        // Try to look up by exact name first
+        const { data: rotatingTask, error: rtErr } = await supabase
           .from('rotating_tasks')
-          .select('id, allow_multiple_completions, current_member_index, member_order')
+          .select('id')
           .eq('name', task.title)
           .eq('family_id', profile.family_id)
           .eq('is_active', true)
           .eq('is_paused', false)
           .single();
 
-        if (rotatingTask) {
-          console.log('🔄 Generating next instance for rotating task:', task.title);
+        // Prefer targeting a specific rotating_task_id if we have it
+        if (rotatingTask && !rtErr) {
+          console.log('🔄 Generating next instance for rotating task by id:', task.title);
           await supabase.functions.invoke('generate-rotating-tasks', {
             body: { rotating_task_id: rotatingTask.id }
           });
-          
-          // Refetch tasks immediately to show the new task
-          await fetchUserData();
+        } else {
+          // Fallback: trigger by task_name + family_id (case differences or minor mismatches)
+          console.log('🔄 Generating next instance for rotating task by name:', task.title);
+          await supabase.functions.invoke('generate-rotating-tasks', {
+            body: { task_name: task.title, family_id: profile.family_id }
+          });
         }
+
+        // Refetch tasks immediately to show the new task
+        await fetchUserData();
       } catch (rotatingError) {
-        // Not a rotating task or error checking - ignore and continue
-        console.log('Not a rotating task or error checking:', rotatingError);
+        console.warn('⚠️ Rotating task generation did not run:', rotatingError);
       }
     } catch (error) {
       console.error('Error completing task:', error);
