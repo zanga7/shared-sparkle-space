@@ -772,9 +772,18 @@ const ColumnBasedDashboard = () => {
       const assignees = task.assignees?.map(a => a.profile) || 
                        (task.assigned_profile ? [task.assigned_profile] : []);
       
-      // In dashboard mode, use the active member as the completer if they're the assignee
-      const completerId = dashboardMode && activeMemberId ? activeMemberId : profile.id;
+      // Choose who gets the points
+      let completerId = profile.id;
+      if (dashboardMode) {
+        if (activeMemberId) {
+          completerId = activeMemberId;
+        } else if (assignees.length === 1) {
+          // Auto-credit the single assignee if no active member selected
+          completerId = assignees[0].id;
+        }
+      }
       const completerProfile = familyMembers.find(m => m.id === completerId) || profile;
+      console.log('🧾 Completing task for', { taskId: task.id, completerId, assignees: assignees.map(a => a.id) });
       
       // Check if completer is allowed to complete this task (only enforce when NOT in dashboard mode)
       if (!dashboardMode) {
@@ -824,18 +833,8 @@ const ColumnBasedDashboard = () => {
         description: toastMessage,
       });
 
-      // Update local state for task completion (real-time will update points)
-      setTasks(prevTasks => 
-        prevTasks.map(t => 
-          t.id === task.id 
-            ? { ...t, task_completions: [...(t.task_completions || []), { 
-                id: Date.now().toString(), 
-                completed_at: new Date().toISOString(), 
-                completed_by: completerId 
-              }] }
-            : t
-        )
-      );
+      // Rely on realtime to reflect completion; no optimistic fake IDs to avoid UUID errors
+
 
       console.log('✅ Task completed. Database trigger handling points and rotation.');
     } catch (error) {
