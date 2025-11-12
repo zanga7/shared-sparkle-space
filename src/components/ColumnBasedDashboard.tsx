@@ -1241,13 +1241,39 @@ const ColumnBasedDashboard = () => {
     // Add unassigned tasks category
     tasksByMember.set('unassigned', []);
     
-    // Generate virtual task instances from task series (only for today)
+    // Generate virtual task instances from task series
+    // Show instances for the current week so weekly/monthly tasks appear
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
     
-    const virtualInstances = generateVirtualTaskInstances(today, tomorrow);
+    // Get the end of this week (Sunday)
+    const endOfWeek = new Date(today);
+    endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+    endOfWeek.setHours(23, 59, 59, 999);
+    
+    const allVirtualInstances = generateVirtualTaskInstances(today, endOfWeek);
+    
+    // Filter to show only the most relevant instance per series:
+    // - Daily tasks: show today's instance only
+    // - Weekly tasks: show this week's first instance
+    // - Monthly tasks: show this month's first instance
+    const seriesInstanceMap = new Map<string, typeof allVirtualInstances[0]>();
+    
+    allVirtualInstances.forEach(instance => {
+      const existingInstance = seriesInstanceMap.get(instance.series_id);
+      if (!existingInstance) {
+        seriesInstanceMap.set(instance.series_id, instance);
+      } else {
+        // Keep the earliest instance (closest to today)
+        const instanceDate = new Date(instance.occurrence_date);
+        const existingDate = new Date(existingInstance.occurrence_date);
+        if (instanceDate < existingDate) {
+          seriesInstanceMap.set(instance.series_id, instance);
+        }
+      }
+    });
+    
+    const virtualInstances = Array.from(seriesInstanceMap.values());
     
     // Map virtual instances to Task format
     const virtualTasks: Task[] = virtualInstances.map(vTask => ({
