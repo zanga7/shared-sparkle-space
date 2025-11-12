@@ -10,9 +10,10 @@ import { useToast } from '@/hooks/use-toast';
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, user, resetPassword } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -71,6 +72,31 @@ const Auth = () => {
     setLoading(false);
   };
 
+  const handleResetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('reset-email') as string;
+
+    const { error } = await resetPassword(email);
+    
+    if (error) {
+      toast({
+        title: 'Reset Failed',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } else {
+      toast({
+        title: 'Check Your Email',
+        description: 'Password reset instructions have been sent to your email.',
+      });
+      setShowForgotPassword(false);
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 w-full">
       <div className="w-full flex flex-col items-center space-y-4">
@@ -89,30 +115,66 @@ const Auth = () => {
               </TabsList>
 
               <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
-                    <Input
-                      id="signin-email"
-                      name="signin-email"
-                      type="email"
-                      placeholder="parent@example.com"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
-                    <Input
-                      id="signin-password"
-                      name="signin-password"
-                      type="password"
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? 'Signing In...' : 'Sign In'}
-                  </Button>
-                </form>
+                {!showForgotPassword ? (
+                  <form onSubmit={handleSignIn} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-email">Email</Label>
+                      <Input
+                        id="signin-email"
+                        name="signin-email"
+                        type="email"
+                        placeholder="parent@example.com"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-password">Password</Label>
+                      <Input
+                        id="signin-password"
+                        name="signin-password"
+                        type="password"
+                        required
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <Button 
+                        type="button" 
+                        variant="link" 
+                        className="px-0 text-sm"
+                        onClick={() => setShowForgotPassword(true)}
+                      >
+                        Forgot Password?
+                      </Button>
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? 'Signing In...' : 'Sign In'}
+                    </Button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleResetPassword} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email">Email</Label>
+                      <Input
+                        id="reset-email"
+                        name="reset-email"
+                        type="email"
+                        placeholder="parent@example.com"
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? 'Sending...' : 'Send Reset Instructions'}
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => setShowForgotPassword(false)}
+                    >
+                      Back to Sign In
+                    </Button>
+                  </form>
+                )}
               </TabsContent>
 
               <TabsContent value="signup">
