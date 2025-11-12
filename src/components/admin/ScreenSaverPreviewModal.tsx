@@ -103,7 +103,7 @@ export const ScreenSaverPreviewModal = ({ open, onClose, settings, images }: Scr
               key={currentImage.id}
               src={imageUrl}
               alt={currentImage.name}
-              className={`w-full h-full object-contain ${transitionClass}`}
+              className={`w-full h-full object-cover ${transitionClass}`}
             />
           </div>
 
