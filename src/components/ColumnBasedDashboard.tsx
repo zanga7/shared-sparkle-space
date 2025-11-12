@@ -235,7 +235,7 @@ const ColumnBasedDashboard = () => {
       // Get active rotating task names for this family
       const { data: rotating, error: namesError } = await supabase
         .from('rotating_tasks')
-        .select('name')
+        .select('name, allow_multiple_completions')
         .eq('family_id', familyId)
         .eq('is_active', true);
 
@@ -244,7 +244,8 @@ const ColumnBasedDashboard = () => {
         return;
       }
 
-      const names = Array.from(new Set((rotating || []).map(r => r.name)));
+      const rotatingMap = new Map((rotating || []).map(r => [r.name, r.allow_multiple_completions]));
+      const names = Array.from(rotatingMap.keys());
       if (names.length === 0) return;
 
       // Fetch today's tasks for those names with assignees
@@ -263,17 +264,30 @@ const ColumnBasedDashboard = () => {
 
       type Row = { id: string; title: string; created_at: string; due_date: string | null; task_assignees: { profile_id: string }[]; task_completions?: { id: string }[] };
       const rows = (todaysTasks as unknown as Row[]) || [];
-      const groups = new Map<string, Row[]>();
+      const toDelete: string[] = [];
+
+      // Group by title only for single-instance tasks
+      const byTitle = new Map<string, Row[]>();
+      const byTitleAndAssignee = new Map<string, Row[]>();
 
       for (const row of rows) {
-        const assigneeId = row.task_assignees?.[0]?.profile_id || 'unassigned';
-        const key = `${row.title}::${assigneeId}`;
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key)!.push(row);
+        const allowMultiple = rotatingMap.get(row.title);
+        
+        if (allowMultiple === false) {
+          // Single instance per day: group by title only
+          if (!byTitle.has(row.title)) byTitle.set(row.title, []);
+          byTitle.get(row.title)!.push(row);
+        } else {
+          // Multiple completions: group by title + assignee
+          const assigneeId = row.task_assignees?.[0]?.profile_id || 'unassigned';
+          const key = `${row.title}::${assigneeId}`;
+          if (!byTitleAndAssignee.has(key)) byTitleAndAssignee.set(key, []);
+          byTitleAndAssignee.get(key)!.push(row);
+        }
       }
 
-      const toDelete: string[] = [];
-      for (const [_, list] of groups) {
+      // Handle single-instance tasks: keep only ONE per title
+      for (const [title, list] of byTitle) {
         if (list.length <= 1) continue;
 
         const isIncomplete = (r: Row) => !r.task_completions || r.task_completions.length === 0;
@@ -281,16 +295,30 @@ const ColumnBasedDashboard = () => {
 
         let keep: Row;
         if (incomplete.length > 0) {
-          // Prefer keeping an incomplete task (oldest to avoid churn)
+          // Keep the oldest incomplete task
           keep = incomplete.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
         } else {
-          // All completed: keep the oldest with due date if any, else oldest
-          const withDue = list.filter(r => !!r.due_date);
-          if (withDue.length > 0) {
-            keep = withDue.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
-          } else {
-            keep = list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
-          }
+          // All completed: keep the oldest
+          keep = list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+        }
+
+        for (const r of list) {
+          if (r.id !== keep.id) toDelete.push(r.id);
+        }
+      }
+
+      // Handle multiple-completion tasks: keep only ONE per (title, assignee)
+      for (const [key, list] of byTitleAndAssignee) {
+        if (list.length <= 1) continue;
+
+        const isIncomplete = (r: Row) => !r.task_completions || r.task_completions.length === 0;
+        const incomplete = list.filter(isIncomplete);
+
+        let keep: Row;
+        if (incomplete.length > 0) {
+          keep = incomplete.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+        } else {
+          keep = list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
         }
 
         for (const r of list) {
