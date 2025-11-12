@@ -41,14 +41,8 @@ const adminMenuItems = [
   { title: "Reward Approvals", url: "/admin/reward-approvals", icon: ClipboardCheck },
   { title: "Calendar Settings", url: "/admin/calendar-settings", icon: Calendar },
   { title: "Screen Saver", url: "/admin/screensaver", icon: Monitor },
-  { title: "Event Migration", url: "/admin/event-migration", icon: Database },
   { title: "Permissions", url: "/admin/permissions", icon: Shield },
-  { title: "Categories", url: "/admin/categories", icon: Database },
   { title: "Theme Management", url: "/admin/themes", icon: Palette },
-  { title: "Audit Logs", url: "/admin/audit", icon: FileText },
-  { title: "Data Export", url: "/admin/export", icon: Download },
-  { title: "Archived Items", url: "/admin/archived", icon: Archive },
-  { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 
 export function AdminSidebar() {
@@ -70,10 +64,23 @@ export function AdminSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarTrigger className="m-2 self-end" />
-
-      <SidebarContent>
+      <SidebarContent className="flex flex-col h-full">
         <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink to="/" className="hover:bg-muted/50">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    <span>Back to Dashboard</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup className="flex-1">
           <SidebarGroupLabel>Admin Panel</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -95,18 +102,9 @@ export function AdminSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Quick Actions</SidebarGroupLabel>
+        <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <NavLink to="/" className="hover:bg-muted/50">
-                    <BarChart3 className="mr-2 h-4 w-4" />
-                    <span>Back to Dashboard</span>
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={handleLogout} className="hover:bg-destructive/10 text-destructive hover:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
