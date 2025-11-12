@@ -57,7 +57,7 @@ export const EnhancedTaskItem = ({
   return (
     <div 
       className={cn(
-        "group relative border rounded-lg p-3 transition-all hover:shadow-md",
+        "group/task relative border rounded-lg p-3 transition-all hover:shadow-md",
         isCompleted && "bg-muted/30",
         isOverdue && "border-destructive/50 bg-destructive/5"
       )}
@@ -100,7 +100,7 @@ export const EnhancedTaskItem = ({
 
             {/* Action Buttons - Only visible on hover */}
             {showActions && !isCompleted && (
-              <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 flex items-center gap-1 shrink-0">
+              <div className="invisible opacity-0 group-hover/task:visible group-hover/task:opacity-100 transition-all duration-200 flex items-center gap-1 shrink-0">
                 {onEdit && (
                   <Button 
                     size="sm" 
