@@ -91,18 +91,25 @@ export const AddTaskDialog = ({
 
   // Handle preselected member - reset when dialog opens or member changes
   useEffect(() => {
-    if (open && preselectedMemberId && preselectedMemberId !== 'unassigned') {
-      setFormData(prev => ({ 
-        ...prev, 
-        assigned_to: preselectedMemberId,
-        assignees: [preselectedMemberId]
-      }));
-    } else if (open && preselectedMemberId === 'unassigned') {
-      setFormData(prev => ({ 
-        ...prev, 
-        assigned_to: 'unassigned',
-        assignees: []
-      }));
+    if (open) {
+      if (preselectedMemberId && preselectedMemberId !== 'unassigned') {
+        console.log('🎯 Setting preselected member:', preselectedMemberId);
+        setFormData(prev => ({ 
+          ...prev, 
+          assigned_to: preselectedMemberId,
+          assignees: [preselectedMemberId]
+        }));
+      } else if (preselectedMemberId === 'unassigned') {
+        console.log('🎯 Setting unassigned');
+        setFormData(prev => ({ 
+          ...prev, 
+          assigned_to: 'unassigned',
+          assignees: []
+        }));
+      } else if (!preselectedMemberId) {
+        // When no preselection, keep existing state or default to unassigned
+        console.log('🎯 No preselection, keeping current state');
+      }
     }
   }, [open, preselectedMemberId]);
 
@@ -134,6 +141,14 @@ export const AddTaskDialog = ({
         variant: 'destructive'
       });
       return;
+    }
+
+    // Warn if no assignees selected (unless it's intentionally unassigned)
+    if (formData.assignees.length === 0 && formData.assigned_to !== 'unassigned') {
+      toast({
+        title: 'No assignees selected',
+        description: 'This task will be created as unassigned. Anyone can complete it.',
+      });
     }
 
     setLoading(true);
@@ -367,6 +382,12 @@ export const AddTaskDialog = ({
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               placeholder="e.g., Clean bedroom, Take out trash"
               required
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit(e as any);
+                }
+              }}
             />
           </div>
 
@@ -378,6 +399,13 @@ export const AddTaskDialog = ({
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Additional details about the task..."
               rows={3}
+              onKeyDown={(e) => {
+                // Allow Shift+Enter for new lines, plain Enter submits form
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit(e as any);
+                }
+              }}
             />
           </div>
 
@@ -392,8 +420,9 @@ export const AddTaskDialog = ({
                 value={formData.points}
                 onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) || 10 })}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
+                    handleSubmit(e as any);
                   }
                 }}
               />

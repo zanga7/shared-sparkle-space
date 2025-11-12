@@ -377,6 +377,12 @@ export const EditTaskDialog = ({
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="Enter task title"
                 required
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(e as any);
+                  }
+                }}
               />
             </div>
 
@@ -388,6 +394,13 @@ export const EditTaskDialog = ({
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Enter task description (optional)"
                 rows={3}
+                onKeyDown={(e) => {
+                  // Allow Shift+Enter for new lines, plain Enter submits form
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(e as any);
+                  }
+                }}
               />
             </div>
 
@@ -401,8 +414,9 @@ export const EditTaskDialog = ({
                 value={formData.points}
                 onChange={(e) => setFormData(prev => ({ ...prev, points: parseInt(e.target.value) || 10 }))}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
+                    handleSubmit(e as any);
                   }
                 }}
                 required
