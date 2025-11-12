@@ -712,14 +712,17 @@ const ColumnBasedDashboard = () => {
         return { memberId: id, group: null };
       }
       
-      // Check if it's a member + group combination (UUID-pending-<group> or UUID-completed-<group>)
+      // Check if it's a member + group combination (UUID-<group>)
       const parts = id.split('-');
       
-      if (parts.length >= 6) { // UUID has 5 parts when split by '-', plus group makes 6+
+      // New format: UUID-group (6 parts total: 5 from UUID + 1 group)
+      // Old format: UUID-pending-group or UUID-completed-group (7+ parts)
+      if (parts.length >= 6) {
         const memberId = parts.slice(0, 5).join('-'); // Reconstruct UUID
-        const remainder = parts.slice(5).join('-'); // e.g. "pending-morning" | "completed-general"
+        const remainder = parts.slice(5).join('-'); // e.g. "morning" or "pending-morning"
         
         if (memberId.length === 36 && memberId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+          // Remove pending-/completed- prefix if present (for backwards compatibility)
           const group = remainder.replace(/^pending-/, '').replace(/^completed-/, '');
           
           if (VALID_TASK_GROUPS.includes(group as TaskGroup)) {
@@ -728,11 +731,9 @@ const ColumnBasedDashboard = () => {
         }
       }
       
-      // Check if it's just a group name (for member view) possibly prefixed with pending-/completed-
-      const potentialGroup = id.replace(/^pending-/, '').replace(/^completed-/, '');
-      
-      if (VALID_TASK_GROUPS.includes(potentialGroup as TaskGroup)) {
-        return { memberId: null, group: potentialGroup };
+      // Check if it's just a group name (for member view)
+      if (VALID_TASK_GROUPS.includes(id as TaskGroup)) {
+        return { memberId: null, group: id };
       }
       
       console.error('Invalid droppable ID format:', id);

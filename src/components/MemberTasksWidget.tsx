@@ -76,36 +76,25 @@ export const MemberTasksWidget = ({
       return;
     }
 
-    // Parse droppable IDs (format: "pending-groupname" or "completed-groupname")
-    const parseDroppableId = (id: string): { status: string | null; group: string | null } => {
-      const parts = id.split('-');
-      if (parts.length >= 2) {
-        const status = parts[0]; // 'pending' or 'completed'
-        const group = parts.slice(1).join('-'); // handle groups with dashes
-        return { status, group };
+    // Parse droppable IDs (format: just "groupname" like "morning", "midday", etc.)
+    const parseDroppableId = (id: string): { group: string | null } => {
+      // Check if it's a valid task group
+      const validGroups = ['morning', 'midday', 'afternoon', 'evening', 'general'];
+      if (validGroups.includes(id)) {
+        return { group: id };
       }
-      return { status: null, group: null };
+      return { group: null };
     };
 
     const sourceInfo = parseDroppableId(source.droppableId);
     const destInfo = parseDroppableId(destination.droppableId);
 
     // Validate parsed IDs
-    if (!destInfo.status || !destInfo.group) {
+    if (!destInfo.group) {
       console.error('Failed to parse destination droppable ID:', destination.droppableId);
       toast({
         title: 'Error',
         description: 'Invalid drop location. Please try again.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Don't allow moving to completed section via drag
-    if (destInfo.status === 'completed') {
-      toast({
-        title: 'Cannot Move',
-        description: 'Tasks must be completed using the checkbox.',
         variant: 'destructive',
       });
       return;
