@@ -75,12 +75,13 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Check if task already exists for today for this member
+      // Check if task already exists for today assigned to this specific member
       const { data: existingTasks, error: checkError } = await supabaseClient
         .from('tasks')
-        .select('id')
+        .select('id, task_assignees!inner(profile_id)')
         .eq('family_id', rotatingTask.family_id)
         .eq('title', rotatingTask.name)
+        .eq('task_assignees.profile_id', currentMemberId)
         .gte('created_at', `${today}T00:00:00Z`)
         .lte('created_at', `${today}T23:59:59Z`);
 

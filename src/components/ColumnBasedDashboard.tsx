@@ -235,14 +235,6 @@ const ColumnBasedDashboard = () => {
               setFamilyMembers(membersData || []);
             }
 
-            // Generate rotating tasks for today
-            try {
-              await supabase.functions.invoke('generate-rotating-tasks');
-            } catch (rotatingError) {
-              console.error('Failed to generate rotating tasks:', rotatingError);
-              // Continue anyway - don't block the dashboard
-            }
-
             // Fetch family tasks
             const { data: tasksData, error: tasksError } = await supabase
               .from('tasks')
