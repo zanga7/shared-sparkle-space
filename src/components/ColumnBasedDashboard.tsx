@@ -216,6 +216,7 @@ const ColumnBasedDashboard = () => {
               created_by,
               completion_rule,
               task_group,
+              rotating_task_id,
               assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
               assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
               task_completions(id, completed_at, completed_by)
