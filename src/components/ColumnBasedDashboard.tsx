@@ -836,27 +836,14 @@ const ColumnBasedDashboard = () => {
     if (!profile || !task.task_completions || task.task_completions.length === 0) return;
     
     try {
-      // Find the completion record by the current user
+      // Find the completion record to delete
       const userCompletion = task.task_completions.find(completion => completion.completed_by === profile.id);
       
       if (!userCompletion) {
         return;
       }
 
-      // Get all assignees who received points based on completion rule
-      let assignees;
-      const allAssignees = task.assignees?.map(a => a.profile) || 
-                          (task.assigned_profile ? [task.assigned_profile] : []);
-      
-      if (task.completion_rule === 'any_one' && allAssignees.length > 1) {
-        // For "any_one" tasks, only the completer received points
-        assignees = [profile];
-      } else {
-        // For "everyone" tasks or single assignee, only the completer received points
-        assignees = [profile];
-      }
-
-      // Remove the specific task completion record
+      // Delete the task completion record - the database trigger will handle point removal
       const { error } = await supabase
         .from('task_completions')
         .delete()
@@ -866,42 +853,12 @@ const ColumnBasedDashboard = () => {
         throw error;
       }
 
-      // Remove points from all assignees who received them
-      const pointUpdates = assignees.map(async (recipient) => {
-        const currentProfile = familyMembers.find(m => m.id === recipient.id);
-        if (currentProfile) {
-          return supabase
-            .from('profiles')
-            .update({
-              total_points: currentProfile.total_points - task.points
-            })
-            .eq('id', recipient.id);
-        }
-      });
-
-      const updateResults = await Promise.all(pointUpdates.filter(Boolean));
-      
-      // Check for errors in point updates
-      const updateErrors = updateResults.filter(result => result?.error);
-      if (updateErrors.length > 0) {
-        throw new Error('Failed to update some points');
-      }
-
-      // Create toast message based on point removal
-      let toastMessage;
-      if (assignees.length === 1) {
-        toastMessage = `${task.points} points removed`;
-      } else {
-        const names = assignees.map(p => p.display_name).join(', ');
-        toastMessage = `${task.points} points removed from: ${names}`;
-      }
-
       toast({
         title: 'Task Uncompleted',
-        description: toastMessage,
+        description: `${task.points} points removed`,
       });
 
-      // Update local state instead of full refresh
+      // Update local state (real-time will update points)
       setTasks(prevTasks => 
         prevTasks.map(t => 
           t.id === task.id 
@@ -910,15 +867,7 @@ const ColumnBasedDashboard = () => {
         )
       );
       
-      // Update member points locally (subtract points)
-      setFamilyMembers(prevMembers =>
-        prevMembers.map(member => {
-          const wasRecipient = assignees.find(a => a.id === member.id);
-          return wasRecipient 
-            ? { ...member, total_points: Math.max(0, member.total_points - task.points) }
-            : member;
-        })
-      );
+      console.log('✅ Task uncompleted. Database trigger handling point removal.');
     } catch (error) {
       console.error('Error uncompleting task:', error);
       toast({
