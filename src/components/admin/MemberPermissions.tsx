@@ -7,12 +7,16 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/user-avatar';
-import { Shield, Settings2 } from 'lucide-react';
+import { Shield, Settings2, Key } from 'lucide-react';
 import { toast } from 'sonner';
+import { SetChildPinDialog } from './SetChildPinDialog';
+import type { ExtendedProfile } from '@/types/admin';
 
 export function MemberPermissions() {
   const { familyMembers, refreshFamilyMembers } = useAdminContext();
   const [saving, setSaving] = useState(false);
+  const [selectedMemberForPin, setSelectedMemberForPin] = useState<ExtendedProfile | null>(null);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
 
   const updateMemberPermissions = async (memberId: string, field: string, value: boolean | string) => {
     setSaving(true);
@@ -70,6 +74,18 @@ export function MemberPermissions() {
                       )}
                     </div>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedMemberForPin(member);
+                      setPinDialogOpen(true);
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Key className="h-4 w-4" />
+                    {member.pin_hash ? 'Reset PIN' : 'Set PIN'}
+                  </Button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -240,6 +256,13 @@ export function MemberPermissions() {
           </div>
         </CardContent>
       </Card>
+
+      <SetChildPinDialog
+        member={selectedMemberForPin}
+        open={pinDialogOpen}
+        onOpenChange={setPinDialogOpen}
+        onPinUpdated={refreshFamilyMembers}
+      />
     </div>
   );
 }
