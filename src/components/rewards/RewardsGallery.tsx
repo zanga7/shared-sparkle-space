@@ -227,15 +227,30 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
     
     setContributingIds(prev => new Set(prev).add(rewardId));
     try {
-      // Create contribution entry
-      const { data: profile } = await supabase
+      // Get current profile data including family_id and total_points
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('family_id')
+        .select('family_id, total_points')
         .eq('id', currentProfileId)
         .single();
 
-      if (!profile) throw new Error('Profile not found');
+      if (profileError || !profile) throw new Error('Profile not found');
 
+      // Check if user has enough points
+      if (profile.total_points < amount) {
+        toast.error('Insufficient points for this contribution');
+        return;
+      }
+
+      // Deduct points from profile's total_points
+      const { error: pointsError } = await supabase
+        .from('profiles')
+        .update({ total_points: profile.total_points - amount })
+        .eq('id', currentProfileId);
+
+      if (pointsError) throw pointsError;
+
+      // Create contribution entry
       const { error } = await supabase
         .from('group_contributions')
         .insert({
@@ -247,7 +262,7 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
 
       if (error) throw error;
 
-      // Create ledger entry for spending points
+      // Create ledger entry for audit trail
       await supabase
         .from('points_ledger')
         .insert({

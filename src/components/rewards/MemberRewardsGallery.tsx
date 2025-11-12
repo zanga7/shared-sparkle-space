@@ -124,6 +124,30 @@ export function MemberRewardsGallery({ member }: MemberRewardsGalleryProps) {
 
       if (!profile) throw new Error('Profile not found');
 
+      // First, get current points balance
+      const { data: currentProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('total_points')
+        .eq('id', member.id)
+        .single();
+
+      if (fetchError || !currentProfile) throw new Error('Failed to get current points balance');
+
+      // Check if user has enough points
+      if (currentProfile.total_points < amount) {
+        toast.error('Insufficient points for this contribution');
+        return;
+      }
+
+      // Deduct points from profile's total_points
+      const { error: pointsError } = await supabase
+        .from('profiles')
+        .update({ total_points: currentProfile.total_points - amount })
+        .eq('id', member.id);
+
+      if (pointsError) throw pointsError;
+
+      // Create the contribution record
       const { error } = await supabase
         .from('group_contributions')
         .insert({
@@ -135,6 +159,7 @@ export function MemberRewardsGallery({ member }: MemberRewardsGalleryProps) {
 
       if (error) throw error;
 
+      // Create ledger entry for audit trail
       await supabase
         .from('points_ledger')
         .insert({
