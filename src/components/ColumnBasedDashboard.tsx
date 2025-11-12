@@ -362,16 +362,6 @@ const ColumnBasedDashboard = () => {
             setSwitchDialogOpen(true);
             return;
           }
-          
-          // For team tasks, only allow completion when viewing the acting member's own column
-          if (selectedMemberFilter && selectedMemberFilter !== activeMemberId) {
-            toast({
-              title: 'Cannot Complete Task',
-              description: 'You can only complete tasks from your own task column.',
-              variant: 'destructive'
-            });
-            return;
-          }
         }
         
         // Check PIN requirements for the active member
@@ -1206,21 +1196,11 @@ const ColumnBasedDashboard = () => {
                             </CardHeader>
 
                              <CardContent className="p-0">
-                               <TaskGroupsList
-                                 tasks={memberTasks}
-                                 allTasks={tasks}
-                                 familyMembers={familyMembers}
-                                 onTaskToggle={(task) => {
-                                   if (dashboardMode && activeMemberId !== member.id) {
-                                     toast({
-                                       title: 'Access Denied',
-                                       description: 'You can only complete tasks from your own task column.',
-                                       variant: 'destructive'
-                                     });
-                                     return;
-                                   }
-                                   handleTaskToggle(task);
-                                 }}
+                                <TaskGroupsList
+                                  tasks={memberTasks}
+                                  allTasks={tasks}
+                                  familyMembers={familyMembers}
+                                  onTaskToggle={handleTaskToggle}
                                  onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
                                  onDeleteTask={profile.role === 'parent' ? setDeletingTask : undefined}
                                  onAddTask={(group) => handleAddTaskForMember(member.id, group)}
