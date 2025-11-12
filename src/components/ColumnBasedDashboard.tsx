@@ -783,22 +783,12 @@ const ColumnBasedDashboard = () => {
         }
       }
       
-      // Determine point recipients based on completion rule
-      let pointRecipients;
-      if (task.completion_rule === 'any_one' && assignees.length > 1) {
-        // "Any one" rule: only the completer gets points
-        pointRecipients = [completerProfile];
-      } else {
-        // "Everyone" rule or single assignee: only the completer gets points
-        pointRecipients = [completerProfile];
-      }
-      
-      // Create task completion record
+      // Create task completion record - the database trigger will handle points
       const { error } = await supabase
         .from('task_completions')
         .insert({
           task_id: task.id,
-           completed_by: profile.id, // Must use authenticated user's profile for RLS
+          completed_by: completerId, // Use the actual completer (active member in dashboard mode)
           points_earned: task.points
         });
 
@@ -806,74 +796,32 @@ const ColumnBasedDashboard = () => {
         throw error;
       }
 
-      // Award points to all assignees (or just the completer if no assignees)
-      const pointUpdates = pointRecipients.map(async (recipient) => {
-        const currentProfile = familyMembers.find(m => m.id === recipient.id);
-        if (currentProfile) {
-          return supabase
-            .from('profiles')
-            .update({
-              total_points: currentProfile.total_points + task.points
-            })
-            .eq('id', recipient.id);
-        }
-      });
-
-      const updateResults = await Promise.all(pointUpdates.filter(Boolean));
-      
-      // Check for errors in point updates
-      const updateErrors = updateResults.filter(result => result?.error);
-      if (updateErrors.length > 0) {
-        throw new Error('Failed to update some points');
-      }
-
-      // Create toast message based on completion rule and point distribution
-      let toastMessage;
-      if (task.completion_rule === 'any_one' && assignees.length > 1) {
-        const assigneeNames = assignees.map(a => a.display_name).join(', ');
-        toastMessage = `Task completed for everyone! ${completerProfile.display_name} earned ${task.points} points. Assignees: ${assigneeNames}`;
-      } else if (pointRecipients.length === 1 && pointRecipients[0].id === completerProfile.id) {
-        toastMessage = dashboardMode && completerProfile.id !== profile.id 
-          ? `${completerProfile.display_name} earned ${task.points} points!`
-          : `You earned ${task.points} points!`;
-      } else if (pointRecipients.length === 1) {
-        toastMessage = `${pointRecipients[0].display_name} earned ${task.points} points!`;
-      } else {
-        const names = pointRecipients.map(p => p.display_name).join(', ');
-        toastMessage = `${task.points} points awarded to: ${names}`;
-      }
+      // Create toast message
+      const toastMessage = dashboardMode && completerProfile.id !== profile.id 
+        ? `${completerProfile.display_name} earned ${task.points} points!`
+        : `You earned ${task.points} points!`;
 
       toast({
         title: 'Task Completed!',
         description: toastMessage,
       });
 
-      // Update local state instead of full refresh
+      // Update local state for task completion (real-time will update points)
       setTasks(prevTasks => 
         prevTasks.map(t => 
           t.id === task.id 
             ? { ...t, task_completions: [...(t.task_completions || []), { 
                 id: Date.now().toString(), 
                 completed_at: new Date().toISOString(), 
-                completed_by: profile.id 
+                completed_by: completerId 
               }] }
             : t
         )
       );
-      
-      // Update member points locally
-      setFamilyMembers(prevMembers =>
-        prevMembers.map(member => {
-          const recipient = pointRecipients.find(r => r.id === member.id);
-          return recipient 
-            ? { ...member, total_points: member.total_points + task.points }
-            : member;
-        })
-      );
 
-      // The database trigger will automatically create the next rotating task instance
-      // Realtime subscriptions will show it when ready
-      console.log('✅ Task completed. Database trigger will handle rotation if needed.');
+      // The database trigger will automatically award points and handle rotation
+      // Real-time subscriptions will update the UI when ready
+      console.log('✅ Task completed. Database trigger handling points and rotation.');
     } catch (error) {
       console.error('Error completing task:', error);
       toast({
