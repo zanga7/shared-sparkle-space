@@ -151,15 +151,17 @@ export const EnhancedTaskItem = ({
               })()}
             </Badge>
 
-            {/* Assignees Display */}
-            <TaskAssigneesDisplay 
-              task={task} 
-              showNames={false}
-              onClick={onEdit ? () => onEdit(task) : undefined}
-            />
+            {/* Assignees Display - Hidden when completed */}
+            {!isCompleted && (
+              <TaskAssigneesDisplay 
+                task={task} 
+                showNames={false}
+                onClick={onEdit ? () => onEdit(task) : undefined}
+              />
+            )}
 
-            {/* Due Date */}
-            {task.due_date && (
+            {/* Due Date - Hidden when completed */}
+            {!isCompleted && task.due_date && (
               <Badge 
                 variant={isOverdue ? "destructive" : daysUntilDue === 0 ? "default" : "outline"} 
                 className="text-xs py-0 h-5 flex items-center gap-1"
