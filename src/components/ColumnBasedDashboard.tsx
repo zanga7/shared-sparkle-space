@@ -165,6 +165,64 @@ const ColumnBasedDashboard = () => {
     }
   }, [user]); // Remove profile?.id dependency to prevent loops
 
+  // Set up realtime subscription for task changes
+  useEffect(() => {
+    if (!profile?.family_id) return;
+
+    const channel = supabase
+      .channel('tasks-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'tasks',
+          filter: `family_id=eq.${profile.family_id}`
+        },
+        async (payload) => {
+          console.log('🔔 New task detected via realtime:', payload.new);
+          
+          // Fetch full task data with relations
+          const { data: newTaskData } = await supabase
+            .from('tasks')
+            .select(`
+              id,
+              title,
+              description,
+              points,
+              due_date,
+              assigned_to,
+              created_by,
+              completion_rule,
+              task_group,
+              assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
+              assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
+              task_completions(id, completed_at, completed_by)
+            `)
+            .eq('id', payload.new.id)
+            .single();
+
+          if (newTaskData) {
+            setTasks(prevTasks => {
+              // Check if task already exists
+              if (prevTasks.some(t => t.id === newTaskData.id)) {
+                return prevTasks;
+              }
+              return [...prevTasks, {
+                ...newTaskData,
+                completion_rule: (newTaskData.completion_rule || 'everyone') as 'any_one' | 'everyone'
+              }];
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.family_id]);
+
   const cleanupDuplicateRotatingTasksToday = async (familyId: string) => {
     try {
       const start = new Date();
@@ -612,6 +670,29 @@ const ColumnBasedDashboard = () => {
             : member;
         })
       );
+
+      // Check if this is a rotating task with allow_multiple_completions
+      // If so, generate the next instance immediately
+      try {
+        const { data: rotatingTask } = await supabase
+          .from('rotating_tasks')
+          .select('id, allow_multiple_completions, current_member_index, member_order')
+          .eq('name', task.title)
+          .eq('family_id', profile.family_id)
+          .eq('is_active', true)
+          .eq('is_paused', false)
+          .single();
+
+        if (rotatingTask?.allow_multiple_completions) {
+          console.log('🔄 Generating next instance for rotating task with multiple completions');
+          
+          // Invoke the edge function to generate the next task
+          await supabase.functions.invoke('generate-rotating-tasks');
+        }
+      } catch (rotatingError) {
+        // Not a rotating task or error checking - ignore and continue
+        console.log('Not a rotating task or error checking:', rotatingError);
+      }
     } catch (error) {
       console.error('Error completing task:', error);
       toast({
