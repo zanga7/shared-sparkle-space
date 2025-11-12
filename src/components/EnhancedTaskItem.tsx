@@ -28,6 +28,7 @@ interface EnhancedTaskItemProps {
   currentMemberId?: string;
   isDragging?: boolean;
   memberColor?: string;
+  isCompleting?: boolean;
 }
 
 export const EnhancedTaskItem = ({ 
@@ -40,7 +41,8 @@ export const EnhancedTaskItem = ({
   showActions = true,
   currentMemberId,
   isDragging = false,
-  memberColor
+  memberColor,
+  isCompleting = false
 }: EnhancedTaskItemProps) => {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -82,18 +84,24 @@ export const EnhancedTaskItem = ({
           }}
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
+          disabled={isCompleting}
           className={cn(
             "shrink-0 w-7 h-7 p-0 cursor-pointer transition-all",
             isCompletedByMe 
               ? "bg-green-500 hover:bg-green-600 hover:scale-110 active:scale-95" 
-              : "hover:border-green-500 hover:text-green-500"
+              : "hover:border-green-500 hover:text-green-500",
+            isCompleting && "opacity-50 cursor-wait"
           )}
           title={isCompletedByMe 
             ? "Click to uncomplete and remove points" 
             : (isCompleted ? "Already completed by someone; click to attempt your completion" : "Click to complete and earn points")
           }
         >
-          <CheckCircle2 className="h-3 w-3" />
+          {isCompleting ? (
+            <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <CheckCircle2 className="h-3 w-3" />
+          )}
         </Button>
 
         {/* Task Content */}

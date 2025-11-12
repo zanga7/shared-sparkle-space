@@ -142,43 +142,50 @@ export const useDashboardAuth = () => {
   }, [toast]);
 
   // Check if member can perform action (PIN cache or no PIN required)
-  const canPerformAction = useCallback(async (memberId: string, actionType: 'task_completion' | 'list_delete'): Promise<{ canProceed: boolean; needsPin: boolean; profile?: any }> => {
+  const canPerformAction = useCallback(async (
+    memberId: string, 
+    actionType: 'task_completion' | 'list_delete',
+    profile?: Profile
+  ): Promise<{ canProceed: boolean; needsPin: boolean; profile?: any }> => {
     try {
-      // Get member profile
-      const { data: profileData, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', memberId)
-        .single();
+      let memberProfile = profile;
+      
+      // Only fetch profile if not provided
+      if (!memberProfile) {
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', memberId)
+          .single();
 
-      if (error || !profileData) {
-        return { canProceed: false, needsPin: false };
+        if (error || !profileData) {
+          return { canProceed: false, needsPin: false };
+        }
+
+        memberProfile = {
+          id: profileData.id,
+          display_name: profileData.display_name,
+          color: profileData.color,
+          role: profileData.role as 'parent' | 'child',
+          require_pin_to_complete_tasks: profileData.require_pin_to_complete_tasks || false,
+          require_pin_for_list_deletes: profileData.require_pin_for_list_deletes || false,
+          calendar_edit_permission: (profileData.calendar_edit_permission as 'open' | 'require_pin') || 'open',
+          pin_hash: profileData.pin_hash
+        };
       }
 
-      // Create a compatible profile object
-      const profile: Profile = {
-        id: profileData.id,
-        display_name: profileData.display_name,
-        color: profileData.color,
-        role: profileData.role as 'parent' | 'child',
-        require_pin_to_complete_tasks: profileData.require_pin_to_complete_tasks || false,
-        require_pin_for_list_deletes: profileData.require_pin_for_list_deletes || false,
-        calendar_edit_permission: (profileData.calendar_edit_permission as 'open' | 'require_pin') || 'open',
-        pin_hash: profileData.pin_hash
-      };
-
       const requiresPin = actionType === 'task_completion' 
-        ? profile.require_pin_to_complete_tasks
-        : profile.require_pin_for_list_deletes;
+        ? memberProfile.require_pin_to_complete_tasks
+        : memberProfile.require_pin_for_list_deletes;
 
       // If no PIN required, can proceed
       if (!requiresPin) {
-        return { canProceed: true, needsPin: false, profile };
+        return { canProceed: true, needsPin: false, profile: memberProfile };
       }
       
       // If PIN is required but not set, still require PIN authentication
-      if (!profile.pin_hash) {
-        return { canProceed: false, needsPin: true, profile };
+      if (!memberProfile.pin_hash) {
+        return { canProceed: false, needsPin: true, profile: memberProfile };
       }
 
       // Check if PIN is cached
@@ -192,7 +199,7 @@ export const useDashboardAuth = () => {
         });
 
         if (cacheValid) {
-          return { canProceed: true, needsPin: false, profile };
+          return { canProceed: true, needsPin: false, profile: memberProfile };
         } else {
           // Clear invalid cache
           setPinCache(prev => {
@@ -203,7 +210,7 @@ export const useDashboardAuth = () => {
         }
       }
 
-      return { canProceed: false, needsPin: true, profile };
+      return { canProceed: false, needsPin: true, profile: memberProfile };
     } catch (error) {
       console.error('Error checking action permissions:', error);
       return { canProceed: false, needsPin: false };

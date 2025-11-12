@@ -25,6 +25,7 @@ interface TaskGroupsListProps {
   memberId?: string;
   memberColor?: string;
   droppableIdPrefix?: string;
+  isCompleting?: (taskId: string) => boolean;
 }
 
 export const TaskGroupsList = ({
@@ -39,7 +40,8 @@ export const TaskGroupsList = ({
   showActions,
   memberId,
   memberColor,
-  droppableIdPrefix = ''
+  droppableIdPrefix = '',
+  isCompleting
 }: TaskGroupsListProps) => {
   const memberColors = memberColor ? getMemberColorClasses(memberColor) : null;
 
@@ -143,6 +145,7 @@ export const TaskGroupsList = ({
                             currentMemberId={memberId}
                             isDragging={snapshot.isDragging}
                             memberColor={memberColor}
+                            isCompleting={isCompleting?.(task.id)}
                           />
                         </div>
                       )}

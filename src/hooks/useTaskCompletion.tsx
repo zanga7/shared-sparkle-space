@@ -34,13 +34,10 @@ export const useTaskCompletion = ({
       let completerId: string | null = null;
 
       if (isDashboardMode && activeMemberId) {
-        // Dashboard mode: use active member
         completerId = activeMemberId;
       } else if (task.assignees && task.assignees.length === 1 && !activeMemberId) {
-        // Single assignee and no active member selected
         completerId = task.assignees[0].profile_id;
       } else if (currentUserProfile) {
-        // Default to current user
         completerId = currentUserProfile.id;
       }
 
@@ -55,8 +52,8 @@ export const useTaskCompletion = ({
 
       // Check if PIN is required
       if (isDashboardMode && activeMemberId) {
-        const canComplete = await canPerformAction(activeMemberId, 'task_completion');
-        if (!canComplete) {
+        const { canProceed } = await canPerformAction(activeMemberId, 'task_completion');
+        if (!canProceed) {
           toast({
             title: "PIN Required",
             description: "Please enter your PIN to complete this task",
@@ -66,7 +63,13 @@ export const useTaskCompletion = ({
         }
       }
 
-      // Always use RPC to ensure points are properly handled
+      // Optimistic UI update - show immediate feedback
+      toast({
+        title: "Task Completed!",
+        description: `+${task.points} points earned`,
+      });
+
+      // Call RPC to ensure points are properly handled
       const { error: insertError } = await supabase.rpc('complete_task_for_member', {
         p_task_id: task.id,
         p_completed_by: completerId,
@@ -92,12 +95,7 @@ export const useTaskCompletion = ({
         return false;
       }
 
-      toast({
-        title: "Task Completed!",
-        description: `+${task.points} points earned`,
-      });
-
-      onSuccess?.();
+      // Realtime will handle final state sync, no need to call onSuccess
       return true;
 
     } catch (error) {
@@ -147,43 +145,27 @@ export const useTaskCompletion = ({
         return false;
       }
 
-      // Find the completion record for this completer (prefer local state, fallback to DB)
-      let completion = task.task_completions?.find(
+      // Find the completion record in local state
+      const completion = task.task_completions?.find(
         (c) => c.completed_by === completerId
       );
 
       if (!completion) {
-        const { data: rows, error: fetchCompletionError } = await supabase
-          .from('task_completions')
-          .select('id, completed_at')
-          .eq('task_id', task.id)
-          .eq('completed_by', completerId)
-          .order('completed_at', { ascending: false })
-          .limit(1);
-
-        if (fetchCompletionError) {
-          console.error('Error fetching latest completion:', fetchCompletionError);
-          toast({
-            title: "Error",
-            description: fetchCompletionError.message || "Failed to find completion to remove",
-            variant: "destructive",
-          });
-          return false;
-        }
-
-        if (!rows || rows.length === 0) {
-          toast({
-            title: "Error",
-            description: "No completion found to remove",
-            variant: "destructive",
-          });
-          return false;
-        }
-
-        completion = rows[0] as any;
+        toast({
+          title: "Error",
+          description: "No completion found to remove",
+          variant: "destructive",
+        });
+        return false;
       }
 
-      // Always use RPC to ensure points are properly handled
+      // Optimistic UI update
+      toast({
+        title: "Task Uncompleted",
+        description: `-${task.points} points removed`,
+      });
+
+      // Call RPC to ensure points are properly handled
       const { error } = await supabase.rpc('uncomplete_task_for_member', {
         p_completion_id: completion.id,
       });
@@ -198,12 +180,7 @@ export const useTaskCompletion = ({
         return false;
       }
 
-      toast({
-        title: "Task Uncompleted",
-        description: `-${task.points} points removed`,
-      });
-
-      onSuccess?.();
+      // Realtime will handle final state sync, no need to call onSuccess
       return true;
 
     } catch (error) {

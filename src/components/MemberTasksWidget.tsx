@@ -40,7 +40,7 @@ export const MemberTasksWidget = ({
   const { toast } = useToast();
   const memberColors = getMemberColorClasses(member.color);
   
-  const { completeTask, uncompleteTask } = useTaskCompletion({
+  const { completeTask, uncompleteTask, isCompleting } = useTaskCompletion({
     currentUserProfile: profile,
     activeMemberId: activeMemberId || member.id,
     isDashboardMode
@@ -57,9 +57,9 @@ export const MemberTasksWidget = ({
     );
 
     if (isCompleted) {
-      await uncompleteTask(task, onTaskUpdated);
+      await uncompleteTask(task);
     } else {
-      await completeTask(task, onTaskUpdated);
+      await completeTask(task);
     }
   };
   
@@ -221,6 +221,7 @@ export const MemberTasksWidget = ({
                 showActions={profile.role === 'parent'}
                 memberId={member.id}
                 memberColor={member.color}
+                isCompleting={isCompleting}
               />
             </DragDropContext>
           </div>
