@@ -51,6 +51,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { useDashboardMode } from '@/hooks/useDashboardMode';
 import { useTaskCompletion } from '@/hooks/useTaskCompletion';
+import { useTaskSeries } from '@/hooks/useTaskSeries';
 import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
 import { MemberSwitchDialog } from '@/components/dashboard/MemberSwitchDialog';
 import { MemberSelectorDialog } from '@/components/dashboard/MemberSelectorDialog';
@@ -107,6 +108,12 @@ const ColumnBasedDashboard = () => {
     setProfile,
     setFamilyMembers,
   });
+
+  // Task series hook for generating virtual recurring task instances
+  const {
+    generateVirtualTaskInstances,
+    fetchTaskSeries
+  } = useTaskSeries(profile?.family_id || null);
 
   // Update local state when hook value changes
   useEffect(() => {
@@ -1234,8 +1241,58 @@ const ColumnBasedDashboard = () => {
     // Add unassigned tasks category
     tasksByMember.set('unassigned', []);
     
-    // Add regular tasks
-    tasks.forEach(task => {
+    // Generate virtual task instances from task series (for next 30 days)
+    const today = new Date();
+    const endDate = new Date(today);
+    endDate.setDate(endDate.getDate() + 30);
+    
+    const virtualInstances = generateVirtualTaskInstances(today, endDate);
+    
+    // Map virtual instances to Task format
+    const virtualTasks: Task[] = virtualInstances.map(vTask => ({
+      id: vTask.id,
+      title: vTask.title,
+      description: vTask.description || null,
+      points: vTask.points,
+      due_date: vTask.due_date,
+      assigned_to: vTask.assigned_profiles[0] || null,
+      created_by: vTask.created_by,
+      completion_rule: (vTask.completion_rule || 'everyone') as 'any_one' | 'everyone',
+      task_group: vTask.task_group,
+      assignees: vTask.assigned_profiles.map(profileId => {
+        const memberProfile = familyMembers.find(m => m.id === profileId);
+        return {
+          id: `${vTask.id}-${profileId}`,
+          profile_id: profileId,
+          assigned_at: new Date().toISOString(),
+          assigned_by: vTask.created_by,
+          profile: memberProfile ? {
+            id: memberProfile.id,
+            display_name: memberProfile.display_name,
+            role: memberProfile.role,
+            color: memberProfile.color
+          } : {
+            id: profileId,
+            display_name: 'Unknown',
+            role: 'child' as const,
+            color: 'gray'
+          }
+        };
+      }),
+      task_completions: [],
+      // Virtual task properties
+      isVirtual: true,
+      series_id: vTask.series_id,
+      occurrence_date: vTask.occurrence_date,
+      isException: vTask.isException,
+      exceptionType: vTask.exceptionType
+    }));
+    
+    // Combine regular tasks with virtual task instances
+    const allTasks = [...tasks, ...virtualTasks];
+    
+    // Add all tasks (regular + virtual)
+    allTasks.forEach(task => {
       if (task.assignees && task.assignees.length > 0) {
         // Task has multiple assignees - add to each
         task.assignees.forEach(assignee => {
@@ -1255,8 +1312,6 @@ const ColumnBasedDashboard = () => {
         tasksByMember.set('unassigned', unassignedTasks);
       }
     });
-
-    // Rotating tasks have been removed
     
     // Filter tasks by selected member if one is chosen
     if (selectedMemberFilter) {
