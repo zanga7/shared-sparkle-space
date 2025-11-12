@@ -7,7 +7,7 @@ import { UserAvatar } from '@/components/ui/user-avatar';
 import { MemberTasksWidget } from '@/components/MemberTasksWidget';
 import { MemberEventsWidget } from '@/components/MemberEventsWidget';
 import { MemberPersonalListsEnhanced } from '@/components/MemberPersonalListsEnhanced';
-import { MemberRewardsStack } from '@/components/MemberRewardsStack';
+import { MemberRewardsGallery } from '@/components/rewards/MemberRewardsGallery';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
 import { EventDialog } from '@/components/EventDialog';
 import { getMemberColorClasses } from '@/lib/utils';
@@ -185,7 +185,7 @@ export const MemberDashboard = ({
   );
 
   const renderRewardsWidget = () => (
-    <MemberRewardsStack member={member} />
+    <MemberRewardsGallery member={member} />
   );
 
   const widgets = [
