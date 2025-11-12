@@ -178,7 +178,7 @@ export const useTaskCompletion = ({
 
       toast({
         title: "Task Uncompleted",
-        description: `Points have been adjusted`,
+        description: `-${task.points} points removed`,
       });
 
       onSuccess?.();

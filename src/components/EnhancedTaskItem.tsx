@@ -60,7 +60,7 @@ export const EnhancedTaskItem = ({
       )}
     >
       <div className="flex items-start gap-2">
-        {/* Complete Button */}
+        {/* Complete/Uncomplete Button */}
         <Button 
           size="sm" 
           variant={isCompleted ? "default" : "outline"}
@@ -69,9 +69,12 @@ export const EnhancedTaskItem = ({
             onToggle(task);
           }}
           className={cn(
-            "shrink-0 w-7 h-7 p-0",
-            isCompleted && "bg-green-500 hover:bg-green-600"
+            "shrink-0 w-7 h-7 p-0 cursor-pointer transition-all",
+            isCompleted 
+              ? "bg-green-500 hover:bg-green-600 hover:scale-110 active:scale-95" 
+              : "hover:border-green-500 hover:text-green-500"
           )}
+          title={isCompleted ? "Click to uncomplete and remove points" : "Click to complete and earn points"}
         >
           <CheckCircle2 className="h-3 w-3" />
         </Button>
