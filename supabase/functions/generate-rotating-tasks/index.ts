@@ -65,11 +65,11 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Helper: check if any task with this title exists today (regardless of assignee)
-      const anyTaskExistsToday = async (): Promise<boolean> => {
+      // Helper: check if any INCOMPLETE task with this title exists today (regardless of assignee)
+      const anyIncompleteTaskExistsToday = async (): Promise<boolean> => {
         const { data: existing, error } = await supabaseClient
           .from('tasks')
-          .select('id')
+          .select('id, task_completions(id)')
           .eq('family_id', rotatingTask.family_id)
           .eq('title', rotatingTask.name)
           .gte('created_at', `${today}T00:00:00Z`)
@@ -78,7 +78,9 @@ Deno.serve(async (req) => {
           console.error(`Error checking series-level existing tasks for ${rotatingTask.name}:`, error);
           return true; // fail-safe: avoid duplicate creation on error
         }
-        return (existing && existing.length > 0);
+        // Filter to only incomplete tasks (no completion records)
+        const incompleteTasks = existing?.filter(task => !task.task_completions || task.task_completions.length === 0) || [];
+        return incompleteTasks.length > 0;
       };
 
       let targetMemberId: string | null = null;
@@ -86,9 +88,9 @@ Deno.serve(async (req) => {
 
       if (!rotatingTask.allow_multiple_completions) {
         // Single instance per day for the series
-        const exists = await anyTaskExistsToday();
+        const exists = await anyIncompleteTaskExistsToday();
         if (exists) {
-          console.log(`⏭️  ${rotatingTask.name}: a task already exists today (single-instance mode)`);
+          console.log(`⏭️  ${rotatingTask.name}: an incomplete task already exists today (single-instance mode)`);
           continue;
         }
         // Assign to current member index
@@ -99,7 +101,7 @@ Deno.serve(async (req) => {
         }
         usedIndex = rotatingTask.current_member_index;
       } else {
-        // Multiple completions allowed: find the next member who doesn't have one today
+        // Multiple completions allowed: find the next member who doesn't have an incomplete task today
         for (let i = 0; i < len; i++) {
           const idx = (rotatingTask.current_member_index + i) % len;
           const candidateId = rotatingTask.member_order[idx];
@@ -107,7 +109,7 @@ Deno.serve(async (req) => {
 
           const { data: existingForMember, error: checkError } = await supabaseClient
             .from('tasks')
-            .select('id, task_assignees!inner(profile_id)')
+            .select('id, task_assignees!inner(profile_id), task_completions(id)')
             .eq('family_id', rotatingTask.family_id)
             .eq('title', rotatingTask.name)
             .eq('task_assignees.profile_id', candidateId)
@@ -119,7 +121,10 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          if (!existingForMember || existingForMember.length === 0) {
+          // Check if member has an incomplete task
+          const hasIncompleteTask = existingForMember?.some(task => !task.task_completions || task.task_completions.length === 0);
+
+          if (!hasIncompleteTask) {
             targetMemberId = candidateId;
             usedIndex = idx;
             break;
@@ -127,7 +132,7 @@ Deno.serve(async (req) => {
         }
 
         if (!targetMemberId) {
-          console.log(`⏭️  ${rotatingTask.name}: all members already have a task today`);
+          console.log(`⏭️  ${rotatingTask.name}: all members already have incomplete tasks today`);
           continue;
         }
       }
