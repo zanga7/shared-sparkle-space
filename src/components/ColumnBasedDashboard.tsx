@@ -1059,6 +1059,7 @@ const ColumnBasedDashboard = () => {
     if (!profile?.family_id) return;
     
     try {
+      // Refresh tasks
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .select(`
@@ -1071,10 +1072,6 @@ const ColumnBasedDashboard = () => {
           created_by,
           completion_rule,
           task_group,
-          category_id,
-          family_id,
-          created_at,
-          updated_at,
           assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
           assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
           task_completions(id, completed_at, completed_by)
@@ -1090,6 +1087,29 @@ const ColumnBasedDashboard = () => {
         console.log('Tasks refreshed successfully');
       } else if (tasksError) {
         console.error('Error refreshing tasks:', tasksError);
+      }
+
+      // Also refresh profile and family members to get updated points
+      const { data: updatedProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (updatedProfile) {
+        setProfile(updatedProfile);
+      }
+
+      const { data: updatedMembers } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('family_id', profile.family_id)
+        .eq('status', 'active')
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true });
+
+      if (updatedMembers) {
+        setFamilyMembers(updatedMembers);
       }
     } catch (error) {
       console.error('Error in refreshTasksOnly:', error);
