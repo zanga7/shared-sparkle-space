@@ -1504,10 +1504,16 @@ export type Database = {
         }
         Returns: boolean
       }
-      complete_task_for_member: {
-        Args: { p_completed_by: string; p_points: number; p_task_id: string }
-        Returns: Json
-      }
+      complete_task_for_member:
+        | {
+            Args: {
+              p_completed_by: string
+              p_points: number
+              p_task_id: string
+            }
+            Returns: Json
+          }
+        | { Args: { p_completed_by: string; p_task_id: string }; Returns: Json }
       create_audit_log: {
         Args: {
           p_action: string

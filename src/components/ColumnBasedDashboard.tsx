@@ -848,62 +848,7 @@ const ColumnBasedDashboard = () => {
   };
 
   const uncompleteTask = async (task: Task) => {
-    if (!profile || !task.task_completions || task.task_completions.length === 0) return;
-    
-    try {
-      // Find the completion record by the current user or active member
-      const completerId = dashboardMode && activeMemberId ? activeMemberId : profile.id;
-      const userCompletion = task.task_completions.find(completion => completion.completed_by === completerId);
-      
-      if (!userCompletion) {
-        return;
-      }
-
-      // Delete the task completion record - use RPC in dashboard mode on behalf of member
-      let deleteError: any = null;
-      if (dashboardMode && completerId !== profile.id) {
-        const { data, error } = await supabase.rpc('uncomplete_task_for_member', {
-          p_completion_id: userCompletion.id,
-        });
-        deleteError = error;
-      } else {
-        const { error } = await supabase
-          .from('task_completions')
-          .delete()
-          .eq('id', userCompletion.id);
-        deleteError = error;
-      }
-
-      if (deleteError) {
-        throw deleteError;
-      }
-
-      toast({
-        title: 'Task Uncompleted',
-        description: `${task.points} points removed`,
-      });
-
-      // Update local state (real-time will update points)
-      setTasks(prevTasks => 
-        prevTasks.map(t => 
-          t.id === task.id 
-            ? { ...t, task_completions: [] }
-            : t
-        )
-      );
-      
-      // Refresh data to ensure UI and points are in sync
-      await fetchUserData();
-      
-      console.log('✅ Task uncompleted. Database trigger handling point removal.');
-    } catch (error) {
-      console.error('Error uncompleting task:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to uncomplete task',
-        variant: 'destructive'
-      });
-    }
+    await uncompleteTaskHandler(task, refreshTasksOnly);
   };
 
   const handleTaskToggle = (task: Task) => {
