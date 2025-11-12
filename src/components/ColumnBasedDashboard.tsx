@@ -712,7 +712,15 @@ const ColumnBasedDashboard = () => {
   };
 
   const handleTaskToggle = (task: Task) => {
-    const isCompleted = task.task_completions && task.task_completions.length > 0;
+    // Determine who we're checking for (same logic as the hook)
+    const completerId = activeMemberId || profile?.id;
+    if (!completerId) return;
+
+    // Check if THIS specific user/member has completed the task
+    const isCompleted = task.task_completions?.some(
+      (c) => c.completed_by === completerId
+    );
+
     if (isCompleted) {
       uncompleteTask(task);
     } else {
