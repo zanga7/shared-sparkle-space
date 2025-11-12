@@ -25,6 +25,7 @@ import { ScreenSaverPreview } from "./pages/ScreenSaverPreview";
 import DashboardMode from "./pages/admin/DashboardMode";
 import Permissions from "./pages/admin/Permissions";
 import RotatingTasks from "./pages/admin/RotatingTasks";
+import RotationDebugger from "./pages/admin/RotationDebugger";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="permissions" element={<Permissions />} />
             <Route path="screensaver" element={<ScreenSaverManagement />} />
             <Route path="rotating-tasks" element={<RotatingTasks />} />
+            <Route path="rotation-debugger" element={<RotationDebugger />} />
           </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

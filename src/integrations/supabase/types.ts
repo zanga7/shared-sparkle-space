@@ -1026,6 +1026,80 @@ export type Database = {
         }
         Relationships: []
       }
+      rotation_events: {
+        Row: {
+          chosen_member_id: string | null
+          created_at: string
+          family_id: string
+          id: string
+          new_task_id: string | null
+          next_index: number | null
+          previous_index: number | null
+          reason: string | null
+          rotating_task_id: string
+          selected_index: number | null
+          source: string
+          status: string
+        }
+        Insert: {
+          chosen_member_id?: string | null
+          created_at?: string
+          family_id: string
+          id?: string
+          new_task_id?: string | null
+          next_index?: number | null
+          previous_index?: number | null
+          reason?: string | null
+          rotating_task_id: string
+          selected_index?: number | null
+          source: string
+          status: string
+        }
+        Update: {
+          chosen_member_id?: string | null
+          created_at?: string
+          family_id?: string
+          id?: string
+          new_task_id?: string | null
+          next_index?: number | null
+          previous_index?: number | null
+          reason?: string | null
+          rotating_task_id?: string
+          selected_index?: number | null
+          source?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rotation_events_chosen_member_id_fkey"
+            columns: ["chosen_member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rotation_events_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rotation_events_new_task_id_fkey"
+            columns: ["new_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rotation_events_rotating_task_id_fkey"
+            columns: ["rotating_task_id"]
+            isOneToOne: false
+            referencedRelation: "rotating_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       screensaver_images: {
         Row: {
           created_at: string
@@ -1304,6 +1378,7 @@ export type Database = {
           id: string
           points: number
           recurrence_options: Json | null
+          rotating_task_id: string | null
           task_group: string | null
           title: string
           updated_at: string
@@ -1320,6 +1395,7 @@ export type Database = {
           id?: string
           points?: number
           recurrence_options?: Json | null
+          rotating_task_id?: string | null
           task_group?: string | null
           title: string
           updated_at?: string
@@ -1336,6 +1412,7 @@ export type Database = {
           id?: string
           points?: number
           recurrence_options?: Json | null
+          rotating_task_id?: string | null
           task_group?: string | null
           title?: string
           updated_at?: string
@@ -1367,6 +1444,13 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_rotating_task_id_fkey"
+            columns: ["rotating_task_id"]
+            isOneToOne: false
+            referencedRelation: "rotating_tasks"
             referencedColumns: ["id"]
           },
         ]

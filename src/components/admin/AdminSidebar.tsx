@@ -37,6 +37,7 @@ const adminMenuItems = [
   { title: "Family Members", url: "/admin/members", icon: Users },
   { title: "Dashboard Mode", url: "/admin/dashboard", icon: Smartphone },
   { title: "Rotating Tasks", url: "/admin/rotating-tasks", icon: RotateCcw },
+  { title: "Rotation Debugger", url: "/admin/rotation-debugger", icon: Database },
   { title: "Rewards", url: "/admin/rewards", icon: Gift },
   { title: "Reward Approvals", url: "/admin/reward-approvals", icon: ClipboardCheck },
   { title: "Calendar Settings", url: "/admin/calendar-settings", icon: Calendar },

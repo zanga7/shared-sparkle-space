@@ -19,7 +19,21 @@ interface RotatingTask {
   is_active: boolean;
   is_paused: boolean;
   task_group: string;
+  created_by: string;
   allow_multiple_completions: boolean;
+}
+
+interface RotationEvent {
+  family_id: string;
+  rotating_task_id: string;
+  source: 'edge_function' | 'manual';
+  previous_index: number;
+  selected_index: number;
+  next_index: number;
+  chosen_member_id: string | null;
+  new_task_id: string | null;
+  status: 'success' | 'skipped' | 'failed';
+  reason: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -125,11 +139,30 @@ Deno.serve(async (req) => {
         return !!data && !error;
       };
 
+      // Helper: log rotation event
+      const logRotationEvent = async (event: Omit<RotationEvent, 'family_id' | 'rotating_task_id'>) => {
+        await supabaseClient.from('rotation_events').insert({
+          family_id: rotatingTask.family_id,
+          rotating_task_id: rotatingTask.id,
+          source: 'edge_function',
+          ...event
+        });
+      };
+
       if (!rotatingTask.allow_multiple_completions) {
         // Single instance per day for the series
         const exists = await anyIncompleteTaskExistsToday();
         if (exists) {
           console.log(`⏭️  ${rotatingTask.name}: an incomplete task already exists today (single-instance mode)`);
+          await logRotationEvent({
+            previous_index: originalIndex,
+            selected_index: originalIndex,
+            next_index: originalIndex,
+            chosen_member_id: null,
+            new_task_id: null,
+            status: 'skipped',
+            reason: 'Incomplete task already exists today'
+          });
           continue;
         }
 
@@ -146,6 +179,15 @@ Deno.serve(async (req) => {
 
         if (!targetMemberId) {
           console.log(`❌ No valid members found in rotation for ${rotatingTask.name}`);
+          await logRotationEvent({
+            previous_index: originalIndex,
+            selected_index: originalIndex,
+            next_index: originalIndex,
+            chosen_member_id: null,
+            new_task_id: null,
+            status: 'failed',
+            reason: 'No valid members in rotation'
+          });
           continue;
         }
       } else {
@@ -186,6 +228,15 @@ Deno.serve(async (req) => {
 
         if (!targetMemberId) {
           console.log(`⏭️  ${rotatingTask.name}: all members already have incomplete tasks today or are invalid`);
+          await logRotationEvent({
+            previous_index: originalIndex,
+            selected_index: originalIndex,
+            next_index: originalIndex,
+            chosen_member_id: null,
+            new_task_id: null,
+            status: 'skipped',
+            reason: 'All members have incomplete tasks today'
+          });
           continue;
         }
       }
@@ -242,10 +293,11 @@ Deno.serve(async (req) => {
           title: rotatingTask.name,
           description: rotatingTask.description,
           points: rotatingTask.points,
-          created_by: rotatingTask.member_order[0], // Use first member as creator
+          created_by: rotatingTask.created_by,
           task_group: taskGroup,
           due_date: dueDate,
-          completion_rule: 'everyone'
+          completion_rule: 'everyone',
+          rotating_task_id: rotatingTask.id
         })
         .select()
         .single();
@@ -257,6 +309,16 @@ Deno.serve(async (req) => {
           .from('rotating_tasks')
           .update({ current_member_index: originalIndex, updated_at: now.toISOString() })
           .eq('id', rotatingTask.id);
+        
+        await logRotationEvent({
+          previous_index: originalIndex,
+          selected_index: selectedIndex,
+          next_index: nextIndex,
+          chosen_member_id: targetMemberId,
+          new_task_id: null,
+          status: 'failed',
+          reason: `Task creation failed: ${createError?.message || 'Unknown error'}`
+        });
         continue;
       }
 
@@ -266,7 +328,7 @@ Deno.serve(async (req) => {
         .insert({
           task_id: newTask.id,
           profile_id: targetMemberId,
-          assigned_by: rotatingTask.member_order[0]
+          assigned_by: rotatingTask.created_by
         });
 
       if (assignError) {
@@ -277,8 +339,29 @@ Deno.serve(async (req) => {
           .from('rotating_tasks')
           .update({ current_member_index: originalIndex, updated_at: now.toISOString() })
           .eq('id', rotatingTask.id);
+        
+        await logRotationEvent({
+          previous_index: originalIndex,
+          selected_index: selectedIndex,
+          next_index: nextIndex,
+          chosen_member_id: targetMemberId,
+          new_task_id: newTask.id,
+          status: 'failed',
+          reason: `Assignment failed: ${assignError.message || 'Unknown error'}`
+        });
         continue;
       }
+
+      // Log successful rotation
+      await logRotationEvent({
+        previous_index: originalIndex,
+        selected_index: selectedIndex,
+        next_index: nextIndex,
+        chosen_member_id: targetMemberId,
+        new_task_id: newTask.id,
+        status: 'success',
+        reason: null
+      });
 
       console.log(`✅ Created task ${rotatingTask.name} for member ${targetMemberId}`);
       generatedCount++;
