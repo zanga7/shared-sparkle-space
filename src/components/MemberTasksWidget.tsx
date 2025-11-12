@@ -68,6 +68,9 @@ export const MemberTasksWidget = ({
         midday.setHours(15, 0, 0, 0);
         return midday.toISOString();
       case 'afternoon':
+        const afternoon = new Date(today);
+        afternoon.setHours(18, 0, 0, 0);
+        return afternoon.toISOString();
       case 'evening':
         const evening = new Date(today);
         evening.setHours(23, 59, 0, 0);

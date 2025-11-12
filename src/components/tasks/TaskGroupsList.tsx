@@ -7,7 +7,7 @@ import { Task, Profile } from '@/types/task';
 import { cn, getMemberColorClasses } from '@/lib/utils';
 import { Sun, Clock3, Moon, FileText } from 'lucide-react';
 
-type TaskGroup = 'morning' | 'midday' | 'evening' | 'general';
+type TaskGroup = 'morning' | 'midday' | 'afternoon' | 'evening' | 'general';
 
 interface TaskGroupsListProps {
   tasks: Task[];
@@ -45,7 +45,8 @@ export const TaskGroupsList = ({
     const groups = {
       morning: tasks.filter(task => task.task_group === 'morning'),
       midday: tasks.filter(task => task.task_group === 'midday'),
-      evening: tasks.filter(task => task.task_group === 'evening' || task.task_group === 'afternoon'),
+      afternoon: tasks.filter(task => task.task_group === 'afternoon'),
+      evening: tasks.filter(task => task.task_group === 'evening'),
       general: tasks.filter(task => !task.task_group || task.task_group === 'general')
     };
     return groups;
@@ -66,6 +67,7 @@ export const TaskGroupsList = ({
     switch (group) {
       case 'morning': return Sun;
       case 'midday': return Clock3;
+      case 'afternoon': return Clock3;
       case 'evening': return Moon;
       case 'general': return FileText;
     }
@@ -75,6 +77,7 @@ export const TaskGroupsList = ({
     switch (group) {
       case 'morning': return 'Morning';
       case 'midday': return 'Midday';
+      case 'afternoon': return 'Afternoon';
       case 'evening': return 'Evening';
       case 'general': return 'General';
     }
@@ -87,8 +90,9 @@ export const TaskGroupsList = ({
     switch (group) {
       case 'morning': return hour >= 6 && hour < 12;
       case 'midday': return hour >= 11 && hour < 16;
-      case 'evening': return hour >= 15 || hour < 6;
-      case 'general': return true;
+      case 'afternoon': return hour >= 15 && hour < 19;
+      case 'evening': return hour >= 18 || hour < 6;
+      case 'general': return true; // Always open
     }
   };
 

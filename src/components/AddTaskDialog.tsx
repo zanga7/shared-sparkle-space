@@ -109,11 +109,10 @@ export const AddTaskDialog = ({
   // Handle preselected task group
   useEffect(() => {
     if (preselectedTaskGroup) {
-      const normalized = preselectedTaskGroup === 'afternoon' ? 'evening' : preselectedTaskGroup;
-      console.log('📋 Setting task group from preselected:', { preselectedTaskGroup, normalized });
+      console.log('📋 Setting task group from preselected:', { preselectedTaskGroup });
       setFormData(prev => ({ 
         ...prev, 
-        task_group: normalized
+        task_group: preselectedTaskGroup
       }));
     }
   }, [preselectedTaskGroup]);
@@ -140,10 +139,8 @@ export const AddTaskDialog = ({
     setLoading(true);
     
     try {
-      const normalizedGroup = formData.task_group === 'afternoon' ? 'evening' : formData.task_group;
       console.log('💾 Creating task with:', { 
-        originalGroup: formData.task_group, 
-        normalizedGroup,
+        task_group: formData.task_group,
         title: formData.title,
         assignees: formData.assignees 
       });
@@ -156,7 +153,7 @@ export const AddTaskDialog = ({
           title: formData.title.trim(),
           description: formData.description.trim() || null,
           points: formData.points,
-           task_group: normalizedGroup,
+          task_group: formData.task_group,
           completion_rule: formData.completion_rule,
           recurrence_rule: taskRecurrenceOptions.rule,
           series_start: (formData.due_date || new Date()).toISOString(),
@@ -197,7 +194,7 @@ export const AddTaskDialog = ({
           assigned_to: formData.assignees.length === 1 ? formData.assignees[0] : null,
           due_date: formData.due_date?.toISOString() || null,
           completion_rule: formData.completion_rule,
-          task_group: normalizedGroup,
+          task_group: formData.task_group,
           family_id: familyId,
           created_by: profileId,
           recurrence_options: null
@@ -432,10 +429,16 @@ export const AddTaskDialog = ({
                     Midday (11 AM - 3 PM)
                   </div>
                 </SelectItem>
+                <SelectItem value="afternoon">
+                  <div className="flex items-center gap-2">
+                    <Clock3 className="h-4 w-4" />
+                    Afternoon (3 PM - 6 PM)
+                  </div>
+                </SelectItem>
                 <SelectItem value="evening">
                   <div className="flex items-center gap-2">
                     <Moon className="h-4 w-4" />
-                    Evening (3 PM onwards)
+                    Evening (6 PM onwards)
                   </div>
                 </SelectItem>
                 <SelectItem value="general">

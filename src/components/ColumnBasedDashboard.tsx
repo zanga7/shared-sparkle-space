@@ -701,10 +701,7 @@ const ColumnBasedDashboard = () => {
     const parseDroppableId = (id: string): { memberId: string | null; group: string | null } => {
       if (id === 'unassigned') return { memberId: null, group: null };
 
-      const validGroups = ['morning', 'midday', 'evening', 'general'];
-      
-      // Normalize group aliases
-      const normalizeGroup = (g: string): string => g === 'afternoon' ? 'evening' : g;
+      const validGroups = ['morning', 'midday', 'afternoon', 'evening', 'general'];
       
       // Check if it's a member ID only (36 characters UUID)
       if (id.length === 36 && id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
@@ -719,8 +716,7 @@ const ColumnBasedDashboard = () => {
         const remainder = parts.slice(5).join('-'); // e.g. "pending-morning" | "completed-general"
         
         if (memberId.length === 36 && memberId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-          const rawGroup = remainder.replace(/^pending-/, '').replace(/^completed-/, '');
-          const group = normalizeGroup(rawGroup); // Normalize afternoon → evening
+          const group = remainder.replace(/^pending-/, '').replace(/^completed-/, '');
           
           if (validGroups.includes(group)) {
             return { memberId, group };
@@ -729,8 +725,7 @@ const ColumnBasedDashboard = () => {
       }
       
       // Check if it's just a group name (for member view) possibly prefixed with pending-/completed-
-      const rawPotentialGroup = id.replace(/^pending-/, '').replace(/^completed-/, '');
-      const potentialGroup = normalizeGroup(rawPotentialGroup); // Normalize afternoon → evening
+      const potentialGroup = id.replace(/^pending-/, '').replace(/^completed-/, '');
       
       if (validGroups.includes(potentialGroup)) {
         return { memberId: null, group: potentialGroup };
@@ -945,6 +940,11 @@ const ColumnBasedDashboard = () => {
         const midday = new Date(today);
         midday.setHours(15, 0, 0, 0);
         return midday.toISOString();
+      case 'afternoon':
+        // Set to 6 PM today
+        const afternoon = new Date(today);
+        afternoon.setHours(18, 0, 0, 0);
+        return afternoon.toISOString();
       case 'evening':
         // Set to 11:59 PM today
         const evening = new Date(today);
@@ -1007,12 +1007,12 @@ const ColumnBasedDashboard = () => {
   };
 
   // Time-based task grouping
-  type TaskGroup = 'morning' | 'midday' | 'evening' | 'general';
+  type TaskGroup = 'morning' | 'midday' | 'afternoon' | 'evening' | 'general';
   
   const getTaskGroup = (task: Task): TaskGroup => {
     // Priority 1: Use task_group field if explicitly set
     if (task.task_group) {
-      const validGroups = ['morning', 'midday', 'evening', 'general'];
+      const validGroups = ['morning', 'midday', 'afternoon', 'evening', 'general'];
       if (validGroups.includes(task.task_group)) {
         return task.task_group as TaskGroup;
       }
@@ -1026,7 +1026,8 @@ const ColumnBasedDashboard = () => {
     
     if (hour >= 0 && hour < 11) return 'morning';
     if (hour >= 11 && hour < 15) return 'midday';
-    if (hour >= 15 && hour < 24) return 'evening';
+    if (hour >= 15 && hour < 18) return 'afternoon';
+    if (hour >= 18 && hour < 24) return 'evening';
     return 'general';
   };
   
@@ -1034,6 +1035,7 @@ const ColumnBasedDashboard = () => {
     switch (group) {
       case 'morning': return Sun;
       case 'midday': return Clock3;
+      case 'afternoon': return Clock3;
       case 'evening': return Moon;
       case 'general': return FileText;
     }
@@ -1043,6 +1045,7 @@ const ColumnBasedDashboard = () => {
     switch (group) {
       case 'morning': return 'Morning';
       case 'midday': return 'Midday';
+      case 'afternoon': return 'Afternoon';
       case 'evening': return 'Evening';
       case 'general': return 'General';
     }
@@ -1055,7 +1058,8 @@ const ColumnBasedDashboard = () => {
     switch (group) {
       case 'morning': return hour >= 6 && hour < 12;
       case 'midday': return hour >= 11 && hour < 16;
-      case 'evening': return hour >= 15 || hour < 6;
+      case 'afternoon': return hour >= 15 && hour < 19;
+      case 'evening': return hour >= 18 || hour < 6;
       case 'general': return true; // Always open
     }
   };
@@ -1064,6 +1068,7 @@ const ColumnBasedDashboard = () => {
     const groups: Record<TaskGroup, Task[]> = {
       morning: [],
       midday: [],
+      afternoon: [],
       evening: [],
       general: []
     };
