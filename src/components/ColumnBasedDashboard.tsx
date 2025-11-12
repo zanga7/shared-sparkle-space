@@ -836,8 +836,9 @@ const ColumnBasedDashboard = () => {
     if (!profile || !task.task_completions || task.task_completions.length === 0) return;
     
     try {
-      // Find the completion record to delete
-      const userCompletion = task.task_completions.find(completion => completion.completed_by === profile.id);
+      // Find the completion record by the current user or active member
+      const completerId = dashboardMode && activeMemberId ? activeMemberId : profile.id;
+      const userCompletion = task.task_completions.find(completion => completion.completed_by === completerId);
       
       if (!userCompletion) {
         return;
