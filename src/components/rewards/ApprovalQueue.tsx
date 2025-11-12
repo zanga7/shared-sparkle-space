@@ -112,6 +112,12 @@ export function ApprovalQueue() {
         gr.requests.some(r => r.requested_by === selectedMember)
       );
 
+  // Separate pending from non-pending requests
+  const pendingGroupedRequests = filteredGroupedRequests.filter(gr => gr.status === 'pending');
+  const nonPendingGroupedRequests = filteredGroupedRequests.filter(gr => gr.status !== 'pending');
+  const pendingIndividualRequests = filteredIndividualRequests.filter(req => req.status === 'pending');
+  const nonPendingIndividualRequests = filteredIndividualRequests.filter(req => req.status !== 'pending');
+
   // Fetch family members and group contributions
   useEffect(() => {
     const fetchData = async () => {
@@ -299,9 +305,19 @@ export function ApprovalQueue() {
         </div>
       </div>
 
-      <div className="space-y-2">
-        {/* Group contribution requests */}
-        {filteredGroupedRequests.map((groupedRequest) => (
+      {/* Pending Approvals Section */}
+      {(pendingGroupedRequests.length > 0 || pendingIndividualRequests.length > 0) && (
+        <div className="space-y-3">
+          <div className="bg-yellow-50 dark:bg-yellow-950/20 border-2 border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-500" />
+              <h3 className="font-semibold text-lg text-yellow-900 dark:text-yellow-100">
+                Pending Approvals ({pendingGroupedRequests.length + pendingIndividualRequests.length})
+              </h3>
+            </div>
+            <div className="space-y-2">
+              {/* Pending group contribution requests */}
+              {pendingGroupedRequests.map((groupedRequest) => (
           <Card key={groupedRequest.id} className="relative">
             <CardContent className="p-3">
               <div className="flex items-center justify-between gap-4">
@@ -515,8 +531,8 @@ export function ApprovalQueue() {
           </Card>
         ))}
 
-        {/* Individual reward requests */}
-        {filteredIndividualRequests.map((request) => {
+              {/* Pending individual reward requests */}
+              {pendingIndividualRequests.map((request) => {
           const currentBalance = getPointsBalance(request.requested_by);
           const canAfford = currentBalance >= request.points_cost;
 
@@ -732,9 +748,271 @@ export function ApprovalQueue() {
                 )}
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Other Statuses Section */}
+      {(nonPendingGroupedRequests.length > 0 || nonPendingIndividualRequests.length > 0) && (
+        <div className="space-y-3">
+          <h3 className="font-semibold text-lg">Processed Requests</h3>
+          <div className="space-y-2">
+            {/* Non-pending group contribution requests */}
+            {nonPendingGroupedRequests.map((groupedRequest) => (
+              <Card key={groupedRequest.id} className="relative">
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3">
+                        <OverlappingAvatarGroup 
+                          members={groupedRequest.contributors}
+                          size="sm"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-medium text-sm truncate">
+                            {groupedRequest.reward_title}
+                          </h4>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>Group contribution</span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                              <Coins className="w-3 h-3" />
+                              {groupedRequest.points_cost}
+                            </span>
+                            <span>•</span>
+                            <span>{format(new Date(groupedRequest.created_at), 'MMM d')}</span>
+                            <span>•</span>
+                            <span>{groupedRequest.contributors.length} contributors</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Badge className={getStatusColor(groupedRequest.status)} variant="secondary">
+                        {groupedRequest.status}
+                      </Badge>
+
+                      {groupedRequest.status === 'approved' && (
+                        <div className="flex gap-1">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                size="sm" 
+                                onClick={() => setSelectedGroupedRequest(groupedRequest)}
+                              >
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Mark Claimed
+                              </Button>
+                            </DialogTrigger>
+                            
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Mark as Claimed</DialogTitle>
+                                <DialogDescription>
+                                  Mark the group reward "{groupedRequest.reward_title}" as claimed?
+                                </DialogDescription>
+                              </DialogHeader>
+
+                              <DialogFooter>
+                                <Button variant="outline" onClick={() => setSelectedGroupedRequest(null)}>
+                                  Cancel
+                                </Button>
+                                <Button onClick={handleMarkClaimed} disabled={isClaiming}>
+                                  {isClaiming ? 'Marking...' : 'Mark Claimed'}
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={() => setSelectedGroupedRequest(groupedRequest)}
+                              >
+                                <RotateCcw className="w-3 h-3 mr-1" />
+                                Revoke
+                              </Button>
+                            </DialogTrigger>
+                            
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Revoke Group Reward</DialogTitle>
+                                <DialogDescription>
+                                  Revoke the group reward "{groupedRequest.reward_title}" and refund {groupedRequest.points_cost} points?
+                                </DialogDescription>
+                              </DialogHeader>
+
+                              <div className="space-y-4">
+                                <div>
+                                  <Label htmlFor="revoke-note">Reason (optional)</Label>
+                                  <Textarea
+                                    id="revoke-note"
+                                    placeholder="Explain why this reward was revoked..."
+                                    value={note}
+                                    onChange={(e) => setNote(e.target.value)}
+                                  />
+                                </div>
+                              </div>
+
+                              <DialogFooter>
+                                <Button variant="outline" onClick={() => setSelectedGroupedRequest(null)}>
+                                  Cancel
+                                </Button>
+                                <Button variant="destructive" onClick={handleRevoke} disabled={isRevoking}>
+                                  {isRevoking ? 'Revoking...' : 'Revoke & Refund'}
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {groupedRequest.approval_note && (
+                    <div className="mt-3 p-2 bg-muted rounded text-xs">
+                      <span className="font-medium">Note:</span> {groupedRequest.approval_note}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+
+            {/* Non-pending individual reward requests */}
+            {nonPendingIndividualRequests.map((request) => {
+              const currentBalance = getPointsBalance(request.requested_by);
+
+              return (
+                <Card key={request.id} className="relative">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3">
+                          <UserAvatar 
+                            name={request.requestor?.display_name || 'Unknown User'}
+                            color={request.requestor?.color || 'sky'}
+                            size="sm"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-medium text-sm truncate">
+                              {request.reward?.title || 'Unknown Reward'}
+                            </h4>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>{request.requestor?.display_name || 'Unknown User'}</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <Coins className="w-3 h-3" />
+                                {request.points_cost}
+                              </span>
+                              <span>•</span>
+                              <span>{format(new Date(request.created_at), 'MMM d')}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusColor(request.status)} variant="secondary">
+                          {request.status}
+                        </Badge>
+
+                        {request.status === 'approved' && (
+                          <div className="flex gap-1">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => setSelectedRequest(request)}
+                                >
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Mark Claimed
+                                </Button>
+                              </DialogTrigger>
+                              
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Mark as Claimed</DialogTitle>
+                                  <DialogDescription>
+                                    Mark {request.requestor?.display_name}'s reward "{request.reward?.title}" as claimed?
+                                  </DialogDescription>
+                                </DialogHeader>
+
+                                <DialogFooter>
+                                  <Button variant="outline" onClick={() => setSelectedRequest(null)}>
+                                    Cancel
+                                  </Button>
+                                  <Button onClick={handleMarkClaimed} disabled={isClaiming}>
+                                    {isClaiming ? 'Marking...' : 'Mark Claimed'}
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={() => setSelectedRequest(request)}
+                                >
+                                  <RotateCcw className="w-3 h-3 mr-1" />
+                                  Revoke
+                                </Button>
+                              </DialogTrigger>
+                              
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Revoke Reward</DialogTitle>
+                                  <DialogDescription>
+                                    Revoke {request.requestor?.display_name}'s reward "{request.reward?.title}" and refund {request.points_cost} points?
+                                  </DialogDescription>
+                                </DialogHeader>
+
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label htmlFor="revoke-note">Reason (optional)</Label>
+                                    <Textarea
+                                      id="revoke-note"
+                                      placeholder="Explain why this reward was revoked..."
+                                      value={note}
+                                      onChange={(e) => setNote(e.target.value)}
+                                    />
+                                  </div>
+                                </div>
+
+                                <DialogFooter>
+                                  <Button variant="outline" onClick={() => setSelectedRequest(null)}>
+                                    Cancel
+                                  </Button>
+                                  <Button variant="destructive" onClick={handleRevoke} disabled={isRevoking}>
+                                    {isRevoking ? 'Revoking...' : 'Revoke & Refund'}
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {request.approval_note && (
+                      <div className="mt-3 p-2 bg-muted rounded text-xs">
+                        <span className="font-medium">Note:</span> {request.approval_note}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
