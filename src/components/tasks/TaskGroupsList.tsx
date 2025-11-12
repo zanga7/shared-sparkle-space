@@ -90,19 +90,9 @@ export const TaskGroupsList = ({
     return (
       <AccordionItem value={droppableId} key={droppableId}>
         <AccordionTrigger className="text-sm font-medium px-3 py-2 hover:no-underline">
-          <div className="flex items-center justify-between w-full pr-2">
-            <div className="flex items-center gap-2">
-              <Icon className="h-4 w-4 text-muted-foreground" />
-              <span>{groupTitle}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">
-                {completedGroupTasks.length}/{groupTasks.length}
-              </span>
-              {groupTasks.length > 0 && (
-                <Progress value={progress} className="w-12 h-1" />
-              )}
-            </div>
+          <div className="flex items-center gap-2">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+            <span>{groupTitle}</span>
           </div>
         </AccordionTrigger>
         <AccordionContent forceMount className="px-3 pb-3 pt-1">
