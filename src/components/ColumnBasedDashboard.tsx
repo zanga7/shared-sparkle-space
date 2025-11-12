@@ -1360,6 +1360,7 @@ const ColumnBasedDashboard = () => {
                               <Progress 
                                 value={memberTasks.length > 0 ? Math.round((completedTasks.length / memberTasks.length) * 100) : 0} 
                                 className="h-3"
+                                indicatorClassName={getMemberColorClasses(member.color).bg}
                               />
                             </CardHeader>
 
