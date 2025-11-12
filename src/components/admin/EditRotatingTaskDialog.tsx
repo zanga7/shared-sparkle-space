@@ -401,19 +401,32 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
             )}
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="allowMultipleCompletions"
-              checked={allowMultipleCompletions}
-              onCheckedChange={(checked) => setAllowMultipleCompletions(checked as boolean)}
-            />
-            <Label htmlFor="allowMultipleCompletions" className="text-sm">
-              Allow multiple completions per {cadence === 'daily' ? 'day' : cadence === 'weekly' ? 'week' : 'month'}
-            </Label>
+          <div className="border rounded-lg p-4 space-y-2 bg-muted/30">
+            <Label className="text-base font-medium">Task Assignment Mode</Label>
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="allowMultipleCompletions"
+                checked={allowMultipleCompletions}
+                onCheckedChange={(checked) => setAllowMultipleCompletions(checked as boolean)}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="allowMultipleCompletions" className="text-sm font-medium">
+                  Assign to all members simultaneously
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {allowMultipleCompletions ? (
+                    <>
+                      ✅ <strong>Shared task mode:</strong> Creates one task for each member in the rotation. All members will see their own instance of the task.
+                    </>
+                  ) : (
+                    <>
+                      ✅ <strong>Rotating assignment mode:</strong> Creates one task for the current member in rotation. Only that member will see the task. After completion, the next member gets the task.
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            When enabled, allows generating new tasks even if one already exists for the current {cadence === 'daily' ? 'day' : cadence === 'weekly' ? 'week' : 'month'}. Useful for tasks that can be done multiple times.
-          </p>
 
           <div className="flex items-center space-x-2">
             <Checkbox
