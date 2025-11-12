@@ -327,8 +327,10 @@ const ColumnBasedDashboard = () => {
   useEffect(() => {
     if (!profile?.family_id) return;
 
+    console.log('🔔 Setting up profiles realtime subscription for family:', profile.family_id);
+
     const profilesChannel = supabase
-      .channel('profiles-changes')
+      .channel(`profiles-${profile.family_id}`)
       .on(
         'postgres_changes',
         {
@@ -344,6 +346,7 @@ const ColumnBasedDashboard = () => {
           
           // Update the current profile if it's the user's profile
           if (updatedProfile.id === profile.id) {
+            console.log('📊 Updating current user points:', updatedProfile.total_points);
             setProfile(prev => prev ? { ...prev, total_points: updatedProfile.total_points } : null);
           }
           
@@ -357,9 +360,12 @@ const ColumnBasedDashboard = () => {
           );
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Profiles realtime subscription status:', status);
+      });
 
     return () => {
+      console.log('🔌 Removing profiles realtime subscription');
       supabase.removeChannel(profilesChannel);
     };
   }, [profile?.family_id, profile?.id]);
