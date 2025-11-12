@@ -56,15 +56,8 @@ export const EnhancedTaskItem = ({
       className={cn(
         "group relative border rounded-lg p-3 transition-all hover:shadow-md",
         isCompleted && "bg-muted/30",
-        isOverdue && "border-destructive/50 bg-destructive/5",
-        onEdit && "hover:bg-muted/20"
+        isOverdue && "border-destructive/50 bg-destructive/5"
       )}
-      onClick={onEdit ? (e) => {
-        // Don't trigger if clicking on buttons or interactive elements
-        const target = e.target as HTMLElement;
-        if (target.closest('button')) return;
-        onEdit(task);
-      } : undefined}
     >
       <div className="flex items-start gap-2">
         {/* Complete Button */}
