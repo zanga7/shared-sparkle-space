@@ -108,15 +108,8 @@ export const TaskGroupsList = ({
               >
                 {groupTasks.length === 0 ? (
                   <div className="text-center py-4 text-muted-foreground">
-                    {snapshot.isDraggingOver ? (
+                    {snapshot.isDraggingOver && (
                       <p className="text-xs">Drop task here</p>
-                    ) : (
-                      <div className="space-y-2">
-                        <p className="text-xs">No tasks in this group</p>
-                        <div className="text-xs text-muted-foreground">
-                          Drag tasks here or create new ones
-                        </div>
-                      </div>
                     )}
                   </div>
                 ) : (
