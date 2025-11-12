@@ -165,6 +165,86 @@ const ColumnBasedDashboard = () => {
     }
   }, [user]); // Remove profile?.id dependency to prevent loops
 
+  const cleanupDuplicateRotatingTasksToday = async (familyId: string) => {
+    try {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
+      const startISO = start.toISOString();
+      const endISO = end.toISOString();
+
+      // Get active rotating task names for this family
+      const { data: rotating, error: namesError } = await supabase
+        .from('rotating_tasks')
+        .select('name')
+        .eq('family_id', familyId)
+        .eq('is_active', true);
+
+      if (namesError) {
+        console.error('Failed to load rotating task names:', namesError);
+        return;
+      }
+
+      const names = Array.from(new Set((rotating || []).map(r => r.name)));
+      if (names.length === 0) return;
+
+      // Fetch today's tasks for those names with assignees
+      const { data: todaysTasks, error: tasksError } = await supabase
+        .from('tasks')
+        .select('id, title, created_at, due_date, task_assignees!inner(profile_id)')
+        .eq('family_id', familyId)
+        .in('title', names)
+        .gte('created_at', startISO)
+        .lte('created_at', endISO);
+
+      if (tasksError) {
+        console.error('Failed to load today\'s tasks for cleanup:', tasksError);
+        return;
+      }
+
+      type Row = { id: string; title: string; created_at: string; due_date: string | null; task_assignees: { profile_id: string }[] };
+      const rows = (todaysTasks as unknown as Row[]) || [];
+      const groups = new Map<string, Row[]>();
+
+      for (const row of rows) {
+        const assigneeId = row.task_assignees?.[0]?.profile_id || 'unassigned';
+        const key = `${row.title}::${assigneeId}`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(row);
+      }
+
+      const toDelete: string[] = [];
+      for (const [_, list] of groups) {
+        if (list.length <= 1) continue;
+        const withDue = list.filter(r => !!r.due_date);
+        let keep: Row;
+        if (withDue.length > 0) {
+          keep = withDue.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+        } else {
+          keep = list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+        }
+        for (const r of list) {
+          if (r.id !== keep.id) toDelete.push(r.id);
+        }
+      }
+
+      if (toDelete.length > 0) {
+        const { error: delError } = await supabase
+          .from('tasks')
+          .delete()
+          .in('id', toDelete);
+        if (delError) {
+          console.error('Failed deleting duplicates:', delError);
+        } else {
+          console.log(`🧹 Removed ${toDelete.length} duplicate rotating tasks`);
+        }
+      }
+    } catch (e) {
+      console.error('Error during duplicate cleanup:', e);
+    }
+  };
+
   const fetchUserData = async () => {
     try {
       console.log('🔄 fetchUserData called for user:', user?.id, 'email:', user?.email);
@@ -235,6 +315,9 @@ const ColumnBasedDashboard = () => {
               setFamilyMembers(membersData || []);
             }
 
+            // Cleanup duplicate rotating tasks for today
+            await cleanupDuplicateRotatingTasksToday(retryProfileData.family_id);
+
             // Fetch family tasks
             const { data: tasksData, error: tasksError } = await supabase
               .from('tasks')
@@ -303,6 +386,9 @@ const ColumnBasedDashboard = () => {
         console.error('Failed to generate rotating tasks:', rotatingError);
         // Continue anyway - don't block the dashboard
       }
+
+      // Cleanup duplicate rotating tasks for today
+      await cleanupDuplicateRotatingTasksToday(profileData.family_id);
 
       // Fetch family tasks with completion status
       const { data: tasksData, error: tasksError } = await supabase
