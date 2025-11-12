@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils';
 import { DragDropContext, DropResult } from '@hello-pangea/dnd';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useTaskCompletion } from '@/hooks/useTaskCompletion';
+import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 
 interface MemberTasksWidgetProps {
   member: Profile;
@@ -19,8 +21,9 @@ interface MemberTasksWidgetProps {
   profile: Profile;
   onTaskUpdated: () => void;
   onEditTask?: (task: Task) => void;
-  onTaskComplete: (task: Task) => void;
   onAddTask: () => void;
+  activeMemberId?: string | null;
+  isDashboardMode?: boolean;
 }
 
 export const MemberTasksWidget = ({
@@ -30,11 +33,35 @@ export const MemberTasksWidget = ({
   profile,
   onTaskUpdated,
   onEditTask,
-  onTaskComplete,
-  onAddTask
+  onAddTask,
+  activeMemberId,
+  isDashboardMode = false
 }: MemberTasksWidgetProps) => {
   const { toast } = useToast();
   const memberColors = getMemberColorClasses(member.color);
+  
+  const { completeTask, uncompleteTask } = useTaskCompletion({
+    currentUserProfile: profile,
+    activeMemberId: activeMemberId || member.id,
+    isDashboardMode
+  });
+
+  const handleTaskToggle = async (task: Task) => {
+    // Determine who we're checking for
+    const completerId = activeMemberId || member.id;
+    if (!completerId) return;
+
+    // Check if THIS specific user/member has completed the task
+    const isCompleted = task.task_completions?.some(
+      (c) => c.completed_by === completerId
+    );
+
+    if (isCompleted) {
+      await uncompleteTask(task, onTaskUpdated);
+    } else {
+      await completeTask(task, onTaskUpdated);
+    }
+  };
   
   const memberTasks = tasks.filter(task => 
     task.assigned_to === member.id || 
@@ -188,7 +215,7 @@ export const MemberTasksWidget = ({
                 tasks={memberTasks}
                 allTasks={tasks}
                 familyMembers={familyMembers}
-                onTaskToggle={onTaskComplete}
+                onTaskToggle={handleTaskToggle}
                 onEditTask={profile.role === 'parent' ? onEditTask : undefined}
                 onDragEnd={handleDragEnd}
                 showActions={profile.role === 'parent'}

@@ -25,9 +25,8 @@ interface MemberDashboardProps {
   profile: Profile;
   onTaskUpdated: () => void;
   onEditTask?: (task: Task) => void;
-  onTaskComplete: (task: Task) => void;
   activeMemberId: string | null;
-  dashboardMode: string;
+  dashboardMode: boolean;
 }
 
 const WIDGET_SECTIONS = [
@@ -44,7 +43,6 @@ export const MemberDashboard = ({
   profile,
   onTaskUpdated,
   onEditTask,
-  onTaskComplete,
   activeMemberId,
   dashboardMode
 }: MemberDashboardProps) => {
@@ -156,8 +154,9 @@ export const MemberDashboard = ({
       profile={profile}
       onTaskUpdated={onTaskUpdated}
       onEditTask={onEditTask}
-      onTaskComplete={onTaskComplete}
       onAddTask={() => setIsTaskDialogOpen(true)}
+      activeMemberId={activeMemberId}
+      isDashboardMode={dashboardMode}
     />
   );
 

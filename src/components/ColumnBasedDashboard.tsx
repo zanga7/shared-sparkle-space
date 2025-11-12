@@ -1299,9 +1299,8 @@ const ColumnBasedDashboard = () => {
                 profile={profile}
                 onTaskUpdated={fetchUserData}
                 onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
-                onTaskComplete={(task) => completeTask(task)}
                 activeMemberId={activeMemberId}
-                dashboardMode="member"
+                dashboardMode={dashboardMode}
               />
             );
           })()
