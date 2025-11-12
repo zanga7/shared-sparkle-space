@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +56,7 @@ import { useDashboardMode } from '@/hooks/useDashboardMode';
 
 const ColumnBasedDashboard = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [familyMembers, setFamilyMembers] = useState<Profile[]>([]);
@@ -1001,7 +1003,7 @@ const ColumnBasedDashboard = () => {
 
   const handleSettingsClick = () => {
     // Navigate to admin dashboard
-    window.location.href = '/admin';
+    navigate('/admin');
   };
 
   if (loading) {

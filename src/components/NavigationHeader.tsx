@@ -55,7 +55,7 @@ export function NavigationHeader({
 
   return (
     <header className="w-full border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between relative">
         {/* Main Navigation - Only show if Dashboard Mode is enabled OR in member view */}
         {dashboardModeEnabled && (
           <nav className="flex items-center space-x-1">
@@ -137,16 +137,17 @@ export function NavigationHeader({
             </>
           )}
 
-          {/* Settings */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onSettingsClick}
-            className="h-9 w-9 p-0"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
         </div>
+        
+        {/* Settings - Fixed to top right corner */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onSettingsClick}
+          className="h-9 w-9 p-0 absolute right-4 top-1/2 -translate-y-1/2"
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
       </div>
     </header>
   );
