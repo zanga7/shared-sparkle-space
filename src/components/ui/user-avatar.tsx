@@ -1,8 +1,10 @@
 import * as React from "react"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
+import { useQuery } from "@tanstack/react-query"
+import { supabase } from "@/integrations/supabase/client"
 
 import { cn, getMemberColorClasses } from "@/lib/utils"
-import { AVATAR_ICONS, AvatarIconType } from "./avatar-icon-selector"
+import { AvatarIconType } from "./avatar-icon-selector"
 
 interface UserAvatarProps extends React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root> {
   name: string
@@ -20,33 +22,50 @@ const sizeClasses = {
 const UserAvatar = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Root>,
   UserAvatarProps
->(({ className, name, color, size = 'md', avatarIcon, ...props }, ref) => {
+>(({ className, name, color = 'sky', size = 'md', avatarIcon, ...props }, ref) => {
+  // Fetch avatar icons from database
+  const { data: avatarIcons = [] } = useQuery({
+    queryKey: ['avatar-icons'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('avatar_icons')
+        .select('*');
+      
+      if (error) throw error;
+      return data as Array<{ id: string; name: string; svg_content: string }>;
+    }
+  });
+
+  // Fetch color hex value
+  const { data: colorData } = useQuery({
+    queryKey: ['color-palette', color],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('color_palettes')
+        .select('hex_value')
+        .eq('color_key', color)
+        .maybeSingle();
+      
+      if (error) return null;
+      return data;
+    },
+    enabled: !!color
+  });
+
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   const colorClasses = getMemberColorClasses(color);
-  const iconSrc = avatarIcon && avatarIcon in AVATAR_ICONS 
-    ? AVATAR_ICONS[avatarIcon as AvatarIconType]
-    : null;
-
-  const getColorFilter = (color: string = 'sky') => {
-    const filterMap: Record<string, string> = {
-      sky: 'brightness(0) saturate(100%) invert(58%) sepia(65%) saturate(3000%) hue-rotate(180deg)',
-      rose: 'brightness(0) saturate(100%) invert(49%) sepia(100%) saturate(2000%) hue-rotate(330deg)',
-      emerald: 'brightness(0) saturate(100%) invert(60%) sepia(80%) saturate(1500%) hue-rotate(120deg)',
-      amber: 'brightness(0) saturate(100%) invert(70%) sepia(100%) saturate(2000%) hue-rotate(20deg)',
-      violet: 'brightness(0) saturate(100%) invert(45%) sepia(90%) saturate(1500%) hue-rotate(240deg)',
-    };
-    return filterMap[color] || filterMap.sky;
-  };
+  const iconData = avatarIcons.find(icon => icon.name === avatarIcon);
+  const colorHex = colorData?.hex_value || '#0ea5e9';
 
   return (
     <AvatarPrimitive.Root
       ref={ref}
       className={cn(
         "relative flex shrink-0 overflow-hidden",
-        !iconSrc && "rounded-full",
+        !iconData && "rounded-full",
         sizeClasses[size],
         className
       )}
@@ -55,21 +74,29 @@ const UserAvatar = React.forwardRef<
       <AvatarPrimitive.Fallback 
         className={cn(
           "flex h-full w-full items-center justify-center font-medium",
-          !iconSrc && "rounded-full",
-          !iconSrc && colorClasses.avatar
+          !iconData && "rounded-full",
+          !iconData && colorClasses.avatar
         )}
       >
-        {iconSrc ? (
-          <img 
-            src={iconSrc} 
-            alt={name}
-            className="w-full h-full object-contain"
-            style={{ 
-              filter: getColorFilter(color)
+        {iconData ? (
+          <div 
+            className="w-full h-full flex items-center justify-center [&_svg]:w-full [&_svg]:h-full"
+            dangerouslySetInnerHTML={{ __html: iconData.svg_content }}
+            style={{
+              ['--icon-color' as any]: colorHex,
             }}
           />
         ) : (
           getInitials(name)
+        )}
+        {iconData && (
+          <style>
+            {`
+              .user-avatar-${avatarIcon} .cls-1 {
+                fill: ${colorHex} !important;
+              }
+            `}
+          </style>
         )}
       </AvatarPrimitive.Fallback>
     </AvatarPrimitive.Root>

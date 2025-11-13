@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,8 +9,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
-import { ColorSwatch, ColorSwatches } from '@/types/admin';
 import { AvatarIconSelector, AvatarIconType } from '@/components/ui/avatar-icon-selector';
+
+interface ColorPalette {
+  id: string;
+  name: string;
+  color_key: string;
+  hex_value: string;
+}
 
 interface AddMemberDialogProps {
   isOpen: boolean;
@@ -25,12 +32,33 @@ export const AddMemberDialog = ({ isOpen, onOpenChange, familyId, onMemberAdded,
   const [formData, setFormData] = useState({
     display_name: '',
     role: 'child' as 'parent' | 'child',
-    color: 'sky' as ColorSwatch,
+    color: 'sky' as string,
     avatar_icon: '' as string,
     can_add_for_self: true,
     can_add_for_siblings: false,
     can_add_for_parents: false,
   });
+
+  // Fetch available colors from database
+  const { data: colors = [] } = useQuery({
+    queryKey: ['color-palettes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('color_palettes')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return data as ColorPalette[];
+    }
+  });
+
+  // Set default color when colors are loaded
+  useEffect(() => {
+    if (colors.length > 0 && !formData.color) {
+      setFormData(prev => ({ ...prev, color: colors[0].color_key }));
+    }
+  }, [colors]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,7 +138,7 @@ export const AddMemberDialog = ({ isOpen, onOpenChange, familyId, onMemberAdded,
       setFormData({
         display_name: '',
         role: 'child',
-        color: 'sky',
+        color: colors[0]?.color_key || 'sky',
         avatar_icon: '',
         can_add_for_self: true,
         can_add_for_siblings: false,
@@ -173,7 +201,7 @@ export const AddMemberDialog = ({ isOpen, onOpenChange, familyId, onMemberAdded,
               <Label>Color</Label>
               <Select 
                 value={formData.color} 
-                onValueChange={(value: ColorSwatch) => 
+                onValueChange={(value: string) => 
                   setFormData(prev => ({ ...prev, color: value }))
                 }
               >
@@ -181,19 +209,22 @@ export const AddMemberDialog = ({ isOpen, onOpenChange, familyId, onMemberAdded,
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.keys(ColorSwatches).map((color) => {
+                  {colors.map((color) => {
                     const isUsed = existingMembers.some(m => 
-                      m.color === color && m.status === 'active'
+                      m.color === color.color_key && m.status === 'active'
                     );
                     return (
                       <SelectItem 
-                        key={color} 
-                        value={color}
+                        key={color.id} 
+                        value={color.color_key}
                         disabled={isUsed}
                       >
                         <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${ColorSwatches[color as ColorSwatch]}`} />
-                          {color}
+                          <div 
+                            className="w-3 h-3 rounded-full border border-border" 
+                            style={{ backgroundColor: color.hex_value }}
+                          />
+                          {color.name}
                           {isUsed && <span className="text-xs text-muted-foreground">(in use)</span>}
                         </div>
                       </SelectItem>
@@ -209,6 +240,7 @@ export const AddMemberDialog = ({ isOpen, onOpenChange, familyId, onMemberAdded,
             <AvatarIconSelector
               selectedIcon={formData.avatar_icon}
               selectedColor={formData.color}
+              selectedColorHex={colors.find(c => c.color_key === formData.color)?.hex_value}
               usedIcons={existingMembers
                 .filter(m => m.status === 'active')
                 .map(m => m.avatar_url)
