@@ -31,7 +31,7 @@ interface ColorPalette {
   id: string;
   name: string;
   color_key: string;
-  hsl_value: string;
+  hex_value: string;
   is_system: boolean;
 }
 
@@ -121,17 +121,17 @@ export default function ThemesManagement() {
 
   // Color mutations
   const saveColorMutation = useMutation({
-    mutationFn: async (formData: { name: string; color_key: string; hsl_value: string; id?: string }) => {
+    mutationFn: async (formData: { name: string; color_key: string; hex_value: string; id?: string }) => {
       if (formData.id) {
         const { error } = await supabase
           .from('color_palettes')
-          .update({ name: formData.name, color_key: formData.color_key, hsl_value: formData.hsl_value })
+          .update({ name: formData.name, color_key: formData.color_key, hex_value: formData.hex_value })
           .eq('id', formData.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('color_palettes')
-          .insert({ name: formData.name, color_key: formData.color_key, hsl_value: formData.hsl_value });
+          .insert({ name: formData.name, color_key: formData.color_key, hex_value: formData.hex_value });
         if (error) throw error;
       }
     },
@@ -181,8 +181,27 @@ export default function ThemesManagement() {
       id: editingColor?.id,
       name: formData.get('name') as string,
       color_key: formData.get('color_key') as string,
-      hsl_value: formData.get('hsl_value') as string,
+      hex_value: formData.get('hex_value') as string,
     });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, iconId?: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const svgContent = event.target?.result as string;
+      if (iconId) {
+        // Update existing icon
+        saveIconMutation.mutate({
+          id: iconId,
+          name: icons?.find(i => i.id === iconId)?.name || '',
+          svg_content: svgContent,
+        });
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -247,6 +266,20 @@ export default function ThemesManagement() {
                         >
                           <Edit className="w-3 h-3" />
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => document.getElementById(`upload-${icon.id}`)?.click()}
+                        >
+                          Upload
+                        </Button>
+                        <input
+                          id={`upload-${icon.id}`}
+                          type="file"
+                          accept=".svg"
+                          className="hidden"
+                          onChange={(e) => handleFileUpload(e, icon.id)}
+                        />
                         {!icon.is_system && (
                           <Button
                             variant="destructive"
@@ -297,9 +330,9 @@ export default function ThemesManagement() {
                     <CardContent className="space-y-2">
                       <div 
                         className="h-16 rounded border border-border" 
-                        style={{ backgroundColor: `hsl(${color.hsl_value})` }}
+                        style={{ backgroundColor: color.hex_value }}
                       />
-                      <div className="text-xs text-muted-foreground font-mono">{color.hsl_value}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{color.hex_value}</div>
                       <div className="flex gap-2">
                         <Button
                           variant="outline"
@@ -403,16 +436,27 @@ export default function ThemesManagement() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="hsl_value">HSL Value</Label>
-                <Input 
-                  id="hsl_value" 
-                  name="hsl_value" 
-                  defaultValue={editingColor?.hsl_value}
-                  placeholder="e.g., 180 50% 50%"
-                  required 
-                />
+                <Label htmlFor="hex_value">Hex Color Value</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    id="hex_value" 
+                    name="hex_value" 
+                    type="color"
+                    defaultValue={editingColor?.hex_value}
+                    className="w-20 h-10 p-1 cursor-pointer"
+                    required 
+                  />
+                  <Input 
+                    name="hex_value" 
+                    defaultValue={editingColor?.hex_value}
+                    placeholder="#000000"
+                    className="flex-1"
+                    pattern="^#[0-9A-Fa-f]{6}$"
+                    required 
+                  />
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Format: hue saturation% lightness% (e.g., 180 50% 50%)
+                  Format: #RRGGBB (e.g., #0EA5E9)
                 </p>
               </div>
             </div>

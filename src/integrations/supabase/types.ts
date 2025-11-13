@@ -246,7 +246,7 @@ export type Database = {
         Row: {
           color_key: string
           created_at: string | null
-          hsl_value: string
+          hex_value: string
           id: string
           is_system: boolean | null
           name: string
@@ -255,7 +255,7 @@ export type Database = {
         Insert: {
           color_key: string
           created_at?: string | null
-          hsl_value: string
+          hex_value?: string
           id?: string
           is_system?: boolean | null
           name: string
@@ -264,7 +264,7 @@ export type Database = {
         Update: {
           color_key?: string
           created_at?: string | null
-          hsl_value?: string
+          hex_value?: string
           id?: string
           is_system?: boolean | null
           name?: string
