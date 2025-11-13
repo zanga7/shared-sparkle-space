@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,13 +25,20 @@ import {
   UserCog,
   GripVertical
 } from 'lucide-react';
-import { ExtendedProfile, ColorSwatch, ColorSwatches } from '@/types/admin';
+import { ExtendedProfile } from '@/types/admin';
 import { format } from 'date-fns';
 import { AddMemberDialog } from '@/components/admin/AddMemberDialog';
 import { SetChildPinDialog } from '@/components/admin/SetChildPinDialog';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { AvatarIconSelector, AvatarIconType } from '@/components/ui/avatar-icon-selector';
 import { UserAvatar } from '@/components/ui/user-avatar';
+
+interface ColorPalette {
+  id: string;
+  name: string;
+  color_key: string;
+  hex_value: string;
+}
 
 const MemberManagement = () => {
   const { user } = useAuth();
@@ -46,13 +54,32 @@ const MemberManagement = () => {
   const [formData, setFormData] = useState({
     display_name: '',
     role: 'child' as 'parent' | 'child',
-    color: 'sky' as ColorSwatch,
+    color: 'sky' as string,
     avatar_icon: '' as string,
     can_add_for_self: true,
     can_add_for_siblings: false,
     can_add_for_parents: false,
     status: 'active' as 'active' | 'archived'
   });
+
+  // Fetch available colors from database
+  const { data: colors = [] } = useQuery({
+    queryKey: ['color-palettes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('color_palettes')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return data as ColorPalette[];
+    }
+  });
+
+  // Helper to get color hex value
+  const getColorHex = (colorKey: string) => {
+    return colors.find(c => c.color_key === colorKey)?.hex_value || '#0ea5e9';
+  };
 
   useEffect(() => {
     if (user) {
@@ -102,7 +129,7 @@ const MemberManagement = () => {
     setFormData({
       display_name: member.display_name,
       role: member.role,
-      color: (member.color as ColorSwatch) || 'sky',
+      color: member.color || 'sky',
       avatar_icon: member.avatar_url || '',
       can_add_for_self: member.can_add_for_self,
       can_add_for_siblings: member.can_add_for_siblings,
@@ -377,7 +404,14 @@ const MemberManagement = () => {
                     <Badge variant={member.role === 'parent' ? 'default' : 'secondary'}>
                       {member.role}
                     </Badge>
-                    <Badge variant="outline" className={ColorSwatches[member.color as ColorSwatch] || ColorSwatches.sky}>
+                    <Badge 
+                      variant="outline" 
+                      style={{ 
+                        backgroundColor: `${getColorHex(member.color)}20`,
+                        borderColor: getColorHex(member.color),
+                        color: getColorHex(member.color)
+                      }}
+                    >
                       {member.color}
                     </Badge>
                   </div>
@@ -534,7 +568,7 @@ const MemberManagement = () => {
                 <Label>Color</Label>
                 <Select 
                   value={formData.color} 
-                  onValueChange={(value: ColorSwatch) => 
+                  onValueChange={(value: string) => 
                     setFormData(prev => ({ ...prev, color: value }))
                   }
                 >
@@ -542,21 +576,24 @@ const MemberManagement = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.keys(ColorSwatches).map((color) => {
+                    {colors.map((color) => {
                       const isUsed = familyMembers.some(m => 
                         m.id !== editingMember?.id && 
-                        m.color === color && 
+                        m.color === color.color_key && 
                         m.status === 'active'
                       );
                       return (
                         <SelectItem 
-                          key={color} 
-                          value={color}
+                          key={color.id} 
+                          value={color.color_key}
                           disabled={isUsed}
                         >
                           <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${ColorSwatches[color as ColorSwatch]}`} />
-                            {color}
+                            <div 
+                              className="w-3 h-3 rounded-full border border-border" 
+                              style={{ backgroundColor: color.hex_value }}
+                            />
+                            {color.name}
                             {isUsed && <span className="text-xs text-muted-foreground">(in use)</span>}
                           </div>
                         </SelectItem>
@@ -572,6 +609,7 @@ const MemberManagement = () => {
               <AvatarIconSelector
                 selectedIcon={formData.avatar_icon}
                 selectedColor={formData.color}
+                selectedColorHex={getColorHex(formData.color)}
                 usedIcons={familyMembers
                   .filter(m => m.id !== editingMember?.id && m.status === 'active')
                   .map(m => m.avatar_url)
