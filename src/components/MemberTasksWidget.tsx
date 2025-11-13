@@ -13,8 +13,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useTaskCompletion } from '@/hooks/useTaskCompletion';
 import { useDashboardAuth } from '@/hooks/useDashboardAuth';
-import useEmblaCarousel from 'embla-carousel-react';
-import { useEffect, useState } from 'react';
 
 interface MemberTasksWidgetProps {
   member: Profile;
@@ -49,28 +47,6 @@ export const MemberTasksWidget = ({
 }: MemberTasksWidgetProps) => {
   const { toast } = useToast();
   const { styles: colorStyles } = useMemberColor(memberColor || member.color);
-  const [isMobile, setIsMobile] = useState(false);
-  const [isTablet, setIsTablet] = useState(false);
-  
-  // Carousel for mobile/tablet
-  const [emblaRef, emblaApi] = useEmblaCarousel({ 
-    align: 'start',
-    dragFree: false,
-    containScroll: 'trimSnaps'
-  });
-  
-  // Detect mobile and tablet
-  useEffect(() => {
-    const checkViewport = () => {
-      const width = window.innerWidth;
-      setIsMobile(width < 768);
-      setIsTablet(width >= 768 && width < 1024);
-    };
-    
-    checkViewport();
-    window.addEventListener('resize', checkViewport);
-    return () => window.removeEventListener('resize', checkViewport);
-  }, []);
   
   const { completeTask, uncompleteTask, isCompleting } = useTaskCompletion({
     currentUserProfile: profile,
@@ -216,58 +192,6 @@ export const MemberTasksWidget = ({
     }
   };
 
-  // Desktop view - use accordion
-  if (!isMobile && !isTablet) {
-    return (
-      <Card className="h-full flex flex-col" style={colorStyles.bg10}>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-xl" style={colorStyles.text}>
-            <Users className="h-6 w-6" />
-            Tasks
-          </CardTitle>
-          
-          <div className="space-y-2">
-            <Progress value={progressPercentage} className="h-2" />
-          </div>
-          
-          <AddButton 
-            text="Add Task"
-            onClick={onAddTask}
-            className="border-dashed hover:border-solid w-full"
-            style={{ ...colorStyles.border, ...colorStyles.text }}
-          />
-        </CardHeader>
-        
-        <CardContent className="flex-1 overflow-hidden">
-          {memberTasks.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No tasks assigned</p>
-            </div>
-          ) : (
-            <div className="h-full overflow-y-auto">
-              <DragDropContext onDragEnd={handleDragEnd}>
-                <TaskGroupsList
-                  tasks={memberTasks}
-                  allTasks={tasks}
-                  familyMembers={familyMembers}
-                  onTaskToggle={handleTaskToggle}
-                  onEditTask={profile.role === 'parent' ? onEditTask : undefined}
-                  onDragEnd={handleDragEnd}
-                  showActions={profile.role === 'parent'}
-                  memberId={member.id}
-                  memberColor={member.color}
-                  isCompleting={isCompleting}
-                />
-              </DragDropContext>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Mobile/Tablet view - use carousel columns
   return (
     <Card className="h-full flex flex-col" style={colorStyles.bg10}>
       <CardHeader className="pb-4">
@@ -295,24 +219,21 @@ export const MemberTasksWidget = ({
             <p>No tasks assigned</p>
           </div>
         ) : (
-          <div className="h-full overflow-hidden" ref={emblaRef}>
-            <div className="flex h-full">
-              <DragDropContext onDragEnd={handleDragEnd}>
-                <TaskGroupsList
-                  tasks={memberTasks}
-                  allTasks={tasks}
-                  familyMembers={familyMembers}
-                  onTaskToggle={handleTaskToggle}
-                  onEditTask={profile.role === 'parent' ? onEditTask : undefined}
-                  onDragEnd={handleDragEnd}
-                  showActions={profile.role === 'parent'}
-                  memberId={member.id}
-                  memberColor={member.color}
-                  isCompleting={isCompleting}
-                  carouselMode={isMobile ? 'mobile' : 'tablet'}
-                />
-              </DragDropContext>
-            </div>
+          <div className="h-full overflow-y-auto">
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <TaskGroupsList
+                tasks={memberTasks}
+                allTasks={tasks}
+                familyMembers={familyMembers}
+                onTaskToggle={handleTaskToggle}
+                onEditTask={profile.role === 'parent' ? onEditTask : undefined}
+                onDragEnd={handleDragEnd}
+                showActions={profile.role === 'parent'}
+                memberId={member.id}
+                memberColor={member.color}
+                isCompleting={isCompleting}
+              />
+            </DragDropContext>
           </div>
         )}
       </CardContent>
