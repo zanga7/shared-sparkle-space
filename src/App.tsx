@@ -27,6 +27,11 @@ import Permissions from "./pages/admin/Permissions";
 import RotatingTasks from "./pages/admin/RotatingTasks";
 import RotationDebugger from "./pages/admin/RotationDebugger";
 import HolidayManagement from "./pages/admin/HolidayManagement";
+import { SuperAdminGuard } from "./components/super-admin/SuperAdminGuard";
+import SuperAdminLayout from "./pages/super-admin/SuperAdminLayout";
+import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
+import FamilyManagement from "./pages/super-admin/FamilyManagement";
+import PlanManagement from "./pages/super-admin/PlanManagement";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -68,6 +73,13 @@ const App = () => (
             <Route path="rotation-debugger" element={<RotationDebugger />} />
             <Route path="holidays" element={<HolidayManagement />} />
           </Route>
+
+          <Route path="/super-admin" element={<SuperAdminGuard><SuperAdminLayout /></SuperAdminGuard>}>
+            <Route index element={<SuperAdminDashboard />} />
+            <Route path="families" element={<FamilyManagement />} />
+            <Route path="plans" element={<PlanManagement />} />
+          </Route>
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
