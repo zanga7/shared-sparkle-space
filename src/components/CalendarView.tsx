@@ -185,7 +185,8 @@ export const CalendarView = ({
             id: profileId,
             display_name: 'Unknown',
             role: 'child' as const,
-            color: 'gray'
+            color: 'gray',
+            avatar_url: null
           }
         };
       })

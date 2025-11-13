@@ -1362,12 +1362,14 @@ const ColumnBasedDashboard = () => {
             id: memberProfile.id,
             display_name: memberProfile.display_name,
             role: memberProfile.role,
-            color: memberProfile.color
+            color: memberProfile.color,
+            avatar_url: memberProfile.avatar_url || null
           } : {
             id: profileId,
             display_name: 'Unknown',
             role: 'child' as const,
-            color: 'gray'
+            color: 'gray',
+            avatar_url: null
           }
         };
       }),
