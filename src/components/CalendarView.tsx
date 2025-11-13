@@ -971,7 +971,7 @@ export const CalendarView = ({
                               
                               {/* Attendees Display */}
                               {event.attendees && event.attendees.length > 0 && <div className="mt-1">
-                                  <EventAttendeesDisplay attendees={event.attendees} showNames={false} maxDisplay={3} className="text-purple-600" />
+                                  <EventAttendeesDisplay attendees={event.attendees} showNames={false} maxDisplay={99} className="text-purple-600" />
                                 </div>}
                               
                               {/* Time Display - only show on first day or single day events */}
