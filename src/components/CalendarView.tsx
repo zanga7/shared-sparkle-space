@@ -13,7 +13,8 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Grid3X3, Rows3, Ch
 import { AddButton } from '@/components/ui/add-button';
 import { EventAttendeesDisplay } from '@/components/ui/event-attendees-display';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addWeeks, addMonths, addDays, subWeeks, subMonths, subDays, isSameDay, isToday, isPast, isSameMonth } from 'date-fns';
-import { cn, getMemberColorClasses } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { useMemberColor } from '@/hooks/useMemberColor';
 import { Task, Profile } from '@/types/task';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { supabase } from '@/integrations/supabase/client';
@@ -111,21 +112,6 @@ export const CalendarView = ({
     isDashboardMode: dashboardMode,
   });
 
-  // Get member color classes using the global color system
-  const getMemberColors = (member: Profile | null) => {
-    if (!member) return {
-      bg: 'bg-muted/50',
-      bgSoft: 'bg-muted/30',
-      bg10: 'bg-muted/10',
-      bg20: 'bg-muted/20',
-      bg50: 'bg-muted/50',
-      border: 'border-muted',
-      text: 'text-muted-foreground',
-      accent: 'bg-muted',
-      avatar: 'bg-muted text-white'
-    };
-    return getMemberColorClasses(member.color);
-  };
 
   // Calculate date range based on view mode
   const dateRange = useMemo(() => {
@@ -547,17 +533,30 @@ export const CalendarView = ({
     }
   };
 
-  // Render task item
-  const renderTask = (task: Task, index: number) => {
+  // Render task item component
+  const TaskItem = ({ task, index }: { task: Task; index: number }) => {
     const isCompleted = task.task_completions && task.task_completions.length > 0;
     const isOverdue = task.due_date && isPast(new Date(task.due_date)) && !isCompleted;
     const streak = calculateStreak(task);
     const assignedMember = familyMembers.find(m => m.id === task.assigned_to);
-    const memberColors = getMemberColors(assignedMember);
+    const { styles: colorStyles } = useMemberColor(assignedMember?.color);
     const isDragDisabled = task.isVirtual || false;
     
     return <Draggable key={task.id} draggableId={task.id} index={index} isDragDisabled={isDragDisabled}>
-        {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("p-2 mb-1 rounded-md text-xs transition-all hover:shadow-md group relative", onEditTask ? "cursor-pointer hover:ring-2 hover:ring-primary/20" : !isDragDisabled && "cursor-move", isCompleted ? memberColors.bg20 : memberColors.bg50, isCompleted && "opacity-60 line-through", isOverdue && "ring-1 ring-destructive/50", snapshot.isDragging && "shadow-lg rotate-2", isDragDisabled && "cursor-pointer")}>
+        {(provided, snapshot) => <div 
+          ref={provided.innerRef} 
+          {...provided.draggableProps} 
+          {...provided.dragHandleProps} 
+          className={cn(
+            "p-2 mb-1 rounded-md text-xs transition-all hover:shadow-md group relative", 
+            onEditTask ? "cursor-pointer hover:ring-2 hover:ring-primary/20" : !isDragDisabled && "cursor-move", 
+            isCompleted && "opacity-60 line-through", 
+            isOverdue && "ring-1 ring-destructive/50", 
+            snapshot.isDragging && "shadow-lg rotate-2", 
+            isDragDisabled && "cursor-pointer"
+          )}
+          style={isCompleted ? colorStyles.bg20 : colorStyles.bg50}
+        >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1 min-w-0" onClick={e => handleTaskClick(task, e)}>
                 <button onClick={e => handleTaskToggle(task, e)} className={cn("h-3 w-3 flex-shrink-0 rounded-full border transition-colors hover:scale-110", isCompleted ? "bg-green-500 border-green-500 text-white" : "border-gray-300 hover:border-green-400")}>
@@ -748,10 +747,11 @@ export const CalendarView = ({
                   <div className="space-y-2">
                     <div className="text-sm font-medium">Member Progress</div>
                     {analytics.memberStats.map((member, index) => {
-                  const familyMember = familyMembers[index];
-                  const memberColors = getMemberColors(familyMember);
-                  return <div key={member.name} className="flex items-center gap-2">
-                          <Badge variant="outline" className={cn("text-xs", memberColors.text, memberColors.border)}>
+                  const MemberProgress = () => {
+                    const familyMember = familyMembers[index];
+                    const { styles: colorStyles } = useMemberColor(familyMember?.color);
+                    return <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs" style={{ ...colorStyles.text, ...colorStyles.border }}>
                             {member.name}
                           </Badge>
                           <Progress value={member.percentage} className="flex-1 h-2" />
@@ -759,6 +759,8 @@ export const CalendarView = ({
                             {member.completed}/{member.total}
                           </span>
                         </div>;
+                  };
+                  return <MemberProgress key={member.name} />;
                 })}
                   </div>
                 </CardContent>
@@ -784,18 +786,23 @@ export const CalendarView = ({
               {/* Member Columns */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {familyMembers.map(member => {
-              const dateKey = format(currentDate, 'yyyy-MM-dd');
-              const memberTasks = (tasksByDate[dateKey] || []).filter(task => task.assigned_to === member.id || task.assignees?.some(a => a.profile_id === member.id));
-              // Show events in correct member columns: events with no attendees show for all, events with attendees show only for assigned members
-              const memberEvents = (eventsByDate[dateKey] || []).filter(event => {
-                const hasAttendees = event.attendees && event.attendees.length > 0;
-                const isAssignedToMember = hasAttendees && event.attendees.some((a: any) => a.profile_id === member.id);
-                const showForAll = !hasAttendees; // Events with no attendees show for everyone
-                return showForAll || isAssignedToMember;
-              });
-              const memberColors = getMemberColors(member);
-              return <Droppable key={member.id} droppableId={member.id}>
-                      {(provided, snapshot) => <Card className={cn("transition-colors", memberColors.bg10, snapshot.isDraggingOver && "ring-2 ring-primary/20")}>
+              const MemberColumn = () => {
+                const { styles: colorStyles } = useMemberColor(member.color);
+                const dateKey = format(currentDate, 'yyyy-MM-dd');
+                const memberTasks = (tasksByDate[dateKey] || []).filter(task => task.assigned_to === member.id || task.assignees?.some(a => a.profile_id === member.id));
+                // Show events in correct member columns: events with no attendees show for all, events with attendees show only for assigned members
+                const memberEvents = (eventsByDate[dateKey] || []).filter(event => {
+                  const hasAttendees = event.attendees && event.attendees.length > 0;
+                  const isAssignedToMember = hasAttendees && event.attendees.some((a: any) => a.profile_id === member.id);
+                  const showForAll = !hasAttendees; // Events with no attendees show for everyone
+                  return showForAll || isAssignedToMember;
+                });
+                
+                return <Droppable key={member.id} droppableId={member.id}>
+                      {(provided, snapshot) => <Card 
+                        className={cn("transition-colors", snapshot.isDraggingOver && "ring-2 ring-primary/20")}
+                        style={colorStyles.bg10}
+                      >
                           <CardHeader className="pb-3">
                             <div className="flex items-center gap-2">
                               <UserAvatar name={member.display_name} color={member.color} avatarIcon={member.avatar_url || undefined} size="sm" />
@@ -810,7 +817,7 @@ export const CalendarView = ({
                           
                           <CardContent ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[200px]">
                             {/* Tasks */}
-                            {memberTasks.map((task, index) => renderTask(task, index))}
+                            {memberTasks.map((task, index) => <TaskItem key={task.id} task={task} index={index} />)}
                             
                              {/* Events */}
                              {memberEvents.map((event, eventIndex) => {
@@ -873,6 +880,8 @@ export const CalendarView = ({
                           </CardContent>
                         </Card>}
                     </Droppable>;
+              };
+              return <MemberColumn key={member.id} />;
             })}
               </div>
             </div> :
@@ -925,7 +934,7 @@ export const CalendarView = ({
                             </div>
                           )}
                           
-                          {dayTasks.map((task, index) => renderTask(task, index))}
+                          {dayTasks.map((task, index) => <TaskItem key={task.id} task={task} index={index} />)}
                           
                            {/* Events */}
                            {dayEvents.map((event, eventIndex) => {
