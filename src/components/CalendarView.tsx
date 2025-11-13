@@ -1052,72 +1052,91 @@ export const CalendarView = ({
                           
                            {/* Events */}
                            {dayEvents.map((event, eventIndex) => {
-                             const isDragDisabled = event.isMultiDay ? !event.isFirstDay : false;
-                             
-                             console.log('Event drag status:', {
-                               eventId: event.id,
-                               title: event.title,
-                               isMultiDay: event.isMultiDay,
-                               isFirstDay: event.isFirstDay,
-                               isDragDisabled
-                             });
-                             
-                             return <Draggable 
-                               key={`event-${event.id}-${dateKey}`} 
-                               draggableId={`event-${event.id}`} 
-                               index={dayTasks.length + eventIndex}
-                               isDragDisabled={isDragDisabled}
-                             >
-                                {(provided, snapshot) => <div 
-                                  ref={provided.innerRef} 
-                                  {...provided.draggableProps} 
-                                  {...provided.dragHandleProps} 
-                                  className={cn(
-                                    "group p-3 mb-1 hover:shadow-md transition-all bg-card shadow-sm", 
-                                    event.isMultiDay && !event.isFirstDay && !event.isLastDay && "rounded-none", 
-                                    event.isMultiDay && event.isFirstDay && "rounded-r-none", 
-                                    event.isMultiDay && event.isLastDay && "rounded-l-none", 
-                                    !event.isMultiDay && "rounded-md",
-                                    !isDragDisabled && "cursor-move",
-                                    isDragDisabled && "cursor-not-allowed opacity-70",
-                                    snapshot.isDragging && "shadow-lg rotate-2 scale-105 z-[9999]"
-                                  )}
-                                  onClick={e => {
-                       e.stopPropagation();
-                       handleEditEvent(event);
-                     }}>
-                               <div className="flex items-center justify-between">
-                                 <span className="font-medium text-sm text-foreground truncate">
-                                   {event.isMultiDay && !event.isFirstDay ? `↳ ${event.title}` : event.title}
-                                 </span>
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    <Badge variant="outline" className="text-xs h-4 px-1">
-                                      {event.isMultiDay ? 'Multi' : event.recurrence_options?.enabled || event.isVirtual ? 'Series' : 'Single'}
-                                    </Badge>
-                                    <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-muted-foreground" />
-                                  </div>
-                               </div>
-                               
-                               {/* Attendees Display */}
-                               {event.attendees && event.attendees.length > 0 && <div className="mt-2">
-                                   <EventAttendeesDisplay attendees={event.attendees} showNames={false} maxDisplay={99} />
-                                 </div>}
-                               
-                               {/* Time Display - only show on first day or single day events */}
-                               {(!event.isMultiDay || event.isFirstDay) && event.start_date && <div className="flex items-center gap-1 mt-2">
-                                   <Clock className="h-3 w-3 text-muted-foreground" />
-                                   <span className="text-xs text-muted-foreground">
-                                    {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
-                                    {event.isMultiDay && ` - ${format(new Date(event.originalEnd), 'MMM d')}`}
-                                  </span>
-                                   {/* Recurrence Indicator */}
-                                   {event.recurrence_options?.enabled && <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600 ml-1">
-                                       <Repeat className="h-2.5 w-2.5 mr-0.5" />
-                                       Series
-                                     </Badge>}
-                                </div>}
-                                 </div>}
-                             </Draggable>
+                              const isDragDisabled = event.isMultiDay ? !event.isFirstDay : false;
+                              
+                              // Determine background color based on attendees
+                              const attendeeCount = event.attendees?.length || 0;
+                              const singleMember = attendeeCount === 1 ? familyMembers.find(m => m.id === event.attendees[0].profile_id) : null;
+                              
+                              const EventCard = () => {
+                                const memberColorData = singleMember ? useMemberColor(singleMember.color) : null;
+                                
+                                // Create background style based on attendee count
+                                let bgStyle: React.CSSProperties = {};
+                                if (attendeeCount === 0) {
+                                  // No attendees - white background
+                                  bgStyle = { backgroundColor: 'hsl(var(--card))' };
+                                } else if (attendeeCount === 1 && memberColorData) {
+                                  // Single member - use member color at 30% opacity
+                                  const hex = memberColorData.hex;
+                                  bgStyle = { backgroundColor: `${hex}4D` }; // 4D in hex = 77/255 = ~30% opacity
+                                } else {
+                                  // Multiple members - light grey
+                                  bgStyle = { backgroundColor: 'hsl(var(--muted))' };
+                                }
+                                
+                                return (
+                                  <Draggable 
+                                    key={`event-${event.id}-${dateKey}`} 
+                                    draggableId={`event-${event.id}`} 
+                                    index={dayTasks.length + eventIndex}
+                                    isDragDisabled={isDragDisabled}
+                                  >
+                                    {(provided, snapshot) => <div 
+                                      ref={provided.innerRef} 
+                                      {...provided.draggableProps} 
+                                      {...provided.dragHandleProps} 
+                                      className={cn(
+                                        "group p-3 mb-1 hover:shadow-md transition-all shadow-sm", 
+                                        event.isMultiDay && !event.isFirstDay && !event.isLastDay && "rounded-none", 
+                                        event.isMultiDay && event.isFirstDay && "rounded-r-none", 
+                                        event.isMultiDay && event.isLastDay && "rounded-l-none", 
+                                        !event.isMultiDay && "rounded-md",
+                                        !isDragDisabled && "cursor-move",
+                                        isDragDisabled && "cursor-not-allowed opacity-70",
+                                        snapshot.isDragging && "shadow-lg rotate-2 scale-105 z-[9999]"
+                                      )}
+                                      style={bgStyle}
+                                      onClick={e => {
+                                        e.stopPropagation();
+                                        handleEditEvent(event);
+                                      }}>
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium text-sm text-foreground truncate">
+                                          {event.isMultiDay && !event.isFirstDay ? `↳ ${event.title}` : event.title}
+                                        </span>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <Badge variant="outline" className="text-xs h-4 px-1">
+                                            {event.isMultiDay ? 'Multi' : event.recurrence_options?.enabled || event.isVirtual ? 'Series' : 'Single'}
+                                          </Badge>
+                                          <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-muted-foreground" />
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Attendees Display */}
+                                      {event.attendees && event.attendees.length > 0 && <div className="mt-2">
+                                          <EventAttendeesDisplay attendees={event.attendees} showNames={false} maxDisplay={99} />
+                                        </div>}
+                                      
+                                      {/* Time Display - only show on first day or single day events */}
+                                      {(!event.isMultiDay || event.isFirstDay) && event.start_date && <div className="flex items-center gap-1 mt-2">
+                                          <Clock className="h-3 w-3 text-muted-foreground" />
+                                          <span className="text-xs text-muted-foreground">
+                                            {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
+                                            {event.isMultiDay && ` - ${format(new Date(event.originalEnd), 'MMM d')}`}
+                                          </span>
+                                          {/* Recurrence Indicator */}
+                                          {event.recurrence_options?.enabled && <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600 ml-1">
+                                              <Repeat className="h-2.5 w-2.5 mr-0.5" />
+                                              Series
+                                            </Badge>}
+                                        </div>}
+                                    </div>}
+                                  </Draggable>
+                                );
+                              };
+                              
+                              return <EventCard key={`event-${event.id}-${dateKey}`} />;
                            })}
                            
                            {/* Empty State Drag Indicator */}
