@@ -50,6 +50,7 @@ interface Profile {
   display_name: string;
   role: 'parent' | 'child';
   color: string;
+  avatar_url?: string | null;
   total_points: number;
 }
 
@@ -67,6 +68,7 @@ interface ListItem {
     id: string;
     display_name: string;
     color: string;
+    avatar_url?: string | null;
   }[];
 }
 

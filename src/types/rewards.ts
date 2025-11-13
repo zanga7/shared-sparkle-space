@@ -30,6 +30,7 @@ export interface RewardRequest {
     id: string;
     display_name: string;
     color: string;
+    avatar_url?: string | null;
   };
 }
 
@@ -70,5 +71,6 @@ export interface GroupContribution {
     id: string;
     display_name: string;
     color: string;
+    avatar_url?: string | null;
   };
 }
