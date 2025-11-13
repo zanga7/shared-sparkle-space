@@ -62,6 +62,13 @@ export type Database = {
             referencedRelation: "families"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "audit_logs_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "super_admin_family_stats"
+            referencedColumns: ["family_id"]
+          },
         ]
       }
       calendar_integrations: {
@@ -198,6 +205,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "families"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "categories_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "super_admin_family_stats"
+            referencedColumns: ["family_id"]
           },
         ]
       }
@@ -388,23 +402,76 @@ export type Database = {
       families: {
         Row: {
           created_at: string
+          current_plan_id: string | null
           id: string
           name: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          current_plan_id?: string | null
           id?: string
           name: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          current_plan_id?: string | null
           id?: string
           name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "families_current_plan_id_fkey"
+            columns: ["current_plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_module_overrides: {
+        Row: {
+          family_id: string
+          id: string
+          is_enabled: boolean | null
+          module_name: Database["public"]["Enums"]["app_module"]
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          family_id: string
+          id?: string
+          is_enabled?: boolean | null
+          module_name: Database["public"]["Enums"]["app_module"]
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          family_id?: string
+          id?: string
+          is_enabled?: boolean | null
+          module_name?: Database["public"]["Enums"]["app_module"]
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_module_overrides_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_module_overrides_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "super_admin_family_stats"
+            referencedColumns: ["family_id"]
+          },
+        ]
       }
       google_photos_integrations: {
         Row: {
@@ -567,6 +634,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "families"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "household_settings_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: true
+            referencedRelation: "super_admin_family_stats"
+            referencedColumns: ["family_id"]
           },
         ]
       }
@@ -751,6 +825,35 @@ export type Database = {
           },
         ]
       }
+      plan_modules: {
+        Row: {
+          id: string
+          is_enabled: boolean | null
+          module_name: Database["public"]["Enums"]["app_module"]
+          plan_id: string
+        }
+        Insert: {
+          id?: string
+          is_enabled?: boolean | null
+          module_name: Database["public"]["Enums"]["app_module"]
+          plan_id: string
+        }
+        Update: {
+          id?: string
+          is_enabled?: boolean | null
+          module_name?: Database["public"]["Enums"]["app_module"]
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_modules_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       points_ledger: {
         Row: {
           created_at: string
@@ -876,6 +979,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "families"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "super_admin_family_stats"
+            referencedColumns: ["family_id"]
           },
         ]
       }
@@ -1118,6 +1228,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "rotation_events_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "super_admin_family_stats"
+            referencedColumns: ["family_id"]
+          },
+          {
             foreignKeyName: "rotation_events_new_task_id_fkey"
             columns: ["new_task_id"]
             isOneToOne: false
@@ -1226,6 +1343,42 @@ export type Database = {
           timeout_minutes?: number
           transition_effect?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      subscription_plans: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_custom: boolean | null
+          name: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_custom?: boolean | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_custom?: boolean | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1480,6 +1633,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tasks_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "super_admin_family_stats"
+            referencedColumns: ["family_id"]
+          },
+          {
             foreignKeyName: "tasks_rotating_task_id_fkey"
             columns: ["rotating_task_id"]
             isOneToOne: false
@@ -1488,9 +1648,59 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      super_admin_family_stats: {
+        Row: {
+          active_members: number | null
+          created_at: string | null
+          current_plan_id: string | null
+          event_count: number | null
+          family_id: string | null
+          family_name: string | null
+          is_custom_plan: boolean | null
+          last_activity: string | null
+          list_count: number | null
+          max_streak: number | null
+          member_count: number | null
+          plan_name: string | null
+          reward_count: number | null
+          task_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "families_current_plan_id_fkey"
+            columns: ["current_plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       add_exdate_to_series: {
@@ -1756,6 +1966,13 @@ export type Database = {
           refresh_token: string
         }[]
       }
+      get_family_modules: {
+        Args: { check_family_id: string }
+        Returns: {
+          is_enabled: boolean
+          module_name: string
+        }[]
+      }
       get_family_profiles_metadata: {
         Args: never
         Returns: {
@@ -1889,6 +2106,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_system_stats: { Args: never; Returns: Json }
       get_token_encryption_status: { Args: never; Returns: Json }
       get_user_calendar_integrations: {
         Args: never
@@ -1980,6 +2198,7 @@ export type Database = {
         Args: { target_family_id: string }
         Returns: boolean
       }
+      is_super_admin: { Args: { check_user_id?: string }; Returns: boolean }
       log_admin_action: {
         Args: {
           p_action: string
@@ -2139,6 +2358,14 @@ export type Database = {
       }
     }
     Enums: {
+      app_module:
+        | "tasks"
+        | "calendar"
+        | "lists"
+        | "rewards"
+        | "rotating_tasks"
+        | "screensaver"
+      app_role: "super_admin" | "user"
       reward_request_status:
         | "pending"
         | "approved"
@@ -2274,6 +2501,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_module: [
+        "tasks",
+        "calendar",
+        "lists",
+        "rewards",
+        "rotating_tasks",
+        "screensaver",
+      ],
+      app_role: ["super_admin", "user"],
       reward_request_status: [
         "pending",
         "approved",
