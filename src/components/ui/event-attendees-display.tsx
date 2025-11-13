@@ -59,14 +59,13 @@ export function EventAttendeesDisplay({
       className={cn("flex items-center gap-1 cursor-pointer hover:bg-muted rounded p-1 -m-1", className)}
       onClick={onClick}
     >
-      <div className="flex -space-x-1">
+      <div className="flex gap-1">
         {displayedAttendees.map((attendee) => (
           <UserAvatar
             key={attendee.profile.id}
             name={attendee.profile.display_name}
             color={attendee.profile.color || 'sky'}
             size="sm"
-            className="border-2 border-background"
             title={attendee.profile.display_name}
           />
         ))}
@@ -74,7 +73,7 @@ export function EventAttendeesDisplay({
           <UserAvatar
             name={`+${remainingCount}`}
             size="sm"
-            className="border-2 border-background bg-muted text-muted-foreground"
+            className="bg-muted text-muted-foreground"
             title={`+${remainingCount} more`}
           />
         )}
