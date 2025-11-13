@@ -10,7 +10,8 @@ import {
   getTaskGroupTitle, 
   shouldGroupBeOpenByDefault 
 } from '@/utils/taskGroupUtils';
-import { cn, getMemberColorClasses } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { useMemberColor } from '@/hooks/useMemberColor';
 
 interface TaskGroupsListProps {
   tasks: Task[];
@@ -43,7 +44,7 @@ export const TaskGroupsList = ({
   droppableIdPrefix = '',
   isCompleting
 }: TaskGroupsListProps) => {
-  const memberColors = memberColor ? getMemberColorClasses(memberColor) : null;
+  const { styles: colorStyles } = useMemberColor(memberColor);
 
   // Group all tasks by task_group field (keeping them together)
   const groupAllTasks = (tasks: Task[]) => {
@@ -160,11 +161,8 @@ export const TaskGroupsList = ({
                 {onAddTask && showActions && (
                   <div className="pt-2 border-t border-dashed">
                     <AddButton
-                      className={cn(
-                        "w-full text-xs",
-                        memberColors?.border,
-                        memberColors?.text
-                      )}
+                      className="w-full text-xs"
+                      style={{ ...colorStyles.border, ...colorStyles.text }}
                       text={`Add ${groupTitle} Task`}
                       onClick={() => onAddTask(group)}
                     />

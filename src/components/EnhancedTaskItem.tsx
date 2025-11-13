@@ -13,9 +13,10 @@ import {
   Repeat
 } from 'lucide-react';
 import { format, isAfter, differenceInDays } from 'date-fns';
-import { cn, getMemberColorClasses } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { Task, Profile } from '@/types/task';
 import { TaskAssigneesDisplay } from '@/components/ui/task-assignees-display';
+import { useMemberColor } from '@/hooks/useMemberColor';
 
 interface EnhancedTaskItemProps {
   task: Task;
@@ -61,17 +62,16 @@ export const EnhancedTaskItem = ({
   const daysUntilDue = getDaysUntilDue();
 
   // Get member colors if memberColor is provided
-  const memberColors = memberColor ? getMemberColorClasses(memberColor) : null;
+  const { styles: colorStyles } = useMemberColor(memberColor);
 
   return (
     <div 
       className={cn(
         "group/task relative rounded-lg p-3 transition-all hover:shadow-md",
-        isCompleted && memberColors?.bg20,
-        !isCompleted && memberColors?.bg50,
         isOverdue && "ring-1 ring-destructive/50",
         !isCompleted && !(task as any).isVirtual && "cursor-grab active:cursor-grabbing"
       )}
+      style={isCompleted ? colorStyles.bg20 : colorStyles.bg50}
     >
       <div className="flex items-start gap-2">
         {/* Complete/Uncomplete Button */}
