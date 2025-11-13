@@ -45,7 +45,8 @@ const UserAvatar = React.forwardRef<
     <AvatarPrimitive.Root
       ref={ref}
       className={cn(
-        "relative flex shrink-0 overflow-hidden rounded-full",
+        "relative flex shrink-0 overflow-hidden",
+        !iconSrc && "rounded-full",
         sizeClasses[size],
         className
       )}
@@ -53,7 +54,8 @@ const UserAvatar = React.forwardRef<
     >
       <AvatarPrimitive.Fallback 
         className={cn(
-          "flex h-full w-full items-center justify-center rounded-full font-medium",
+          "flex h-full w-full items-center justify-center font-medium",
+          !iconSrc && "rounded-full",
           !iconSrc && colorClasses.avatar
         )}
       >
@@ -61,10 +63,9 @@ const UserAvatar = React.forwardRef<
           <img 
             src={iconSrc} 
             alt={name}
-            className="w-full h-full p-1.5"
+            className="w-full h-full object-contain"
             style={{ 
-              filter: getColorFilter(color),
-              backgroundColor: 'white'
+              filter: getColorFilter(color)
             }}
           />
         ) : (
