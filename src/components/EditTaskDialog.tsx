@@ -271,6 +271,8 @@ export const EditTaskDialog = ({
       }
 
       onTaskUpdated();
+      // Notify listeners (e.g., dashboards) that series data changed
+      try { window.dispatchEvent(new CustomEvent('series-updated')); } catch {}
       onOpenChange(false);
     } catch (error) {
       console.error('Error handling edit scope:', error);
@@ -301,6 +303,8 @@ export const EditTaskDialog = ({
           title: 'Task Skipped',
           description: 'This occurrence has been skipped',
         });
+        // Notify listeners that series data changed
+        try { window.dispatchEvent(new CustomEvent('series-updated')); } catch {}
         
         onTaskUpdated();
         onOpenChange(false);

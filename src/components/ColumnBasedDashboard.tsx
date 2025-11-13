@@ -289,6 +289,45 @@ const ColumnBasedDashboard = () => {
     };
   }, [profile?.family_id]);
 
+  // Listen for series updates (from dialogs or other components) and refresh series data
+  useEffect(() => {
+    const handler = () => {
+      console.log('🔁 [SERIES] series-updated event received, refreshing task series');
+      fetchTaskSeries();
+    };
+    window.addEventListener('series-updated', handler);
+    return () => window.removeEventListener('series-updated', handler);
+  }, [fetchTaskSeries]);
+
+  // Realtime subscriptions for series and exceptions to auto-refresh virtual tasks
+  useEffect(() => {
+    if (!profile?.family_id) return;
+
+    const channel = supabase
+      .channel('series-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'task_series', filter: `family_id=eq.${profile.family_id}` },
+        async () => {
+          console.log('🛰️ [REALTIME] task_series change detected, refreshing');
+          fetchTaskSeries();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'recurrence_exceptions' },
+        async () => {
+          console.log('🛰️ [REALTIME] recurrence_exceptions change detected, refreshing');
+          fetchTaskSeries();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.family_id, fetchTaskSeries]);
+
   // Subscribe to task_assignees inserts to hydrate assignees after rotating task generation
   useEffect(() => {
     if (!profile?.family_id) return;
