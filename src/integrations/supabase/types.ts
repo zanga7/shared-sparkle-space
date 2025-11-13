@@ -1749,6 +1749,7 @@ export type Database = {
           member_count: number | null
           plan_name: string | null
           reward_count: number | null
+          status: string | null
           task_count: number | null
         }
         Relationships: [
