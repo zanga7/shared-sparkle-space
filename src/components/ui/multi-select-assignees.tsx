@@ -29,13 +29,22 @@ export function MultiSelectAssignees({
   // Ensure selectedAssignees is always an array
   const safeSelectedAssignees = selectedAssignees || [];
 
-  const selectedMembers = familyMembers.filter(member => 
+  // Filter for active members only (if status property exists)
+  const activeMembers = familyMembers.filter(member => 
+    !('status' in member) || (member as any).status === 'active'
+  );
+
+  const selectedMembers = activeMembers.filter(member => 
     safeSelectedAssignees.includes(member.id)
   );
 
-  const availableMembers = familyMembers.filter(member => 
+  const availableMembers = activeMembers.filter(member => 
     !safeSelectedAssignees.includes(member.id)
   );
+
+  const selectAll = () => {
+    onAssigneesChange(activeMembers.map(m => m.id));
+  };
 
   const toggleAssignee = (profileId: string) => {
     const newAssignees = safeSelectedAssignees.includes(profileId)
@@ -117,33 +126,19 @@ export function MultiSelectAssignees({
             />
             <CommandEmpty>No family members found.</CommandEmpty>
             <CommandGroup heading="Assignees">
-              {/* Anyone can do it option */}
+              {/* Select all option */}
               <CommandItem
-                value="unassigned"
+                value="select-all"
                 onSelect={() => {
-                  onAssigneesChange([]);
-                  setOpen(false);
+                  selectAll();
                 }}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 text-xs text-muted-foreground border-b"
               >
-                <div className="flex items-center gap-2 flex-1">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs bg-muted">
-                      ?
-                    </AvatarFallback>
-                  </Avatar>
-                  <span>Anyone can do it</span>
-                </div>
-                <Check
-                  className={cn(
-                    "h-4 w-4",
-                    selectedAssignees.length === 0 ? "opacity-100" : "opacity-0"
-                  )}
-                />
+                <span>Select all</span>
               </CommandItem>
               
               {/* Family members */}
-              {familyMembers.map((member) => (
+              {activeMembers.map((member) => (
                 <CommandItem
                   key={member.id}
                   value={member.display_name}
