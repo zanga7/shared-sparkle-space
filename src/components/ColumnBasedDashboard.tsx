@@ -231,24 +231,50 @@ const ColumnBasedDashboard = () => {
             .eq('id', payload.new.id)
             .single();
 
-          if (newTaskData) {
+          // Retry once if assignees are not yet available (race-safe hydration)
+          let hydratedTask = newTaskData;
+          if (hydratedTask && (!hydratedTask.assignees || hydratedTask.assignees.length === 0)) {
+            await new Promise((resolve) => setTimeout(resolve, 400));
+            const { data: retryData } = await supabase
+              .from('tasks')
+              .select(`
+                id,
+                title,
+                description,
+                points,
+                due_date,
+                assigned_to,
+                created_by,
+                completion_rule,
+                task_group,
+                rotating_task_id,
+                assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
+                assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
+                task_completions(id, completed_at, completed_by)
+              `)
+              .eq('id', payload.new.id)
+              .single();
+            if (retryData) hydratedTask = retryData;
+          }
+
+          if (hydratedTask) {
             console.log('✅ [REALTIME] Task data fetched:', {
-              taskId: newTaskData.id,
-              title: newTaskData.title,
-              assigneesCount: newTaskData.assignees?.length || 0,
-              assignees: newTaskData.assignees?.map(a => a.profile?.display_name)
+              taskId: hydratedTask.id,
+              title: hydratedTask.title,
+              assigneesCount: hydratedTask.assignees?.length || 0,
+              assignees: hydratedTask.assignees?.map(a => a.profile?.display_name)
             });
             
             setTasks(prevTasks => {
               // Check if task already exists
-              if (prevTasks.some(t => t.id === newTaskData.id)) {
+              if (prevTasks.some(t => t.id === hydratedTask.id)) {
                 console.log('⚠️ [REALTIME] Task already exists, skipping add');
                 return prevTasks;
               }
               console.log('➕ [REALTIME] Adding task to state');
               return [...prevTasks, {
-                ...newTaskData,
-                completion_rule: (newTaskData.completion_rule || 'everyone') as 'any_one' | 'everyone'
+                ...hydratedTask,
+                completion_rule: (hydratedTask.completion_rule || 'everyone') as 'any_one' | 'everyone'
               }];
             });
           } else {
