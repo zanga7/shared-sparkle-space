@@ -49,6 +49,9 @@ Deno.serve(async (req) => {
 
     console.log('🔄 Starting rotating tasks generation...');
 
+    // Whether to assign to the next member (used when triggered on completion)
+    let assignNextMember = false;
+
     // Optional filter from request body to process a single rotating task
     const contentType = req.headers.get('content-type') || '';
     let filter: { id?: string; name?: string; family_id?: string } = {};
@@ -58,6 +61,9 @@ Deno.serve(async (req) => {
         if (body?.rotating_task_id) filter.id = body.rotating_task_id;
         if (body?.task_name) filter.name = body.task_name;
         if (body?.family_id) filter.family_id = body.family_id;
+        if (typeof body?.assign_next_member !== 'undefined') {
+          assignNextMember = !!body.assign_next_member;
+        }
       } catch (_) {
         // ignore JSON parse errors
       }
@@ -238,6 +244,50 @@ Deno.serve(async (req) => {
             reason: 'All members have incomplete tasks today'
           });
           continue;
+        }
+      }
+
+      // If assign_next_member is set, rotate assignee to the next valid member before reserving
+      if (assignNextMember) {
+        console.log('➡️ assign_next_member flag detected; rotating assignee to next member');
+        let rotated = false;
+        if (!rotatingTask.allow_multiple_completions) {
+          for (let i = 1; i <= len; i++) {
+            const idx = (selectedIndex + i) % len;
+            const candidateId = rotatingTask.member_order[idx] || null;
+            if (await candidateIsValid(candidateId)) {
+              targetMemberId = candidateId;
+              selectedIndex = idx;
+              rotated = true;
+              break;
+            }
+          }
+        } else {
+          for (let i = 1; i <= len; i++) {
+            const idx = (selectedIndex + i) % len;
+            const candidateId = rotatingTask.member_order[idx];
+            if (!candidateId) continue;
+            if (!(await candidateIsValid(candidateId))) continue;
+            const { data: existingForMember, error: checkError } = await supabaseClient
+              .from('tasks')
+              .select('id, task_assignees!inner(profile_id), task_completions(id)')
+              .eq('family_id', rotatingTask.family_id)
+              .eq('title', rotatingTask.name)
+              .eq('task_assignees.profile_id', candidateId)
+              .gte('created_at', `${today}T00:00:00Z`)
+              .lte('created_at', `${today}T23:59:59Z`);
+            if (checkError) continue;
+            const hasIncompleteTask = existingForMember?.some(task => !task.task_completions || task.task_completions.length === 0);
+            if (!hasIncompleteTask) {
+              targetMemberId = candidateId;
+              selectedIndex = idx;
+              rotated = true;
+              break;
+            }
+          }
+        }
+        if (!rotated) {
+          console.log('⚠️ assign_next_member requested but no valid next candidate found; keeping current selection');
         }
       }
 

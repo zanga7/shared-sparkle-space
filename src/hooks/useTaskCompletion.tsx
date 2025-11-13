@@ -191,6 +191,7 @@ export const useTaskCompletion = ({
               rotating_task_id: rotatingTaskId,
               task_name: taskName,
               family_id: familyId,
+              assign_next_member: true,
             }
           });
 
