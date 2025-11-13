@@ -91,7 +91,13 @@ export const useEvents = (familyId?: string) => {
             created_at: series.created_at,
             updated_at: series.updated_at,
             attendees: attendeeProfiles.map(profileId => {
-              const profile = profilesMap?.get(profileId) || { id: profileId, display_name: 'Unknown', role: 'child' as const, color: 'sky' };
+              const profile = profilesMap?.get(profileId) || { 
+                id: profileId, 
+                display_name: 'Unknown', 
+                role: 'child' as const, 
+                color: 'sky',
+                avatar_url: null
+              };
               return {
                 id: crypto.randomUUID(),
                 event_id: `${series.id}-${format(instance.date, 'yyyy-MM-dd')}`,
@@ -141,7 +147,7 @@ export const useEvents = (familyId?: string) => {
     try {
       const { data: profilesData, error } = await supabase
         .from('profiles')
-        .select('id, display_name, role, color, status')
+        .select('id, display_name, role, color, avatar_url, status')
         .eq('family_id', familyId)
         .eq('status', 'active');
       
