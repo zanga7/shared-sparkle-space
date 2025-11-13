@@ -814,7 +814,7 @@ export const CalendarView = ({
                                     </div>
                                   </CardHeader>
                                   
-                                  <CardContent ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[200px]">
+                                  <CardContent ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[200px] pt-6">
                                     {memberTasks.map((task, index) => <TaskItem key={task.id} task={task} index={index} />)}
                                     {memberEvents.map((event, eventIndex) => {
                                       const isDragDisabled = event.isMultiDay ? !event.isFirstDay : false;
@@ -925,7 +925,7 @@ export const CalendarView = ({
                             </div>
                           </CardHeader>
                           
-                          <CardContent ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[200px]">
+                          <CardContent ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[200px] pt-6">
                             {/* Tasks */}
                             {memberTasks.map((task, index) => <TaskItem key={task.id} task={task} index={index} />)}
                             
