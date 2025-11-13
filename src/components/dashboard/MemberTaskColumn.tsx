@@ -5,23 +5,26 @@ import { UserAvatar } from '@/components/ui/user-avatar';
 import { TaskGroupsList } from '@/components/tasks/TaskGroupsList';
 import { cn } from '@/lib/utils';
 import { useMemberColor } from '@/hooks/useMemberColor';
+import { Task, Profile } from '@/types/task';
+import { DropResult } from '@hello-pangea/dnd';
+import { TaskGroup } from '@/types/taskGroup';
 
-interface MemberColumnProps {
-  member: any;
-  memberTasks: any[];
-  completedTasks: any[];
-  allTasks: any[];
-  familyMembers: any[];
-  onTaskToggle: (taskId: string, memberId: string) => Promise<void>;
-  onEditTask?: (task: any) => void;
-  onDeleteTask?: (taskId: string) => void;
-  onAddTask: (group?: string) => void;
+interface MemberTaskColumnProps {
+  member: Profile;
+  memberTasks: Task[];
+  completedTasks: Task[];
+  allTasks: Task[];
+  familyMembers: Profile[];
+  onTaskToggle: (task: Task) => void;
+  onEditTask?: (task: Task) => void;
+  onDeleteTask?: (task: Task) => void;
+  onAddTask: (memberId: string, group?: TaskGroup) => void;
   onAddTaskForMember: (memberId: string) => void;
-  onDragEnd: (result: any) => Promise<void>;
+  onDragEnd: (result: DropResult) => void;
   showActions: boolean;
 }
 
-export function MemberColumn({
+export function MemberTaskColumn({
   member,
   memberTasks,
   completedTasks,
@@ -34,16 +37,22 @@ export function MemberColumn({
   onAddTaskForMember,
   onDragEnd,
   showActions,
-}: MemberColumnProps) {
+}: MemberTaskColumnProps) {
   const { styles: colorStyles, hex: colorHex } = useMemberColor(member.color);
 
+  const progressPercentage = memberTasks.length > 0
+    ? Math.round((completedTasks.length / memberTasks.length) * 100)
+    : 0;
+
   return (
-    <Card
-      key={member.id}
+    <Card 
       className="flex-shrink-0 w-72 sm:w-80 h-fit group"
       style={colorStyles.bg10}
     >
-      <CardHeader className="pb-3 border-b" style={colorStyles.border}>
+      <CardHeader 
+        className="pb-3 border-b"
+        style={colorStyles.border}
+      >
         <div className="flex items-center gap-3">
           <UserAvatar
             name={member.display_name}
@@ -58,14 +67,12 @@ export function MemberColumn({
             </CardTitle>
           </div>
         </div>
-        <div style={colorStyles.bg} className="h-3 rounded-full overflow-hidden">
+        <div className="relative h-3 rounded-full overflow-hidden bg-muted">
           <div
-            className="h-full transition-all duration-300"
+            className="absolute inset-0 h-full transition-all duration-300"
             style={{
               ...colorStyles.accent,
-              width: memberTasks.length > 0
-                ? `${Math.round((completedTasks.length / memberTasks.length) * 100)}%`
-                : '0%',
+              width: `${progressPercentage}%`,
             }}
           />
         </div>
@@ -79,7 +86,7 @@ export function MemberColumn({
           onTaskToggle={onTaskToggle}
           onEditTask={onEditTask}
           onDeleteTask={onDeleteTask}
-          onAddTask={onAddTask}
+          onAddTask={(group) => onAddTask(member.id, group)}
           onDragEnd={onDragEnd}
           showActions={showActions}
           memberId={member.id}

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { UserAvatar } from '@/components/ui/user-avatar';
-import { getMemberColorClasses } from '@/lib/utils';
+import { MemberTaskColumn } from '@/components/dashboard/MemberTaskColumn';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Progress } from '@/components/ui/progress';
@@ -1593,7 +1593,7 @@ const ColumnBasedDashboard = () => {
           <TabsContent value="columns" className="mt-4 sm:mt-6">
             {viewMode === 'everyone' ? (
               <DragDropContext onDragEnd={handleDragEnd} onDragStart={() => console.log('Drag started')}>
-                <div className="w-full overflow-x-auto touch-pan-x">
+                 <div className="w-full overflow-x-auto touch-pan-x">
                   <div className="flex gap-3 sm:gap-4 pb-4" style={{ minWidth: 'fit-content' }}>
                      {/* Family member columns - show all members in everyone mode */}
                      {familyMembers.map(member => {
@@ -1601,71 +1601,23 @@ const ColumnBasedDashboard = () => {
                      const completedTasks = memberTasks.filter(task => 
                        task.task_completions && task.task_completions.length > 0
                      );
-                     const pendingTasks = memberTasks.filter(task => 
-                       !task.task_completions || task.task_completions.length === 0
-                     );
 
                       return (
-                        <Card key={member.id} className={cn(
-                          "flex-shrink-0 w-72 sm:w-80 h-fit group",
-                          getMemberColorClasses(member.color).bg10
-                        )}>
-                            <CardHeader className={cn(
-                             "pb-3 border-b",
-                             getMemberColorClasses(member.color).border
-                           )}>
-                            <div className="flex items-center gap-3">
-                               <UserAvatar
-                                 name={member.display_name}
-                                 color={member.color}
-                                 avatarIcon={member.avatar_url || undefined}
-                                 size="md"
-                                 className="sm:h-10 sm:w-10"
-                               />
-                               <div className="min-w-0 flex-1">
-                                 <CardTitle className="text-base sm:text-lg truncate">{member.display_name}</CardTitle>
-                              </div>
-                             </div>
-                              <Progress 
-                                value={memberTasks.length > 0 ? Math.round((completedTasks.length / memberTasks.length) * 100) : 0} 
-                                className="h-3"
-                                indicatorClassName={getMemberColorClasses(member.color).bg}
-                              />
-                            </CardHeader>
-
-                             <CardContent className="p-0">
-                                <TaskGroupsList
-                                  tasks={memberTasks}
-                                  allTasks={tasks}
-                                  familyMembers={familyMembers}
-                                  onTaskToggle={handleTaskToggle}
-                                 onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
-                                 onDeleteTask={profile.role === 'parent' ? initiateTaskDeletion : undefined}
-                                 onAddTask={(group) => handleAddTaskForMember(member.id, group)}
-                                 onDragEnd={handleDragEnd}
-                                 showActions={profile.role === 'parent'}
-                                 memberId={member.id}
-                                 memberColor={member.color}
-                                 droppableIdPrefix={`${member.id}-`}
-                               />
-                             </CardContent>
-                             
-                             {/* Add Task Button at Member Level */}
-                             {profile.role === 'parent' && (
-                               <div className="px-4 pb-4">
-                                 <AddButton
-                                   className={cn(
-                                     "w-full text-xs opacity-0 group-hover:opacity-75 transition-opacity",
-                                     getMemberColorClasses(member.color).border,
-                                     getMemberColorClasses(member.color).text
-                                   )}
-                                   text="Add Task"
-                                   showIcon={true}
-                                   onClick={() => handleAddTaskForMember(member.id)}
-                                 />
-                               </div>
-                             )}
-                         </Card>
+                        <MemberTaskColumn
+                          key={member.id}
+                          member={member}
+                          memberTasks={memberTasks}
+                          completedTasks={completedTasks}
+                          allTasks={tasks}
+                          familyMembers={familyMembers}
+                          onTaskToggle={handleTaskToggle}
+                          onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
+                          onDeleteTask={profile.role === 'parent' ? initiateTaskDeletion : undefined}
+                          onAddTask={handleAddTaskForMember}
+                          onAddTaskForMember={handleAddTaskForMember}
+                          onDragEnd={handleDragEnd}
+                          showActions={profile.role === 'parent'}
+                        />
                      );
                    })}
 
