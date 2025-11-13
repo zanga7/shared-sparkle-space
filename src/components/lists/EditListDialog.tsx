@@ -12,20 +12,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import * as Icons from 'lucide-react';
-import { RotateCcw } from 'lucide-react';
 
 interface Category {
   id: string;
@@ -60,8 +49,6 @@ export function EditListDialog({
   const [categoryId, setCategoryId] = useState(list.category_id || '');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -152,58 +139,7 @@ export function EditListDialog({
     }
   };
 
-  const handleResetList = async () => {
-    try {
-      setResetting(true);
-      const { error } = await supabase
-        .from('list_items')
-        .update({
-          is_completed: false,
-          completed_at: null,
-          completed_by: null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('list_id', list.id)
-        .eq('is_completed', true);
-
-      if (error) throw error;
-
-      toast({
-        title: 'List reset',
-        description: 'All items have been unchecked successfully'
-      });
-
-      setShowResetConfirm(false);
-    } catch (error) {
-      console.error('Error resetting list:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to reset list',
-        variant: 'destructive'
-      });
-    } finally {
-      setResetting(false);
-    }
-  };
-
   return (
-    <>
-      <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reset list?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will uncheck all completed items in this list. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleResetList} disabled={resetting}>
-              {resetting ? 'Resetting...' : 'Reset List'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -267,20 +203,6 @@ export function EditListDialog({
               </Select>
             </div>
           )}
-          
-          {/* Reset List Section */}
-          <div className="pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() => setShowResetConfirm(true)}
-            >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Reset List (Uncheck All)
-            </Button>
-          </div>
-
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
@@ -292,6 +214,5 @@ export function EditListDialog({
         </form>
       </DialogContent>
     </Dialog>
-    </>
   );
 }

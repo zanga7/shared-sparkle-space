@@ -26,10 +26,21 @@ import {
   Copy,
   Archive,
   ArchiveRestore,
-  ListTodo
+  ListTodo,
+  RotateCcw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 import { EnhancedListInput } from '@/components/ui/enhanced-list-input';
 
@@ -108,6 +119,8 @@ export function CompactInlineListCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [assigningItem, setAssigningItem] = useState<string | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     fetchItems();
@@ -362,11 +375,74 @@ export function CompactInlineListCard({
     setEditingValue('');
   };
 
+  const handleResetList = async () => {
+    try {
+      setResetting(true);
+      const { error } = await supabase
+        .from('list_items')
+        .update({
+          is_completed: false,
+          completed_at: null,
+          completed_by: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('list_id', list.id)
+        .eq('is_completed', true);
+
+      if (error) throw error;
+
+      // Update items state directly (AJAX approach)
+      setItems(prev => prev.map(item => ({
+        ...item,
+        is_completed: false,
+        completed_at: undefined,
+        completed_by: undefined
+      })));
+
+      // Update parent counts
+      onListItemsUpdated(list.id, items.length, 0, 0);
+
+      toast({
+        title: 'List reset',
+        description: 'All items have been unchecked successfully'
+      });
+
+      setShowResetConfirm(false);
+    } catch (error) {
+      console.error('Error resetting list:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reset list',
+        variant: 'destructive'
+      });
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const completedCount = items.filter(item => item.is_completed).length;
   const progressPercentage = items.length > 0 ? Math.round((completedCount / items.length) * 100) : 0;
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <>
+      <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset list?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will uncheck all completed items in this list. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleResetList} disabled={resetting}>
+              {resetting ? 'Resetting...' : 'Reset List'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2 flex-1">
@@ -388,6 +464,13 @@ export function CompactInlineListCard({
                 <DropdownMenuItem onClick={() => onDuplicateList(list)}>
                   <Copy className="h-4 w-4 mr-2" />
                   Duplicate
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setShowResetConfirm(true)}
+                  disabled={completedCount === 0}
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Reset
                 </DropdownMenuItem>
                 {!isPersonalList && (
                   <>
@@ -655,5 +738,6 @@ export function CompactInlineListCard({
         </Dialog>
       )}
     </Card>
+    </>
   );
 }
