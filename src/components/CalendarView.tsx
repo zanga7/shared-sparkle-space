@@ -803,14 +803,9 @@ export const CalendarView = ({
                                   style={colorStyles.bg10}
                                 >
                                   <CardHeader className="pb-3">
-                                    <div className="flex items-center gap-2">
+                                     <div className="flex items-center gap-2">
                                       <UserAvatar name={member.display_name} color={member.color} avatarIcon={member.avatar_url || undefined} size="sm" />
-                                      <div>
-                                        <CardTitle className="text-sm">{member.display_name}</CardTitle>
-                                        <p className="text-xs text-muted-foreground">
-                                          {memberTasks.length + memberEvents.length} items
-                                        </p>
-                                      </div>
+                                      <CardTitle className="text-sm">{member.display_name}</CardTitle>
                                     </div>
                                   </CardHeader>
                                   
@@ -916,12 +911,7 @@ export const CalendarView = ({
                           <CardHeader className="pb-3">
                             <div className="flex items-center gap-2">
                               <UserAvatar name={member.display_name} color={member.color} avatarIcon={member.avatar_url || undefined} size="sm" />
-                              <div>
-                                <CardTitle className="text-sm">{member.display_name}</CardTitle>
-                                <p className="text-xs text-muted-foreground">
-                                  {memberTasks.length + memberEvents.length} items
-                                </p>
-                              </div>
+                              <CardTitle className="text-sm">{member.display_name}</CardTitle>
                             </div>
                           </CardHeader>
                           
