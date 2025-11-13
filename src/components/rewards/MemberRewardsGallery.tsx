@@ -11,7 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { GroupContribution } from '@/types/rewards';
 import { Profile } from '@/types/task';
-import { cn, getMemberColorClasses } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { useMemberColor } from '@/hooks/useMemberColor';
 
 interface MemberRewardsGalleryProps {
   member: Profile;
@@ -23,7 +24,7 @@ export function MemberRewardsGallery({ member }: MemberRewardsGalleryProps) {
   const [contributingIds, setContributingIds] = useState<Set<string>>(new Set());
   const [groupContributions, setGroupContributions] = useState<GroupContribution[]>([]);
   
-  const memberColors = getMemberColorClasses(member.color);
+  const { styles: colorStyles } = useMemberColor(member.color);
   const userBalance = getPointsBalance(member.id);
 
   // Get available rewards for this member
@@ -187,7 +188,7 @@ export function MemberRewardsGallery({ member }: MemberRewardsGalleryProps) {
 
   if (loading) {
     return (
-      <Card className={cn("h-full", memberColors.border)} style={{ borderWidth: '2px' }}>
+      <Card className="h-full flex flex-col" style={colorStyles.bg10}>
         <CardContent className="flex items-center justify-center py-8">
           <Loader2 className="w-6 h-6 animate-spin" />
           <span className="ml-2">Loading rewards...</span>
@@ -197,11 +198,11 @@ export function MemberRewardsGallery({ member }: MemberRewardsGalleryProps) {
   }
 
   return (
-    <Card className={cn("h-full flex flex-col", memberColors.border)} style={{ borderWidth: '2px' }}>
+    <Card className="h-full flex flex-col" style={colorStyles.bg10}>
       <div className="p-6 border-b">
         <div className="flex items-center justify-between mb-2">
-          <h3 className={cn("text-lg font-semibold flex items-center gap-2", memberColors.text)}>
-            <Gift className="w-5 h-5" />
+          <h3 className="text-lg font-semibold flex items-center gap-2" style={colorStyles.text}>
+            <Gift className="w-6 h-6" />
             Rewards
           </h3>
           <Badge variant="outline" className="text-sm">

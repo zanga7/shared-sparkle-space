@@ -100,46 +100,44 @@ export const MemberDashboard = ({
   }, [emblaApi]);
 
   const renderMemberHeader = () => (
-    <div 
-      className="text-center py-6 sm:py-8 rounded-lg mb-6"
-      style={colorStyles.accent}
-    >
-      <div className="mx-auto mb-4 w-fit">
+    <div className="mb-6">
+      <div className="flex items-center gap-4">
         <UserAvatar
-          name={member.display_name} 
-          color="white"
+          name={member.display_name}
+          color={member.color}
           avatarIcon={member.avatar_url || undefined}
-          size="lg" 
-          className="" 
+          size="lg"
+          className="h-16 w-16"
         />
+        <div className="flex-1">
+          <h1 className="text-3xl sm:text-4xl font-bold" style={{ color: colorHex }}>
+            {member.display_name}'s Dashboard
+          </h1>
+          <div className="flex items-center gap-3 mt-2">
+            <Badge variant="outline" className="text-sm px-3 py-1" style={{ color: colorHex, borderColor: colorHex }}>
+              {member.total_points} points
+            </Badge>
+            <Badge variant="outline" className="text-sm px-3 py-1 capitalize" style={{ color: colorHex, borderColor: colorHex }}>
+              {member.role}
+            </Badge>
+          </div>
+        </div>
       </div>
-      <h1 className="text-3xl sm:text-4xl font-bold mb-4 text-white">
-        {member.display_name}'s Dashboard
-      </h1>
-      <div className="flex justify-center items-center gap-4 mb-6">
-        <Badge variant="outline" className="text-lg px-4 sm:px-6 py-2 bg-white/20 border-white/30 text-white">
-          {member.total_points} points
-        </Badge>
-        <Badge variant="secondary" className="text-lg px-4 sm:px-6 py-2 bg-white/20 border-white/30 text-white">
-          {member.role}
-        </Badge>
-      </div>
-      
+
       {/* Mobile Widget Navigation Buttons */}
       {isMobile && (
-        <div className="flex justify-center gap-2 mt-4">
+        <div className="flex gap-2 mt-4">
           {WIDGET_SECTIONS.map((section, index) => {
             const IconComponent = section.icon;
+            const isActive = activeWidget === index;
             return (
               <Button
                 key={section.id}
-                variant={activeWidget === index ? "default" : "outline"}
+                variant={isActive ? "default" : "outline"}
                 size="sm"
                 onClick={() => scrollToWidget(index)}
-                className={cn(
-                  "h-12 w-12 p-0",
-                  activeWidget === index ? "bg-white text-foreground" : "bg-white/20 border-white/30 text-white hover:bg-white/30"
-                )}
+                className="h-10 px-3"
+                style={isActive ? { backgroundColor: colorHex, color: '#ffffff' } : { color: colorHex, borderColor: colorHex }}
                 aria-label={`Go to ${section.title}`}
               >
                 <IconComponent className="h-5 w-5" />
