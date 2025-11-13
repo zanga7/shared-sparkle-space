@@ -3,8 +3,9 @@ import * as AvatarPrimitive from "@radix-ui/react-avatar"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 
-import { cn, getMemberColorClasses } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import { AvatarIconType } from "./avatar-icon-selector"
+import { useMemberColor } from "@/hooks/useMemberColor"
 
 interface UserAvatarProps extends React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root> {
   name: string
@@ -23,6 +24,8 @@ const UserAvatar = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Root>,
   UserAvatarProps
 >(({ className, name, color = 'sky', size = 'md', avatarIcon, ...props }, ref) => {
+  const { hex: colorHex, styles: colorStyles } = useMemberColor(color);
+  
   // Fetch avatar icons from database
   const { data: avatarIcons = [] } = useQuery({
     queryKey: ['avatar-icons'],
@@ -36,29 +39,11 @@ const UserAvatar = React.forwardRef<
     }
   });
 
-  // Fetch color hex value
-  const { data: colorData } = useQuery({
-    queryKey: ['color-palette', color],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('color_palettes')
-        .select('hex_value')
-        .eq('color_key', color)
-        .maybeSingle();
-      
-      if (error) return null;
-      return data;
-    },
-    enabled: !!color
-  });
-
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const colorClasses = getMemberColorClasses(color);
   const iconData = avatarIcons.find(icon => icon.name === avatarIcon);
-  const colorHex = colorData?.hex_value || '#0ea5e9';
 
   return (
     <AvatarPrimitive.Root
@@ -74,17 +59,14 @@ const UserAvatar = React.forwardRef<
       <AvatarPrimitive.Fallback 
         className={cn(
           "flex h-full w-full items-center justify-center font-medium",
-          !iconData && "rounded-full",
-          !iconData && colorClasses.avatar
+          !iconData && "rounded-full"
         )}
+        style={!iconData ? colorStyles.avatar : undefined}
       >
         {iconData ? (
           <div 
             className="w-full h-full flex items-center justify-center [&_svg]:w-full [&_svg]:h-full"
             dangerouslySetInnerHTML={{ __html: iconData.svg_content }}
-            style={{
-              ['--icon-color' as any]: colorHex,
-            }}
           />
         ) : (
           getInitials(name)
@@ -92,7 +74,7 @@ const UserAvatar = React.forwardRef<
         {iconData && (
           <style>
             {`
-              .user-avatar-${avatarIcon} .cls-1 {
+              [data-avatar="${avatarIcon}"] .cls-1 {
                 fill: ${colorHex} !important;
               }
             `}

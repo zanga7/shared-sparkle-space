@@ -8,6 +8,7 @@ import NetworkStatusIndicator from "@/components/NetworkStatusIndicator";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ColorPaletteProvider } from "@/contexts/ColorPaletteContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ChildAuth from "./pages/ChildAuth";
@@ -46,8 +47,9 @@ const queryClient = new QueryClient({
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
+      <ColorPaletteProvider>
+        <TooltipProvider>
+          <Toaster />
         <Sonner />
         <PWAInstallPrompt />
         <PWAUpdatePrompt />
@@ -86,6 +88,7 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
+      </ColorPaletteProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
