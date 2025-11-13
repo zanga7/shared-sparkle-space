@@ -438,21 +438,30 @@ export default function ThemesManagement() {
               <div className="space-y-2">
                 <Label htmlFor="hex_value">Hex Color Value</Label>
                 <div className="flex gap-2">
-                  <Input 
-                    id="hex_value" 
-                    name="hex_value" 
+                  <input 
+                    id="hex_value_picker" 
                     type="color"
-                    defaultValue={editingColor?.hex_value}
-                    className="w-20 h-10 p-1 cursor-pointer"
-                    required 
+                    defaultValue={editingColor?.hex_value || '#000000'}
+                    className="w-20 h-10 p-1 cursor-pointer rounded-md border border-input"
+                    onChange={(e) => {
+                      const textInput = document.getElementById('hex_value') as HTMLInputElement;
+                      if (textInput) textInput.value = e.target.value;
+                    }}
                   />
                   <Input 
+                    id="hex_value"
                     name="hex_value" 
-                    defaultValue={editingColor?.hex_value}
+                    defaultValue={editingColor?.hex_value || '#000000'}
                     placeholder="#000000"
                     className="flex-1"
                     pattern="^#[0-9A-Fa-f]{6}$"
-                    required 
+                    required
+                    onChange={(e) => {
+                      const colorInput = document.getElementById('hex_value_picker') as HTMLInputElement;
+                      if (colorInput && /^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                        colorInput.value = e.target.value;
+                      }
+                    }}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
