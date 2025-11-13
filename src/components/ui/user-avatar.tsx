@@ -54,6 +54,7 @@ const UserAvatar = React.forwardRef<
         sizeClasses[size],
         className
       )}
+      data-avatar={avatarIcon || undefined}
       {...props}
     >
       <AvatarPrimitive.Fallback 
@@ -66,6 +67,7 @@ const UserAvatar = React.forwardRef<
         {iconData ? (
           <div 
             className="w-full h-full flex items-center justify-center [&_svg]:w-full [&_svg]:h-full"
+            style={{ color: colorHex }}
             dangerouslySetInnerHTML={{ __html: iconData.svg_content }}
           />
         ) : (
@@ -74,8 +76,15 @@ const UserAvatar = React.forwardRef<
         {iconData && (
           <style>
             {`
-              [data-avatar="${avatarIcon}"] .cls-1 {
+              [data-avatar="${avatarIcon}"] svg path,
+              [data-avatar="${avatarIcon}"] svg circle,
+              [data-avatar="${avatarIcon}"] svg rect,
+              [data-avatar="${avatarIcon}"] svg polygon,
+              [data-avatar="${avatarIcon}"] svg g [fill] {
                 fill: ${colorHex} !important;
+              }
+              [data-avatar="${avatarIcon}"] svg * {
+                stroke: ${colorHex} !important;
               }
             `}
           </style>
