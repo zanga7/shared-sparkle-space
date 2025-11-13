@@ -820,44 +820,44 @@ export const CalendarView = ({
                                           index={memberTasks.length + eventIndex}
                                           isDragDisabled={isDragDisabled}
                                         >
-                                          {(provided, snapshot) => (
-                                            <div 
-                                              ref={provided.innerRef} 
-                                              {...provided.draggableProps} 
-                                              {...provided.dragHandleProps} 
-                                              className={cn(
-                                                "group p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs hover:shadow-md transition-all", 
-                                                !isDragDisabled && "cursor-move",
-                                                isDragDisabled && "cursor-not-allowed opacity-70",
-                                                snapshot.isDragging && "shadow-lg rotate-2 z-[9999]"
-                                              )}
-                                              onClick={() => handleEditEvent(event)}
-                                            >
-                                              <div className="flex items-center justify-between">
-                                                <span className="font-medium text-purple-700">{event.title}</span>
-                                                <div className="flex items-center gap-1">
-                                                  <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600">
-                                                    {event.isMultiDay ? 'Multi' : 'Event'}
-                                                  </Badge>
-                                                  <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-purple-600" />
-                                                </div>
-                                              </div>
-                                              {event.location && (
-                                                <div className="flex items-center gap-1 mt-1">
-                                                  <MapPin className="h-2.5 w-2.5 text-purple-600" />
-                                                  <p className="text-xs text-purple-600">{event.location}</p>
-                                                </div>
-                                              )}
-                                              {event.start_date && (
-                                                <div className="flex items-center gap-1 mt-1">
-                                                  <Clock className="h-2.5 w-2.5 text-purple-600" />
-                                                  <p className="text-xs text-purple-600">
-                                                    {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
-                                                  </p>
-                                                </div>
-                                              )}
-                                            </div>
-                                          )}
+                                           {(provided, snapshot) => (
+                                             <div 
+                                               ref={provided.innerRef} 
+                                               {...provided.draggableProps} 
+                                               {...provided.dragHandleProps} 
+                                               className={cn(
+                                                 "group p-3 mb-1 rounded-md bg-card shadow-sm hover:shadow-md transition-all", 
+                                                 !isDragDisabled && "cursor-move",
+                                                 isDragDisabled && "cursor-not-allowed opacity-70",
+                                                 snapshot.isDragging && "shadow-lg rotate-2 z-[9999]"
+                                               )}
+                                               onClick={() => handleEditEvent(event)}
+                                             >
+                                               <div className="flex items-center justify-between">
+                                                 <span className="font-medium text-sm text-foreground">{event.title}</span>
+                                                 <div className="flex items-center gap-1">
+                                                   <Badge variant="outline" className="text-xs h-4 px-1">
+                                                     {event.isMultiDay ? 'Multi' : 'Event'}
+                                                   </Badge>
+                                                   <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-muted-foreground" />
+                                                 </div>
+                                               </div>
+                                               {event.location && (
+                                                 <div className="flex items-center gap-1 mt-2">
+                                                   <MapPin className="h-3 w-3 text-muted-foreground" />
+                                                   <p className="text-xs text-muted-foreground">{event.location}</p>
+                                                 </div>
+                                               )}
+                                               {event.start_date && (
+                                                 <div className="flex items-center gap-1 mt-2">
+                                                   <Clock className="h-3 w-3 text-muted-foreground" />
+                                                   <p className="text-xs text-muted-foreground">
+                                                     {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
+                                                   </p>
+                                                 </div>
+                                               )}
+                                             </div>
+                                           )}
                                         </Draggable>
                                       );
                                     })}
@@ -929,38 +929,38 @@ export const CalendarView = ({
                                  index={memberTasks.length + eventIndex}
                                  isDragDisabled={isDragDisabled}
                                >
-                                 {(provided, snapshot) => <div 
-                                   ref={provided.innerRef} 
-                                   {...provided.draggableProps} 
-                                   {...provided.dragHandleProps} 
-                                   className={cn(
-                                     "group p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs hover:shadow-md transition-all", 
-                                     !isDragDisabled && "cursor-move",
-                                     isDragDisabled && "cursor-not-allowed opacity-70",
-                                     snapshot.isDragging && "shadow-lg rotate-2 z-[9999]"
-                                   )}
-                                   onClick={() => handleEditEvent(event)}
-                                 >
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium text-purple-700">{event.title}</span>
-                                  <div className="flex items-center gap-1">
-                                   <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600">
-                                     {event.isMultiDay ? 'Multi' : 'Event'}
-                                   </Badge>
-                                    <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-purple-600" />
-                                  </div>
-                                </div>
-                                {event.location && <div className="flex items-center gap-1 mt-1">
-                                    <MapPin className="h-2.5 w-2.5 text-purple-600" />
-                                    <p className="text-xs text-purple-600">{event.location}</p>
-                                  </div>}
-                                {event.start_date && <div className="flex items-center gap-1 mt-1">
-                                    <Clock className="h-2.5 w-2.5 text-purple-600" />
-                                    <p className="text-xs text-purple-600">
-                                      {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
-                                    </p>
-                                  </div>}
-                               </div>}
+                                  {(provided, snapshot) => <div 
+                                    ref={provided.innerRef} 
+                                    {...provided.draggableProps} 
+                                    {...provided.dragHandleProps} 
+                                    className={cn(
+                                      "group p-3 mb-1 rounded-md bg-card shadow-sm hover:shadow-md transition-all", 
+                                      !isDragDisabled && "cursor-move",
+                                      isDragDisabled && "cursor-not-allowed opacity-70",
+                                      snapshot.isDragging && "shadow-lg rotate-2 z-[9999]"
+                                    )}
+                                    onClick={() => handleEditEvent(event)}
+                                  >
+                                 <div className="flex items-center justify-between">
+                                   <span className="font-medium text-sm text-foreground">{event.title}</span>
+                                   <div className="flex items-center gap-1">
+                                    <Badge variant="outline" className="text-xs h-4 px-1">
+                                      {event.isMultiDay ? 'Multi' : 'Event'}
+                                    </Badge>
+                                     <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-muted-foreground" />
+                                   </div>
+                                 </div>
+                                 {event.location && <div className="flex items-center gap-1 mt-2">
+                                     <MapPin className="h-3 w-3 text-muted-foreground" />
+                                     <p className="text-xs text-muted-foreground">{event.location}</p>
+                                   </div>}
+                                 {event.start_date && <div className="flex items-center gap-1 mt-2">
+                                     <Clock className="h-3 w-3 text-muted-foreground" />
+                                     <p className="text-xs text-muted-foreground">
+                                       {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
+                                     </p>
+                                   </div>}
+                                </div>}
                               </Draggable>
                              })}
                              
@@ -1058,46 +1058,45 @@ export const CalendarView = ({
                                index={dayTasks.length + eventIndex}
                                isDragDisabled={isDragDisabled}
                              >
-                               {(provided, snapshot) => <div 
-                                 ref={provided.innerRef} 
-                                 {...provided.draggableProps} 
-                                 {...provided.dragHandleProps} 
-                                 className={cn(
-                                   "group p-2 mb-1 text-xs hover:shadow-md transition-all border", 
-                                   "bg-purple-50 border-purple-200 text-purple-700", 
-                                   event.isMultiDay && !event.isFirstDay && !event.isLastDay && "rounded-none border-l-0 border-r-0", 
-                                   event.isMultiDay && event.isFirstDay && "rounded-r-none border-r-0", 
-                                   event.isMultiDay && event.isLastDay && "rounded-l-none border-l-0", 
-                                   !event.isMultiDay && "rounded-md",
-                                   !isDragDisabled && "cursor-move",
-                                   isDragDisabled && "cursor-not-allowed opacity-70",
-                                   snapshot.isDragging && "shadow-lg rotate-2 scale-105 z-[9999]"
-                                 )}
-                                 onClick={e => {
-                      e.stopPropagation();
-                      handleEditEvent(event);
-                    }}>
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium truncate">
-                                  {event.isMultiDay && !event.isFirstDay ? `↳ ${event.title}` : event.title}
-                                </span>
-                                 <div className="flex items-center gap-1 shrink-0">
-                                   <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600">
-                                     {event.isMultiDay ? 'Multi' : event.recurrence_options?.enabled || event.isVirtual ? 'Series' : 'Single'}
-                                   </Badge>
-                                   <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-purple-600" />
-                                 </div>
-                              </div>
-                              
-                              {/* Attendees Display */}
-                              {event.attendees && event.attendees.length > 0 && <div className="mt-1">
-                                  <EventAttendeesDisplay attendees={event.attendees} showNames={false} maxDisplay={99} className="text-purple-600" />
-                                </div>}
-                              
-                              {/* Time Display - only show on first day or single day events */}
-                              {(!event.isMultiDay || event.isFirstDay) && event.start_date && <div className="flex items-center gap-1 mt-1">
-                                  <Clock className="h-2.5 w-2.5 text-purple-600" />
-                                  <span className="text-xs text-purple-600">
+                                {(provided, snapshot) => <div 
+                                  ref={provided.innerRef} 
+                                  {...provided.draggableProps} 
+                                  {...provided.dragHandleProps} 
+                                  className={cn(
+                                    "group p-3 mb-1 hover:shadow-md transition-all bg-card shadow-sm", 
+                                    event.isMultiDay && !event.isFirstDay && !event.isLastDay && "rounded-none", 
+                                    event.isMultiDay && event.isFirstDay && "rounded-r-none", 
+                                    event.isMultiDay && event.isLastDay && "rounded-l-none", 
+                                    !event.isMultiDay && "rounded-md",
+                                    !isDragDisabled && "cursor-move",
+                                    isDragDisabled && "cursor-not-allowed opacity-70",
+                                    snapshot.isDragging && "shadow-lg rotate-2 scale-105 z-[9999]"
+                                  )}
+                                  onClick={e => {
+                       e.stopPropagation();
+                       handleEditEvent(event);
+                     }}>
+                               <div className="flex items-center justify-between">
+                                 <span className="font-medium text-sm text-foreground truncate">
+                                   {event.isMultiDay && !event.isFirstDay ? `↳ ${event.title}` : event.title}
+                                 </span>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <Badge variant="outline" className="text-xs h-4 px-1">
+                                      {event.isMultiDay ? 'Multi' : event.recurrence_options?.enabled || event.isVirtual ? 'Series' : 'Single'}
+                                    </Badge>
+                                    <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-muted-foreground" />
+                                  </div>
+                               </div>
+                               
+                               {/* Attendees Display */}
+                               {event.attendees && event.attendees.length > 0 && <div className="mt-2">
+                                   <EventAttendeesDisplay attendees={event.attendees} showNames={false} maxDisplay={99} />
+                                 </div>}
+                               
+                               {/* Time Display - only show on first day or single day events */}
+                               {(!event.isMultiDay || event.isFirstDay) && event.start_date && <div className="flex items-center gap-1 mt-2">
+                                   <Clock className="h-3 w-3 text-muted-foreground" />
+                                   <span className="text-xs text-muted-foreground">
                                     {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
                                     {event.isMultiDay && ` - ${format(new Date(event.originalEnd), 'MMM d')}`}
                                   </span>
