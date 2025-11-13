@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useQuery } from "@tanstack/react-query";
@@ -141,6 +142,16 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
       setCurrentMemberIndex(currentMemberIndex - 1);
     } else if (fromIndex > currentMemberIndex && toIndex <= currentMemberIndex) {
       setCurrentMemberIndex(currentMemberIndex + 1);
+    }
+  };
+
+  const selectAllDays = () => {
+    setWeeklyDays([0, 1, 2, 3, 4, 5, 6]);
+  };
+
+  const selectAllMembers = () => {
+    if (profiles) {
+      setSelectedMembers(profiles.map(p => p.id));
     }
   };
 
@@ -322,7 +333,16 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
 
           {cadence === 'weekly' && (
             <div>
-              <Label>Days of Week</Label>
+              <div className="flex items-baseline justify-between">
+                <Label>Days of Week</Label>
+                <button
+                  type="button"
+                  onClick={selectAllDays}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  select all
+                </button>
+              </div>
               <div className="grid grid-cols-2 gap-2 mt-2">
                 {weekDays.map((day) => (
                   <div key={day.value} className="flex items-center space-x-2">
@@ -355,7 +375,16 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
           )}
 
           <div>
-            <Label>Family Members</Label>
+            <div className="flex items-baseline justify-between">
+              <Label>Family Members</Label>
+              <button
+                type="button"
+                onClick={selectAllMembers}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                select all
+              </button>
+            </div>
             <div className="grid grid-cols-1 gap-2 mt-2 max-h-40 overflow-y-auto">
               {profiles?.map((profile) => (
                 <div key={profile.id} className="flex items-center space-x-2">
@@ -401,31 +430,37 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
             )}
           </div>
 
-          <div className="border rounded-lg p-4 space-y-2 bg-muted/30">
+          <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
             <Label className="text-base font-medium">Task Assignment Mode</Label>
-            <div className="flex items-start space-x-2">
-              <Checkbox
-                id="allowMultipleCompletions"
-                checked={allowMultipleCompletions}
-                onCheckedChange={(checked) => setAllowMultipleCompletions(checked as boolean)}
-              />
-              <div className="space-y-1">
-                <Label htmlFor="allowMultipleCompletions" className="text-sm font-medium">
-                  Assign to all members simultaneously
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  {allowMultipleCompletions ? (
-                    <>
-                      ✅ <strong>Shared task mode:</strong> Creates one task for each member in the rotation. All members will see their own instance of the task.
-                    </>
-                  ) : (
-                    <>
-                      ✅ <strong>Rotating assignment mode:</strong> Creates one task for the current member in rotation. Only that member will see the task. After completion, the next member gets the task.
-                    </>
-                  )}
-                </p>
+            <RadioGroup
+              value={allowMultipleCompletions ? "shared" : "rotating"}
+              onValueChange={(value) => setAllowMultipleCompletions(value === "shared")}
+            >
+              <div className="space-y-3">
+                <div className="flex items-start space-x-3">
+                  <RadioGroupItem value="rotating" id="rotating-mode" />
+                  <div className="space-y-1">
+                    <Label htmlFor="rotating-mode" className="text-sm font-medium cursor-pointer">
+                      Rotating Assignment Mode
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Creates one task for the current member in rotation. Only that member will see the task. After completion, the next member gets the task.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <RadioGroupItem value="shared" id="shared-mode" />
+                  <div className="space-y-1">
+                    <Label htmlFor="shared-mode" className="text-sm font-medium cursor-pointer">
+                      Shared Task Mode
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Creates one task for each member in the rotation. All members will see their own instance of the task.
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
+            </RadioGroup>
           </div>
 
           <div className="flex items-center space-x-2">
