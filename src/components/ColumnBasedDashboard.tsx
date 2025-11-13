@@ -1624,11 +1624,15 @@ const ColumnBasedDashboard = () => {
                    {/* Unassigned tasks column - only show if no member filter or if unassigned has tasks */}
                    {!selectedMemberFilter && (tasksByMember.get('unassigned')?.length > 0 || profile.role === 'parent') && (
                      <Card className="flex-shrink-0 w-72 sm:w-80 h-fit">
+                       <CardHeader className="pb-3">
+                         <CardTitle className="text-base sm:text-lg text-muted-foreground">Unassigned</CardTitle>
+                         <CardDescription className="text-xs sm:text-sm">Drag to assign to members</CardDescription>
+                       </CardHeader>
                        <Droppable droppableId="unassigned">
                          {(provided, snapshot) => (
                            <CardContent 
                              className={cn(
-                               "space-y-3 transition-colors pt-6",
+                               "space-y-3 transition-colors",
                                snapshot.isDraggingOver && "bg-accent/50"
                              )}
                              ref={provided.innerRef}
@@ -1654,6 +1658,7 @@ const ColumnBasedDashboard = () => {
                                          onEdit={profile.role === 'parent' ? setEditingTask : undefined}
                                          onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
                                          showActions={profile.role === 'parent' && !snapshot.isDragging}
+                                         isUnassigned={true}
                                        />
                                      </div>
                                    )}

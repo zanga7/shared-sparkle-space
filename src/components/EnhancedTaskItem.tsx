@@ -30,6 +30,7 @@ interface EnhancedTaskItemProps {
   isDragging?: boolean;
   memberColor?: string;
   isCompleting?: boolean;
+  isUnassigned?: boolean;
 }
 
 export const EnhancedTaskItem = ({ 
@@ -43,7 +44,8 @@ export const EnhancedTaskItem = ({
   currentMemberId,
   isDragging = false,
   memberColor,
-  isCompleting = false
+  isCompleting = false,
+  isUnassigned = false
 }: EnhancedTaskItemProps) => {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -69,9 +71,10 @@ export const EnhancedTaskItem = ({
       className={cn(
         "group/task relative rounded-lg p-3 transition-all hover:shadow-md",
         isOverdue && "ring-1 ring-destructive/50",
-        !isCompleted && !(task as any).isVirtual && "cursor-grab active:cursor-grabbing"
+        !isCompleted && !(task as any).isVirtual && "cursor-grab active:cursor-grabbing",
+        isUnassigned && "bg-muted/30"
       )}
-      style={isCompleted ? colorStyles.bg20 : colorStyles.bg50}
+      style={!isUnassigned ? (isCompleted ? colorStyles.bg20 : colorStyles.bg50) : undefined}
     >
       <div className="flex items-start gap-2">
         {/* Complete/Uncomplete Button */}
