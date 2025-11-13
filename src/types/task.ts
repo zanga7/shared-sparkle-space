@@ -17,6 +17,7 @@ export interface Task {
     display_name: string;
     role: 'parent' | 'child';
     color: string;
+    avatar_url?: string | null;
   };
   assignees?: Array<{
     id: string;
@@ -28,6 +29,7 @@ export interface Task {
       display_name: string;
       role: 'parent' | 'child';
       color: string;
+      avatar_url?: string | null;
     };
   }>;
   task_completions?: Array<{

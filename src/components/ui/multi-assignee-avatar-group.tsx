@@ -58,7 +58,7 @@ export function MultiAssigneeAvatarGroup({
   }
 
   return (
-    <div className={cn("flex -space-x-1", className)}>
+    <div className={cn("flex gap-1", className)}>
       {displayedAssignees.map((assignee) => (
         <UserAvatar
           key={assignee.id}
@@ -66,7 +66,6 @@ export function MultiAssigneeAvatarGroup({
           color={assignee.color}
           avatarIcon={assignee.avatar_url || undefined}
           size={size}
-          className="border-2 border-background"
           title={assignee.display_name}
         />
       ))}
@@ -74,7 +73,7 @@ export function MultiAssigneeAvatarGroup({
         <UserAvatar
           name={`+${remainingCount}`}
           size={size}
-          className="border-2 border-background bg-muted text-muted-foreground"
+          className="bg-muted text-muted-foreground"
           title={`+${remainingCount} more`}
         />
       )}

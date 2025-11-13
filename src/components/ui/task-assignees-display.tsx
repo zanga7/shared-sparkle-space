@@ -50,6 +50,7 @@ export function TaskAssigneesDisplay({
         <UserAvatar
           name={assignees[0].display_name}
           color={assignees[0].color}
+          avatarIcon={assignees[0].avatar_url || undefined}
           size="sm"
         />
         <span className="text-sm">{assignees[0].display_name}</span>
@@ -62,14 +63,14 @@ export function TaskAssigneesDisplay({
       className={cn("flex items-center gap-1 cursor-pointer hover:bg-muted rounded p-1 -m-1", className)}
       onClick={onClick}
     >
-      <div className="flex -space-x-1">
+      <div className="flex gap-1">
         {displayedAssignees.map((assignee) => (
           <UserAvatar
             key={assignee.id}
             name={assignee.display_name}
             color={assignee.color}
+            avatarIcon={assignee.avatar_url || undefined}
             size="sm"
-            className="border-2 border-background"
             title={assignee.display_name}
           />
         ))}
@@ -77,7 +78,7 @@ export function TaskAssigneesDisplay({
           <UserAvatar
             name={`+${remainingCount}`}
             size="sm"
-            className="border-2 border-background bg-muted text-muted-foreground"
+            className="bg-muted text-muted-foreground"
             title={`+${remainingCount} more`}
           />
         )}

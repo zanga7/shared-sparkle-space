@@ -560,7 +560,7 @@ export function CompactInlineListCard({
               </div>
               
               {item.assignees && item.assignees.length > 0 && (
-                <div className="flex -space-x-1">
+                <div className="flex gap-1">
                   {item.assignees.slice(0, 2).map((assignee, index) => (
                     <UserAvatar
                       key={assignee.id}
@@ -568,11 +568,11 @@ export function CompactInlineListCard({
                       color={assignee.color}
                       avatarIcon={assignee.avatar_url || undefined}
                       size="sm"
-                      className="border border-background h-5 w-5 text-xs"
+                      className="h-5 w-5 text-xs"
                     />
                   ))}
                   {item.assignees.length > 2 && (
-                    <div className="h-5 w-5 rounded-full bg-muted border border-background flex items-center justify-center">
+                    <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center">
                       <span className="text-xs text-muted-foreground">
                         +{item.assignees.length - 2}
                       </span>

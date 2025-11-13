@@ -490,7 +490,7 @@ export function InlineListCard({
               </div>
 
               {item.assignees && item.assignees.length > 0 && (
-                <div className="flex -space-x-1">
+                <div className="flex gap-1">
                   {item.assignees.slice(0, 2).map((assignee) => (
                     <UserAvatar
                       key={assignee.profile.id}
@@ -498,14 +498,13 @@ export function InlineListCard({
                       color={assignee.profile.color}
                       avatarIcon={assignee.profile.avatar_url || undefined}
                       size="sm"
-                      className="border border-background"
                     />
                   ))}
                   {item.assignees.length > 2 && (
                     <UserAvatar
                       name={`+${item.assignees.length - 2}`}
                       size="sm"
-                      className="border border-background bg-muted text-muted-foreground"
+                      className="bg-muted text-muted-foreground"
                     />
                   )}
                 </div>

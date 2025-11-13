@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Check, ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Profile } from '@/types/task';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -57,10 +57,6 @@ export function MultiSelectAssignees({
     onAssigneesChange(safeSelectedAssignees.filter(id => id !== profileId));
   };
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
   return (
     <div className={cn("space-y-2", className)}>
       {/* Selected assignees display */}
@@ -72,11 +68,13 @@ export function MultiSelectAssignees({
               variant="secondary" 
               className="flex items-center gap-2 pr-1 py-1"
             >
-              <Avatar className="h-6 w-6">
-                <AvatarFallback className="text-xs">
-                  {getInitials(member.display_name)}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                name={member.display_name}
+                color={member.color}
+                avatarIcon={member.avatar_url || undefined}
+                size="sm"
+                className="h-6 w-6"
+              />
               <span className="text-sm">{member.display_name}</span>
               <Button
                 variant="ghost"
@@ -146,11 +144,13 @@ export function MultiSelectAssignees({
                   className="flex items-center gap-2"
                 >
                   <div className="flex items-center gap-2 flex-1">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs">
-                        {getInitials(member.display_name)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar
+                      name={member.display_name}
+                      color={member.color}
+                      avatarIcon={member.avatar_url || undefined}
+                      size="sm"
+                      className="h-8 w-8"
+                    />
                     <div className="flex flex-col">
                       <span>{member.display_name}</span>
                       <span className="text-xs text-muted-foreground capitalize">

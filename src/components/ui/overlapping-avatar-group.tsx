@@ -19,10 +19,10 @@ const sizeClasses = {
   lg: 'h-10 w-10'
 };
 
-const overlapClasses = {
-  sm: '-space-x-1',
-  md: '-space-x-2',
-  lg: '-space-x-3'
+const gapClasses = {
+  sm: 'gap-1',
+  md: 'gap-1',
+  lg: 'gap-2'
 };
 
 export function OverlappingAvatarGroup({
@@ -53,18 +53,14 @@ export function OverlappingAvatarGroup({
   }
 
   return (
-    <div className={cn("flex", overlapClasses[size], className)}>
-      {displayedMembers.map((member, index) => (
+    <div className={cn("flex", gapClasses[size], className)}>
+      {displayedMembers.map((member) => (
         <UserAvatar
           key={member.id}
           name={member.display_name}
           color={member.color}
           avatarIcon={member.avatar_url || undefined}
           size={size}
-          className={cn(
-            "border-2 border-background",
-            index > 0 && "shadow-sm" // Add shadow to overlapped avatars for better visibility
-          )}
           title={member.display_name}
         />
       ))}
@@ -72,7 +68,7 @@ export function OverlappingAvatarGroup({
         <UserAvatar
           name={`+${remainingCount}`}
           size={size}
-          className="border-2 border-background bg-muted text-muted-foreground shadow-sm"
+          className="bg-muted text-muted-foreground"
           title={`+${remainingCount} more`}
         />
       )}
