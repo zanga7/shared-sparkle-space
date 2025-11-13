@@ -8,6 +8,7 @@ interface EventAttendeesDisplayProps {
       id: string;
       display_name: string;
       color?: string;
+      avatar_url?: string | null;
     };
   }>;
   className?: string;
@@ -47,6 +48,7 @@ export function EventAttendeesDisplay({
         <UserAvatar
           name={attendees[0].profile.display_name}
           color={attendees[0].profile.color || 'sky'}
+          avatarIcon={attendees[0].profile.avatar_url || undefined}
           size="sm"
         />
         <span className="text-sm">{attendees[0].profile.display_name}</span>
@@ -65,6 +67,7 @@ export function EventAttendeesDisplay({
             key={attendee.profile.id}
             name={attendee.profile.display_name}
             color={attendee.profile.color || 'sky'}
+            avatarIcon={attendee.profile.avatar_url || undefined}
             size="sm"
             title={attendee.profile.display_name}
           />
