@@ -52,16 +52,21 @@ export function TaskAssigneesDisplay({
     );
   }
 
-  // For single assignee without showNames, just show name
+  // For single assignee without showNames, show avatar
   if (assignees.length === 1) {
     return (
-      <Badge 
-        variant="outline" 
-        className={cn("text-xs cursor-pointer hover:bg-muted", className)}
+      <div 
+        className={cn("cursor-pointer hover:opacity-80 transition-opacity", className)}
         onClick={onClick}
       >
-        {assignees[0].display_name}
-      </Badge>
+        <UserAvatar
+          name={assignees[0].display_name}
+          color={assignees[0].color}
+          avatarIcon={assignees[0].avatar_url || undefined}
+          size="sm"
+          title={assignees[0].display_name}
+        />
+      </div>
     );
   }
 

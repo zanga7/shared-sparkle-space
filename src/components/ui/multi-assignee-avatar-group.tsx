@@ -47,13 +47,14 @@ export function MultiAssigneeAvatarGroup({
   if (assignees.length === 1) {
     const assignee = assignees[0];
     return (
-      <Badge 
-        variant="outline" 
-        className={cn("text-xs", className)}
+      <UserAvatar
+        name={assignee.display_name}
+        color={assignee.color}
+        avatarIcon={assignee.avatar_url || undefined}
+        size={size}
         title={assignee.display_name}
-      >
-        {assignee.display_name}
-      </Badge>
+        className={className}
+      />
     );
   }
 
