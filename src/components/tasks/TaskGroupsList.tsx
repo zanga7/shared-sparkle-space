@@ -27,6 +27,7 @@ interface TaskGroupsListProps {
   memberColor?: string;
   droppableIdPrefix?: string;
   isCompleting?: (taskId: string) => boolean;
+  carouselMode?: 'mobile' | 'tablet' | null;
 }
 
 export const TaskGroupsList = ({
@@ -42,7 +43,8 @@ export const TaskGroupsList = ({
   memberId,
   memberColor,
   droppableIdPrefix = '',
-  isCompleting
+  isCompleting,
+  carouselMode = null
 }: TaskGroupsListProps) => {
   const { styles: colorStyles } = useMemberColor(memberColor);
 
@@ -178,13 +180,116 @@ export const TaskGroupsList = ({
 
   const defaultOpenValues = TASK_GROUPS_ORDER.map(group => `${droppableIdPrefix}${group}`);
 
+  // Carousel mode for mobile/tablet
+  if (carouselMode) {
+    const columnWidth = carouselMode === 'mobile' ? '100%' : 'calc(40% - 0.5rem)';
+    
+    return (
+      <>
+        {TASK_GROUPS_ORDER.map((group) => {
+          const groupTasks = taskGroups[group];
+          const Icon = getTaskGroupIcon(group);
+          const groupTitle = getTaskGroupTitle(group);
+          const droppableId = `${droppableIdPrefix}${group}`;
+          
+          return (
+            <div
+              key={group}
+              className="flex-shrink-0 h-full overflow-y-auto pr-4"
+              style={{ width: columnWidth }}
+            >
+              <div className="mb-2 flex items-center gap-2 font-medium">
+                <Icon className="h-4 w-4 text-muted-foreground" />
+                <span>{groupTitle}</span>
+              </div>
+              
+              <Droppable droppableId={droppableId}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={cn(
+                      "space-y-1 min-h-[60px] transition-colors",
+                      snapshot.isDraggingOver && "bg-accent/50 rounded-lg p-2"
+                    )}
+                  >
+                    {groupTasks.length === 0 ? (
+                      <div className="text-center py-4 text-muted-foreground text-sm">
+                        {snapshot.isDraggingOver ? (
+                          <p>Drop task here</p>
+                        ) : (
+                          <p>No {groupTitle.toLowerCase()} tasks</p>
+                        )}
+                      </div>
+                    ) : (
+                      groupTasks.map((task, index) => {
+                        const isTaskCompleted = task.task_completions && task.task_completions.length > 0;
+                        const isVirtualTask = (task as any).isVirtual || false;
+                        return (
+                          <Draggable 
+                            key={task.id} 
+                            draggableId={task.id} 
+                            index={index}
+                            isDragDisabled={isTaskCompleted || isVirtualTask}
+                          >
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={cn(
+                                  "transition-all duration-200",
+                                  snapshot.isDragging && "shadow-xl rotate-2 scale-105 z-50 ring-2 ring-primary/30"
+                                )}
+                              >
+                                <EnhancedTaskItem
+                                  task={task}
+                                  allTasks={allTasks}
+                                  familyMembers={familyMembers}
+                                  onToggle={onTaskToggle}
+                                  onEdit={onEditTask}
+                                  onDelete={onDeleteTask}
+                                  showActions={showActions && !snapshot.isDragging}
+                                  currentMemberId={memberId}
+                                  isDragging={snapshot.isDragging}
+                                  memberColor={memberColor}
+                                  isCompleting={isCompleting?.(task.id)}
+                                />
+                              </div>
+                            )}
+                          </Draggable>
+                        );
+                      })
+                    )}
+                    {provided.placeholder}
+                    
+                    {onAddTask && showActions && (
+                      <div className="pt-2 border-t border-dashed mt-2">
+                        <AddButton
+                          className="w-full text-xs"
+                          style={{ ...colorStyles.border, ...colorStyles.text }}
+                          text={`Add Task`}
+                          onClick={() => onAddTask(group)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Droppable>
+            </div>
+          );
+        })}
+      </>
+    );
+  }
+
+  // Default accordion mode for desktop
   return (
     <Accordion 
       type="multiple" 
       defaultValue={defaultOpenValues}
       className="space-y-2"
     >
-      {/* All task groups with pending tasks first, completed tasks below */}
       {renderTaskGroup('morning', taskGroups.morning)}
       {renderTaskGroup('midday', taskGroups.midday)}
       {renderTaskGroup('afternoon', taskGroups.afternoon)}
