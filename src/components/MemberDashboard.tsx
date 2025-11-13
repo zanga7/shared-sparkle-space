@@ -62,6 +62,19 @@ export const MemberDashboard = ({
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const isMobile = useIsMobile();
+  const [isTablet, setIsTablet] = React.useState(false);
+  
+  // Detect tablet portrait
+  React.useEffect(() => {
+    const checkTablet = () => {
+      const width = window.innerWidth;
+      setIsTablet(width >= 768 && width < 1024);
+    };
+    
+    checkTablet();
+    window.addEventListener('resize', checkTablet);
+    return () => window.removeEventListener('resize', checkTablet);
+  }, []);
 
   const { styles: colorStyles, hex: colorHex } = useMemberColor(member.color);
   const { events = [], createEvent, updateEvent, deleteEvent, refreshEvents } = useEvents(profile.family_id);
@@ -203,16 +216,19 @@ export const MemberDashboard = ({
     renderRewardsWidget()
   ];
 
-  if (isMobile) {
+  // Mobile or Tablet - Use Carousel
+  if (isMobile || isTablet) {
+    const columnWidth = isMobile ? '100%' : 'calc(40% - 0.5rem)';
+    
     return (
       <div className="w-full mx-auto px-4">
         {renderMemberHeader()}
         
-        {/* Mobile Carousel - Full Width */}
+        {/* Mobile/Tablet Carousel */}
         <div className="overflow-hidden -mx-4" ref={emblaRef}>
           <div className="flex">
             {widgets.map((widget, index) => (
-              <div key={index} className="flex-[0_0_100%] px-4">
+              <div key={index} className="flex-shrink-0 px-4" style={{ width: columnWidth }}>
                 <div className="h-[calc(100vh-400px)] w-full">
                   {widget}
                 </div>
@@ -222,11 +238,13 @@ export const MemberDashboard = ({
         </div>
 
         {/* Mobile Navigation - Current Widget Title */}
-        <div className="flex justify-center items-center mt-4">
-          <span className="text-lg font-medium text-center">
-            {WIDGET_SECTIONS[activeWidget]?.title}
-          </span>
-        </div>
+        {isMobile && (
+          <div className="flex justify-center items-center mt-4">
+            <span className="text-lg font-medium text-center">
+              {WIDGET_SECTIONS[activeWidget]?.title}
+            </span>
+          </div>
+        )}
 
         {/* Dialogs */}
         <AddTaskDialog
@@ -236,7 +254,7 @@ export const MemberDashboard = ({
           onTaskCreated={onTaskUpdated}
           open={isTaskDialogOpen}
           onOpenChange={setIsTaskDialogOpen}
-        preselectedMemberId={member.id}
+          preselectedMemberId={member.id}
         />
         
         <EventDialog
