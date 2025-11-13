@@ -16,7 +16,7 @@ export const AddButton = forwardRef<HTMLButtonElement, AddButtonProps>(
         variant="ghost"
         size="sm"
         className={cn(
-          "justify-start gap-2 text-muted-foreground hover:text-foreground hover:bg-accent border-dashed border border-transparent hover:border-accent",
+          "justify-end gap-2 text-muted-foreground hover:text-foreground hover:bg-accent",
           className
         )}
         {...props}
