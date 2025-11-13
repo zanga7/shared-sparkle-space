@@ -6,6 +6,7 @@ interface OverlappingAvatarGroupProps {
     id: string;
     display_name: string;
     color?: string;
+    avatar_url?: string | null;
   }>;
   maxDisplay?: number;
   size?: 'sm' | 'md' | 'lg';
@@ -43,6 +44,7 @@ export function OverlappingAvatarGroup({
       <UserAvatar 
         name={member.display_name}
         color={member.color}
+        avatarIcon={member.avatar_url || undefined}
         size={size}
         className={className}
         title={member.display_name}
@@ -57,6 +59,7 @@ export function OverlappingAvatarGroup({
           key={member.id}
           name={member.display_name}
           color={member.color}
+          avatarIcon={member.avatar_url || undefined}
           size={size}
           className={cn(
             "border-2 border-background",

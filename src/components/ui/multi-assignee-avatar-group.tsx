@@ -7,6 +7,7 @@ interface MultiAssigneeAvatarGroupProps {
     display_name: string;
     role: 'parent' | 'child';
     color?: string;
+    avatar_url?: string | null;
   }>;
   maxDisplay?: number;
   size?: 'sm' | 'md' | 'lg';
@@ -48,6 +49,7 @@ export function MultiAssigneeAvatarGroup({
       <UserAvatar 
         name={assignee.display_name}
         color={assignee.color}
+        avatarIcon={assignee.avatar_url || undefined}
         size={size}
         className={className}
         title={assignee.display_name}
@@ -62,6 +64,7 @@ export function MultiAssigneeAvatarGroup({
           key={assignee.id}
           name={assignee.display_name}
           color={assignee.color}
+          avatarIcon={assignee.avatar_url || undefined}
           size={size}
           className="border-2 border-background"
           title={assignee.display_name}

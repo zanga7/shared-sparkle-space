@@ -9,21 +9,24 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
 import { ColorSwatch, ColorSwatches } from '@/types/admin';
+import { AvatarIconSelector, AvatarIconType } from '@/components/ui/avatar-icon-selector';
 
 interface AddMemberDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   familyId: string;
   onMemberAdded: () => void;
+  existingMembers?: Array<{ color: string; avatar_url?: string | null; status: string }>;
 }
 
-export const AddMemberDialog = ({ isOpen, onOpenChange, familyId, onMemberAdded }: AddMemberDialogProps) => {
+export const AddMemberDialog = ({ isOpen, onOpenChange, familyId, onMemberAdded, existingMembers = [] }: AddMemberDialogProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     display_name: '',
     role: 'child' as 'parent' | 'child',
     color: 'sky' as ColorSwatch,
+    avatar_icon: '' as string,
     can_add_for_self: true,
     can_add_for_siblings: false,
     can_add_for_parents: false,
@@ -40,6 +43,32 @@ export const AddMemberDialog = ({ isOpen, onOpenChange, familyId, onMemberAdded 
       return;
     }
 
+    // Validate uniqueness
+    const colorInUse = existingMembers.some(m => 
+      m.color === formData.color && m.status === 'active'
+    );
+    const iconInUse = formData.avatar_icon && existingMembers.some(m => 
+      m.avatar_url === formData.avatar_icon && m.status === 'active'
+    );
+
+    if (colorInUse) {
+      toast({
+        title: 'Error',
+        description: 'This color is already in use by another active member',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (iconInUse) {
+      toast({
+        title: 'Error',
+        description: 'This icon is already in use by another active member',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const insertData: any = {
@@ -47,6 +76,7 @@ export const AddMemberDialog = ({ isOpen, onOpenChange, familyId, onMemberAdded 
         display_name: formData.display_name.trim(),
         role: formData.role,
         color: formData.color,
+        avatar_url: formData.avatar_icon || null,
         can_add_for_self: formData.can_add_for_self,
         can_add_for_siblings: formData.can_add_for_siblings,
         can_add_for_parents: formData.can_add_for_parents,
@@ -81,6 +111,7 @@ export const AddMemberDialog = ({ isOpen, onOpenChange, familyId, onMemberAdded 
         display_name: '',
         role: 'child',
         color: 'sky',
+        avatar_icon: '',
         can_add_for_self: true,
         can_add_for_siblings: false,
         can_add_for_parents: false,
@@ -140,24 +171,52 @@ export const AddMemberDialog = ({ isOpen, onOpenChange, familyId, onMemberAdded 
 
             <div>
               <Label>Color</Label>
-              <Select value={formData.color} onValueChange={(value: ColorSwatch) => 
-                setFormData(prev => ({ ...prev, color: value }))
-              }>
+              <Select 
+                value={formData.color} 
+                onValueChange={(value: ColorSwatch) => 
+                  setFormData(prev => ({ ...prev, color: value }))
+                }
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.keys(ColorSwatches).map((color) => (
-                    <SelectItem key={color} value={color}>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${ColorSwatches[color as ColorSwatch]}`} />
-                        {color}
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {Object.keys(ColorSwatches).map((color) => {
+                    const isUsed = existingMembers.some(m => 
+                      m.color === color && m.status === 'active'
+                    );
+                    return (
+                      <SelectItem 
+                        key={color} 
+                        value={color}
+                        disabled={isUsed}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full ${ColorSwatches[color as ColorSwatch]}`} />
+                          {color}
+                          {isUsed && <span className="text-xs text-muted-foreground">(in use)</span>}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div>
+            <Label>Avatar Icon</Label>
+            <AvatarIconSelector
+              selectedIcon={formData.avatar_icon}
+              selectedColor={formData.color}
+              usedIcons={existingMembers
+                .filter(m => m.status === 'active')
+                .map(m => m.avatar_url)
+                .filter(Boolean) as string[]}
+              onIconSelect={(icon: AvatarIconType) => 
+                setFormData(prev => ({ ...prev, avatar_icon: icon }))
+              }
+            />
           </div>
 
           <div className="space-y-3">

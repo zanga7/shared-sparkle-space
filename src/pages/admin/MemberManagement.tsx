@@ -29,6 +29,8 @@ import { format } from 'date-fns';
 import { AddMemberDialog } from '@/components/admin/AddMemberDialog';
 import { SetChildPinDialog } from '@/components/admin/SetChildPinDialog';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { AvatarIconSelector, AvatarIconType } from '@/components/ui/avatar-icon-selector';
+import { UserAvatar } from '@/components/ui/user-avatar';
 
 const MemberManagement = () => {
   const { user } = useAuth();
@@ -45,6 +47,7 @@ const MemberManagement = () => {
     display_name: '',
     role: 'child' as 'parent' | 'child',
     color: 'sky' as ColorSwatch,
+    avatar_icon: '' as string,
     can_add_for_self: true,
     can_add_for_siblings: false,
     can_add_for_parents: false,
@@ -100,6 +103,7 @@ const MemberManagement = () => {
       display_name: member.display_name,
       role: member.role,
       color: (member.color as ColorSwatch) || 'sky',
+      avatar_icon: member.avatar_url || '',
       can_add_for_self: member.can_add_for_self,
       can_add_for_siblings: member.can_add_for_siblings,
       can_add_for_parents: member.can_add_for_parents,
@@ -111,6 +115,32 @@ const MemberManagement = () => {
   const handleSaveMember = async () => {
     if (!editingMember) return;
 
+    // Validate uniqueness
+    const colorInUse = familyMembers.some(m => 
+      m.id !== editingMember.id && m.color === formData.color && m.status === 'active'
+    );
+    const iconInUse = formData.avatar_icon && familyMembers.some(m => 
+      m.id !== editingMember.id && m.avatar_url === formData.avatar_icon && m.status === 'active'
+    );
+
+    if (colorInUse) {
+      toast({
+        title: 'Error',
+        description: 'This color is already in use by another active member',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (iconInUse) {
+      toast({
+        title: 'Error',
+        description: 'This icon is already in use by another active member',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('profiles')
@@ -118,6 +148,7 @@ const MemberManagement = () => {
           display_name: formData.display_name.trim(),
           role: formData.role,
           color: formData.color,
+          avatar_url: formData.avatar_icon || null,
           can_add_for_self: formData.can_add_for_self,
           can_add_for_siblings: formData.can_add_for_siblings,
           can_add_for_parents: formData.can_add_for_parents,
@@ -333,11 +364,12 @@ const MemberManagement = () => {
                             <GripVertical className="h-4 w-4 text-gray-400" />
                           </div>
                           
-                          <Avatar className="h-12 w-12">
-                            <AvatarFallback className={ColorSwatches[member.color as ColorSwatch] || ColorSwatches.sky}>
-                              {member.display_name[0]}
-                            </AvatarFallback>
-                          </Avatar>
+                          <UserAvatar 
+                            name={member.display_name}
+                            color={member.color}
+                            avatarIcon={member.avatar_url || undefined}
+                            size="lg"
+                          />
                 
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -423,11 +455,12 @@ const MemberManagement = () => {
             <div className="space-y-4">
               {archivedMembers.map((member) => (
                 <div key={member.id} className="flex items-center gap-4 p-4 border rounded-lg opacity-60">
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback className={ColorSwatches[member.color as ColorSwatch] || ColorSwatches.sky}>
-                      {member.display_name[0]}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar 
+                    name={member.display_name}
+                    color={member.color}
+                    avatarIcon={member.avatar_url || undefined}
+                    size="lg"
+                  />
                   
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
@@ -499,24 +532,54 @@ const MemberManagement = () => {
 
               <div>
                 <Label>Color</Label>
-                <Select value={formData.color} onValueChange={(value: ColorSwatch) => 
-                  setFormData(prev => ({ ...prev, color: value }))
-                }>
+                <Select 
+                  value={formData.color} 
+                  onValueChange={(value: ColorSwatch) => 
+                    setFormData(prev => ({ ...prev, color: value }))
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.keys(ColorSwatches).map((color) => (
-                      <SelectItem key={color} value={color}>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${ColorSwatches[color as ColorSwatch]}`} />
-                          {color}
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {Object.keys(ColorSwatches).map((color) => {
+                      const isUsed = familyMembers.some(m => 
+                        m.id !== editingMember?.id && 
+                        m.color === color && 
+                        m.status === 'active'
+                      );
+                      return (
+                        <SelectItem 
+                          key={color} 
+                          value={color}
+                          disabled={isUsed}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className={`w-3 h-3 rounded-full ${ColorSwatches[color as ColorSwatch]}`} />
+                            {color}
+                            {isUsed && <span className="text-xs text-muted-foreground">(in use)</span>}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div>
+              <Label>Avatar Icon</Label>
+              <AvatarIconSelector
+                selectedIcon={formData.avatar_icon}
+                selectedColor={formData.color}
+                usedIcons={familyMembers
+                  .filter(m => m.id !== editingMember?.id && m.status === 'active')
+                  .map(m => m.avatar_url)
+                  .filter(Boolean) as string[]}
+                onIconSelect={(icon: AvatarIconType) => 
+                  setFormData(prev => ({ ...prev, avatar_icon: icon }))
+                }
+              />
             </div>
 
             <div>
@@ -588,6 +651,7 @@ const MemberManagement = () => {
         isOpen={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
         familyId={profile?.family_id || ''}
+        existingMembers={familyMembers}
         onMemberAdded={fetchMemberData}
       />
 

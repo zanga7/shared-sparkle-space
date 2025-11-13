@@ -2,11 +2,13 @@ import * as React from "react"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
 
 import { cn, getMemberColorClasses } from "@/lib/utils"
+import { AVATAR_ICONS, AvatarIconType } from "./avatar-icon-selector"
 
 interface UserAvatarProps extends React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root> {
   name: string
   color?: string
   size?: 'sm' | 'md' | 'lg'
+  avatarIcon?: string
 }
 
 const sizeClasses = {
@@ -18,12 +20,26 @@ const sizeClasses = {
 const UserAvatar = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Root>,
   UserAvatarProps
->(({ className, name, color, size = 'md', ...props }, ref) => {
+>(({ className, name, color, size = 'md', avatarIcon, ...props }, ref) => {
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   const colorClasses = getMemberColorClasses(color);
+  const iconSrc = avatarIcon && avatarIcon in AVATAR_ICONS 
+    ? AVATAR_ICONS[avatarIcon as AvatarIconType]
+    : null;
+
+  const getColorFilter = (color: string = 'sky') => {
+    const filterMap: Record<string, string> = {
+      sky: 'brightness(0) saturate(100%) invert(58%) sepia(65%) saturate(3000%) hue-rotate(180deg)',
+      rose: 'brightness(0) saturate(100%) invert(49%) sepia(100%) saturate(2000%) hue-rotate(330deg)',
+      emerald: 'brightness(0) saturate(100%) invert(60%) sepia(80%) saturate(1500%) hue-rotate(120deg)',
+      amber: 'brightness(0) saturate(100%) invert(70%) sepia(100%) saturate(2000%) hue-rotate(20deg)',
+      violet: 'brightness(0) saturate(100%) invert(45%) sepia(90%) saturate(1500%) hue-rotate(240deg)',
+    };
+    return filterMap[color] || filterMap.sky;
+  };
 
   return (
     <AvatarPrimitive.Root
@@ -38,10 +54,22 @@ const UserAvatar = React.forwardRef<
       <AvatarPrimitive.Fallback 
         className={cn(
           "flex h-full w-full items-center justify-center rounded-full font-medium",
-          colorClasses.avatar
+          !iconSrc && colorClasses.avatar
         )}
       >
-        {getInitials(name)}
+        {iconSrc ? (
+          <img 
+            src={iconSrc} 
+            alt={name}
+            className="w-full h-full p-1.5"
+            style={{ 
+              filter: getColorFilter(color),
+              backgroundColor: 'white'
+            }}
+          />
+        ) : (
+          getInitials(name)
+        )}
       </AvatarPrimitive.Fallback>
     </AvatarPrimitive.Root>
   )
