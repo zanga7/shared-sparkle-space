@@ -1624,96 +1624,49 @@ const ColumnBasedDashboard = () => {
                    {/* Unassigned tasks column - only show if no member filter or if unassigned has tasks */}
                    {!selectedMemberFilter && (tasksByMember.get('unassigned')?.length > 0 || profile.role === 'parent') && (
                      <Card className="flex-shrink-0 w-72 sm:w-80 h-fit">
-                      <CardHeader className="pb-3">
-                         <div className="flex items-center gap-2 sm:gap-3">
-                            <UserAvatar 
-                              name="Unassigned"
-                              size="md"
-                              className="h-8 w-8 sm:h-10 sm:w-10 bg-muted text-muted-foreground"
-                            />
-                           <div className="min-w-0 flex-1">
-                             <CardTitle className="text-base sm:text-lg">Unassigned</CardTitle>
-                             <CardDescription className="text-xs sm:text-sm">Drag to assign to members</CardDescription>
-                           </div>
-                         </div>
-                      </CardHeader>
-                       <div className="group">
                        <Droppable droppableId="unassigned">
                          {(provided, snapshot) => (
                            <CardContent 
                              className={cn(
-                               "space-y-3 transition-colors",
+                               "space-y-3 transition-colors pt-6",
                                snapshot.isDraggingOver && "bg-accent/50"
                              )}
                              ref={provided.innerRef}
                              {...provided.droppableProps}
                            >
                              <div className="space-y-2 sm:space-y-3 mb-4 min-h-[100px]">
-                               {tasksByMember.get('unassigned')?.length === 0 ? (
-                                 <div className="text-center py-6 sm:py-8 text-muted-foreground">
-                                   <Users className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
-                                   <p className="text-xs sm:text-sm px-2">
-                                     {snapshot.isDraggingOver ? 'Drop here to unassign' : 'No unassigned tasks'}
-                                   </p>
-                                 </div>
-                              ) : (
-                                tasksByMember.get('unassigned')?.map((task, index) => (
-                                  <Draggable key={task.id} draggableId={task.id} index={index}>
-                                    {(provided, snapshot) => (
-                                      <div
-                                        ref={provided.innerRef}
-                                        {...provided.draggableProps}
-                                        {...provided.dragHandleProps}
-                                        className={cn(
-                                          snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50"
-                                        )}
-                                      >
-                                        <EnhancedTaskItem
-                                          task={task}
-                                          allTasks={tasks}
-                                          familyMembers={familyMembers}
-                                          onToggle={handleTaskToggle}
-                                          onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                          onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
-                                          showActions={profile.role === 'parent' && !snapshot.isDragging}
-                                        />
-                                      </div>
-                                    )}
-                                  </Draggable>
-                                )) || []
-                               )}
+                               {tasksByMember.get('unassigned')?.map((task, index) => (
+                                 <Draggable key={task.id} draggableId={task.id} index={index}>
+                                   {(provided, snapshot) => (
+                                     <div
+                                       ref={provided.innerRef}
+                                       {...provided.draggableProps}
+                                       {...provided.dragHandleProps}
+                                       className={cn(
+                                         snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50"
+                                       )}
+                                     >
+                                       <EnhancedTaskItem
+                                         task={task}
+                                         allTasks={tasks}
+                                         familyMembers={familyMembers}
+                                         onToggle={handleTaskToggle}
+                                         onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                                         onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
+                                         showActions={profile.role === 'parent' && !snapshot.isDragging}
+                                       />
+                                     </div>
+                                   )}
+                                 </Draggable>
+                               )) || []}
                                {provided.placeholder}
-                               
-                               {/* Add Task Button for Unassigned */}
-                               {profile.role === 'parent' && (
-                                 <div className="pt-2 mt-4 border-t border-muted/50">
-                                   <AddButton
-                                     className="w-full text-xs opacity-0 group-hover:opacity-75 transition-opacity border-muted text-muted-foreground"
-                                     text="Add Unassigned Task"
-                                     showIcon={true}
-                                     onClick={() => handleAddTaskForMember('unassigned')}
-                                   />
-                                 </div>
-                               )}
                              </div>
-                            
-                             {/* Add Task Button */}
-                             {profile.role === 'parent' && (
-                               <div className="pt-3 border-t">
-                                 <AddButton
-                                   className="w-full"
-                                   text="Add Task"
-                                   onClick={() => setIsAddDialogOpen(true)}
-                                 />
-                               </div>
-                             )}
                            </CardContent>
                          )}
                        </Droppable>
-                       </div>
-                    </Card>
-                  )}
-                  </div>
+                     </Card>
+                   )}
+                   </div>
                 </div>
               </DragDropContext>
             ) : (
