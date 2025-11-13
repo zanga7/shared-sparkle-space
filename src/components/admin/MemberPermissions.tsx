@@ -58,7 +58,8 @@ export function MemberPermissions() {
                 <div className="flex items-center gap-3">
                   <UserAvatar 
                     name={member.display_name} 
-                    color={member.color} 
+                    color={member.color}
+                    avatarIcon={member.avatar_url || undefined}
                     size="sm" 
                   />
                   <div className="flex-1">

@@ -8,6 +8,7 @@ interface Profile {
   id: string;
   display_name: string;
   color: string;
+  avatar_url?: string | null;
   role: 'parent' | 'child';
 }
 
@@ -62,7 +63,8 @@ export function MemberPinDialog({
           <DialogTitle className="flex items-center gap-3">
             <UserAvatar 
               name={member.display_name} 
-              color={member.color} 
+              color={member.color}
+              avatarIcon={member.avatar_url || undefined}
               size="sm" 
             />
             Enter PIN for {member.display_name}

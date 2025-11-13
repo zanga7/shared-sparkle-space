@@ -135,7 +135,7 @@ export function CompactInlineListCard({
         .select(`
           *,
           assignees:list_item_assignees(
-            profile:profiles(id, display_name, color)
+            profile:profiles(id, display_name, color, avatar_url)
           )
         `)
         .eq('list_id', list.id)
@@ -160,7 +160,7 @@ export function CompactInlineListCard({
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, family_id, display_name, role, color, total_points')
+        .select('id, family_id, display_name, role, color, avatar_url, total_points')
         .eq('family_id', profile.family_id)
         .eq('status', 'active')
         .order('display_name');
@@ -564,6 +564,7 @@ export function CompactInlineListCard({
                       key={assignee.id}
                       name={assignee.display_name}
                       color={assignee.color}
+                      avatarIcon={assignee.avatar_url || undefined}
                       size="sm"
                       className="border border-background h-5 w-5 text-xs"
                     />

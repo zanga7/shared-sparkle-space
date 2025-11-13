@@ -582,7 +582,7 @@ export const CalendarView = ({
               </div>
             </div>
             {assignedMember && <div className="flex items-center gap-1 mt-1">
-                <UserAvatar name={assignedMember.display_name} color={assignedMember.color} size="sm" />
+                <UserAvatar name={assignedMember.display_name} color={assignedMember.color} avatarIcon={assignedMember.avatar_url || undefined} size="sm" />
                 <span className="text-xs opacity-75">{assignedMember.display_name}</span>
               </div>}
           </div>}
@@ -798,7 +798,7 @@ export const CalendarView = ({
                       {(provided, snapshot) => <Card className={cn("transition-colors", memberColors.bg10, snapshot.isDraggingOver && "ring-2 ring-primary/20")}>
                           <CardHeader className="pb-3">
                             <div className="flex items-center gap-2">
-                              <UserAvatar name={member.display_name} color={member.color} size="sm" />
+                              <UserAvatar name={member.display_name} color={member.color} avatarIcon={member.avatar_url || undefined} size="sm" />
                               <div>
                                 <CardTitle className="text-sm">{member.display_name}</CardTitle>
                                 <p className="text-xs text-muted-foreground">

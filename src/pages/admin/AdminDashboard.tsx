@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -246,11 +246,12 @@ const AdminDashboard = () => {
             <div className="space-y-3">
               {familyMembers.slice(0, 5).map((member) => (
                 <div key={member.id} className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs">
-                      {member.display_name[0]}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar 
+                    name={member.display_name}
+                    color={member.color}
+                    avatarIcon={member.avatar_url || undefined}
+                    size="md"
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{member.display_name}</div>
                     <div className="text-sm text-muted-foreground">

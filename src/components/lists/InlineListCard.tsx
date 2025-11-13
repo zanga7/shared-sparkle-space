@@ -41,6 +41,7 @@ interface Profile {
   display_name: string;
   role: 'parent' | 'child';
   color: string;
+  avatar_url?: string | null;
   total_points: number;
 }
 
@@ -495,6 +496,7 @@ export function InlineListCard({
                       key={assignee.profile.id}
                       name={assignee.profile.display_name}
                       color={assignee.profile.color}
+                      avatarIcon={assignee.profile.avatar_url || undefined}
                       size="sm"
                       className="border border-background"
                     />

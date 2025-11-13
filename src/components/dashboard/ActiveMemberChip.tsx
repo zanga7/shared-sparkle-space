@@ -6,6 +6,7 @@ interface Profile {
   id: string;
   display_name: string;
   color: string;
+  avatar_url?: string | null;
   role: 'parent' | 'child';
 }
 
@@ -31,7 +32,8 @@ export function ActiveMemberChip({ activeMember, className }: ActiveMemberChipPr
     >
       <UserAvatar 
         name={activeMember.display_name} 
-        color={activeMember.color} 
+        color={activeMember.color}
+        avatarIcon={activeMember.avatar_url || undefined}
         size="sm" 
         className="mr-2" 
       />

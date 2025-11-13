@@ -7,6 +7,7 @@ interface Profile {
   display_name: string;
   user_id: string | null;
   color: string;
+  avatar_url?: string | null;
   pin_locked_until: string | null;
 }
 
@@ -42,7 +43,7 @@ export const ChildAuthProvider = ({ children }: { children: React.ReactNode }) =
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, display_name, user_id, color, pin_locked_until')
+        .select('id, display_name, user_id, color, avatar_url, pin_locked_until')
         .is('user_id', null) // Only child profiles
         .eq('status', 'active');
 

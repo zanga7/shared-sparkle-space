@@ -8,6 +8,7 @@ interface Profile {
   id: string;
   display_name: string;
   color: string;
+  avatar_url?: string | null;
   role: 'parent' | 'child';
   require_pin_to_complete_tasks?: boolean;
   require_pin_for_list_deletes?: boolean;
@@ -61,7 +62,8 @@ export function MemberSwitchDialog({
                 <Badge variant="outline" className="h-8 px-2">
                   <UserAvatar 
                     name={currentMember.display_name} 
-                    color={currentMember.color} 
+                    color={currentMember.color}
+                    avatarIcon={currentMember.avatar_url || undefined}
                     size="sm" 
                     className="mr-2" 
                   />
@@ -75,7 +77,8 @@ export function MemberSwitchDialog({
               <Badge variant="default" className="h-8 px-2">
                 <UserAvatar 
                   name={requiredMember?.display_name || ''} 
-                  color={requiredMember?.color || 'sky'} 
+                  color={requiredMember?.color || 'sky'}
+                  avatarIcon={requiredMember?.avatar_url || undefined}
                   size="sm" 
                   className="mr-2" 
                 />

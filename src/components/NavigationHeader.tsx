@@ -11,6 +11,7 @@ interface Profile {
   id: string;
   display_name: string;
   color: string;
+  avatar_url?: string | null;
   total_points: number;
   role: 'parent' | 'child';
   require_pin_to_complete_tasks?: boolean;
@@ -120,7 +121,8 @@ export function NavigationHeader({
                   >
                     <UserAvatar 
                       name={member.display_name} 
-                      color={member.color} 
+                      color={member.color}
+                      avatarIcon={member.avatar_url || undefined}
                       size="sm" 
                     />
                     <span className="hidden md:inline text-xs sm:text-sm">{member.display_name}</span>

@@ -1618,6 +1618,7 @@ const ColumnBasedDashboard = () => {
                                <UserAvatar
                                  name={member.display_name}
                                  color={member.color}
+                                 avatarIcon={member.avatar_url || undefined}
                                  size="md"
                                  className="sm:h-10 sm:w-10"
                                />
@@ -1673,11 +1674,11 @@ const ColumnBasedDashboard = () => {
                      <Card className="flex-shrink-0 w-72 sm:w-80 h-fit">
                       <CardHeader className="pb-3">
                          <div className="flex items-center gap-2 sm:gap-3">
-                           <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-                             <AvatarFallback className="bg-muted text-muted-foreground text-xs sm:text-sm">
-                               ?
-                             </AvatarFallback>
-                           </Avatar>
+                            <UserAvatar 
+                              name="Unassigned"
+                              size="md"
+                              className="h-8 w-8 sm:h-10 sm:w-10 bg-muted text-muted-foreground"
+                            />
                            <div className="min-w-0 flex-1">
                              <CardTitle className="text-base sm:text-lg">Unassigned</CardTitle>
                              <CardDescription className="text-xs sm:text-sm">Drag to assign to members</CardDescription>
@@ -1785,7 +1786,8 @@ const ColumnBasedDashboard = () => {
                         <div className="text-center py-6">
                           <UserAvatar 
                             name={member.display_name} 
-                            color={member.color} 
+                            color={member.color}
+                            avatarIcon={member.avatar_url || undefined}
                             size="lg" 
                             className="mx-auto mb-4" 
                           />
@@ -1863,7 +1865,8 @@ const ColumnBasedDashboard = () => {
                         <>
                           <UserAvatar 
                             name={member.display_name} 
-                            color={member.color} 
+                            color={member.color}
+                            avatarIcon={member.avatar_url || undefined}
                             size="lg" 
                             className="mx-auto mb-4" 
                           />
@@ -1891,7 +1894,8 @@ const ColumnBasedDashboard = () => {
                         <>
                           <UserAvatar 
                             name={member.display_name} 
-                            color={member.color} 
+                            color={member.color}
+                            avatarIcon={member.avatar_url || undefined}
                             size="lg" 
                             className="mx-auto mb-4" 
                           />
@@ -1943,7 +1947,8 @@ const ColumnBasedDashboard = () => {
                           <>
                             <UserAvatar 
                               name={member.display_name} 
-                              color={member.color} 
+                              color={member.color}
+                              avatarIcon={member.avatar_url || undefined}
                               size="lg" 
                               className="mx-auto mb-4" 
                             />

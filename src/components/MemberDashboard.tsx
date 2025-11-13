@@ -106,7 +106,8 @@ export const MemberDashboard = ({
     )}>
       <UserAvatar
         name={member.display_name} 
-        color={member.color} 
+        color={member.color}
+        avatarIcon={member.avatar_url || undefined}
         size="lg" 
         className="mx-auto mb-4" 
       />

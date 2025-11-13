@@ -92,6 +92,7 @@ export const MemberEventsWidget = ({
                           key={attendee.profile_id}
                           name={attendee.profile?.display_name || 'Unknown'}
                           color={attendee.profile?.color}
+                          avatarIcon={attendee.profile?.avatar_url || undefined}
                           size="sm"
                         />
                       ))}

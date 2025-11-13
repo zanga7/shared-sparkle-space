@@ -71,6 +71,7 @@ export const ChildLogin = () => {
             <UserAvatar 
               name={selectedProfile.display_name} 
               color={selectedProfile.color}
+              avatarIcon={selectedProfile.avatar_url || undefined}
               size="lg" 
               className="mx-auto mb-4"
             />
@@ -132,6 +133,7 @@ export const ChildLogin = () => {
                   <UserAvatar 
                     name={profile.display_name}
                     color={profile.color}
+                    avatarIcon={profile.avatar_url || undefined}
                     size="lg"
                     className={locked ? 'opacity-50' : ''}
                   />

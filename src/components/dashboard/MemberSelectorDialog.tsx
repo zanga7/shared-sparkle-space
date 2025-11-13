@@ -9,6 +9,7 @@ interface Profile {
   id: string;
   display_name: string;
   color: string;
+  avatar_url?: string | null;
   role: 'parent' | 'child';
   total_points?: number;
 }
@@ -59,7 +60,8 @@ export function MemberSelectorDialog({
               >
                 <UserAvatar 
                   name={member.display_name} 
-                  color={member.color} 
+                  color={member.color}
+                  avatarIcon={member.avatar_url || undefined}
                   size="sm" 
                   className="mr-3" 
                 />

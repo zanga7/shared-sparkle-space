@@ -24,6 +24,7 @@ interface Profile {
   id: string;
   display_name: string;
   color: string;
+  avatar_url?: string | null;
 }
 
 interface Task {
@@ -296,6 +297,7 @@ export default function RotationDebugger() {
                               <UserAvatar
                                 name={member.display_name}
                                 color={member.color}
+                                avatarIcon={member.avatar_url || undefined}
                                 size="sm"
                               />
                               <span className="text-sm">{member.display_name}</span>
@@ -333,6 +335,7 @@ export default function RotationDebugger() {
                                   <UserAvatar
                                     name={assignee.display_name}
                                     color={assignee.color}
+                                    avatarIcon={assignee.avatar_url || undefined}
                                     size="sm"
                                   />
                                   <div>

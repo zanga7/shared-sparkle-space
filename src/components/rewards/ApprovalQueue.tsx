@@ -19,6 +19,7 @@ interface Profile {
   display_name: string;
   role: string;
   color?: string;
+  avatar_url?: string | null;
 }
 
 interface GroupedRewardRequest {
@@ -34,6 +35,7 @@ interface GroupedRewardRequest {
     id: string;
     display_name: string;
     color?: string;
+    avatar_url?: string | null;
     points_contributed?: number;
   }>;
   requests: RewardRequest[];
@@ -71,6 +73,7 @@ export function ApprovalQueue() {
               id: req.requested_by,
               display_name: req.requestor?.display_name || profile?.display_name || 'Unknown',
               color: req.requestor?.color || profile?.color || 'sky',
+              avatar_url: req.requestor?.avatar_url || profile?.avatar_url || null,
               points_contributed: req.points_cost
             };
           });
@@ -125,7 +128,7 @@ export function ApprovalQueue() {
         const [membersResponse, contributionsResponse] = await Promise.all([
           supabase
             .from('profiles')
-            .select('id, display_name, role, color, status')
+            .select('id, display_name, role, color, avatar_url, status')
             .eq('status', 'active')
             .order('display_name'),
           supabase
@@ -546,6 +549,7 @@ export function ApprovalQueue() {
                       <UserAvatar 
                         name={request.requestor?.display_name || 'Unknown User'}
                         color={request.requestor?.color || 'sky'}
+                        avatarIcon={request.requestor?.avatar_url || undefined}
                         size="sm"
                       />
                       <div className="min-w-0 flex-1">
@@ -898,6 +902,7 @@ export function ApprovalQueue() {
                           <UserAvatar 
                             name={request.requestor?.display_name || 'Unknown User'}
                             color={request.requestor?.color || 'sky'}
+                            avatarIcon={request.requestor?.avatar_url || undefined}
                             size="sm"
                           />
                           <div className="min-w-0 flex-1">

@@ -23,6 +23,7 @@ interface Profile {
   user_id: string | null;
   role: string;
   color: string;
+  avatar_url?: string | null;
 }
 
 export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string | null }) {
@@ -607,6 +608,7 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
                         <UserAvatar 
                           name={profile.display_name}
                           color={profile.color}
+                          avatarIcon={profile.avatar_url || undefined}
                           size="sm"
                         />
                         <div className="flex-1 text-left">
