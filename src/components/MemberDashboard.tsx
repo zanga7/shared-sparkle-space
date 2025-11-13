@@ -102,15 +102,17 @@ export const MemberDashboard = ({
   const renderMemberHeader = () => (
     <div 
       className="text-center py-6 sm:py-8 rounded-lg mb-6"
-      style={colorStyles.bg}
+      style={colorStyles.accent}
     >
-      <UserAvatar
-        name={member.display_name} 
-        color={member.color}
-        avatarIcon={member.avatar_url || undefined}
-        size="lg" 
-        className="mx-auto mb-4 border-4 border-white/20" 
-      />
+      <div className="mx-auto mb-4 w-fit">
+        <UserAvatar
+          name={member.display_name} 
+          color="white"
+          avatarIcon={member.avatar_url || undefined}
+          size="lg" 
+          className="border-4 border-white/20" 
+        />
+      </div>
       <h1 className="text-3xl sm:text-4xl font-bold mb-4 text-white">
         {member.display_name}'s Dashboard
       </h1>
@@ -163,6 +165,7 @@ export const MemberDashboard = ({
       setTasks={setTasks}
       setProfile={setProfile}
       setFamilyMembers={setFamilyMembers}
+      memberColor={member.color}
     />
   );
 
@@ -179,6 +182,7 @@ export const MemberDashboard = ({
         setEditingEvent(event);
         setIsEventDialogOpen(true);
       }}
+      memberColor={member.color}
     />
   );
 
@@ -186,6 +190,7 @@ export const MemberDashboard = ({
     <MemberPersonalListsEnhanced
       member={member}
       profile={profile}
+      memberColor={member.color}
     />
   );
 

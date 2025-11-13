@@ -8,7 +8,7 @@ import { AddButton } from '@/components/ui/add-button';
 import { List, Plus, Edit2, Trash2, X, Check } from 'lucide-react';
 import { Profile } from '@/types/task';
 import { cn } from '@/lib/utils';
-import { getMemberColorClasses } from '@/lib/utils';
+import { useMemberColor } from '@/hooks/useMemberColor';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -26,13 +26,15 @@ interface ListItem {
 interface MemberPersonalListsEnhancedProps {
   member: Profile;
   profile: Profile;
+  memberColor?: string;
 }
 
 export const MemberPersonalListsEnhanced = ({
   member,
-  profile
+  profile,
+  memberColor
 }: MemberPersonalListsEnhancedProps) => {
-  const memberColors = getMemberColorClasses(member.color);
+  const { styles: colorStyles } = useMemberColor(memberColor || member.color);
   const { toast } = useToast();
   const [newItemName, setNewItemName] = useState('');
   const [isAddingItem, setIsAddingItem] = useState(false);
@@ -201,9 +203,9 @@ export const MemberPersonalListsEnhanced = ({
   const completedAssignedItems = assignedListItems.filter(item => item.is_completed);
 
   return (
-    <Card className={cn("h-full flex flex-col", memberColors.bg10)}>
+    <Card className="h-full flex flex-col" style={colorStyles.bg10}>
       <CardHeader className="pb-4">
-        <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
+        <CardTitle className="flex items-center gap-2 text-xl" style={colorStyles.text}>
           <List className="h-6 w-6" />
           My Lists
         </CardTitle>
@@ -232,7 +234,8 @@ export const MemberPersonalListsEnhanced = ({
           <AddButton 
             text="Add Item"
             onClick={() => setIsAddingItem(true)}
-            className={cn("border-dashed hover:border-solid w-full", memberColors.border)}
+            className="border-dashed hover:border-solid w-full"
+            style={{ ...colorStyles.border, ...colorStyles.text }}
           />
         )}
       </CardHeader>

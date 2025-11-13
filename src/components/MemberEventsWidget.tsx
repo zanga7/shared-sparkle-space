@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AddButton } from '@/components/ui/add-button';
 import { UserAvatar } from '@/components/ui/user-avatar';
-import { getMemberColorClasses } from '@/lib/utils';
+import { useMemberColor } from '@/hooks/useMemberColor';
 import { Calendar, Edit } from 'lucide-react';
 import { Profile } from '@/types/task';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ interface MemberEventsWidgetProps {
   events: any[];
   onAddEvent: () => void;
   onEditEvent: (event: any) => void;
+  memberColor?: string;
 }
 
 export const MemberEventsWidget = ({
@@ -22,9 +23,10 @@ export const MemberEventsWidget = ({
   profile,
   events,
   onAddEvent,
-  onEditEvent
+  onEditEvent,
+  memberColor
 }: MemberEventsWidgetProps) => {
-  const memberColors = getMemberColorClasses(member.color);
+  const { styles: colorStyles } = useMemberColor(memberColor || member.color);
   
   // Filter events for today and for this member
   const todaysEvents = events.filter(event => {
@@ -36,9 +38,9 @@ export const MemberEventsWidget = ({
   });
 
   return (
-    <Card className={cn("h-full flex flex-col", memberColors.bg10)}>
+    <Card className="h-full flex flex-col" style={colorStyles.bg10}>
       <CardHeader className="pb-4">
-        <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
+        <CardTitle className="flex items-center gap-2 text-xl" style={colorStyles.text}>
           <Calendar className="h-6 w-6" />
           Today's Events
         </CardTitle>
@@ -47,7 +49,8 @@ export const MemberEventsWidget = ({
         <AddButton 
           text="Add Event"
           onClick={onAddEvent}
-          className={cn("border-dashed hover:border-solid w-full", memberColors.border)}
+          className="border-dashed hover:border-solid w-full"
+          style={{ ...colorStyles.border, ...colorStyles.text }}
         />
       </CardHeader>
       

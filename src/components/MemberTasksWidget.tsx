@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { AddButton } from '@/components/ui/add-button';
 import { TaskGroupsList } from '@/components/tasks/TaskGroupsList';
-import { getMemberColorClasses } from '@/lib/utils';
+import { useMemberColor } from '@/hooks/useMemberColor';
 import { Users } from 'lucide-react';
 import { Task, Profile } from '@/types/task';
 import { TaskGroup } from '@/types/taskGroup';
@@ -27,6 +27,7 @@ interface MemberTasksWidgetProps {
   setTasks?: React.Dispatch<React.SetStateAction<Task[]>>;
   setProfile?: React.Dispatch<React.SetStateAction<Profile | null>>;
   setFamilyMembers?: React.Dispatch<React.SetStateAction<Profile[]>>;
+  memberColor?: string;
 }
 
 export const MemberTasksWidget = ({
@@ -41,10 +42,11 @@ export const MemberTasksWidget = ({
   isDashboardMode = false,
   setTasks,
   setProfile,
-  setFamilyMembers
+  setFamilyMembers,
+  memberColor
 }: MemberTasksWidgetProps) => {
   const { toast } = useToast();
-  const memberColors = getMemberColorClasses(member.color);
+  const { styles: colorStyles } = useMemberColor(memberColor || member.color);
   
   const { completeTask, uncompleteTask, isCompleting } = useTaskCompletion({
     currentUserProfile: profile,
@@ -191,9 +193,9 @@ export const MemberTasksWidget = ({
   };
 
   return (
-    <Card className={cn("h-full flex flex-col", memberColors.bg10)}>
+    <Card className="h-full flex flex-col" style={colorStyles.bg10}>
       <CardHeader className="pb-4">
-        <CardTitle className={cn("flex items-center gap-2 text-xl", memberColors.text)}>
+        <CardTitle className="flex items-center gap-2 text-xl" style={colorStyles.text}>
           <Users className="h-6 w-6" />
           Tasks
         </CardTitle>
@@ -207,7 +209,8 @@ export const MemberTasksWidget = ({
         <AddButton 
           text="Add Task"
           onClick={onAddTask}
-          className={cn("border-dashed hover:border-solid w-full", memberColors.border)}
+          className="border-dashed hover:border-solid w-full"
+          style={{ ...colorStyles.border, ...colorStyles.text }}
         />
       </CardHeader>
       
