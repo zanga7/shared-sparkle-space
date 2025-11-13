@@ -10,7 +10,7 @@ import { MemberPersonalListsEnhanced } from '@/components/MemberPersonalListsEnh
 import { MemberRewardsGallery } from '@/components/rewards/MemberRewardsGallery';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
 import { EventDialog } from '@/components/EventDialog';
-import { getMemberColorClasses } from '@/lib/utils';
+import { useMemberColor } from '@/hooks/useMemberColor';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useEvents } from '@/hooks/useEvents';
 import useEmblaCarousel from 'embla-carousel-react';
@@ -63,7 +63,7 @@ export const MemberDashboard = ({
   const [editingEvent, setEditingEvent] = useState(null);
   const isMobile = useIsMobile();
 
-  const memberColors = getMemberColorClasses(member.color);
+  const { styles: colorStyles, hex: colorHex } = useMemberColor(member.color);
   const { events = [], createEvent, updateEvent, deleteEvent, refreshEvents } = useEvents(profile.family_id);
   
   const memberTasks = tasks.filter(task => 
@@ -100,28 +100,25 @@ export const MemberDashboard = ({
   }, [emblaApi]);
 
   const renderMemberHeader = () => (
-    <div className={cn(
-      "text-center py-6 sm:py-8 rounded-lg mb-6",
-      memberColors.bg10
-    )}>
+    <div 
+      className="text-center py-6 sm:py-8 rounded-lg mb-6"
+      style={colorStyles.bg}
+    >
       <UserAvatar
         name={member.display_name} 
         color={member.color}
         avatarIcon={member.avatar_url || undefined}
         size="lg" 
-        className="mx-auto mb-4" 
+        className="mx-auto mb-4 border-4 border-white/20" 
       />
-      <h1 className={cn(
-        "text-3xl sm:text-4xl font-bold mb-4",
-        memberColors.text
-      )}>
+      <h1 className="text-3xl sm:text-4xl font-bold mb-4 text-white">
         {member.display_name}'s Dashboard
       </h1>
       <div className="flex justify-center items-center gap-4 mb-6">
-        <Badge variant="outline" className="text-lg px-4 sm:px-6 py-2">
+        <Badge variant="outline" className="text-lg px-4 sm:px-6 py-2 bg-white/20 border-white/30 text-white">
           {member.total_points} points
         </Badge>
-        <Badge variant={member.role === 'parent' ? 'default' : 'secondary'} className="text-lg px-4 sm:px-6 py-2">
+        <Badge variant="secondary" className="text-lg px-4 sm:px-6 py-2 bg-white/20 border-white/30 text-white">
           {member.role}
         </Badge>
       </div>
@@ -139,7 +136,7 @@ export const MemberDashboard = ({
                 onClick={() => scrollToWidget(index)}
                 className={cn(
                   "h-12 w-12 p-0",
-                  activeWidget === index && memberColors.accent
+                  activeWidget === index ? "bg-white text-foreground" : "bg-white/20 border-white/30 text-white hover:bg-white/30"
                 )}
                 aria-label={`Go to ${section.title}`}
               >
