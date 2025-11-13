@@ -340,15 +340,15 @@ export default function RewardsManagement() {
                          {/* Show assignees */}
                          <div className="flex items-center gap-2 mt-2">
                            <Users className="w-4 h-4 text-muted-foreground" />
-                           {reward.assigned_to && reward.assigned_to.length > 0 ? (
-                             <MultiAssigneeAvatarGroup 
-                               assignees={familyMembers.filter(member => reward.assigned_to?.includes(member.id))} 
-                               maxDisplay={3}
-                               size="sm"
-                             />
-                           ) : (
-                             <span className="text-sm text-muted-foreground">Available to everyone</span>
-                           )}
+                            {reward.assigned_to && reward.assigned_to.length > 0 ? (
+                              <MultiAssigneeAvatarGroup 
+                                assignees={familyMembers.filter(member => reward.assigned_to?.includes(member.id))} 
+                                maxDisplay={99}
+                                size="sm"
+                              />
+                            ) : (
+                              <span className="text-sm text-muted-foreground">Available to everyone</span>
+                            )}
                          </div>
                       </div>
                       
@@ -424,15 +424,15 @@ export default function RewardsManagement() {
                          {/* Show assignees */}
                          <div className="flex items-center gap-2 mt-2">
                            <Users className="w-4 h-4 text-muted-foreground" />
-                           {reward.assigned_to && reward.assigned_to.length > 0 ? (
-                             <MultiAssigneeAvatarGroup 
-                               assignees={familyMembers.filter(member => reward.assigned_to?.includes(member.id))} 
-                               maxDisplay={3}
-                               size="sm"
-                             />
-                           ) : (
-                             <span className="text-sm text-muted-foreground">Available to everyone</span>
-                           )}
+                            {reward.assigned_to && reward.assigned_to.length > 0 ? (
+                              <MultiAssigneeAvatarGroup 
+                                assignees={familyMembers.filter(member => reward.assigned_to?.includes(member.id))} 
+                                maxDisplay={99}
+                                size="sm"
+                              />
+                            ) : (
+                              <span className="text-sm text-muted-foreground">Available to everyone</span>
+                            )}
                          </div>
                       </div>
                       
