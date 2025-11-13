@@ -189,7 +189,7 @@ export function MemberRewardsGallery({ member }: MemberRewardsGalleryProps) {
   if (loading) {
     return (
       <Card className="h-full flex flex-col" style={colorStyles.bg10}>
-        <CardContent className="flex items-center justify-center py-8">
+        <CardContent className="flex items-center justify-center py-8 px-3">
           <Loader2 className="w-6 h-6 animate-spin" />
           <span className="ml-2">Loading rewards...</span>
         </CardContent>
@@ -211,15 +211,15 @@ export function MemberRewardsGallery({ member }: MemberRewardsGalleryProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-0 pt-4 space-y-4">
         {availableRewards.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground px-3">
             <Gift className="w-12 h-12 mb-4 opacity-50" />
             <p className="text-sm">No rewards available</p>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-3 px-3">
               {availableRewards.map((reward) => {
                 if (reward.reward_type === 'group_contribution') {
                   const rewardContributions = groupContributions.filter(c => c.reward_id === reward.id);
@@ -251,7 +251,7 @@ export function MemberRewardsGallery({ member }: MemberRewardsGalleryProps) {
 
             {/* Pending requests section */}
             {pendingRequests.length > 0 && (
-              <div className="pt-4 border-t space-y-2">
+              <div className="pt-4 border-t space-y-2 px-3">
                 <h4 className="text-sm font-semibold flex items-center gap-2">
                   <Clock className="w-4 h-4 text-yellow-500" />
                   Pending ({pendingRequests.length})
@@ -279,7 +279,7 @@ export function MemberRewardsGallery({ member }: MemberRewardsGalleryProps) {
 
             {/* Approved requests section */}
             {approvedRequests.length > 0 && (
-              <div className="pt-4 border-t space-y-2">
+              <div className="pt-4 border-t space-y-2 px-3">
                 <h4 className="text-sm font-semibold flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-green-500" />
                   Approved ({approvedRequests.length})
@@ -297,7 +297,7 @@ export function MemberRewardsGallery({ member }: MemberRewardsGalleryProps) {
 
             {/* Denied requests section */}
             {deniedRequests.length > 0 && (
-              <div className="pt-4 border-t space-y-2">
+              <div className="pt-4 border-t space-y-2 px-3">
                 <h4 className="text-sm font-semibold flex items-center gap-2">
                   <XCircle className="w-4 h-4 text-red-500" />
                   Denied ({deniedRequests.length})

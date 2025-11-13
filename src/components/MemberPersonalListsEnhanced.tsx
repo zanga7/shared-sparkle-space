@@ -240,9 +240,9 @@ export const MemberPersonalListsEnhanced = ({
         )}
       </CardHeader>
       
-      <CardContent className="flex-1 overflow-y-auto space-y-6">
+      <CardContent className="flex-1 overflow-y-auto space-y-6 p-0 pt-4">
         {/* Personal List Section */}
-        <div className="space-y-4">
+        <div className="space-y-4 px-3">
           <h3 className="font-semibold text-base text-foreground border-b pb-2">My Personal Items</h3>
           {personalListItems.length === 0 && !isAddingItem ? (
             <div className="text-center py-4 text-muted-foreground">
@@ -361,7 +361,7 @@ export const MemberPersonalListsEnhanced = ({
         </div>
 
         {/* Assigned Items Section */}
-        <div className="space-y-4">
+        <div className="space-y-4 px-3">
           <h3 className="font-semibold text-base text-foreground border-b pb-2">Assigned to Me</h3>
           {assignedListItems.length === 0 ? (
             <div className="text-center py-4 text-muted-foreground">

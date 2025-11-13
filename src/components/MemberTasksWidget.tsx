@@ -212,7 +212,7 @@ export const MemberTasksWidget = ({
         />
       </CardHeader>
       
-      <CardContent className="flex-1 overflow-hidden">
+      <CardContent className="flex-1 overflow-hidden p-0">
         {memberTasks.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
