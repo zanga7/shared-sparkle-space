@@ -802,10 +802,15 @@ export const CalendarView = ({
                                   className={cn("transition-colors", snapshot.isDraggingOver && "ring-2 ring-primary/20")}
                                   style={colorStyles.bg10}
                                 >
-                                  <CardHeader className="pb-3">
-                                     <div className="flex items-center gap-2">
-                                      <UserAvatar name={member.display_name} color={member.color} avatarIcon={member.avatar_url || undefined} size="sm" />
-                                      <CardTitle className="text-sm">{member.display_name}</CardTitle>
+                                  <CardHeader 
+                                    className="pb-3 border-b"
+                                    style={colorStyles.border}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <UserAvatar name={member.display_name} color={member.color} avatarIcon={member.avatar_url || undefined} size="md" className="sm:h-10 sm:w-10" />
+                                      <div className="min-w-0 flex-1">
+                                        <CardTitle className="text-base sm:text-lg truncate">{member.display_name}</CardTitle>
+                                      </div>
                                     </div>
                                   </CardHeader>
                                   
@@ -908,10 +913,15 @@ export const CalendarView = ({
                         className={cn("transition-colors", snapshot.isDraggingOver && "ring-2 ring-primary/20")}
                         style={colorStyles.bg10}
                       >
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center gap-2">
-                              <UserAvatar name={member.display_name} color={member.color} avatarIcon={member.avatar_url || undefined} size="sm" />
-                              <CardTitle className="text-sm">{member.display_name}</CardTitle>
+                          <CardHeader 
+                            className="pb-3 border-b"
+                            style={colorStyles.border}
+                          >
+                            <div className="flex items-center gap-3">
+                              <UserAvatar name={member.display_name} color={member.color} avatarIcon={member.avatar_url || undefined} size="md" className="sm:h-10 sm:w-10" />
+                              <div className="min-w-0 flex-1">
+                                <CardTitle className="text-base sm:text-lg truncate">{member.display_name}</CardTitle>
+                              </div>
                             </div>
                           </CardHeader>
                           
