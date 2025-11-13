@@ -1558,7 +1558,7 @@ const ColumnBasedDashboard = () => {
       />
 
       {/* Main Content */}
-      <div className="w-full px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+      <div className="w-full px-2 md:px-3 lg:px-6 py-4 sm:py-6">
         {viewMode === 'member' && selectedMemberFilter ? (
           /* Member-specific single dashboard page */
           (() => {
