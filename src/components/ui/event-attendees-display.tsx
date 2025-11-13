@@ -45,14 +45,21 @@ export function EventAttendeesDisplay({
         className={cn("flex items-center gap-2 cursor-pointer hover:bg-muted rounded p-1 -m-1", className)}
         onClick={onClick}
       >
-        <UserAvatar
-          name={attendees[0].profile.display_name}
-          color={attendees[0].profile.color || 'sky'}
-          avatarIcon={attendees[0].profile.avatar_url || undefined}
-          size="sm"
-        />
         <span className="text-sm">{attendees[0].profile.display_name}</span>
       </div>
+    );
+  }
+
+  // For single attendee without showNames, just show name
+  if (attendees.length === 1) {
+    return (
+      <Badge 
+        variant="outline" 
+        className={cn("text-xs cursor-pointer hover:bg-muted", className)}
+        onClick={onClick}
+      >
+        {attendees[0].profile.display_name}
+      </Badge>
     );
   }
 

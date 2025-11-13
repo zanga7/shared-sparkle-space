@@ -1,4 +1,5 @@
 import { UserAvatar } from '@/components/ui/user-avatar';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 interface MultiAssigneeAvatarGroupProps {
@@ -46,14 +47,13 @@ export function MultiAssigneeAvatarGroup({
   if (assignees.length === 1) {
     const assignee = assignees[0];
     return (
-      <UserAvatar 
-        name={assignee.display_name}
-        color={assignee.color}
-        avatarIcon={assignee.avatar_url || undefined}
-        size={size}
-        className={className}
+      <Badge 
+        variant="outline" 
+        className={cn("text-xs", className)}
         title={assignee.display_name}
-      />
+      >
+        {assignee.display_name}
+      </Badge>
     );
   }
 

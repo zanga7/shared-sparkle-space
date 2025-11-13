@@ -1,4 +1,5 @@
 import { UserAvatar } from '@/components/ui/user-avatar';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 interface OverlappingAvatarGroupProps {
@@ -41,14 +42,13 @@ export function OverlappingAvatarGroup({
   if (members.length === 1) {
     const member = members[0];
     return (
-      <UserAvatar 
-        name={member.display_name}
-        color={member.color}
-        avatarIcon={member.avatar_url || undefined}
-        size={size}
-        className={className}
+      <Badge 
+        variant="outline" 
+        className={cn("text-xs", className)}
         title={member.display_name}
-      />
+      >
+        {member.display_name}
+      </Badge>
     );
   }
 

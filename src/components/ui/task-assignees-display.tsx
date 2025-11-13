@@ -47,14 +47,21 @@ export function TaskAssigneesDisplay({
         className={cn("flex items-center gap-2 cursor-pointer hover:bg-muted rounded p-1 -m-1", className)}
         onClick={onClick}
       >
-        <UserAvatar
-          name={assignees[0].display_name}
-          color={assignees[0].color}
-          avatarIcon={assignees[0].avatar_url || undefined}
-          size="sm"
-        />
         <span className="text-sm">{assignees[0].display_name}</span>
       </div>
+    );
+  }
+
+  // For single assignee without showNames, just show name
+  if (assignees.length === 1) {
+    return (
+      <Badge 
+        variant="outline" 
+        className={cn("text-xs cursor-pointer hover:bg-muted", className)}
+        onClick={onClick}
+      >
+        {assignees[0].display_name}
+      </Badge>
     );
   }
 
