@@ -70,7 +70,7 @@ export const EnhancedTaskItem = ({
         isCompleted && memberColors?.bg20,
         !isCompleted && memberColors?.bg50,
         isOverdue && "ring-1 ring-destructive/50",
-        !isCompleted && "cursor-grab active:cursor-grabbing"
+        !isCompleted && !(task as any).isVirtual && "cursor-grab active:cursor-grabbing"
       )}
     >
       <div className="flex items-start gap-2">
