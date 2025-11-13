@@ -50,16 +50,21 @@ export function EventAttendeesDisplay({
     );
   }
 
-  // For single attendee without showNames, just show name
+  // For single attendee without showNames, show avatar
   if (attendees.length === 1) {
     return (
-      <Badge 
-        variant="outline" 
-        className={cn("text-xs cursor-pointer hover:bg-muted", className)}
+      <div 
+        className={cn("cursor-pointer hover:opacity-80 transition-opacity", className)}
         onClick={onClick}
       >
-        {attendees[0].profile.display_name}
-      </Badge>
+        <UserAvatar
+          name={attendees[0].profile.display_name}
+          color={attendees[0].profile.color || 'sky'}
+          avatarIcon={attendees[0].profile.avatar_url || undefined}
+          size="sm"
+          title={attendees[0].profile.display_name}
+        />
+      </div>
     );
   }
 
