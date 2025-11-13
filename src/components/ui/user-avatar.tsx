@@ -25,7 +25,8 @@ const UserAvatar = React.forwardRef<
   UserAvatarProps
 >(({ className, name, color = 'sky', size = 'md', avatarIcon, ...props }, ref) => {
   const isWhite = color === 'white';
-  const { hex: colorHex, styles: colorStyles } = useMemberColor(isWhite ? undefined : color);
+  // For white color, use a default color for the hook but override the hex
+  const { hex: colorHex, styles: colorStyles } = useMemberColor(isWhite ? 'sky' : color);
   const finalColorHex = isWhite ? '#ffffff' : colorHex;
   
   // Fetch avatar icons from database
@@ -47,6 +48,20 @@ const UserAvatar = React.forwardRef<
 
   const iconData = avatarIcons.find(icon => icon.name === avatarIcon);
 
+  // Debug logging
+  React.useEffect(() => {
+    if (avatarIcon) {
+      console.log('UserAvatar debug:', {
+        avatarIcon,
+        avatarIconsCount: avatarIcons.length,
+        iconData: iconData ? 'found' : 'not found',
+        color,
+        isWhite,
+        finalColorHex
+      });
+    }
+  }, [avatarIcon, avatarIcons, iconData, color, isWhite, finalColorHex]);
+
   return (
     <AvatarPrimitive.Root
       ref={ref}
@@ -64,7 +79,7 @@ const UserAvatar = React.forwardRef<
           "flex h-full w-full items-center justify-center font-medium",
           !iconData && "rounded-full"
         )}
-        style={!iconData ? colorStyles.avatar : undefined}
+        style={!iconData ? (isWhite ? { backgroundColor: 'transparent', color: '#ffffff' } : colorStyles.avatar) : undefined}
       >
         {iconData ? (
           <div 
