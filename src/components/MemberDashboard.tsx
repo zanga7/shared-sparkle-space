@@ -219,6 +219,7 @@ export const MemberDashboard = ({
   // Mobile or Tablet - Use Carousel
   if (isMobile || isTablet) {
     const columnWidth = isMobile ? '100%' : 'calc(40% - 0.5rem)';
+    const columnPadding = isMobile ? 'px-2' : 'px-3';
     
     return (
       <div className="w-full mx-auto px-4">
@@ -228,7 +229,7 @@ export const MemberDashboard = ({
         <div className="overflow-hidden -mx-4" ref={emblaRef}>
           <div className="flex">
             {widgets.map((widget, index) => (
-              <div key={index} className="flex-shrink-0 px-4" style={{ width: columnWidth }}>
+              <div key={index} className={`flex-shrink-0 ${columnPadding}`} style={{ width: columnWidth }}>
                 <div className="h-[calc(100vh-400px)] w-full">
                   {widget}
                 </div>
