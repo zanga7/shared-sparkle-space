@@ -189,7 +189,7 @@ export const useEvents = (familyId?: string) => {
         
         supabase
           .from('profiles')
-          .select('id, display_name, role, color, status')
+          .select('id, display_name, role, color, avatar_url, status')
           .eq('family_id', familyId)
           .eq('status', 'active')
       ]);
