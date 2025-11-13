@@ -1676,18 +1676,19 @@ const ColumnBasedDashboard = () => {
                    </div>
                  </div>
 
-                 {/* Desktop/Tablet: Horizontal scrolling with responsive columns */}
-                 <div className="hidden md:block w-full overflow-x-auto">
-                   <div className="flex gap-4 pb-4" style={{ minWidth: 'fit-content' }}>
-                     {/* Family member columns - show all members in everyone mode */}
-                     {familyMembers.map(member => {
+                 {/* Desktop/Tablet: Responsive grid on large screens, scrolling on medium */}
+                 <div className="hidden md:block w-full">
+                   <div className="md:overflow-x-auto xl:overflow-x-visible">
+                     <div className="flex xl:grid xl:grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-4 pb-4 md:min-w-fit xl:min-w-0">
+                       {/* Family member columns - show all members in everyone mode */}
+                       {familyMembers.map(member => {
                        const memberTasks = tasksByMember.get(member.id) || [];
                        const completedTasks = memberTasks.filter(task => 
                          task.task_completions && task.task_completions.length > 0
                        );
 
                        return (
-                         <div key={member.id} className="shrink-0 w-64 min-w-[16rem] max-w-[20rem]">
+                         <div key={member.id} className="md:shrink-0 md:w-64 md:min-w-[16rem] md:max-w-[20rem] xl:shrink xl:w-auto xl:min-w-0 xl:max-w-none">
                            <MemberTaskColumn
                              member={member}
                              memberTasks={memberTasks}
@@ -1708,7 +1709,7 @@ const ColumnBasedDashboard = () => {
 
                      {/* Unassigned tasks column - only show if no member filter or if unassigned has tasks */}
                      {!selectedMemberFilter && (tasksByMember.get('unassigned')?.length > 0 || profile.role === 'parent') && (
-                       <div className="shrink-0 w-64 min-w-[16rem] max-w-[20rem]">
+                       <div className="md:shrink-0 md:w-64 md:min-w-[16rem] md:max-w-[20rem] xl:shrink xl:w-auto xl:min-w-0 xl:max-w-none">
                          <Card className="h-fit">
                            <CardHeader className="pb-3">
                              <CardTitle className="text-base text-muted-foreground">Unassigned</CardTitle>
@@ -1758,9 +1759,10 @@ const ColumnBasedDashboard = () => {
                          </Card>
                        </div>
                      )}
-                    </div>
-                  </div>
-                </DragDropContext>
+                     </div>
+                   </div>
+                 </div>
+               </DragDropContext>
             ) : (
               /* Member-specific dashboard view */
               <div className="w-full">

@@ -890,10 +890,11 @@ export const CalendarView = ({
                 </div>
               </div>
 
-              {/* Desktop/Tablet: Horizontal scrolling single row */}
-              <div className="hidden md:block overflow-x-auto">
-                <div className="flex gap-4 pb-4" style={{ minWidth: 'fit-content' }}>
-                  {familyMembers.map(member => {
+              {/* Desktop/Tablet: Responsive grid on large screens, scrolling on medium */}
+              <div className="hidden md:block">
+                <div className="md:overflow-x-auto xl:overflow-x-visible">
+                  <div className="flex xl:grid xl:grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-4 pb-4 md:min-w-fit xl:min-w-0">
+                    {familyMembers.map(member => {
                     const MemberColumn = () => {
                       const { styles: colorStyles } = useMemberColor(member.color);
                       const dateKey = format(currentDate, 'yyyy-MM-dd');
@@ -906,7 +907,7 @@ export const CalendarView = ({
                       });
                       
                       return (
-                        <div className="shrink-0 w-64 min-w-[16rem] max-w-[20rem]">
+                        <div className="md:shrink-0 md:w-64 md:min-w-[16rem] md:max-w-[20rem] xl:shrink xl:w-auto xl:min-w-0 xl:max-w-none">
                           <Droppable droppableId={member.id}>
                             {(provided, snapshot) => <Card
                         className={cn("transition-colors", snapshot.isDraggingOver && "ring-2 ring-primary/20")}
@@ -993,7 +994,8 @@ export const CalendarView = ({
                       );
                     };
                     return <MemberColumn key={member.id} />;
-                  })}
+                    })}
+                  </div>
                 </div>
               </div>
             </div> :
