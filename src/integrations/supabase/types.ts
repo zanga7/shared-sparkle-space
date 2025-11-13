@@ -71,6 +71,33 @@ export type Database = {
           },
         ]
       }
+      avatar_icons: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_system: boolean | null
+          name: string
+          svg_content: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_system?: boolean | null
+          name: string
+          svg_content: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_system?: boolean | null
+          name?: string
+          svg_content?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       calendar_integrations: {
         Row: {
           access_token: string
@@ -214,6 +241,36 @@ export type Database = {
             referencedColumns: ["family_id"]
           },
         ]
+      }
+      color_palettes: {
+        Row: {
+          color_key: string
+          created_at: string | null
+          hsl_value: string
+          id: string
+          is_system: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          color_key: string
+          created_at?: string | null
+          hsl_value: string
+          id?: string
+          is_system?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          color_key?: string
+          created_at?: string | null
+          hsl_value?: string
+          id?: string
+          is_system?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       dashboard_sessions: {
         Row: {
@@ -405,6 +462,7 @@ export type Database = {
           current_plan_id: string | null
           id: string
           name: string
+          status: string | null
           updated_at: string
         }
         Insert: {
@@ -412,6 +470,7 @@ export type Database = {
           current_plan_id?: string | null
           id?: string
           name: string
+          status?: string | null
           updated_at?: string
         }
         Update: {
@@ -419,6 +478,7 @@ export type Database = {
           current_plan_id?: string | null
           id?: string
           name?: string
+          status?: string | null
           updated_at?: string
         }
         Relationships: [

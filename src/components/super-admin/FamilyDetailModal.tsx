@@ -1,14 +1,27 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { ModuleToggleList } from './ModuleToggleList';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Archive, Trash2 } from 'lucide-react';
 
 interface FamilyDetailModalProps {
   familyId: string;
@@ -18,6 +31,8 @@ interface FamilyDetailModalProps {
 
 export function FamilyDetailModal({ familyId, open, onOpenChange }: FamilyDetailModalProps) {
   const queryClient = useQueryClient();
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { data: family, isLoading: familyLoading } = useQuery({
     queryKey: ['family-detail', familyId],
@@ -89,6 +104,42 @@ export function FamilyDetailModal({ familyId, open, onOpenChange }: FamilyDetail
     },
     onError: () => {
       toast.error('Failed to update plan');
+    }
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('families')
+        .update({ status: 'archived' })
+        .eq('id', familyId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['super-admin-families'] });
+      toast.success('Family archived successfully');
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast.error('Failed to archive family');
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('families')
+        .delete()
+        .eq('id', familyId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['super-admin-families'] });
+      toast.success('Family deleted successfully');
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast.error('Failed to delete family');
     }
   });
 
@@ -202,7 +253,72 @@ export function FamilyDetailModal({ familyId, open, onOpenChange }: FamilyDetail
             </div>
           </div>
         )}
+
+        {!familyLoading && (
+          <>
+            <Separator className="my-6" />
+            
+            {/* Actions */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setArchiveDialogOpen(true)}
+                disabled={family?.status === 'archived'}
+              >
+                <Archive className="w-4 h-4 mr-2" />
+                Archive Family
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Family
+              </Button>
+            </div>
+          </>
+        )}
       </DialogContent>
+
+      {/* Archive Confirmation */}
+      <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive Family</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to archive "{family?.name}"? The family will be moved to the archived section but can be restored later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => archiveMutation.mutate()}>
+              Archive
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Family</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p className="font-semibold text-destructive">This action cannot be undone!</p>
+              <p>Are you sure you want to permanently delete "{family?.name}"? This will delete all associated data including tasks, events, lists, and member profiles.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => deleteMutation.mutate()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

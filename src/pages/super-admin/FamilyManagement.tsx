@@ -24,6 +24,7 @@ interface FamilyStats {
   event_count: number;
   list_count: number;
   reward_count: number;
+  status: string;
 }
 
 export default function FamilyManagement() {
@@ -46,6 +47,9 @@ export default function FamilyManagement() {
   const filteredFamilies = families?.filter(family =>
     family.family_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const activeFamilies = filteredFamilies?.filter(f => f.status !== 'archived');
+  const archivedFamilies = filteredFamilies?.filter(f => f.status === 'archived');
 
   const getPlanBadgeColor = (planName: string | null, isCustom: boolean) => {
     if (isCustom) return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
@@ -77,10 +81,10 @@ export default function FamilyManagement() {
           />
         </div>
 
-        {/* Families Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {isLoading ? (
-            Array.from({ length: 6 }).map((_, i) => (
+        {/* Active Families */}
+        {isLoading ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
               <Card key={i} className="animate-pulse">
                 <CardHeader>
                   <div className="h-4 bg-muted rounded w-3/4" />
@@ -93,9 +97,15 @@ export default function FamilyManagement() {
                   </div>
                 </CardContent>
               </Card>
-            ))
-          ) : (
-            filteredFamilies?.map((family) => (
+            ))}
+          </div>
+        ) : (
+          <>
+            {activeFamilies && activeFamilies.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-xl font-semibold text-foreground">Active Families</h3>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {activeFamilies.map((family) => (
               <Card key={family.family_id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -154,9 +164,54 @@ export default function FamilyManagement() {
                   </Button>
                 </CardContent>
               </Card>
-            ))
-          )}
-        </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {archivedFamilies && archivedFamilies.length > 0 && (
+              <div className="space-y-4 mt-8">
+                <h3 className="text-xl font-semibold text-muted-foreground">Archived Families</h3>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 opacity-60">
+                  {archivedFamilies.map((family) => (
+                    <Card key={family.family_id} className="hover:shadow-lg transition-shadow border-dashed">
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <CardTitle className="text-lg">{family.family_name}</CardTitle>
+                            <CardDescription className="mt-1">
+                              Created {formatDistanceToNow(new Date(family.created_at), { addSuffix: true })}
+                            </CardDescription>
+                          </div>
+                          <Badge variant="outline" className="bg-muted">
+                            Archived
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Users className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-foreground font-medium">{family.member_count}</span>
+                          <span className="text-muted-foreground">members</span>
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => setSelectedFamilyId(family.family_id)}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Details
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
         {!isLoading && filteredFamilies?.length === 0 && (
           <Card>

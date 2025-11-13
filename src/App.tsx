@@ -32,6 +32,7 @@ import SuperAdminLayout from "./pages/super-admin/SuperAdminLayout";
 import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
 import FamilyManagement from "./pages/super-admin/FamilyManagement";
 import PlanManagement from "./pages/super-admin/PlanManagement";
+import ThemesManagement from "./pages/super-admin/ThemesManagement";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,11 +75,12 @@ const App = () => (
             <Route path="holidays" element={<HolidayManagement />} />
           </Route>
 
-          <Route path="/super-admin" element={<SuperAdminGuard><SuperAdminLayout /></SuperAdminGuard>}>
-            <Route index element={<SuperAdminDashboard />} />
-            <Route path="families" element={<FamilyManagement />} />
-            <Route path="plans" element={<PlanManagement />} />
-          </Route>
+        <Route path="/super-admin" element={<SuperAdminGuard><SuperAdminLayout /></SuperAdminGuard>}>
+          <Route index element={<SuperAdminDashboard />} />
+          <Route path="families" element={<FamilyManagement />} />
+          <Route path="plans" element={<PlanManagement />} />
+          <Route path="themes" element={<ThemesManagement />} />
+        </Route>
 
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -9,7 +9,7 @@ export default function SuperAdminLayout() {
     { path: '/super-admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
     { path: '/super-admin/families', label: 'Families', icon: Users },
     { path: '/super-admin/plans', label: 'Plans', icon: Package },
-    { path: '/super-admin/system', label: 'System', icon: Settings },
+    { path: '/super-admin/themes', label: 'Themes', icon: Settings },
   ];
 
   return (
