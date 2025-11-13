@@ -1593,87 +1593,174 @@ const ColumnBasedDashboard = () => {
           <TabsContent value="columns" className="mt-4 sm:mt-6">
             {viewMode === 'everyone' ? (
               <DragDropContext onDragEnd={handleDragEnd} onDragStart={() => console.log('Drag started')}>
-                 <div className="w-full overflow-x-auto touch-pan-x">
-                  <div className="flex gap-3 sm:gap-4 pb-4" style={{ minWidth: 'fit-content' }}>
+                 {/* Mobile: Single column carousel */}
+                 <div className="block md:hidden w-full">
+                   <div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide">
+                     <div className="flex gap-4 pb-4">
+                       {familyMembers.map(member => {
+                         const memberTasks = tasksByMember.get(member.id) || [];
+                         const completedTasks = memberTasks.filter(task => 
+                           task.task_completions && task.task_completions.length > 0
+                         );
+                         return (
+                           <div key={member.id} className="snap-center shrink-0 w-[calc(100vw-2rem)]">
+                             <MemberTaskColumn
+                               member={member}
+                               memberTasks={memberTasks}
+                               completedTasks={completedTasks}
+                               allTasks={tasks}
+                               familyMembers={familyMembers}
+                               onTaskToggle={handleTaskToggle}
+                               onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
+                               onDeleteTask={profile.role === 'parent' ? initiateTaskDeletion : undefined}
+                               onAddTask={handleAddTaskForMember}
+                               onAddTaskForMember={handleAddTaskForMember}
+                               onDragEnd={handleDragEnd}
+                               showActions={profile.role === 'parent'}
+                             />
+                           </div>
+                         );
+                       })}
+                       {!selectedMemberFilter && (tasksByMember.get('unassigned')?.length > 0 || profile.role === 'parent') && (
+                         <div className="snap-center shrink-0 w-[calc(100vw-2rem)]">
+                           <Card className="h-fit">
+                             <CardHeader className="pb-3">
+                               <CardTitle className="text-base text-muted-foreground">Unassigned</CardTitle>
+                               <CardDescription className="text-xs">Drag to assign to members</CardDescription>
+                             </CardHeader>
+                             <Droppable droppableId="unassigned">
+                               {(provided, snapshot) => (
+                                 <CardContent 
+                                   className={cn(
+                                     "space-y-3 transition-colors",
+                                     snapshot.isDraggingOver && "bg-accent/50"
+                                   )}
+                                   ref={provided.innerRef}
+                                   {...provided.droppableProps}
+                                 >
+                                   <div className="space-y-2 mb-4 min-h-[100px]">
+                                     {tasksByMember.get('unassigned')?.map((task, index) => (
+                                       <Draggable key={task.id} draggableId={task.id} index={index}>
+                                         {(provided, snapshot) => (
+                                           <div
+                                             ref={provided.innerRef}
+                                             {...provided.draggableProps}
+                                             {...provided.dragHandleProps}
+                                             className={cn(
+                                               snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50"
+                                             )}
+                                           >
+                                             <EnhancedTaskItem
+                                               task={task}
+                                               allTasks={tasks}
+                                               familyMembers={familyMembers}
+                                               onToggle={handleTaskToggle}
+                                               onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                                               onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
+                                               showActions={profile.role === 'parent' && !snapshot.isDragging}
+                                               isUnassigned={true}
+                                             />
+                                           </div>
+                                         )}
+                                       </Draggable>
+                                     )) || []}
+                                     {provided.placeholder}
+                                   </div>
+                                 </CardContent>
+                               )}
+                             </Droppable>
+                           </Card>
+                         </div>
+                       )}
+                     </div>
+                   </div>
+                 </div>
+
+                 {/* Desktop/Tablet: Horizontal scrolling with responsive columns */}
+                 <div className="hidden md:block w-full overflow-x-auto">
+                   <div className="flex gap-4 pb-4" style={{ minWidth: 'fit-content' }}>
                      {/* Family member columns - show all members in everyone mode */}
                      {familyMembers.map(member => {
-                     const memberTasks = tasksByMember.get(member.id) || [];
-                     const completedTasks = memberTasks.filter(task => 
-                       task.task_completions && task.task_completions.length > 0
-                     );
+                       const memberTasks = tasksByMember.get(member.id) || [];
+                       const completedTasks = memberTasks.filter(task => 
+                         task.task_completions && task.task_completions.length > 0
+                       );
 
-                      return (
-                        <MemberTaskColumn
-                          key={member.id}
-                          member={member}
-                          memberTasks={memberTasks}
-                          completedTasks={completedTasks}
-                          allTasks={tasks}
-                          familyMembers={familyMembers}
-                          onTaskToggle={handleTaskToggle}
-                          onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
-                          onDeleteTask={profile.role === 'parent' ? initiateTaskDeletion : undefined}
-                          onAddTask={handleAddTaskForMember}
-                          onAddTaskForMember={handleAddTaskForMember}
-                          onDragEnd={handleDragEnd}
-                          showActions={profile.role === 'parent'}
-                        />
-                     );
-                   })}
+                       return (
+                         <div key={member.id} className="shrink-0 w-64 min-w-[16rem] max-w-[20rem]">
+                           <MemberTaskColumn
+                             member={member}
+                             memberTasks={memberTasks}
+                             completedTasks={completedTasks}
+                             allTasks={tasks}
+                             familyMembers={familyMembers}
+                             onTaskToggle={handleTaskToggle}
+                             onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
+                             onDeleteTask={profile.role === 'parent' ? initiateTaskDeletion : undefined}
+                             onAddTask={handleAddTaskForMember}
+                             onAddTaskForMember={handleAddTaskForMember}
+                             onDragEnd={handleDragEnd}
+                             showActions={profile.role === 'parent'}
+                           />
+                         </div>
+                       );
+                     })}
 
-                   {/* Unassigned tasks column - only show if no member filter or if unassigned has tasks */}
-                   {!selectedMemberFilter && (tasksByMember.get('unassigned')?.length > 0 || profile.role === 'parent') && (
-                     <Card className="flex-shrink-0 w-72 sm:w-80 h-fit">
-                       <CardHeader className="pb-3">
-                         <CardTitle className="text-base sm:text-lg text-muted-foreground">Unassigned</CardTitle>
-                         <CardDescription className="text-xs sm:text-sm">Drag to assign to members</CardDescription>
-                       </CardHeader>
-                       <Droppable droppableId="unassigned">
-                         {(provided, snapshot) => (
-                           <CardContent 
-                             className={cn(
-                               "space-y-3 transition-colors",
-                               snapshot.isDraggingOver && "bg-accent/50"
-                             )}
-                             ref={provided.innerRef}
-                             {...provided.droppableProps}
-                           >
-                             <div className="space-y-2 sm:space-y-3 mb-4 min-h-[100px]">
-                               {tasksByMember.get('unassigned')?.map((task, index) => (
-                                 <Draggable key={task.id} draggableId={task.id} index={index}>
-                                   {(provided, snapshot) => (
-                                     <div
-                                       ref={provided.innerRef}
-                                       {...provided.draggableProps}
-                                       {...provided.dragHandleProps}
-                                       className={cn(
-                                         snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50"
+                     {/* Unassigned tasks column - only show if no member filter or if unassigned has tasks */}
+                     {!selectedMemberFilter && (tasksByMember.get('unassigned')?.length > 0 || profile.role === 'parent') && (
+                       <div className="shrink-0 w-64 min-w-[16rem] max-w-[20rem]">
+                         <Card className="h-fit">
+                           <CardHeader className="pb-3">
+                             <CardTitle className="text-base text-muted-foreground">Unassigned</CardTitle>
+                             <CardDescription className="text-xs">Drag to assign to members</CardDescription>
+                           </CardHeader>
+                           <Droppable droppableId="unassigned">
+                             {(provided, snapshot) => (
+                               <CardContent 
+                                 className={cn(
+                                   "space-y-3 transition-colors",
+                                   snapshot.isDraggingOver && "bg-accent/50"
+                                 )}
+                                 ref={provided.innerRef}
+                                 {...provided.droppableProps}
+                               >
+                                 <div className="space-y-2 mb-4 min-h-[100px]">
+                                   {tasksByMember.get('unassigned')?.map((task, index) => (
+                                     <Draggable key={task.id} draggableId={task.id} index={index}>
+                                       {(provided, snapshot) => (
+                                         <div
+                                           ref={provided.innerRef}
+                                           {...provided.draggableProps}
+                                           {...provided.dragHandleProps}
+                                           className={cn(
+                                             snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50"
+                                           )}
+                                         >
+                                           <EnhancedTaskItem
+                                             task={task}
+                                             allTasks={tasks}
+                                             familyMembers={familyMembers}
+                                             onToggle={handleTaskToggle}
+                                             onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                                             onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
+                                             showActions={profile.role === 'parent' && !snapshot.isDragging}
+                                             isUnassigned={true}
+                                           />
+                                         </div>
                                        )}
-                                     >
-                                       <EnhancedTaskItem
-                                         task={task}
-                                         allTasks={tasks}
-                                         familyMembers={familyMembers}
-                                         onToggle={handleTaskToggle}
-                                         onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                         onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
-                                         showActions={profile.role === 'parent' && !snapshot.isDragging}
-                                         isUnassigned={true}
-                                       />
-                                     </div>
-                                   )}
-                                 </Draggable>
-                               )) || []}
-                               {provided.placeholder}
-                             </div>
-                           </CardContent>
-                         )}
-                       </Droppable>
-                     </Card>
-                   )}
-                   </div>
-                </div>
-              </DragDropContext>
+                                     </Draggable>
+                                   )) || []}
+                                   {provided.placeholder}
+                                 </div>
+                               </CardContent>
+                             )}
+                           </Droppable>
+                         </Card>
+                       </div>
+                     )}
+                    </div>
+                  </div>
+                </DragDropContext>
             ) : (
               /* Member-specific dashboard view */
               <div className="w-full">

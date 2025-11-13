@@ -776,30 +776,139 @@ export const CalendarView = ({
       <CardContent>
         <DragDropContext onDragEnd={handleDragEnd}>
           {viewMode === 'today' ?
-        // Today View - Member Columns Layout
+        // Today View - Single Row Member Columns Layout
         <div className="space-y-4">
-              <div className="text-center mb-6">
-                
-                
+              {/* Mobile: Single column carousel */}
+              <div className="block md:hidden">
+                <div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide">
+                  <div className="flex gap-4 pb-4">
+                    {familyMembers.map(member => {
+                      const MemberColumn = () => {
+                        const { styles: colorStyles } = useMemberColor(member.color);
+                        const dateKey = format(currentDate, 'yyyy-MM-dd');
+                        const memberTasks = (tasksByDate[dateKey] || []).filter(task => task.assigned_to === member.id || task.assignees?.some(a => a.profile_id === member.id));
+                        const memberEvents = (eventsByDate[dateKey] || []).filter(event => {
+                          const hasAttendees = event.attendees && event.attendees.length > 0;
+                          const isAssignedToMember = hasAttendees && event.attendees.some((a: any) => a.profile_id === member.id);
+                          const showForAll = !hasAttendees;
+                          return showForAll || isAssignedToMember;
+                        });
+                        
+                        return (
+                          <div className="snap-center shrink-0 w-[calc(100vw-2rem)]">
+                            <Droppable droppableId={member.id}>
+                              {(provided, snapshot) => (
+                                <Card 
+                                  className={cn("transition-colors", snapshot.isDraggingOver && "ring-2 ring-primary/20")}
+                                  style={colorStyles.bg10}
+                                >
+                                  <CardHeader className="pb-3">
+                                    <div className="flex items-center gap-2">
+                                      <UserAvatar name={member.display_name} color={member.color} avatarIcon={member.avatar_url || undefined} size="sm" />
+                                      <div>
+                                        <CardTitle className="text-sm">{member.display_name}</CardTitle>
+                                        <p className="text-xs text-muted-foreground">
+                                          {memberTasks.length + memberEvents.length} items
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </CardHeader>
+                                  
+                                  <CardContent ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[200px]">
+                                    {memberTasks.map((task, index) => <TaskItem key={task.id} task={task} index={index} />)}
+                                    {memberEvents.map((event, eventIndex) => {
+                                      const isDragDisabled = event.isMultiDay ? !event.isFirstDay : false;
+                                      return (
+                                        <Draggable 
+                                          key={`event-${event.id}-${format(currentDate, 'yyyy-MM-dd')}`} 
+                                          draggableId={`event-${event.id}`} 
+                                          index={memberTasks.length + eventIndex}
+                                          isDragDisabled={isDragDisabled}
+                                        >
+                                          {(provided, snapshot) => (
+                                            <div 
+                                              ref={provided.innerRef} 
+                                              {...provided.draggableProps} 
+                                              {...provided.dragHandleProps} 
+                                              className={cn(
+                                                "group p-2 mb-1 rounded-md border border-purple-200 bg-purple-50 text-xs hover:shadow-md transition-all", 
+                                                !isDragDisabled && "cursor-move",
+                                                isDragDisabled && "cursor-not-allowed opacity-70",
+                                                snapshot.isDragging && "shadow-lg rotate-2 z-[9999]"
+                                              )}
+                                              onClick={() => handleEditEvent(event)}
+                                            >
+                                              <div className="flex items-center justify-between">
+                                                <span className="font-medium text-purple-700">{event.title}</span>
+                                                <div className="flex items-center gap-1">
+                                                  <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600">
+                                                    {event.isMultiDay ? 'Multi' : 'Event'}
+                                                  </Badge>
+                                                  <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-purple-600" />
+                                                </div>
+                                              </div>
+                                              {event.location && (
+                                                <div className="flex items-center gap-1 mt-1">
+                                                  <MapPin className="h-2.5 w-2.5 text-purple-600" />
+                                                  <p className="text-xs text-purple-600">{event.location}</p>
+                                                </div>
+                                              )}
+                                              {event.start_date && (
+                                                <div className="flex items-center gap-1 mt-1">
+                                                  <Clock className="h-2.5 w-2.5 text-purple-600" />
+                                                  <p className="text-xs text-purple-600">
+                                                    {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
+                                                  </p>
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+                                        </Draggable>
+                                      );
+                                    })}
+                                    {provided.placeholder}
+                                    <div className="pt-2 border-t border-muted/30">
+                                      <AddButton className="w-full h-8 text-xs" text="Add Event" showIcon={true} onClick={() => handleCreateEvent(currentDate, member.id)} />
+                                    </div>
+                                    {memberTasks.length === 0 && memberEvents.length === 0 && (
+                                      <div className="text-center py-8">
+                                        <div className="text-xs text-muted-foreground">
+                                          No items for {isToday(currentDate) ? 'today' : 'this day'}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </CardContent>
+                                </Card>
+                              )}
+                            </Droppable>
+                          </div>
+                        );
+                      };
+                      return <MemberColumn key={member.id} />;
+                    })}
+                  </div>
+                </div>
               </div>
-              
-              {/* Member Columns */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {familyMembers.map(member => {
-              const MemberColumn = () => {
-                const { styles: colorStyles } = useMemberColor(member.color);
-                const dateKey = format(currentDate, 'yyyy-MM-dd');
-                const memberTasks = (tasksByDate[dateKey] || []).filter(task => task.assigned_to === member.id || task.assignees?.some(a => a.profile_id === member.id));
-                // Show events in correct member columns: events with no attendees show for all, events with attendees show only for assigned members
-                const memberEvents = (eventsByDate[dateKey] || []).filter(event => {
-                  const hasAttendees = event.attendees && event.attendees.length > 0;
-                  const isAssignedToMember = hasAttendees && event.attendees.some((a: any) => a.profile_id === member.id);
-                  const showForAll = !hasAttendees; // Events with no attendees show for everyone
-                  return showForAll || isAssignedToMember;
-                });
-                
-                return <Droppable key={member.id} droppableId={member.id}>
-                      {(provided, snapshot) => <Card 
+
+              {/* Desktop/Tablet: Horizontal scrolling single row */}
+              <div className="hidden md:block overflow-x-auto">
+                <div className="flex gap-4 pb-4" style={{ minWidth: 'fit-content' }}>
+                  {familyMembers.map(member => {
+                    const MemberColumn = () => {
+                      const { styles: colorStyles } = useMemberColor(member.color);
+                      const dateKey = format(currentDate, 'yyyy-MM-dd');
+                      const memberTasks = (tasksByDate[dateKey] || []).filter(task => task.assigned_to === member.id || task.assignees?.some(a => a.profile_id === member.id));
+                      const memberEvents = (eventsByDate[dateKey] || []).filter(event => {
+                        const hasAttendees = event.attendees && event.attendees.length > 0;
+                        const isAssignedToMember = hasAttendees && event.attendees.some((a: any) => a.profile_id === member.id);
+                        const showForAll = !hasAttendees;
+                        return showForAll || isAssignedToMember;
+                      });
+                      
+                      return (
+                        <div className="shrink-0 w-64 min-w-[16rem] max-w-[20rem]">
+                          <Droppable droppableId={member.id}>
+                            {(provided, snapshot) => <Card
                         className={cn("transition-colors", snapshot.isDraggingOver && "ring-2 ring-primary/20")}
                         style={colorStyles.bg10}
                       >
@@ -879,10 +988,13 @@ export const CalendarView = ({
                               </div>}
                           </CardContent>
                         </Card>}
-                    </Droppable>;
-              };
-              return <MemberColumn key={member.id} />;
-            })}
+                          </Droppable>
+                        </div>
+                      );
+                    };
+                    return <MemberColumn key={member.id} />;
+                  })}
+                </div>
               </div>
             </div> :
         // Week/Month Grid View

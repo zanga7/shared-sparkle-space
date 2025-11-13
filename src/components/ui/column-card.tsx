@@ -16,7 +16,7 @@ const ColumnCard = React.forwardRef<HTMLDivElement, ColumnCardProps>(
       <Card
         ref={ref}
         className={cn(
-          "flex-shrink-0 w-72 sm:w-80 h-fit",
+          "flex-shrink-0 w-64 min-w-[16rem] max-w-[20rem] h-fit",
           className
         )}
         style={variant === 'member' && memberColor ? colorStyles.bg10 : undefined}
