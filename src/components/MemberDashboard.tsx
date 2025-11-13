@@ -110,7 +110,7 @@ export const MemberDashboard = ({
           color="white"
           avatarIcon={member.avatar_url || undefined}
           size="lg" 
-          className="border-4 border-white/20" 
+          className="" 
         />
       </div>
       <h1 className="text-3xl sm:text-4xl font-bold mb-4 text-white">

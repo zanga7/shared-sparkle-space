@@ -24,7 +24,9 @@ const UserAvatar = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Root>,
   UserAvatarProps
 >(({ className, name, color = 'sky', size = 'md', avatarIcon, ...props }, ref) => {
-  const { hex: colorHex, styles: colorStyles } = useMemberColor(color);
+  const isWhite = color === 'white';
+  const { hex: colorHex, styles: colorStyles } = useMemberColor(isWhite ? undefined : color);
+  const finalColorHex = isWhite ? '#ffffff' : colorHex;
   
   // Fetch avatar icons from database
   const { data: avatarIcons = [] } = useQuery({
@@ -67,7 +69,7 @@ const UserAvatar = React.forwardRef<
         {iconData ? (
           <div 
             className="w-full h-full flex items-center justify-center [&_svg]:w-full [&_svg]:h-full"
-            style={{ color: colorHex }}
+            style={{ color: finalColorHex }}
             dangerouslySetInnerHTML={{ __html: iconData.svg_content }}
           />
         ) : (
@@ -81,10 +83,10 @@ const UserAvatar = React.forwardRef<
               [data-avatar="${avatarIcon}"] svg rect,
               [data-avatar="${avatarIcon}"] svg polygon,
               [data-avatar="${avatarIcon}"] svg g [fill] {
-                fill: ${colorHex} !important;
+                fill: ${finalColorHex} !important;
               }
               [data-avatar="${avatarIcon}"] svg * {
-                stroke: ${colorHex} !important;
+                stroke: ${finalColorHex} !important;
               }
             `}
           </style>
