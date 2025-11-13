@@ -917,7 +917,14 @@ export const CalendarView = ({
                         </div>
 
                         {/* Tasks and Events */}
-                        <div className="space-y-1">
+                        <div className="space-y-1 relative">
+                          {/* Drag Over Indicator */}
+                          {snapshot.isDraggingOver && (dayTasks.length > 0 || dayEvents.length > 0) && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-green-50/90 border-2 border-dashed border-green-300 rounded z-10">
+                              <span className="text-sm text-green-700 font-medium">Drop event here</span>
+                            </div>
+                          )}
+                          
                           {dayTasks.map((task, index) => renderTask(task, index))}
                           
                            {/* Events */}
@@ -991,6 +998,13 @@ export const CalendarView = ({
                              </Draggable>
                            })}
                            
+                           {/* Empty State Drag Indicator */}
+                           {(dayTasks.length === 0 && dayEvents.length === 0) && snapshot.isDraggingOver && (
+                             <div className="text-center text-sm text-green-700 font-medium py-4 border-2 border-dashed border-green-300 rounded bg-green-50/50">
+                               Drop event here
+                             </div>
+                           )}
+                           
                            {provided.placeholder}
                          </div>
 
@@ -1002,12 +1016,6 @@ export const CalendarView = ({
                   }} />
                         </div>
 
-                        {/* Empty State */}
-                        {dayTasks.length === 0 && <div className="flex items-center justify-center h-full min-h-[60px]">
-                            {snapshot.isDraggingOver ? <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed border-green-300 rounded w-full">
-                                Drop task here
-                              </div> : null}
-                          </div>}
                       </div>}
                   </Droppable>;
           })}
