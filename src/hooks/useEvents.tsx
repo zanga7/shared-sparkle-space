@@ -141,8 +141,9 @@ export const useEvents = (familyId?: string) => {
     try {
       const { data: profilesData, error } = await supabase
         .from('profiles')
-        .select('id, display_name, role, color')
-        .eq('family_id', familyId);
+        .select('id, display_name, role, color, status')
+        .eq('family_id', familyId)
+        .eq('status', 'active');
       
       if (error) throw error;
       
@@ -188,8 +189,9 @@ export const useEvents = (familyId?: string) => {
         
         supabase
           .from('profiles')
-          .select('id, display_name, role, color')
+          .select('id, display_name, role, color, status')
           .eq('family_id', familyId)
+          .eq('status', 'active')
       ]);
 
       const { data: attendeesData, error: attendeesError } = attendeesResponse;

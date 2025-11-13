@@ -66,7 +66,8 @@ export function EditRewardDialog({ reward, open, onOpenChange, onUpdate }: EditR
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, display_name, role, color')
+          .select('id, display_name, role, color, status')
+          .eq('status', 'active')
           .order('display_name');
         
         if (error) {

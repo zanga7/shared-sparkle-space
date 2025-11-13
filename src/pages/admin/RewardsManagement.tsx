@@ -55,7 +55,7 @@ export default function RewardsManagement() {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, display_name, role, color')
+          .select('id, display_name, role, color, status')
           .order('display_name');
         
         if (error) {

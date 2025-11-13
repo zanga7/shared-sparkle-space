@@ -50,8 +50,9 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
         // Get current user's profile
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('id, display_name, user_id, role, color')
+          .select('id, display_name, user_id, role, color, status')
           .eq('user_id', user.id)
+          .eq('status', 'active')
           .single();
 
         if (profileError) throw profileError;
@@ -61,7 +62,8 @@ export function RewardsGallery({ selectedMemberId }: { selectedMemberId?: string
         if (profile.role === 'parent') {
           const { data: familyProfiles, error: familyError } = await supabase
             .from('profiles')
-            .select('id, display_name, user_id, role, color')
+            .select('id, display_name, user_id, role, color, status')
+            .eq('status', 'active')
             .eq('family_id', (await supabase
               .from('profiles')
               .select('family_id')
