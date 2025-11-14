@@ -45,12 +45,12 @@ export const PublicHolidaySettings = ({ familyId }: PublicHolidaySettingsProps) 
     queryKey: ['public-holiday-settings', familyId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('public_holiday_settings')
+        .from('public_holiday_settings' as any)
         .select('*')
         .eq('family_id', familyId)
         .single();
       if (error && error.code !== 'PGRST116') throw error;
-      return data;
+      return data as any;
     },
   });
 
@@ -58,7 +58,7 @@ export const PublicHolidaySettings = ({ familyId }: PublicHolidaySettingsProps) 
     mutationFn: async (updates: any) => {
       if (!settings) {
         const { data, error } = await supabase
-          .from('public_holiday_settings')
+          .from('public_holiday_settings' as any)
           .insert({ family_id: familyId, api_provider: 'nager', ...updates })
           .select()
           .single();
@@ -66,7 +66,7 @@ export const PublicHolidaySettings = ({ familyId }: PublicHolidaySettingsProps) 
         return data;
       } else {
         const { data, error } = await supabase
-          .from('public_holiday_settings')
+          .from('public_holiday_settings' as any)
           .update(updates)
           .eq('id', settings.id)
           .select()

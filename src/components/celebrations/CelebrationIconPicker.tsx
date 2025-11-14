@@ -33,7 +33,7 @@ export const CelebrationIconPicker = ({
 
   return (
     <div className={cn("grid grid-cols-4 md:grid-cols-6 gap-3", className)}>
-      {icons.map((icon) => (
+      {(icons as any[]).map((icon: any) => (
         <button
           key={icon.id}
           type="button"

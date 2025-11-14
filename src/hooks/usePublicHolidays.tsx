@@ -26,13 +26,13 @@ export const usePublicHolidaySettings = (familyId?: string) => {
       if (!familyId) return null;
 
       const { data, error } = await supabase
-        .from('public_holiday_settings')
+        .from('public_holiday_settings' as any)
         .select('*')
         .eq('family_id', familyId)
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
-      return data as PublicHolidaySettings | null;
+      return data as unknown as PublicHolidaySettings | null;
     },
     enabled: !!familyId,
   });
@@ -49,7 +49,7 @@ export const usePublicHolidays = (familyId?: string, year?: number) => {
       const currentYear = year || new Date().getFullYear();
 
       const { data, error } = await supabase
-        .from('public_holidays_cache')
+        .from('public_holidays_cache' as any)
         .select('*')
         .in('region_code', settings.enabled_regions)
         .eq('year', currentYear)

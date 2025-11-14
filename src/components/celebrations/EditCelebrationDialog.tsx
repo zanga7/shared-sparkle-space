@@ -70,7 +70,7 @@ export const EditCelebrationDialog = ({
       };
 
       const { error } = await supabase
-        .from('celebrations')
+        .from('celebrations' as any)
         .update(updates)
         .eq('id', celebration.id);
 
