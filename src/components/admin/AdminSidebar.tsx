@@ -37,7 +37,6 @@ import {
 const adminMenuItems = [
   { title: "Dashboard", url: "/admin", icon: Home, exact: true },
   { title: "Family Members", url: "/admin/members", icon: Users },
-  { title: "Dashboard Mode", url: "/admin/dashboard", icon: Smartphone },
   { title: "Rotating Tasks", url: "/admin/rotating-tasks", icon: RotateCcw },
   { title: "Rotation Debugger", url: "/admin/rotation-debugger", icon: Database },
   { title: "Rewards", url: "/admin/rewards", icon: Gift },
