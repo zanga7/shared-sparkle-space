@@ -44,12 +44,16 @@ export const DashboardModeSettings = React.memo(() => {
         .eq('family_id', profile.family_id)
         .single();
 
+      if (error) {
+        console.error('Error loading settings:', error);
+      }
+
       if (data) {
         setSettings({
-          dashboard_mode_enabled: data.dashboard_mode_enabled || false,
-          auto_return_enabled: data.auto_return_enabled !== false,
-          auto_return_timeout_minutes: data.auto_return_timeout_minutes || 10,
-          require_parent_pin_for_dashboard: data.require_parent_pin_for_dashboard || false
+          dashboard_mode_enabled: (data as any).dashboard_mode_enabled || false,
+          auto_return_enabled: (data as any).auto_return_enabled !== false,
+          auto_return_timeout_minutes: (data as any).auto_return_timeout_minutes || 10,
+          require_parent_pin_for_dashboard: (data as any).require_parent_pin_for_dashboard || false
         });
       }
     } catch (error) {
