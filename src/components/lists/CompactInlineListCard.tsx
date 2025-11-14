@@ -445,7 +445,7 @@ export function CompactInlineListCard({
       </AlertDialog>
 
       <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
+      <CardHeader className="grid-card-header">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2 flex-1">
             <ListTodo className="h-4 w-4 text-primary" />
@@ -508,10 +508,10 @@ export function CompactInlineListCard({
         )}
       </CardHeader>
 
-      <CardContent className="pt-0 pb-3">
-        {/* Items list */}
-        <div className="space-y-1 mb-3">
-          {items.slice(0, isExpanded ? items.length : 10).map((item) => (
+      <CardContent className="grid-card-content">
+        <div className="space-y-3">
+          <div className="space-y-1">
+            {items.slice(0, isExpanded ? items.length : 10).map((item) => (
             <div key={item.id} className="flex items-center gap-2 py-1 group hover:bg-muted/50 rounded-sm px-1 -mx-1">
               <Checkbox 
                 id={`item-${item.id}`}
@@ -620,55 +620,55 @@ export function CompactInlineListCard({
               </DropdownMenu>
             </div>
           ))}
-        </div>
-
-        {/* Quick add input */}
-        <div className="border-t pt-2">
-          <EnhancedListInput
-            value={newItemText}
-            onChange={setNewItemText}
-            onAddItems={addItems}
-            placeholder="Add an item..."
-            disabled={adding}
-            existingItems={items.map(item => item.name)}
-            preventDuplicates={true}
-            
-            className="mb-0"
-          />
-        </div>
-
-        {/* Show/Hide button */}
-        {items.length > 10 && (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="w-full mt-2 h-7 text-xs"
-          >
-            {isExpanded ? (
-              <>
-                <ChevronUp className="h-3 w-3 mr-1" />
-                Show Less
-              </>
-            ) : (
-              <>
-                <ChevronDown className="h-3 w-3 mr-1" />
-                Show {items.length - 10} More
-              </>
-            )}
-          </Button>
-        )}
-
-        {/* Progress indicator */}
-        {items.length > 0 && (
-          <div className="mt-2 space-y-1">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{completedCount} of {items.length} complete</span>
-              <span>{progressPercentage}%</span>
-            </div>
-            <Progress value={progressPercentage} className="h-1" />
           </div>
-        )}
+
+          {/* Quick add input */}
+          <div className="border-t pt-3">
+            <EnhancedListInput
+              value={newItemText}
+              onChange={setNewItemText}
+              onAddItems={addItems}
+              placeholder="Add an item..."
+              disabled={adding}
+              existingItems={items.map(item => item.name)}
+              preventDuplicates={true}
+              className="mb-0"
+            />
+          </div>
+
+          {/* Show/Hide button */}
+          {items.length > 10 && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="w-full h-7 text-xs"
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="h-3 w-3 mr-1" />
+                  Show Less
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3 w-3 mr-1" />
+                  Show {items.length - 10} More
+                </>
+              )}
+            </Button>
+          )}
+
+          {/* Progress indicator */}
+          {items.length > 0 && (
+            <div className="space-y-1 border-t pt-3">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{completedCount} of {items.length} complete</span>
+                <span>{progressPercentage}%</span>
+              </div>
+              <Progress value={progressPercentage} className="h-1" />
+            </div>
+          )}
+        </div>
       </CardContent>
 
       {/* Assignment Dialog */}

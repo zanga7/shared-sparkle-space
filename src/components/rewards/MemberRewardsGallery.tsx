@@ -219,7 +219,7 @@ export function MemberRewardsGallery({ member }: MemberRewardsGalleryProps) {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 gap-3 px-3">
+            <div className="grid grid-cols-1 grid-gap">
               {availableRewards.map((reward) => {
                 if (reward.reward_type === 'group_contribution') {
                   const rewardContributions = groupContributions.filter(c => c.reward_id === reward.id);
