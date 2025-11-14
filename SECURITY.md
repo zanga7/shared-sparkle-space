@@ -4,7 +4,13 @@
 
 ### ✅ Completed Security Fixes
 
-#### 1. Database Function Security Hardening
+#### 1. PIN Hash Protection
+- **Issue**: Family members could view other members' PIN hashes through direct table access
+- **Risk**: Compromised account could extract and crack PIN hashes for all family members
+- **Fix**: Removed direct SELECT access to sensitive fields; enforced use of `get_family_profiles_safe()` function
+- **Status**: ✅ RESOLVED
+
+#### 2. Database Function Security Hardening
 - **Issue**: Database functions were missing `SET search_path TO 'public'` security setting
 - **Risk**: SQL injection via search path manipulation
 - **Fix**: All database functions now have proper `SET search_path TO 'public'` configuration
