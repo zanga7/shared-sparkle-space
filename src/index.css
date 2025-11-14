@@ -287,3 +287,20 @@
 .grid-gap {
   @apply gap-4;
 }
+
+/* ========================================
+   ANIMATIONS - ONBOARDING & CELEBRATIONS
+   ======================================== */
+
+@keyframes scale-up {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.animate-scale {
+  animation: scale-up 2s ease-in-out infinite;
+}
