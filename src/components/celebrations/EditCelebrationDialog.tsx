@@ -304,8 +304,8 @@ export const EditCelebrationDialog = ({
             <div>
               <Label>Select Icon *</Label>
               <CelebrationIconPicker
-                value={formData.icon_id}
-                onChange={(iconId) => setFormData(prev => ({ ...prev, icon_id: iconId }))}
+                selectedIconId={formData.icon_id}
+                onIconSelect={(iconId) => setFormData(prev => ({ ...prev, icon_id: iconId }))}
               />
             </div>
           )}
