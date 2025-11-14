@@ -59,7 +59,7 @@ export function useOnboardingStatus() {
         .update({
           onboarding_completed: true,
           onboarding_completed_at: new Date().toISOString()
-        })
+        } as any)
         .eq('family_id', familyId);
 
       setNeedsOnboarding(false);
