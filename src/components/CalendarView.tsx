@@ -591,6 +591,11 @@ export const CalendarView = ({
   return <Card className="w-full">
       <CardHeader>
         <div className="flex flex-col gap-4">
+          {/* Date Heading */}
+          <h2 className="text-3xl sm:text-4xl font-bold">
+            {viewMode === 'today' ? `Today - ${format(currentDate, 'EEEE, MMMM d, yyyy')}` : viewMode === 'week' ? `Week of ${format(dateRange.start, 'MMM d')} - ${format(dateRange.end, 'MMM d, yyyy')}` : format(currentDate, 'MMMM yyyy')}
+          </h2>
+
           {/* Header Row with View Mode, Navigation, and Filters */}
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
@@ -757,10 +762,6 @@ export const CalendarView = ({
                   </div>
                 </CardContent>
               </Card>}
-        </div>
-        
-        <div className="text-lg font-semibold">
-          {viewMode === 'today' ? `Today - ${format(currentDate, 'EEEE, MMMM d, yyyy')}` : viewMode === 'week' ? `Week of ${format(dateRange.start, 'MMM d')} - ${format(dateRange.end, 'MMM d, yyyy')}` : format(currentDate, 'MMMM yyyy')}
         </div>
       </CardHeader>
 
