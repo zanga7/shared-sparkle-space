@@ -593,10 +593,6 @@ export const CalendarView = ({
         <div className="flex flex-col gap-4">
           {/* Header Row */}
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5" />
-              Family Calendar
-            </CardTitle>
             
             <div className="flex items-center gap-2">
               {/* View Mode Toggle */}
