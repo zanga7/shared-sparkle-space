@@ -38,21 +38,23 @@ export const usePublicHolidaySettings = (familyId?: string) => {
   });
 };
 
-export const usePublicHolidays = (familyId?: string, year?: number) => {
+export const usePublicHolidays = (familyId?: string, startYear?: number, endYear?: number) => {
   const { data: settings } = usePublicHolidaySettings(familyId);
 
   return useQuery({
-    queryKey: ['public-holidays', settings?.enabled_regions, year],
+    queryKey: ['public-holidays', settings?.enabled_regions, startYear, endYear],
     queryFn: async () => {
       if (!settings?.is_enabled || !settings?.enabled_regions?.length) return [];
 
-      const currentYear = year || new Date().getFullYear();
+      const currentYear = startYear || new Date().getFullYear();
+      const finalYear = endYear || currentYear;
 
       const { data, error } = await supabase
         .from('public_holidays_cache' as any)
         .select('*')
         .in('region_code', settings.enabled_regions)
-        .eq('year', currentYear)
+        .gte('year', currentYear)
+        .lte('year', finalYear)
         .order('holiday_date');
 
       if (error) throw error;

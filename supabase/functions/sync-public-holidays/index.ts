@@ -55,9 +55,14 @@ Deno.serve(async (req) => {
 
     // Filter by subdivision if specified (e.g., NSW for AU-NSW)
     const filteredHolidays = holidays.filter(holiday => {
-      if (!subdivisionCode) return holiday.global || !holiday.counties;
-      // If subdivision specified, include only holidays for that subdivision
-      return holiday.counties && holiday.counties.includes(subdivisionCode);
+      if (!subdivisionCode) {
+        // No subdivision - return only national holidays
+        return holiday.global || !holiday.counties;
+      }
+      // Subdivision specified - include both national holidays AND subdivision-specific ones
+      const isNational = holiday.global || !holiday.counties;
+      const isForSubdivision = holiday.counties && holiday.counties.includes(subdivisionCode);
+      return isNational || isForSubdivision;
     });
 
     console.log(`Filtered to ${filteredHolidays.length} holidays for ${region_code}`);

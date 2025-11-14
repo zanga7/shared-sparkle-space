@@ -118,7 +118,9 @@ export const CalendarView = ({
 
   // Celebrations and public holidays hooks
   const { data: celebrations = [] } = useCelebrations(familyId);
-  const { data: publicHolidays = [] } = usePublicHolidays(familyId);
+  // Fetch holidays for current year and next 3 years
+  const currentYear = new Date().getFullYear();
+  const { data: publicHolidays = [] } = usePublicHolidays(familyId, currentYear, currentYear + 3);
 
   // Helper to get celebrations and holidays for a specific date
   const getCelebrationsAndHolidays = useCallback((date: Date) => {

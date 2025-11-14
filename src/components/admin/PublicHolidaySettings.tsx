@@ -93,13 +93,19 @@ export const PublicHolidaySettings = ({ familyId }: PublicHolidaySettingsProps) 
     setSyncing(true);
     try {
       const regions = (settings?.enabled_regions as string[]) || [];
+      const currentYear = new Date().getFullYear();
+      // Sync current year + next 3 years
+      const yearsToSync = [currentYear, currentYear + 1, currentYear + 2, currentYear + 3];
+      
       for (const region of regions) {
-        await supabase.functions.invoke('sync-public-holidays', {
-          body: { region_code: region, year: new Date().getFullYear() },
-        });
+        for (const year of yearsToSync) {
+          await supabase.functions.invoke('sync-public-holidays', {
+            body: { region_code: region, year },
+          });
+        }
       }
       await updateMutation.mutateAsync({ last_sync_at: new Date().toISOString() });
-      toast.success('Holidays synced');
+      toast.success('Holidays synced for current and future years');
     } catch (error: any) {
       toast.error('Sync failed: ' + error.message);
     } finally {
