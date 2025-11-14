@@ -65,11 +65,11 @@ Deno.serve(async (req) => {
       return isNational || isForSubdivision;
     });
 
-    // Deduplicate holidays by date and name (to avoid showing same holiday twice)
+    // Deduplicate holidays by date and localName (to avoid showing same holiday twice)
     const uniqueHolidays = Array.from(
       new Map(
         filteredHolidays.map(holiday => [
-          `${holiday.date}-${holiday.name}`,
+          `${holiday.date}-${holiday.localName}`,
           holiday
         ])
       ).values()
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     const holidaysToInsert = uniqueHolidays.map(holiday => ({
       region_code: region_code,
       holiday_date: holiday.date,
-      holiday_name: holiday.name,
+      holiday_name: holiday.localName, // Use local name from API
       is_public: holiday.global || holiday.types.includes('Public'),
       holiday_type: holiday.types.join(', '),
       year: year,
