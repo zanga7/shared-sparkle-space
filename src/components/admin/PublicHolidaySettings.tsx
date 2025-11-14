@@ -10,24 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Loader2, RefreshCw, Plus } from 'lucide-react';
 import { format } from 'date-fns';
-import { AddCustomRegionDialog } from './AddCustomRegionDialog';
-
-const defaultRegions = [
-  { code: 'AU', name: 'Australia', flag: '🇦🇺', subdivisions: [
-    { code: 'AU-NSW', name: 'New South Wales' },
-    { code: 'AU-VIC', name: 'Victoria' },
-    { code: 'AU-QLD', name: 'Queensland' },
-    { code: 'AU-WA', name: 'Western Australia' },
-    { code: 'AU-SA', name: 'South Australia' },
-    { code: 'AU-TAS', name: 'Tasmania' },
-    { code: 'AU-ACT', name: 'Australian Capital Territory' },
-    { code: 'AU-NT', name: 'Northern Territory' },
-  ]},
-  { code: 'US', name: 'United States', flag: '🇺🇸', subdivisions: [] },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', subdivisions: [] },
-  { code: 'CA', name: 'Canada', flag: '🇨🇦', subdivisions: [] },
-  { code: 'NZ', name: 'New Zealand', flag: '🇳🇿', subdivisions: [] },
-];
+import { RegionSelector } from './RegionSelector';
 
 interface PublicHolidaySettingsProps {
   familyId: string;
@@ -35,11 +18,9 @@ interface PublicHolidaySettingsProps {
 
 export const PublicHolidaySettings = ({ familyId }: PublicHolidaySettingsProps) => {
   const [syncing, setSyncing] = useState(false);
-  const [addRegionDialogOpen, setAddRegionDialogOpen] = useState(false);
-  const [customRegions, setCustomRegions] = useState<Array<{ code: string; name: string; flag: string; subdivisions: any[] }>>([]);
+  const [regionSelectorOpen, setRegionSelectorOpen] = useState(false);
+  const [savedRegions, setSavedRegions] = useState<Array<{ code: string; name: string; flag: string }>>([]);
   const queryClient = useQueryClient();
-
-  const availableRegions = [...defaultRegions, ...customRegions];
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['public-holiday-settings', familyId],
@@ -81,12 +62,36 @@ export const PublicHolidaySettings = ({ familyId }: PublicHolidaySettingsProps) 
     },
   });
 
-  const toggleRegion = (regionCode: string) => {
+  const handleSelectRegion = (region: { code: string; name: string; flag: string; isSubdivision?: boolean }) => {
     const currentRegions = (settings?.enabled_regions as string[]) || [];
-    const newRegions = currentRegions.includes(regionCode)
-      ? currentRegions.filter((r: string) => r !== regionCode)
-      : [...currentRegions, regionCode];
+    
+    // If selecting a subdivision, remove the parent country if it exists
+    let newRegions = [...currentRegions];
+    if (region.isSubdivision) {
+      const parentCountry = region.code.split('-')[0];
+      newRegions = newRegions.filter((r: string) => r !== parentCountry);
+    } else {
+      // If selecting a country, remove any subdivisions of that country
+      newRegions = newRegions.filter((r: string) => !r.startsWith(region.code + '-'));
+    }
+    
+    // Toggle the region
+    if (newRegions.includes(region.code)) {
+      newRegions = newRegions.filter((r: string) => r !== region.code);
+      setSavedRegions(savedRegions.filter(r => r.code !== region.code));
+    } else {
+      newRegions.push(region.code);
+      setSavedRegions([...savedRegions.filter(r => r.code !== region.code), region]);
+    }
+    
     updateMutation.mutate({ enabled_regions: newRegions });
+  };
+
+  const removeRegion = (regionCode: string) => {
+    const currentRegions = (settings?.enabled_regions as string[]) || [];
+    const newRegions = currentRegions.filter((r: string) => r !== regionCode);
+    updateMutation.mutate({ enabled_regions: newRegions });
+    setSavedRegions(savedRegions.filter(r => r.code !== regionCode));
   };
 
   const syncHolidays = async () => {
@@ -130,33 +135,58 @@ export const PublicHolidaySettings = ({ familyId }: PublicHolidaySettingsProps) 
           <div className="space-y-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium">Select Regions</h3>
-                <Button variant="outline" size="sm" onClick={() => setAddRegionDialogOpen(true)}><Plus className="h-3 w-3 mr-1" />Add Region</Button>
+                <Label>Selected Regions</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRegionSelectorOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Region
+                </Button>
               </div>
-              <div className="space-y-4">
-                {availableRegions.map((region) => (
-                  <div key={region.code} className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Checkbox id={region.code} checked={enabledRegions.includes(region.code)} onCheckedChange={() => toggleRegion(region.code)} />
-                      <Label htmlFor={region.code} className="flex items-center gap-2 cursor-pointer">
-                        <span>{region.flag}</span>
-                        <span>{region.name}</span>
-                      </Label>
-                    </div>
-                    {region.subdivisions.length > 0 && enabledRegions.includes(region.code) && (
-                      <div className="ml-8 space-y-2">
-                        {region.subdivisions.map((sub) => (
-                          <div key={sub.code} className="flex items-center gap-2">
-                            <Checkbox id={sub.code} checked={enabledRegions.includes(sub.code)} onCheckedChange={() => toggleRegion(sub.code)} />
-                            <Label htmlFor={sub.code} className="text-sm cursor-pointer">{sub.name}</Label>
+
+              <div className="space-y-2">
+                {enabledRegions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground p-4 text-center border rounded-lg">
+                    No regions selected. Click "Add Region" to get started.
+                  </p>
+                ) : (
+                  enabledRegions.map((regionCode) => {
+                    const savedRegion = savedRegions.find(r => r.code === regionCode);
+                    const flag = savedRegion?.flag || regionCode.split('-')[0];
+                    const name = savedRegion?.name || regionCode;
+                    const isSubdivision = regionCode.includes('-');
+
+                    return (
+                      <div
+                        key={regionCode}
+                        className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{flag}</span>
+                          <div>
+                            <p className="font-medium">{name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {regionCode}
+                              {isSubdivision && ' (includes national holidays)'}
+                            </p>
                           </div>
-                        ))}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeRegion(regionCode)}
+                        >
+                          Remove
+                        </Button>
                       </div>
-                    )}
-                  </div>
-                ))}
+                    );
+                  })
+                )}
               </div>
             </div>
+
             {settings && (
               <div className="flex items-center justify-between pt-4 border-t">
                 <div className="space-y-1">
@@ -173,7 +203,13 @@ export const PublicHolidaySettings = ({ familyId }: PublicHolidaySettingsProps) 
           </div>
         </CardContent>
       </Card>
-      <AddCustomRegionDialog open={addRegionDialogOpen} onOpenChange={setAddRegionDialogOpen} onAdd={(r) => { setCustomRegions(prev => [...prev, { ...r, subdivisions: [] }]); toast.success(`Added ${r.name}`); }} />
+      
+      <RegionSelector
+        open={regionSelectorOpen}
+        onOpenChange={setRegionSelectorOpen}
+        onSelect={handleSelectRegion}
+        selectedRegions={enabledRegions}
+      />
     </>
   );
 };
