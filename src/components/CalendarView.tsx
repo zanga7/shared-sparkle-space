@@ -24,6 +24,10 @@ import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { useTaskCompletion } from '@/hooks/useTaskCompletion';
 import { useTaskSeries, VirtualTaskInstance } from '@/hooks/useTaskSeries';
 import { EventDialog } from '@/components/EventDialog';
+import { useCelebrations } from '@/hooks/useCelebrations';
+import { usePublicHolidays } from '@/hooks/usePublicHolidays';
+import { PublicHolidayBadge } from '@/components/celebrations/PublicHolidayBadge';
+import { Cake, Heart, Gift } from 'lucide-react';
 
 import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
 import { CalendarEvent } from '@/types/event';
@@ -111,6 +115,32 @@ export const CalendarView = ({
     activeMemberId,
     isDashboardMode: dashboardMode,
   });
+
+  // Celebrations and public holidays hooks
+  const { data: celebrations = [] } = useCelebrations(familyId);
+  const { data: publicHolidays = [] } = usePublicHolidays(familyId);
+
+  // Helper to get celebrations and holidays for a specific date
+  const getCelebrationsAndHolidays = useCallback((date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const monthDay = format(date, 'MM-dd');
+    
+    // Match celebrations by checking if the current year date matches OR if month-day matches
+    const dayCelebrations = celebrations.filter(c => {
+      if (!c.celebration_date) return false;
+      const celebMonthDay = c.celebration_date.substring(5); // Get MM-DD from YYYY-MM-DD
+      return c.currentYearDate === dateStr || celebMonthDay === monthDay;
+    });
+    
+    // Match public holidays by date
+    const dayHolidays = publicHolidays.filter(h => {
+      if (!h.holiday_date) return false;
+      const holidayDate = format(new Date(h.holiday_date), 'yyyy-MM-dd');
+      return holidayDate === dateStr;
+    });
+    
+    return { celebrations: dayCelebrations, holidays: dayHolidays };
+  }, [celebrations, publicHolidays]);
 
 
   // Calculate date range based on view mode
@@ -807,6 +837,28 @@ export const CalendarView = ({
                                   </CardHeader>
                                   
                                   <CardContent ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[200px] pt-6">
+                                    {/* Celebrations and Holidays */}
+                                    {(() => {
+                                      const { celebrations: dayCelebrations, holidays: dayHolidays } = getCelebrationsAndHolidays(currentDate);
+                                      return (dayCelebrations.length > 0 || dayHolidays.length > 0) && (
+                                        <div className="mb-3 pb-3 border-b border-muted/30 space-y-2">
+                                          {dayCelebrations.map(celebration => {
+                                            const Icon = celebration.celebration_type === 'birthday' ? Cake : 
+                                                        celebration.celebration_type === 'anniversary' ? Heart : Gift;
+                                            return (
+                                              <div key={celebration.id} className="flex items-center gap-2 text-sm">
+                                                <Icon className="h-4 w-4 text-primary flex-shrink-0" />
+                                                <span className="truncate font-medium">{celebration.name}</span>
+                                                {celebration.age && <Badge variant="secondary" className="text-xs">{celebration.age}</Badge>}
+                                              </div>
+                                            );
+                                          })}
+                                          {dayHolidays.map(holiday => (
+                                            <PublicHolidayBadge key={holiday.id} holiday={holiday} />
+                                          ))}
+                                        </div>
+                                      );
+                                    })()}
                                     {memberTasks.map((task, index) => <TaskItem key={task.id} task={task} index={index} />)}
                                     {memberEvents.map((event, eventIndex) => {
                                       const isDragDisabled = event.isMultiDay ? !event.isFirstDay : false;
@@ -918,6 +970,28 @@ export const CalendarView = ({
                           </CardHeader>
                           
                           <CardContent ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[200px] pt-6">
+                            {/* Celebrations and Holidays */}
+                            {(() => {
+                              const { celebrations: dayCelebrations, holidays: dayHolidays } = getCelebrationsAndHolidays(currentDate);
+                              return (dayCelebrations.length > 0 || dayHolidays.length > 0) && (
+                                <div className="mb-3 pb-3 border-b border-muted/30 space-y-2">
+                                  {dayCelebrations.map(celebration => {
+                                    const Icon = celebration.celebration_type === 'birthday' ? Cake : 
+                                                celebration.celebration_type === 'anniversary' ? Heart : Gift;
+                                    return (
+                                      <div key={celebration.id} className="flex items-center gap-2 text-sm">
+                                        <Icon className="h-4 w-4 text-primary flex-shrink-0" />
+                                        <span className="truncate font-medium">{celebration.name}</span>
+                                        {celebration.age && <Badge variant="secondary" className="text-xs">{celebration.age}</Badge>}
+                                      </div>
+                                    );
+                                  })}
+                                  {dayHolidays.map(holiday => (
+                                    <PublicHolidayBadge key={holiday.id} holiday={holiday} />
+                                  ))}
+                                </div>
+                              );
+                            })()}
                             {/* Tasks */}
                             {memberTasks.map((task, index) => <TaskItem key={task.id} task={task} index={index} />)}
                             
