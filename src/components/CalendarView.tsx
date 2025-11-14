@@ -824,7 +824,16 @@ export const CalendarView = ({
                                             celebration.celebration_type === 'anniversary' ? Heart : Gift;
                                 return (
                                   <div key={celebration.id} className="flex items-center gap-3 p-3 bg-card rounded-lg shadow-sm">
-                                    <Icon className="h-5 w-5 text-primary flex-shrink-0" />
+                                    {/* Photo or Icon */}
+                                    <div className="h-10 w-10 rounded-full overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                                      {celebration.visual_type === 'photo' && celebration.photo_url ? (
+                                        <img src={celebration.photo_url} alt={celebration.name} className="w-full h-full object-cover" />
+                                      ) : celebration.visual_type === 'icon' && celebration.icon ? (
+                                        <div className="w-5 h-5 text-primary" dangerouslySetInnerHTML={{ __html: celebration.icon.svg_content }} />
+                                      ) : (
+                                        <Icon className="h-5 w-5 text-primary" />
+                                      )}
+                                    </div>
                                     <div className="flex-1">
                                       <div className="font-medium">{celebration.name}</div>
                                       {celebration.age && (
@@ -979,7 +988,16 @@ export const CalendarView = ({
                                             celebration.celebration_type === 'anniversary' ? Heart : Gift;
                                 return (
                                   <div key={celebration.id} className="flex items-center gap-3 p-3 bg-card rounded-lg shadow-sm">
-                                    <Icon className="h-5 w-5 text-primary flex-shrink-0" />
+                                    {/* Photo or Icon */}
+                                    <div className="h-10 w-10 rounded-full overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                                      {celebration.visual_type === 'photo' && celebration.photo_url ? (
+                                        <img src={celebration.photo_url} alt={celebration.name} className="w-full h-full object-cover" />
+                                      ) : celebration.visual_type === 'icon' && celebration.icon ? (
+                                        <div className="w-5 h-5 text-primary" dangerouslySetInnerHTML={{ __html: celebration.icon.svg_content }} />
+                                      ) : (
+                                        <Icon className="h-5 w-5 text-primary" />
+                                      )}
+                                    </div>
                                     <div className="flex-1">
                                       <div className="font-medium">{celebration.name}</div>
                                       {celebration.age && (
@@ -1166,7 +1184,13 @@ export const CalendarView = ({
                                               celebration.celebration_type === 'anniversary' ? Heart : Gift;
                                   return (
                                     <div key={celebration.id} className="flex items-center gap-1 text-xs bg-primary/10 rounded px-1.5 py-0.5">
-                                      <Icon className="h-3 w-3 text-primary flex-shrink-0" />
+                                      {celebration.visual_type === 'photo' && celebration.photo_url ? (
+                                        <img src={celebration.photo_url} alt={celebration.name} className="h-4 w-4 rounded-full object-cover flex-shrink-0" />
+                                      ) : celebration.visual_type === 'icon' && celebration.icon ? (
+                                        <div className="h-3 w-3 text-primary flex-shrink-0" dangerouslySetInnerHTML={{ __html: celebration.icon.svg_content }} />
+                                      ) : (
+                                        <Icon className="h-3 w-3 text-primary flex-shrink-0" />
+                                      )}
                                       <span className="truncate font-medium">{celebration.name}</span>
                                     </div>
                                   );

@@ -22,13 +22,8 @@ export const CelebrationCard = ({ celebration, onClick }: CelebrationCardProps) 
     }
   };
 
-  const getPhotoUrl = () => {
-    if (!celebration.photo_url) return null;
-    const { data } = supabase.storage
-      .from('celebration-photos')
-      .getPublicUrl(celebration.photo_url);
-    return data.publicUrl;
-  };
+  // photo_url is already a full public URL from the upload
+  const photoUrl = celebration.photo_url;
 
   const celebrationDate = celebration.currentYearDate 
     ? new Date(celebration.currentYearDate)
@@ -43,9 +38,9 @@ export const CelebrationCard = ({ celebration, onClick }: CelebrationCardProps) 
         <div className="flex items-start gap-3">
           {/* Visual (photo or icon) */}
           <div className="flex-shrink-0 w-12 h-12 rounded-full overflow-hidden bg-muted flex items-center justify-center">
-            {celebration.visual_type === 'photo' && celebration.photo_url ? (
+            {celebration.visual_type === 'photo' && photoUrl ? (
               <img
-                src={getPhotoUrl() || ''}
+                src={photoUrl}
                 alt={celebration.name}
                 className="w-full h-full object-cover"
               />
