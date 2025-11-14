@@ -240,7 +240,7 @@ export const MemberPersonalListsEnhanced = ({
         )}
       </CardHeader>
       
-      <CardContent className="flex-1 overflow-y-auto component-spacing p-0">
+      <CardContent className="flex-1 overflow-y-auto component-spacing">
         {/* Personal List Section */}
         <div className="component-spacing">
           <h3 className="font-semibold text-base text-foreground border-b pb-2">My Personal Items</h3>

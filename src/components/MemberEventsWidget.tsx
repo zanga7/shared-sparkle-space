@@ -53,7 +53,7 @@ export const MemberEventsWidget = ({
         />
       </CardHeader>
       
-      <CardContent className="flex-1 overflow-y-auto p-0">
+      <CardContent className="flex-1 overflow-y-auto">
         {todaysEvents.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
