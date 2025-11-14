@@ -34,6 +34,7 @@ import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
 import FamilyManagement from "./pages/super-admin/FamilyManagement";
 import PlanManagement from "./pages/super-admin/PlanManagement";
 import ThemesManagement from "./pages/super-admin/ThemesManagement";
+import CelebrationsManagement from "./pages/admin/CelebrationsManagement";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -75,6 +76,7 @@ const App = () => (
             <Route path="rotating-tasks" element={<RotatingTasks />} />
             <Route path="rotation-debugger" element={<RotationDebugger />} />
             <Route path="holidays" element={<HolidayManagement />} />
+            <Route path="celebrations" element={<CelebrationsManagement />} />
           </Route>
 
         <Route path="/super-admin" element={<SuperAdminGuard><SuperAdminLayout /></SuperAdminGuard>}>
