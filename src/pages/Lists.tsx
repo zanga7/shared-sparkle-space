@@ -404,10 +404,10 @@ const Lists = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background px-2 md:px-3 lg:px-6 py-4">
+    <div className="min-h-screen bg-background page-padding">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between section-spacing">
             <div>
               <h1 className="text-3xl font-bold">Lists</h1>
               <p className="text-muted-foreground">Manage your family shopping, camping, and to-do lists</p>
@@ -429,7 +429,7 @@ const Lists = () => {
           </div>
 
           {/* Search and Filters */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 section-spacing">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
@@ -442,7 +442,7 @@ const Lists = () => {
           </div>
 
           {/* Tabs */}
-          <Tabs value={selectedFilter} onValueChange={setSelectedFilter} className="mb-6">
+          <Tabs value={selectedFilter} onValueChange={setSelectedFilter} className="section-spacing">
             <TabsList className="grid w-full h-auto" style={{ gridTemplateColumns: `repeat(${categories.length + 3}, 1fr)` }}>
               <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
               {categories.map((category) => (

@@ -765,7 +765,7 @@ export const CalendarView = ({
         </div>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="card-content-consistent">
         <DragDropContext onDragEnd={handleDragEnd}>
           {viewMode === 'today' ?
         // Today View - Single Row Member Columns Layout

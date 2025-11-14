@@ -113,7 +113,7 @@ export const MemberDashboard = ({
   }, [emblaApi]);
 
   const renderMemberHeader = () => (
-    <div className="mb-6">
+    <div className="section-spacing">
       <div className="flex items-center gap-4">
         <UserAvatar
           name={member.display_name}
@@ -222,7 +222,7 @@ export const MemberDashboard = ({
     const columnPadding = isMobile ? 'px-2' : 'px-3';
     
     return (
-      <div className="w-full mx-auto px-4">
+      <div className="w-full mx-auto page-padding">
         {renderMemberHeader()}
         
         {/* Mobile/Tablet Carousel */}
@@ -298,10 +298,10 @@ export const MemberDashboard = ({
 
   // Desktop Layout - Full Width
   return (
-    <div className="w-full mx-auto px-4">
+    <div className="w-full mx-auto page-padding">
       {renderMemberHeader()}
       
-      <div className="grid grid-cols-4 gap-6 h-[calc(100vh-250px)]">
+      <div className="grid grid-cols-4 widget-gap h-[calc(100vh-250px)]">
         {widgets.map((widget, index) => (
           <div key={index} className="min-h-0 h-full">
             {widget}
