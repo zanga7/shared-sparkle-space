@@ -13,6 +13,7 @@ interface DashboardSettings {
   dashboard_mode_enabled: boolean;
   auto_return_enabled: boolean;
   auto_return_timeout_minutes: number;
+  require_parent_pin_for_dashboard: boolean;
 }
 
 export const DashboardModeSettings = React.memo(() => {
@@ -20,7 +21,8 @@ export const DashboardModeSettings = React.memo(() => {
   const [settings, setSettings] = useState<DashboardSettings>({
     dashboard_mode_enabled: false,
     auto_return_enabled: true,
-    auto_return_timeout_minutes: 10
+    auto_return_timeout_minutes: 10,
+    require_parent_pin_for_dashboard: false
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -38,7 +40,7 @@ export const DashboardModeSettings = React.memo(() => {
     try {
       const { data, error } = await supabase
         .from('household_settings')
-        .select('dashboard_mode_enabled, auto_return_enabled, auto_return_timeout_minutes')
+        .select('dashboard_mode_enabled, auto_return_enabled, auto_return_timeout_minutes, require_parent_pin_for_dashboard')
         .eq('family_id', profile.family_id)
         .single();
 
@@ -46,7 +48,8 @@ export const DashboardModeSettings = React.memo(() => {
         setSettings({
           dashboard_mode_enabled: data.dashboard_mode_enabled || false,
           auto_return_enabled: data.auto_return_enabled !== false,
-          auto_return_timeout_minutes: data.auto_return_timeout_minutes || 10
+          auto_return_timeout_minutes: data.auto_return_timeout_minutes || 10,
+          require_parent_pin_for_dashboard: data.require_parent_pin_for_dashboard || false
         });
       }
     } catch (error) {
@@ -67,7 +70,8 @@ export const DashboardModeSettings = React.memo(() => {
           family_id: profile.family_id,
           dashboard_mode_enabled: settings.dashboard_mode_enabled,
           auto_return_enabled: settings.auto_return_enabled,
-          auto_return_timeout_minutes: settings.auto_return_timeout_minutes
+          auto_return_timeout_minutes: settings.auto_return_timeout_minutes,
+          require_parent_pin_for_dashboard: settings.require_parent_pin_for_dashboard
         }, {
           onConflict: 'family_id'
         });
@@ -135,6 +139,22 @@ export const DashboardModeSettings = React.memo(() => {
               checked={settings.dashboard_mode_enabled}
               onCheckedChange={(checked) => 
                 setSettings(prev => ({ ...prev, dashboard_mode_enabled: checked }))
+              }
+            />
+          </div>
+
+          {/* Parent PIN Requirement */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label className="text-base font-medium">Require Parent PIN to Access Dashboard</Label>
+              <p className="text-sm text-muted-foreground">
+                When enabled, users must enter a parent PIN to access the dashboard
+              </p>
+            </div>
+            <Switch
+              checked={settings.require_parent_pin_for_dashboard}
+              onCheckedChange={(checked) => 
+                setSettings(prev => ({ ...prev, require_parent_pin_for_dashboard: checked }))
               }
             />
           </div>
