@@ -199,7 +199,7 @@ export const RegionSelector = ({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0"
+                            className="h-6 w-6 p-0 flex-shrink-0"
                             onClick={() => toggleCountryExpansion(country.countryCode)}
                           >
                             {isExpanded ? (
@@ -209,21 +209,36 @@ export const RegionSelector = ({
                             )}
                           </Button>
                         )}
+                        {!hasSubdivisions && <div className="w-6 flex-shrink-0" />}
                         <Button
                           variant="ghost"
                           className="flex-1 justify-start gap-2 h-auto py-2"
                           onClick={() => handleSelectCountry(country)}
                         >
                           <span className="text-2xl">{getFlagEmoji(country.countryCode)}</span>
-                          <span className="font-medium">{country.name}</span>
-                          <Badge variant="secondary" className="ml-auto">
-                            {country.countryCode}
-                          </Badge>
-                          {isSelected && (
-                            <Badge variant="default" className="ml-2">
-                              Selected
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">{country.name}</span>
+                            {hasSubdivisions && (
+                              <span className="text-xs text-muted-foreground">
+                                Click arrow to view states/provinces
+                              </span>
+                            )}
+                          </div>
+                          <div className="ml-auto flex items-center gap-2">
+                            {hasSubdivisions && (
+                              <Badge variant="outline" className="bg-primary/10">
+                                Has States
+                              </Badge>
+                            )}
+                            <Badge variant="secondary">
+                              {country.countryCode}
                             </Badge>
-                          )}
+                            {isSelected && (
+                              <Badge variant="default">
+                                Selected
+                              </Badge>
+                            )}
+                          </div>
                         </Button>
                       </div>
 
