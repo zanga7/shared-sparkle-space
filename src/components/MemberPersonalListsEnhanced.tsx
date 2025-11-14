@@ -242,7 +242,7 @@ export const MemberPersonalListsEnhanced = ({
       
       <CardContent className="flex-1 overflow-y-auto component-spacing p-0">
         {/* Personal List Section */}
-        <div className="component-spacing px-3">
+        <div className="component-spacing">
           <h3 className="font-semibold text-base text-foreground border-b pb-2">My Personal Items</h3>
           {personalListItems.length === 0 && !isAddingItem ? (
             <div className="text-center py-4 text-muted-foreground">
@@ -361,7 +361,7 @@ export const MemberPersonalListsEnhanced = ({
         </div>
 
         {/* Assigned Items Section */}
-        <div className="component-spacing px-3">
+        <div className="component-spacing">
           <h3 className="font-semibold text-base text-foreground border-b pb-2">Assigned to Me</h3>
           {assignedListItems.length === 0 ? (
             <div className="text-center py-4 text-muted-foreground">

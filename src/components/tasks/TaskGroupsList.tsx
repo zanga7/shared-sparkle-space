@@ -98,7 +98,7 @@ export const TaskGroupsList = ({
             <span>{groupTitle}</span>
           </div>
         </AccordionTrigger>
-        <AccordionContent forceMount className="px-3 pb-3 pt-1">
+        <AccordionContent forceMount className="pb-3 pt-1">
           <Droppable droppableId={droppableId}>
             {(provided, snapshot) => (
               <div

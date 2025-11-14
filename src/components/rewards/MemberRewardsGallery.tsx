@@ -201,7 +201,7 @@ export function MemberRewardsGallery({ member }: MemberRewardsGalleryProps) {
     <Card className="h-full flex flex-col" style={colorStyles.bg10}>
       <div className="p-6 border-b">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-lg font-semibold flex items-center gap-2" style={colorStyles.text}>
+          <h3 className="text-xl font-semibold flex items-center gap-2" style={colorStyles.text}>
             <Gift className="w-6 h-6" />
             Rewards
           </h3>
