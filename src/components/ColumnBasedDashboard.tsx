@@ -77,7 +77,7 @@ const ColumnBasedDashboard = () => {
   const [selectedTaskGroup, setSelectedTaskGroup] = useState<string | null>(null);
   
   // Dashboard mode state using hook
-  const { dashboardModeEnabled } = useDashboardMode();
+  const { dashboardModeEnabled, requireParentPin } = useDashboardMode();
   const dashboardMode = dashboardModeEnabled;
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [switchDialogOpen, setSwitchDialogOpen] = useState(false);

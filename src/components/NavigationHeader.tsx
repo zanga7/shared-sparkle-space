@@ -51,7 +51,7 @@ export function NavigationHeader({
   viewMode = 'everyone'
 }: NavigationHeaderProps) {
   const activeMember = familyMembers.find(m => m.id === activeMemberId);
-  const { dashboardModeEnabled } = useDashboardMode();
+  const { dashboardModeEnabled, requireParentPin } = useDashboardMode();
 
   return (
     <header className="w-full border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
@@ -92,7 +92,7 @@ export function NavigationHeader({
 
         {/* Member Management & Settings */}
         <div className="flex items-center space-x-1 sm:space-x-2 flex-1 justify-end mr-12 overflow-x-auto">
-          {dashboardMode && activeMember && activeMember.require_pin_to_complete_tasks ? (
+          {dashboardMode && activeMember && requireParentPin ? (
             <>
               {/* Dashboard Mode with PIN: Active Member + Member Switcher */}
               <ActiveMemberChip activeMember={activeMember} />
