@@ -62,8 +62,8 @@ export const AddCelebrationDialog = ({ open, onOpenChange, familyId, profileId }
           </div>
           <div><Label>Year (Optional)</Label><Input type="number" value={formData.year_specific} onChange={(e) => setFormData(p => ({ ...p, year_specific: e.target.value }))} placeholder="e.g., 1990" /><p className="text-xs text-muted-foreground mt-1">For birthdays, helps calculate age</p></div>
           <div><Label>Visual *</Label><RadioGroup value={formData.visual_type} onValueChange={(v: any) => setFormData(p => ({ ...p, visual_type: v }))} className="flex gap-4"><div className="flex items-center gap-2"><RadioGroupItem value="icon" id="icon" /><label htmlFor="icon">Icon</label></div><div className="flex items-center gap-2"><RadioGroupItem value="photo" id="photo" /><label htmlFor="photo">Photo</label></div></RadioGroup></div>
-          {formData.visual_type === 'photo' && <div><Label>Photo *</Label><ImageUpload value={uploadedPhotoPath} onChange={setUploadedPhotoPath} bucket="celebration-photos" path={`${familyId}/`} /></div>}
-          {formData.visual_type === 'icon' && <div><Label>Icon *</Label><CelebrationIconPicker selectedIconId={formData.icon_id} onSelectIcon={(id) => setFormData(p => ({ ...p, icon_id: id }))} /></div>}
+          {formData.visual_type === 'photo' && <div><Label>Photo *</Label><ImageUpload value={uploadedPhotoPath} onChange={(url) => setUploadedPhotoPath(url || undefined)} /></div>}
+          {formData.visual_type === 'icon' && <div><Label>Icon *</Label><CelebrationIconPicker selectedIconId={formData.icon_id} onIconSelect={(id) => setFormData(p => ({ ...p, icon_id: id }))} /></div>}
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" disabled={createMutation.isPending}>{createMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Add</Button>

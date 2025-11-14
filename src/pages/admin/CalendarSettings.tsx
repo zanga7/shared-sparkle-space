@@ -10,8 +10,6 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Calendar, Settings, ExternalLink, RefreshCw, Trash2, Shield } from 'lucide-react';
 import { format } from 'date-fns';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Profile } from '@/types/task';
 import { TokenEncryptionStatus } from '@/components/security/TokenEncryptionStatus';
