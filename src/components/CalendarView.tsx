@@ -591,20 +591,22 @@ export const CalendarView = ({
   return <Card className="w-full">
       <CardHeader>
         <div className="flex flex-col gap-4">
-          {/* Header Row */}
-          <div className="flex items-center justify-between">
-            
+          {/* Header Row with View Mode, Navigation, and Filters */}
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               {/* View Mode Toggle */}
               <div className="flex border rounded-md">
-                <Button variant={viewMode === 'today' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('today')} className="rounded-r-none">
+                <Button variant={viewMode === 'today' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('today')} className="rounded-r-none gap-2">
                   <Sun className="h-4 w-4" />
+                  <span className="hidden sm:inline">Day</span>
                 </Button>
-                <Button variant={viewMode === 'week' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('week')} className="rounded-none">
+                <Button variant={viewMode === 'week' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('week')} className="rounded-none gap-2">
                   <Rows3 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Week</span>
                 </Button>
-                <Button variant={viewMode === 'month' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('month')} className="rounded-l-none">
+                <Button variant={viewMode === 'month' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('month')} className="rounded-l-none gap-2">
                   <Grid3X3 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Month</span>
                 </Button>
               </div>
 
@@ -621,22 +623,14 @@ export const CalendarView = ({
                 </Button>
               </div>
             </div>
-          </div>
 
-          {/* Filters & Analytics */}
-          <div className="flex flex-col gap-3">
             {/* Filters */}
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Filters:</span>
-              </div>
-              
+            <div className="flex flex-wrap items-center gap-2 ml-auto">
               <Select value={filters.assignedTo} onValueChange={value => setFilters(prev => ({
               ...prev,
               assignedTo: value
             }))}>
-                <SelectTrigger className="w-32 h-8">
+                <SelectTrigger className="w-28 h-8 text-xs">
                   <SelectValue placeholder="Member" />
                 </SelectTrigger>
                 <SelectContent>
@@ -651,7 +645,7 @@ export const CalendarView = ({
               ...prev,
               status: value
             }))}>
-                <SelectTrigger className="w-32 h-8">
+                <SelectTrigger className="w-28 h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -666,7 +660,7 @@ export const CalendarView = ({
               ...prev,
               taskType: value
             }))}>
-                <SelectTrigger className="w-32 h-8">
+                <SelectTrigger className="w-28 h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -682,11 +676,12 @@ export const CalendarView = ({
                   checked={showTasks}
                   onCheckedChange={(checked) => setShowTasks(checked as boolean)}
                 />
-                <Label htmlFor="show-tasks" className="text-sm cursor-pointer">
-                  Show Tasks
+                <Label htmlFor="show-tasks" className="text-xs cursor-pointer whitespace-nowrap">
+                  Tasks
                 </Label>
               </div>
             </div>
+          </div>
 
 
           {/* Debug Panel */}
@@ -758,11 +753,10 @@ export const CalendarView = ({
                         </div>;
                   };
                   return <MemberProgress key={member.name} />;
-                })}
+                 })}
                   </div>
                 </CardContent>
               </Card>}
-          </div>
         </div>
         
         <div className="text-lg font-semibold">
