@@ -10,7 +10,14 @@
 - **Fix**: Removed direct SELECT access to sensitive fields; enforced use of `get_family_profiles_safe()` function
 - **Status**: ✅ RESOLVED
 
-#### 2. Database Function Security Hardening
+#### 2. Input Validation for Authentication
+- **Issue**: Critical authentication edge functions lacked structured input validation
+- **Risk**: Unvalidated inputs could lead to injection attacks or application errors
+- **Fix**: Implemented zod validation schemas in `secure-pin-auth` and `set-child-pin` edge functions
+- **Validation**: profileId (UUID format), pin (length 1-100), pinType (enum: numeric/icon)
+- **Status**: ✅ RESOLVED
+
+#### 3. Database Function Security Hardening
 - **Issue**: Database functions were missing `SET search_path TO 'public'` security setting
 - **Risk**: SQL injection via search path manipulation
 - **Fix**: All database functions now have proper `SET search_path TO 'public'` configuration

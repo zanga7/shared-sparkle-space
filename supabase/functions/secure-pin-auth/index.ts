@@ -1,10 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema
+const pinAuthSchema = z.object({
+  profileId: z.string().uuid({ message: 'Invalid profile ID format' }),
+  pin: z.string()
+    .min(1, { message: 'PIN cannot be empty' })
+    .max(100, { message: 'PIN is too long' }),
+  pinType: z.enum(['numeric', 'icon']).default('numeric')
+});
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -18,17 +28,25 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { profileId, pin, pinType = 'numeric' } = await req.json();
+    // Parse and validate request body
+    const body = await req.json();
+    const validationResult = pinAuthSchema.safeParse(body);
 
-    if (!profileId || !pin) {
+    if (!validationResult.success) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Missing profileId or pin' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Invalid input',
+          details: validationResult.error.errors.map(e => e.message).join(', ')
+        }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
     }
+
+    const { profileId, pin, pinType } = validationResult.data;
 
     // Validate PIN format based on type
     if (pinType === 'numeric') {

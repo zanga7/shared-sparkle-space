@@ -1,10 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema
+const setPinSchema = z.object({
+  profileId: z.string().uuid({ message: 'Invalid profile ID format' }),
+  pin: z.string()
+    .min(1, { message: 'PIN cannot be empty' })
+    .max(100, { message: 'PIN is too long' }),
+  pinType: z.enum(['numeric', 'icon']).default('numeric')
+});
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -35,28 +45,29 @@ serve(async (req) => {
       }
     );
 
+    // Parse and validate request body
     const requestBody = await req.json();
     console.log('Request body received:', JSON.stringify(requestBody, null, 2));
     
-    const { profileId, pin, pinType = 'numeric' } = requestBody;
+    const validationResult = setPinSchema.safeParse(requestBody);
 
-    console.log('Extracted params:', { profileId, pin: pin ? '[REDACTED]' : 'undefined', pinType });
-
-    if (!profileId || !pin) {
-      console.error('Missing required parameters:', { 
-        hasProfileId: !!profileId, 
-        hasPin: !!pin,
-        profileId,
-        pinLength: pin ? pin.length : 0
-      });
+    if (!validationResult.success) {
+      console.error('Validation failed:', validationResult.error.errors);
       return new Response(
-        JSON.stringify({ success: false, error: 'Missing profileId or pin' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Invalid input',
+          details: validationResult.error.errors.map(e => e.message).join(', ')
+        }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
     }
+
+    const { profileId, pin, pinType } = validationResult.data;
+    console.log('Validated params:', { profileId, pin: '[REDACTED]', pinType });
 
     console.log('Calling set_child_pin function with profileId:', profileId);
     
