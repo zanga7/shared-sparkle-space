@@ -9,6 +9,7 @@ import {
   Image,
   ArrowRight 
 } from 'lucide-react';
+import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
 
 const features = [
   {
@@ -43,9 +44,11 @@ const features = [
 
 export default function FeatureHighlights() {
   const navigate = useNavigate();
+  const { completeOnboarding } = useOnboardingStatus();
 
-  const handleFinish = () => {
-    navigate('/onboarding/complete');
+  const handleFinish = async () => {
+    await completeOnboarding();
+    navigate('/');
   };
 
   return (
@@ -89,24 +92,20 @@ export default function FeatureHighlights() {
           ))}
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-between pt-4 border-t">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-6 border-t">
+          <Button 
+            size="lg"
+            onClick={handleFinish}
+            className="text-lg px-8"
+          >
+            Go to Family Dashboard
+          </Button>
           <Button 
             variant="ghost" 
-            onClick={handleFinish}
+            onClick={() => navigate('/onboarding/celebrations')}
           >
-            Skip Features
+            Back
           </Button>
-          <div className="flex gap-4">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/onboarding/celebrations')}
-            >
-              Back
-            </Button>
-            <Button onClick={handleFinish}>
-              Finish Setup
-            </Button>
-          </div>
         </div>
       </Card>
     </div>
