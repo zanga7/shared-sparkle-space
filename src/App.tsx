@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ColorPaletteProvider } from "@/contexts/ColorPaletteContext";
+import { OnboardingRedirect } from "@/components/OnboardingRedirect";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ChildAuth from "./pages/ChildAuth";
@@ -34,6 +35,11 @@ import FamilyManagement from "./pages/super-admin/FamilyManagement";
 import PlanManagement from "./pages/super-admin/PlanManagement";
 import ThemesManagement from "./pages/super-admin/ThemesManagement";
 import CelebrationsManagement from "./pages/admin/CelebrationsManagement";
+import Welcome from "./pages/onboarding/Welcome";
+import CreateCrew from "./pages/onboarding/CreateCrew";
+import AddCelebrations from "./pages/onboarding/AddCelebrations";
+import FeatureHighlights from "./pages/onboarding/FeatureHighlights";
+import Complete from "./pages/onboarding/Complete";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,13 +61,21 @@ const App = () => (
         <PWAUpdatePrompt />
         <NetworkStatusIndicator />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
+          <OnboardingRedirect>
+            <Routes>
+              <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/child-auth" element={<ChildAuth />} />
             <Route path="/rewards" element={<Rewards />} />
             <Route path="/lists" element={<Lists />} />
             <Route path="/screensaver-preview" element={<ScreenSaverPreview />} />
+            
+            {/* Onboarding Routes */}
+            <Route path="/onboarding/welcome" element={<Welcome />} />
+            <Route path="/onboarding/crew" element={<CreateCrew />} />
+            <Route path="/onboarding/celebrations" element={<AddCelebrations />} />
+            <Route path="/onboarding/features" element={<FeatureHighlights />} />
+            <Route path="/onboarding/complete" element={<Complete />} />
             
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
@@ -86,6 +100,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </OnboardingRedirect>
         </BrowserRouter>
       </TooltipProvider>
       </ColorPaletteProvider>
