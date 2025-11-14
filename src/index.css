@@ -2,12 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* ========================================
+   DESIGN SYSTEM - SPACING TOKENS
+   Core spacing values that should be used throughout the app
+   
+   SPACING SYSTEM GUIDE:
+   Use these classes consistently:
+   
+   - page-padding: All page-level containers
+   - column-card-header: Task columns, member cards, calendar cards
+   - column-card-content: Content area with p-0 (content manages spacing)
+   - column-content-padding: Internal padding for column content areas
+   - grid-card-header: Reward cards, list preview cards
+   - grid-card-content: Content for grid-based cards
+   - component-spacing: Vertical spacing between major sections
+   - section-spacing: Margin bottom for sections
+   - column-gap: Gap between columns in column layouts
+   - widget-gap: Gap between widgets in grids
+   - grid-gap: Gap between items in grids
+   
+   PATTERN:
+   Column/Dashboard Cards: Tight padding (12px), content manages spacing
+   Grid/Gallery Cards: Standard responsive padding (12-24px)
+   ======================================== */
 
 @layer base {
   :root {
+    /* Base spacing scale (in rem) */
+    --space-1: 0.25rem;   /* 4px */
+    --space-2: 0.5rem;    /* 8px */
+    --space-3: 0.75rem;   /* 12px */
+    --space-4: 1rem;      /* 16px */
+    --space-5: 1.25rem;   /* 20px */
+    --space-6: 1.5rem;    /* 24px */
+    --space-8: 2rem;      /* 32px */
+    
+    /* Semantic spacing tokens */
+    --page-padding-mobile: var(--space-2);      /* 8px */
+    --page-padding-tablet: var(--space-3);      /* 12px */
+    --page-padding-desktop: var(--space-6);     /* 24px */
+    
+    --card-padding-mobile: var(--space-3);      /* 12px */
+    --card-padding-tablet: var(--space-4);      /* 16px */
+    --card-padding-desktop: var(--space-6);     /* 24px */
+    
+    --column-gap: var(--space-4);               /* 16px */
+    --component-gap: var(--space-4);            /* 16px */
+    --section-margin: var(--space-4);           /* 16px mobile */
+    --section-margin-desktop: var(--space-6);   /* 24px desktop */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
 
@@ -193,36 +235,55 @@ All colors MUST be HSL.
 }
 
 /* ========================================
-   GLOBAL SPACING SYSTEM
-   Consistent spacing across all pages and components
+   COMPONENT-SPECIFIC SPACING PATTERNS
+   Standard patterns for different component types
    ======================================== */
 
-/* Page-level container padding - matches main dashboard */
+/* Page-level containers */
 .page-padding {
-  @apply px-2 md:px-3 lg:px-6 py-4 sm:py-6;
+  @apply px-2 md:px-3 lg:px-6 py-4 md:py-6;
 }
 
-/* Column and grid gaps */
-.column-gap {
-  @apply gap-4 md:gap-6;
+/* Column cards (task columns, member cards, etc.) */
+.column-card-header {
+  @apply p-3 pb-3;
 }
 
-/* Component spacing within sections */
+.column-card-content {
+  @apply p-0;  /* Zero padding, content handles its own spacing */
+}
+
+.column-content-padding {
+  @apply px-3 py-2;  /* Consistent internal content padding */
+}
+
+/* List/Grid cards (reward cards, list cards, etc.) */
+.grid-card-header {
+  @apply p-3 md:p-4;
+}
+
+.grid-card-content {
+  @apply p-3 md:p-4 pt-0;
+}
+
+/* Spacing between components */
 .component-spacing {
   @apply space-y-4 md:space-y-6;
 }
 
-/* Card content consistent padding override */
-.card-content-consistent {
-  @apply p-4 md:p-6;
+.section-spacing {
+  @apply mb-4 md:mb-6;
 }
 
-/* Widget/Card gap for grids */
+/* Grid and flex gaps */
+.column-gap {
+  @apply gap-4 md:gap-6;
+}
+
 .widget-gap {
   @apply gap-4 md:gap-6;
 }
 
-/* Section margin bottom */
-.section-spacing {
-  @apply mb-4 md:mb-6;
+.grid-gap {
+  @apply gap-4;
 }

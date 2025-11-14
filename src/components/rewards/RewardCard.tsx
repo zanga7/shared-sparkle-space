@@ -28,7 +28,7 @@ export function RewardCard({ reward, userBalance, canRequest, onRequest, isReque
         </div>
       )}
       
-      <CardHeader className="flex-shrink-0">
+      <CardHeader className="grid-card-header flex-shrink-0">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-lg leading-tight">{reward.title}</CardTitle>
           <Badge variant="secondary" className="flex items-center gap-1 whitespace-nowrap">
@@ -43,7 +43,7 @@ export function RewardCard({ reward, userBalance, canRequest, onRequest, isReque
         )}
       </CardHeader>
 
-      <CardContent className="flex-grow">
+      <CardContent className="grid-card-content flex-grow">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Gift className="w-4 h-4" />
           <span>
@@ -58,7 +58,7 @@ export function RewardCard({ reward, userBalance, canRequest, onRequest, isReque
       </CardContent>
 
       <CardFooter className="flex-shrink-0">
-        <Button 
+        <Button
           onClick={onRequest}
           disabled={!isEligible || isRequesting}
           className="w-full"

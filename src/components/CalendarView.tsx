@@ -765,11 +765,11 @@ export const CalendarView = ({
         </div>
       </CardHeader>
 
-      <CardContent className="card-content-consistent">
+      <CardContent className="column-card-content">
         <DragDropContext onDragEnd={handleDragEnd}>
           {viewMode === 'today' ?
         // Today View - Single Row Member Columns Layout
-        <div className="space-y-4">
+        <div className="column-content-padding space-y-4">
               {/* Mobile: Single column carousel */}
               <div className="block md:hidden">
                 <div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide">
