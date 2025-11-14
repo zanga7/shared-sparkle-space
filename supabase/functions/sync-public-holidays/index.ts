@@ -65,10 +65,20 @@ Deno.serve(async (req) => {
       return isNational || isForSubdivision;
     });
 
-    console.log(`Filtered to ${filteredHolidays.length} holidays for ${region_code}`);
+    // Deduplicate holidays by date and name (to avoid showing same holiday twice)
+    const uniqueHolidays = Array.from(
+      new Map(
+        filteredHolidays.map(holiday => [
+          `${holiday.date}-${holiday.name}`,
+          holiday
+        ])
+      ).values()
+    );
+
+    console.log(`Filtered to ${uniqueHolidays.length} holidays for ${region_code}`);
 
     // Insert or update holidays in cache
-    const holidaysToInsert = filteredHolidays.map(holiday => ({
+    const holidaysToInsert = uniqueHolidays.map(holiday => ({
       region_code: region_code,
       holiday_date: holiday.date,
       holiday_name: holiday.name,
