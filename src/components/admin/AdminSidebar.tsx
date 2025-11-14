@@ -30,7 +30,8 @@ import {
   Monitor,
   Smartphone,
   LogOut,
-  GraduationCap
+  GraduationCap,
+  Cake
 } from "lucide-react";
 
 const adminMenuItems = [
@@ -41,6 +42,7 @@ const adminMenuItems = [
   { title: "Rotation Debugger", url: "/admin/rotation-debugger", icon: Database },
   { title: "Rewards", url: "/admin/rewards", icon: Gift },
   { title: "Reward Approvals", url: "/admin/reward-approvals", icon: ClipboardCheck },
+  { title: "Celebrations", url: "/admin/celebrations", icon: Cake },
   { title: "Calendar Settings", url: "/admin/calendar-settings", icon: Calendar },
   { title: "Holiday Management", url: "/admin/holidays", icon: GraduationCap },
   { title: "Screen Saver", url: "/admin/screensaver", icon: Monitor },

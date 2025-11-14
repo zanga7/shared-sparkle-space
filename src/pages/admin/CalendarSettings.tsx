@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { CalendarSecurityMonitor } from '@/components/admin/CalendarSecurityMonitor';
 import { TokenSecurityManager } from '@/components/admin/TokenSecurityManager';
+import { PublicHolidaySettings } from '@/components/admin/PublicHolidaySettings';
 
 const CalendarSettings = () => {
   const { user } = useAuth();
@@ -476,6 +477,9 @@ const CalendarSettings = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Public Holiday Settings */}
+      {profile && <PublicHolidaySettings familyId={profile.family_id} />}
 
       {/* Token Security Status */}
       <TokenEncryptionStatus />
