@@ -1558,7 +1558,7 @@ const ColumnBasedDashboard = () => {
       />
 
       {/* Main Content */}
-      <div className="w-full px-2 md:px-3 lg:px-6 py-4 sm:py-6">
+      <div className="w-full page-padding">
         {viewMode === 'member' && selectedMemberFilter ? (
           /* Member-specific single dashboard page */
           (() => {
@@ -1632,14 +1632,14 @@ const ColumnBasedDashboard = () => {
                              </CardHeader>
                              <Droppable droppableId="unassigned">
                                {(provided, snapshot) => (
-                                 <CardContent 
-                                   className={cn(
-                                     "space-y-3 transition-colors",
-                                     snapshot.isDraggingOver && "bg-accent/50"
-                                   )}
-                                   ref={provided.innerRef}
-                                   {...provided.droppableProps}
-                                 >
+                                <CardContent 
+                                  className={cn(
+                                    "component-spacing transition-colors",
+                                    snapshot.isDraggingOver && "bg-accent/50"
+                                  )}
+                                  ref={provided.innerRef}
+                                  {...provided.droppableProps}
+                                >
                                    <div className="space-y-2 mb-4 min-h-[100px]">
                                      {tasksByMember.get('unassigned')?.map((task, index) => (
                                        <Draggable key={task.id} draggableId={task.id} index={index}>
@@ -1719,14 +1719,14 @@ const ColumnBasedDashboard = () => {
                            </CardHeader>
                            <Droppable droppableId="unassigned">
                              {(provided, snapshot) => (
-                               <CardContent 
-                                 className={cn(
-                                   "space-y-3 transition-colors",
-                                   snapshot.isDraggingOver && "bg-accent/50"
-                                 )}
-                                 ref={provided.innerRef}
-                                 {...provided.droppableProps}
-                               >
+                              <CardContent 
+                                className={cn(
+                                  "component-spacing transition-colors",
+                                  snapshot.isDraggingOver && "bg-accent/50"
+                                )}
+                                ref={provided.innerRef}
+                                {...provided.droppableProps}
+                              >
                                  <div className="space-y-2 mb-4 min-h-[100px]">
                                    {tasksByMember.get('unassigned')?.map((task, index) => (
                                      <Draggable key={task.id} draggableId={task.id} index={index}>
@@ -1811,7 +1811,7 @@ const ColumnBasedDashboard = () => {
                               Tasks ({pendingTasks.length} pending, {completedTasks.length} completed)
                             </CardTitle>
                           </CardHeader>
-                          <CardContent className="space-y-3">
+                          <CardContent className="component-spacing">
                             {pendingTasks.length === 0 && completedTasks.length === 0 ? (
                               <div className="text-center py-8 text-muted-foreground">
                                 <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />

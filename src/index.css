@@ -191,3 +191,38 @@ All colors MUST be HSL.
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* ========================================
+   GLOBAL SPACING SYSTEM
+   Consistent spacing across all pages and components
+   ======================================== */
+
+/* Page-level container padding - matches main dashboard */
+.page-padding {
+  @apply px-2 md:px-3 lg:px-6 py-4 sm:py-6;
+}
+
+/* Column and grid gaps */
+.column-gap {
+  @apply gap-4 md:gap-6;
+}
+
+/* Component spacing within sections */
+.component-spacing {
+  @apply space-y-4 md:space-y-6;
+}
+
+/* Card content consistent padding override */
+.card-content-consistent {
+  @apply p-4 md:p-6;
+}
+
+/* Widget/Card gap for grids */
+.widget-gap {
+  @apply gap-4 md:gap-6;
+}
+
+/* Section margin bottom */
+.section-spacing {
+  @apply mb-4 md:mb-6;
+}
