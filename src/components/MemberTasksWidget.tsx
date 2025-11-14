@@ -201,7 +201,15 @@ export const MemberTasksWidget = ({
         </CardTitle>
         
         <div className="space-y-2">
-          <Progress value={progressPercentage} className="h-2" />
+          <Progress 
+            value={progressPercentage} 
+            className="h-2" 
+            style={{ 
+              backgroundColor: 'hsl(var(--secondary))' 
+            }}
+            indicatorClassName="transition-all"
+            indicatorStyle={colorStyles.bg}
+          />
         </div>
         
         <AddButton 

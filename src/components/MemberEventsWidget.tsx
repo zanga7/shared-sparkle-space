@@ -55,12 +55,12 @@ export const MemberEventsWidget = ({
       
       <CardContent className="flex-1 overflow-y-auto p-0">
         {todaysEvents.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground px-3">
+          <div className="text-center py-8 text-muted-foreground">
             <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No events scheduled for today</p>
           </div>
         ) : (
-          <div className="space-y-3 px-3">
+          <div className="space-y-3">
             {todaysEvents.map((event) => (
               <div 
                 key={event.id} 
