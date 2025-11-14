@@ -10,7 +10,7 @@ export const useCelebrations = (familyId?: string) => {
       if (!familyId) return [];
 
       const { data, error } = await supabase
-        .from('celebrations')
+        .from('celebrations' as any)
         .select(`
           *,
           icon:avatar_icons(id, name, svg_content)
@@ -49,7 +49,7 @@ export const useCelebrationIcons = () => {
     queryKey: ['celebration-icons'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('avatar_icons')
+        .from('avatar_icons' as any)
         .select('*')
         .eq('icon_type', 'celebration')
         .order('name');

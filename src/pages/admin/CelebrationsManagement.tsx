@@ -53,7 +53,7 @@ export default function CelebrationsManagement() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('celebrations')
+        .from('celebrations' as any)
         .delete()
         .eq('id', id);
       if (error) throw error;

@@ -31,7 +31,7 @@ export const AddCelebrationDialog = ({ open, onOpenChange, familyId, profileId }
   const createMutation = useMutation({
     mutationFn: async () => {
       const celebrationDate = `2000-${formData.month}-${formData.day}`;
-      const { error } = await supabase.from('celebrations').insert({
+      const { error } = await supabase.from('celebrations' as any).insert({
         family_id: familyId, created_by: profileId, name: formData.name,
         celebration_type: formData.celebration_type, celebration_date: celebrationDate,
         year_specific: formData.year_specific ? parseInt(formData.year_specific) : null,
