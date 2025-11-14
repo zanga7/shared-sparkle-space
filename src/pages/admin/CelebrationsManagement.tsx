@@ -6,11 +6,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AddCelebrationDialog } from '@/components/celebrations/AddCelebrationDialog';
+import { EditCelebrationDialog } from '@/components/celebrations/EditCelebrationDialog';
 import { CelebrationCard } from '@/components/celebrations/CelebrationCard';
-import { Plus, Search, Loader2, Trash2 } from 'lucide-react';
+import { PublicHolidaySettings } from '@/components/admin/PublicHolidaySettings';
+import { Plus, Search, Loader2, Trash2, Edit, PartyPopper, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { Celebration } from '@/types/celebration';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +29,7 @@ import {
 export default function CelebrationsManagement() {
   const { user } = useAuth();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingCelebration, setEditingCelebration] = useState<Celebration | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -86,33 +91,50 @@ export default function CelebrationsManagement() {
 
   return (
     <div className="page-padding component-spacing">
-      <Card>
-        <CardHeader className="grid-card-header">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Celebrations</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Manage birthdays, anniversaries, and special occasions
-              </p>
-            </div>
-            <Button onClick={() => setShowAddDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Celebration
-            </Button>
-          </div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Celebrations & Holidays</h1>
+          <p className="text-muted-foreground">
+            Manage birthdays, anniversaries, and public holidays
+          </p>
+        </div>
+      </div>
 
-          <div className="relative mt-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search celebrations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </CardHeader>
+      <Tabs defaultValue="celebrations" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="celebrations" className="gap-2">
+            <PartyPopper className="h-4 w-4" />
+            Celebrations
+          </TabsTrigger>
+          <TabsTrigger value="holidays" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            Public Holidays
+          </TabsTrigger>
+        </TabsList>
 
-        <CardContent className="grid-card-content">
+        <TabsContent value="celebrations" className="space-y-4">
+          <Card>
+            <CardHeader className="grid-card-header">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search celebrations..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <Button onClick={() => setShowAddDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Celebration
+                </Button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="grid-card-content">
           {!filteredCelebrations || filteredCelebrations.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               {searchQuery ? 'No celebrations found' : 'No celebrations added yet'}
@@ -129,6 +151,15 @@ export default function CelebrationsManagement() {
                           <CelebrationCard celebration={celebration} />
                         </div>
                         <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingCelebration(celebration)}
+                          className="gap-1 flex-shrink-0"
+                        >
+                          <Edit className="h-3 w-3" />
+                          Edit
+                        </Button>
+                        <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => setDeleteId(celebration.id)}
@@ -143,16 +174,33 @@ export default function CelebrationsManagement() {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="holidays">
+          {profile && <PublicHolidaySettings familyId={profile.family_id} />}
+        </TabsContent>
+      </Tabs>
 
       {profile && (
-        <AddCelebrationDialog
-          open={showAddDialog}
-          onOpenChange={setShowAddDialog}
-          familyId={profile.family_id}
-          profileId={profile.id}
-        />
+        <>
+          <AddCelebrationDialog
+            open={showAddDialog}
+            onOpenChange={setShowAddDialog}
+            familyId={profile.family_id}
+            profileId={profile.id}
+          />
+
+          {editingCelebration && (
+            <EditCelebrationDialog
+              open={!!editingCelebration}
+              onOpenChange={(open) => !open && setEditingCelebration(null)}
+              celebration={editingCelebration}
+              familyId={profile.family_id}
+            />
+          )}
+        </>
       )}
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
