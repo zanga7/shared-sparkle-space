@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Grid3X3, Rows3, CheckCircle2, Clock, Flame, TrendingUp, Plus, Filter, BarChart3, Eye, Edit, Target, Users, Calendar, Sun, MapPin, Repeat } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Grid3X3, Rows3, CheckCircle2, Clock, Flame, TrendingUp, Plus, Filter, BarChart3, Eye, Edit, Target, Users, Calendar, Sun, MapPin, Repeat, PartyPopper } from 'lucide-react';
 import { AddButton } from '@/components/ui/add-button';
 import { EventAttendeesDisplay } from '@/components/ui/event-attendees-display';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addWeeks, addMonths, addDays, subWeeks, subMonths, subDays, isSameDay, isToday, isPast, isSameMonth } from 'date-fns';
@@ -804,6 +804,49 @@ export const CalendarView = ({
               <div className="block md:hidden">
                 <div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide">
                   <div className="flex gap-4 pb-4">
+                    {/* Celebrations Column */}
+                    {(() => {
+                      const { celebrations: dayCelebrations, holidays: dayHolidays } = getCelebrationsAndHolidays(currentDate);
+                      return (dayCelebrations.length > 0 || dayHolidays.length > 0) && (
+                        <div className="snap-center shrink-0 w-[calc(100vw-2rem)]">
+                          <Card className="bg-gradient-to-br from-primary/5 to-primary/10">
+                            <CardHeader className="pb-3 border-b">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <PartyPopper className="h-5 w-5 text-primary" />
+                                </div>
+                                <CardTitle className="text-base sm:text-lg">Celebrations & Holidays</CardTitle>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="space-y-3 pt-6">
+                              {dayCelebrations.map(celebration => {
+                                const Icon = celebration.celebration_type === 'birthday' ? Cake : 
+                                            celebration.celebration_type === 'anniversary' ? Heart : Gift;
+                                return (
+                                  <div key={celebration.id} className="flex items-center gap-3 p-3 bg-card rounded-lg shadow-sm">
+                                    <Icon className="h-5 w-5 text-primary flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <div className="font-medium">{celebration.name}</div>
+                                      {celebration.age && (
+                                        <div className="text-sm text-muted-foreground">Turning {celebration.age}</div>
+                                      )}
+                                    </div>
+                                    {celebration.age && <Badge variant="secondary">{celebration.age}</Badge>}
+                                  </div>
+                                );
+                              })}
+                              {dayHolidays.map(holiday => (
+                                <div key={holiday.id} className="flex items-center gap-3 p-3 bg-card rounded-lg shadow-sm">
+                                  <span className="text-2xl">{holiday.flag_emoji}</span>
+                                  <div className="font-medium">{holiday.holiday_name}</div>
+                                </div>
+                              ))}
+                            </CardContent>
+                          </Card>
+                        </div>
+                      );
+                    })()}
+                    
                     {familyMembers.map(member => {
                       const MemberColumn = () => {
                         const { styles: colorStyles } = useMemberColor(member.color);
@@ -837,28 +880,6 @@ export const CalendarView = ({
                                   </CardHeader>
                                   
                                   <CardContent ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[200px] pt-6">
-                                    {/* Celebrations and Holidays */}
-                                    {(() => {
-                                      const { celebrations: dayCelebrations, holidays: dayHolidays } = getCelebrationsAndHolidays(currentDate);
-                                      return (dayCelebrations.length > 0 || dayHolidays.length > 0) && (
-                                        <div className="mb-3 pb-3 border-b border-muted/30 space-y-2">
-                                          {dayCelebrations.map(celebration => {
-                                            const Icon = celebration.celebration_type === 'birthday' ? Cake : 
-                                                        celebration.celebration_type === 'anniversary' ? Heart : Gift;
-                                            return (
-                                              <div key={celebration.id} className="flex items-center gap-2 text-sm">
-                                                <Icon className="h-4 w-4 text-primary flex-shrink-0" />
-                                                <span className="truncate font-medium">{celebration.name}</span>
-                                                {celebration.age && <Badge variant="secondary" className="text-xs">{celebration.age}</Badge>}
-                                              </div>
-                                            );
-                                          })}
-                                          {dayHolidays.map(holiday => (
-                                            <PublicHolidayBadge key={holiday.id} holiday={holiday} />
-                                          ))}
-                                        </div>
-                                      );
-                                    })()}
                                     {memberTasks.map((task, index) => <TaskItem key={task.id} task={task} index={index} />)}
                                     {memberEvents.map((event, eventIndex) => {
                                       const isDragDisabled = event.isMultiDay ? !event.isFirstDay : false;
@@ -938,6 +959,49 @@ export const CalendarView = ({
               <div className="hidden md:block">
                 <div className="md:overflow-x-auto xl:overflow-x-visible">
                   <div className="flex xl:grid xl:grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-4 pb-4 md:min-w-fit xl:min-w-0">
+                    {/* Celebrations Column */}
+                    {(() => {
+                      const { celebrations: dayCelebrations, holidays: dayHolidays } = getCelebrationsAndHolidays(currentDate);
+                      return (dayCelebrations.length > 0 || dayHolidays.length > 0) && (
+                        <div className="md:shrink-0 md:w-64 md:min-w-[16rem] md:max-w-[20rem] xl:shrink xl:w-auto xl:min-w-0 xl:max-w-none">
+                          <Card className="bg-gradient-to-br from-primary/5 to-primary/10">
+                            <CardHeader className="pb-3 border-b">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <PartyPopper className="h-5 w-5 text-primary" />
+                                </div>
+                                <CardTitle className="text-base sm:text-lg">Celebrations</CardTitle>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="space-y-3 pt-6 min-h-[200px]">
+                              {dayCelebrations.map(celebration => {
+                                const Icon = celebration.celebration_type === 'birthday' ? Cake : 
+                                            celebration.celebration_type === 'anniversary' ? Heart : Gift;
+                                return (
+                                  <div key={celebration.id} className="flex items-center gap-3 p-3 bg-card rounded-lg shadow-sm">
+                                    <Icon className="h-5 w-5 text-primary flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <div className="font-medium">{celebration.name}</div>
+                                      {celebration.age && (
+                                        <div className="text-sm text-muted-foreground">Turning {celebration.age}</div>
+                                      )}
+                                    </div>
+                                    {celebration.age && <Badge variant="secondary">{celebration.age}</Badge>}
+                                  </div>
+                                );
+                              })}
+                              {dayHolidays.map(holiday => (
+                                <div key={holiday.id} className="flex items-center gap-3 p-3 bg-card rounded-lg shadow-sm">
+                                  <span className="text-2xl">{holiday.flag_emoji}</span>
+                                  <div className="font-medium">{holiday.holiday_name}</div>
+                                </div>
+                              ))}
+                            </CardContent>
+                          </Card>
+                        </div>
+                      );
+                    })()}
+                    
                     {familyMembers.map(member => {
                     const MemberColumn = () => {
                       const { styles: colorStyles } = useMemberColor(member.color);
@@ -970,28 +1034,6 @@ export const CalendarView = ({
                           </CardHeader>
                           
                           <CardContent ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[200px] pt-6">
-                            {/* Celebrations and Holidays */}
-                            {(() => {
-                              const { celebrations: dayCelebrations, holidays: dayHolidays } = getCelebrationsAndHolidays(currentDate);
-                              return (dayCelebrations.length > 0 || dayHolidays.length > 0) && (
-                                <div className="mb-3 pb-3 border-b border-muted/30 space-y-2">
-                                  {dayCelebrations.map(celebration => {
-                                    const Icon = celebration.celebration_type === 'birthday' ? Cake : 
-                                                celebration.celebration_type === 'anniversary' ? Heart : Gift;
-                                    return (
-                                      <div key={celebration.id} className="flex items-center gap-2 text-sm">
-                                        <Icon className="h-4 w-4 text-primary flex-shrink-0" />
-                                        <span className="truncate font-medium">{celebration.name}</span>
-                                        {celebration.age && <Badge variant="secondary" className="text-xs">{celebration.age}</Badge>}
-                                      </div>
-                                    );
-                                  })}
-                                  {dayHolidays.map(holiday => (
-                                    <PublicHolidayBadge key={holiday.id} holiday={holiday} />
-                                  ))}
-                                </div>
-                              );
-                            })()}
                             {/* Tasks */}
                             {memberTasks.map((task, index) => <TaskItem key={task.id} task={task} index={index} />)}
                             
@@ -1113,6 +1155,31 @@ export const CalendarView = ({
                               <span className="text-sm text-green-700 font-medium">Drop event here</span>
                             </div>
                           )}
+                          
+                          {/* Celebrations and Holidays */}
+                          {(() => {
+                            const { celebrations: dayCelebrations, holidays: dayHolidays } = getCelebrationsAndHolidays(day);
+                            return (dayCelebrations.length > 0 || dayHolidays.length > 0) && (
+                              <div className="mb-2 space-y-1">
+                                {dayCelebrations.map(celebration => {
+                                  const Icon = celebration.celebration_type === 'birthday' ? Cake : 
+                                              celebration.celebration_type === 'anniversary' ? Heart : Gift;
+                                  return (
+                                    <div key={celebration.id} className="flex items-center gap-1 text-xs bg-primary/10 rounded px-1.5 py-0.5">
+                                      <Icon className="h-3 w-3 text-primary flex-shrink-0" />
+                                      <span className="truncate font-medium">{celebration.name}</span>
+                                    </div>
+                                  );
+                                })}
+                                {dayHolidays.map(holiday => (
+                                  <div key={holiday.id} className="flex items-center gap-1 text-xs bg-muted rounded px-1.5 py-0.5">
+                                    <span>{holiday.flag_emoji}</span>
+                                    <span className="truncate">{holiday.holiday_name}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
                           
                           {dayTasks.map((task, index) => <TaskItem key={task.id} task={task} index={index} />)}
                           
