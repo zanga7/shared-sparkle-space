@@ -17,11 +17,16 @@
 - **Validation**: profileId (UUID format), pin (length 1-100), pinType (enum: numeric/icon)
 - **Status**: ✅ RESOLVED
 
-#### 3. Database Function Security Hardening
-- **Issue**: Database functions were missing `SET search_path TO 'public'` security setting
-- **Risk**: SQL injection via search path manipulation
-- **Fix**: All database functions now have proper `SET search_path TO 'public'` configuration
-- **Status**: ✅ RESOLVED
+#### 3. Database Function Search Path Security
+- **Issue**: Critical SECURITY DEFINER functions lacked `SET search_path` configuration
+- **Risk**: Search path manipulation attacks allowing malicious schema injection
+- **Affected Functions**:
+  - `get_user_family_id()` - Returns current user's family ID
+  - `hash_pin()` - Hashes user PINs with bcrypt
+  - `verify_pin()` - Verifies PIN authentication
+  - `generate_initial_recurring_task()` - Creates recurring task instances
+- **Fix**: Added `SET search_path = public` to all critical SECURITY DEFINER functions
+- **Status**: ✅ RESOLVED (Migration: 20251117)
 
 #### 2. Enhanced Security Logging
 - **Implementation**: Added comprehensive security event logging
