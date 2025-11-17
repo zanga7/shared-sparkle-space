@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Cake, Heart, Gift } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import { sanitizeSVG } from '@/lib/utils';
 
 interface CelebrationCardProps {
   celebration: Celebration;
@@ -47,7 +48,7 @@ export const CelebrationCard = ({ celebration, onClick }: CelebrationCardProps) 
             ) : celebration.visual_type === 'icon' && celebration.icon ? (
               <div
                 className="w-6 h-6 text-primary"
-                dangerouslySetInnerHTML={{ __html: celebration.icon.svg_content }}
+                dangerouslySetInnerHTML={{ __html: sanitizeSVG(celebration.icon.svg_content) }}
               />
             ) : (
               <Gift className="h-6 w-6 text-muted-foreground" />

@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { cn, sanitizeSVG } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -87,7 +87,7 @@ export function AvatarIconSelector({
           >
             <div 
               className="w-12 h-12 mx-auto [&_svg]:w-full [&_svg]:h-full [&_path]:transition-colors"
-              dangerouslySetInnerHTML={{ __html: icon.svg_content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeSVG(icon.svg_content) }}
               style={{
                 ['--icon-color' as any]: activeColorHex,
               }}

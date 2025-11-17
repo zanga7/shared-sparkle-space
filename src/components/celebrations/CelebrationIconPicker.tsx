@@ -1,5 +1,5 @@
 import { useCelebrationIcons } from '@/hooks/useCelebrations';
-import { cn } from '@/lib/utils';
+import { cn, sanitizeSVG } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
 interface CelebrationIconPickerProps {
@@ -49,7 +49,7 @@ export const CelebrationIconPicker = ({
         >
           <div
             className="w-8 h-8 text-foreground"
-            dangerouslySetInnerHTML={{ __html: icon.svg_content }}
+            dangerouslySetInnerHTML={{ __html: sanitizeSVG(icon.svg_content) }}
           />
         </button>
       ))}
