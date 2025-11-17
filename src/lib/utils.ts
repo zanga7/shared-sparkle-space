@@ -1,8 +1,23 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import DOMPurify from 'dompurify'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
+}
+
+/**
+ * Sanitizes SVG content to prevent XSS attacks
+ * Allows only safe SVG elements and attributes
+ */
+export function sanitizeSVG(svgContent: string): string {
+  return DOMPurify.sanitize(svgContent, {
+    USE_PROFILES: { svg: true, svgFilters: true },
+    ADD_TAGS: ['svg', 'path', 'circle', 'rect', 'polygon', 'g', 'defs', 'style', 'clipPath', 'mask'],
+    ADD_ATTR: ['viewBox', 'xmlns', 'fill', 'stroke', 'stroke-width', 'transform', 'd', 'cx', 'cy', 'r', 'x', 'y', 'width', 'height', 'class', 'id', 'data-name'],
+    FORBID_TAGS: ['script', 'object', 'embed', 'iframe'],
+    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
+  });
 }
 
 // Member color utilities

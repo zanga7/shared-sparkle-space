@@ -13,7 +13,7 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Grid3X3, Rows3, Ch
 import { AddButton } from '@/components/ui/add-button';
 import { EventAttendeesDisplay } from '@/components/ui/event-attendees-display';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addWeeks, addMonths, addDays, subWeeks, subMonths, subDays, isSameDay, isToday, isPast, isSameMonth } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, sanitizeSVG } from '@/lib/utils';
 import { useMemberColor } from '@/hooks/useMemberColor';
 import { Task, Profile } from '@/types/task';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -831,7 +831,7 @@ export const CalendarView = ({
                                       {celebration.visual_type === 'photo' && celebration.photo_url ? (
                                         <img src={celebration.photo_url} alt={celebration.name} className="w-full h-full object-cover" />
                                       ) : celebration.visual_type === 'icon' && celebration.icon ? (
-                                        <div className="w-5 h-5 text-primary" dangerouslySetInnerHTML={{ __html: celebration.icon.svg_content }} />
+                                        <div className="w-5 h-5 text-primary" dangerouslySetInnerHTML={{ __html: sanitizeSVG(celebration.icon.svg_content) }} />
                                       ) : (
                                         <Icon className="h-5 w-5 text-primary" />
                                       )}
@@ -995,7 +995,7 @@ export const CalendarView = ({
                                       {celebration.visual_type === 'photo' && celebration.photo_url ? (
                                         <img src={celebration.photo_url} alt={celebration.name} className="w-full h-full object-cover" />
                                       ) : celebration.visual_type === 'icon' && celebration.icon ? (
-                                        <div className="w-5 h-5 text-primary" dangerouslySetInnerHTML={{ __html: celebration.icon.svg_content }} />
+                                        <div className="w-5 h-5 text-primary" dangerouslySetInnerHTML={{ __html: sanitizeSVG(celebration.icon.svg_content) }} />
                                       ) : (
                                         <Icon className="h-5 w-5 text-primary" />
                                       )}
@@ -1189,7 +1189,7 @@ export const CalendarView = ({
                                       {celebration.visual_type === 'photo' && celebration.photo_url ? (
                                         <img src={celebration.photo_url} alt={celebration.name} className="h-4 w-4 rounded-full object-cover flex-shrink-0" />
                                       ) : celebration.visual_type === 'icon' && celebration.icon ? (
-                                        <div className="h-3 w-3 text-primary flex-shrink-0" dangerouslySetInnerHTML={{ __html: celebration.icon.svg_content }} />
+                                        <div className="h-3 w-3 text-primary flex-shrink-0" dangerouslySetInnerHTML={{ __html: sanitizeSVG(celebration.icon.svg_content) }} />
                                       ) : (
                                         <Icon className="h-3 w-3 text-primary flex-shrink-0" />
                                       )}

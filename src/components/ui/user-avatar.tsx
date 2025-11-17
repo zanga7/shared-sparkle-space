@@ -3,7 +3,7 @@ import * as AvatarPrimitive from "@radix-ui/react-avatar"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 
-import { cn } from "@/lib/utils"
+import { cn, sanitizeSVG } from "@/lib/utils"
 import { AvatarIconType } from "./avatar-icon-selector"
 import { useMemberColor } from "@/hooks/useMemberColor"
 
@@ -85,7 +85,7 @@ const UserAvatar = React.forwardRef<
           <div 
             className="w-full h-full flex items-center justify-center [&_svg]:w-full [&_svg]:h-full"
             style={{ color: finalColorHex }}
-            dangerouslySetInnerHTML={{ __html: iconData.svg_content }}
+            dangerouslySetInnerHTML={{ __html: sanitizeSVG(iconData.svg_content) }}
           />
         ) : (
           getInitials(name)

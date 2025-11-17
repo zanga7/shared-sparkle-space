@@ -19,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { sanitizeSVG } from '@/lib/utils';
 
 interface AvatarIcon {
   id: string;
@@ -255,7 +256,7 @@ export default function ThemesManagement() {
                     </CardHeader>
                     <CardContent className="space-y-2">
                       <div className="h-16 flex items-center justify-center bg-muted rounded">
-                        <div dangerouslySetInnerHTML={{ __html: icon.svg_content }} className="w-12 h-12" />
+                        <div dangerouslySetInnerHTML={{ __html: sanitizeSVG(icon.svg_content) }} className="w-12 h-12" />
                       </div>
                       <div className="flex gap-2">
                         <Button
