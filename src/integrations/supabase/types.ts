@@ -74,6 +74,7 @@ export type Database = {
       avatar_icons: {
         Row: {
           created_at: string | null
+          icon_type: string | null
           id: string
           is_system: boolean | null
           name: string
@@ -82,6 +83,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          icon_type?: string | null
           id?: string
           is_system?: boolean | null
           name: string
@@ -90,6 +92,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          icon_type?: string | null
           id?: string
           is_system?: boolean | null
           name?: string
@@ -239,6 +242,83 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "super_admin_family_stats"
             referencedColumns: ["family_id"]
+          },
+        ]
+      }
+      celebrations: {
+        Row: {
+          celebration_date: string
+          celebration_type: string
+          created_at: string | null
+          created_by: string
+          family_id: string
+          icon_id: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          photo_url: string | null
+          updated_at: string | null
+          visual_type: string
+          year_specific: number | null
+        }
+        Insert: {
+          celebration_date: string
+          celebration_type: string
+          created_at?: string | null
+          created_by: string
+          family_id: string
+          icon_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          photo_url?: string | null
+          updated_at?: string | null
+          visual_type: string
+          year_specific?: number | null
+        }
+        Update: {
+          celebration_date?: string
+          celebration_type?: string
+          created_at?: string | null
+          created_by?: string
+          family_id?: string
+          icon_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          photo_url?: string | null
+          updated_at?: string | null
+          visual_type?: string
+          year_specific?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "celebrations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "celebrations_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "celebrations_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "super_admin_family_stats"
+            referencedColumns: ["family_id"]
+          },
+          {
+            foreignKeyName: "celebrations_icon_id_fkey"
+            columns: ["icon_id"]
+            isOneToOne: false
+            referencedRelation: "avatar_icons"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -655,8 +735,11 @@ export type Database = {
           dashboard_mode_enabled: boolean | null
           family_id: string
           id: string
+          onboarding_completed: boolean
+          onboarding_completed_at: string | null
           pin_attempts_limit: number
           pin_lockout_duration: number
+          require_parent_pin_for_dashboard: boolean
           subscription_metadata: Json | null
           theme_palette: Json
           updated_at: string
@@ -668,8 +751,11 @@ export type Database = {
           dashboard_mode_enabled?: boolean | null
           family_id: string
           id?: string
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
           pin_attempts_limit?: number
           pin_lockout_duration?: number
+          require_parent_pin_for_dashboard?: boolean
           subscription_metadata?: Json | null
           theme_palette?: Json
           updated_at?: string
@@ -681,8 +767,11 @@ export type Database = {
           dashboard_mode_enabled?: boolean | null
           family_id?: string
           id?: string
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
           pin_attempts_limit?: number
           pin_lockout_duration?: number
+          require_parent_pin_for_dashboard?: boolean
           subscription_metadata?: Json | null
           theme_palette?: Json
           updated_at?: string
@@ -1048,6 +1137,90 @@ export type Database = {
             referencedColumns: ["family_id"]
           },
         ]
+      }
+      public_holiday_settings: {
+        Row: {
+          api_key: string | null
+          api_provider: string
+          created_at: string | null
+          enabled_regions: Json | null
+          family_id: string
+          id: string
+          is_enabled: boolean | null
+          last_sync_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          api_provider: string
+          created_at?: string | null
+          enabled_regions?: Json | null
+          family_id: string
+          id?: string
+          is_enabled?: boolean | null
+          last_sync_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          api_provider?: string
+          created_at?: string | null
+          enabled_regions?: Json | null
+          family_id?: string
+          id?: string
+          is_enabled?: boolean | null
+          last_sync_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_holiday_settings_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: true
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_holiday_settings_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: true
+            referencedRelation: "super_admin_family_stats"
+            referencedColumns: ["family_id"]
+          },
+        ]
+      }
+      public_holidays_cache: {
+        Row: {
+          cached_at: string | null
+          holiday_date: string
+          holiday_name: string
+          holiday_type: string | null
+          id: string
+          is_public: boolean | null
+          region_code: string
+          year: number
+        }
+        Insert: {
+          cached_at?: string | null
+          holiday_date: string
+          holiday_name: string
+          holiday_type?: string | null
+          id?: string
+          is_public?: boolean | null
+          region_code: string
+          year: number
+        }
+        Update: {
+          cached_at?: string | null
+          holiday_date?: string
+          holiday_name?: string
+          holiday_type?: string | null
+          id?: string
+          is_public?: boolean | null
+          region_code?: string
+          year?: number
+        }
+        Relationships: []
       }
       recurrence_exceptions: {
         Row: {
