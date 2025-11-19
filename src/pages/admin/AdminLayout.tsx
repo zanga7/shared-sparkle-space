@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminMobileMenu } from "@/components/admin/AdminMobileMenu";
 import { AdminProvider } from "@/contexts/AdminContext";
 import { AdminPinProtection } from "@/components/admin/AdminPinProtection";
 import { useDashboardMode } from "@/hooks/useDashboardMode";
@@ -35,8 +36,8 @@ export default function AdminLayout() {
                   <span className="text-sm font-medium">Menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-72 overflow-y-auto">
-                <AdminSidebar onItemClick={() => setMobileMenuOpen(false)} />
+              <SheetContent side="left" className="p-0 w-72">
+                <AdminMobileMenu onItemClick={() => setMobileMenuOpen(false)} />
               </SheetContent>
             </Sheet>
             
