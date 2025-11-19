@@ -49,7 +49,11 @@ const adminMenuItems = [
   { title: "Theme Management", url: "/admin/themes", icon: Palette },
 ];
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  onItemClick?: () => void;
+}
+
+export function AdminSidebar({ onItemClick }: AdminSidebarProps = {}) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -58,6 +62,10 @@ export function AdminSidebar() {
   const handleLogout = async () => {
     await signOut();
     navigate('/auth');
+  };
+
+  const handleNavClick = () => {
+    onItemClick?.();
   };
 
   const isActive = (path: string, exact?: boolean) => 
@@ -74,7 +82,7 @@ export function AdminSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <NavLink to="/" className="hover:bg-muted/50">
+                  <NavLink to="/" className="hover:bg-muted/50" onClick={handleNavClick}>
                     <BarChart3 className="mr-2 h-4 w-4" />
                     <span>Back to Dashboard</span>
                   </NavLink>
@@ -95,6 +103,7 @@ export function AdminSidebar() {
                       to={item.url} 
                       end={item.exact}
                       className={getNavCls(item.url, item.exact)}
+                      onClick={handleNavClick}
                     >
                       <item.icon className="mr-2 h-4 w-4" />
                       <span>{item.title}</span>
