@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Profile } from '@/types/task';
 import { TokenEncryptionStatus } from '@/components/security/TokenEncryptionStatus';
+import { CalendarSelectionModal } from '@/components/admin/CalendarSelectionModal';
 
 import {
   AlertDialog,
@@ -36,6 +37,14 @@ const CalendarSettings = () => {
   const [integrations, setIntegrations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingIntegration, setDeletingIntegration] = useState<any | null>(null);
+  const [calendarModalOpen, setCalendarModalOpen] = useState(false);
+  const [calendarModalData, setCalendarModalData] = useState<{
+    calendars: any[];
+    tokens: any;
+    integrationType: 'google' | 'microsoft';
+    profileId: string;
+  } | null>(null);
+  const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
