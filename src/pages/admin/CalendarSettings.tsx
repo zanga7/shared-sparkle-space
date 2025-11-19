@@ -133,9 +133,10 @@ const CalendarSettings = () => {
           `width=${width},height=${height},left=${left},top=${top}`
         );
 
-        // Listen for OAuth callback
+        // Listen for OAuth callback via postMessage
         const handleMessage = async (event: MessageEvent) => {
-          if (event.data.type === 'oauth-success') {
+          // Security: check origin if needed
+          if (event.data.type === 'oauth-success' && event.data.provider === integrationType) {
             const { code, state } = event.data;
             
             // Exchange code for tokens (auth handled automatically by SDK)
@@ -165,6 +166,23 @@ const CalendarSettings = () => {
         };
 
         window.addEventListener('message', handleMessage);
+        
+        // Fallback: check sessionStorage if popup closes without postMessage
+        const checkSessionStorage = setInterval(() => {
+          const stored = sessionStorage.getItem(`${integrationType === 'microsoft' ? 'ms' : 'google'}-oauth-callback`);
+          if (stored) {
+            clearInterval(checkSessionStorage);
+            sessionStorage.removeItem(`${integrationType === 'microsoft' ? 'ms' : 'google'}-oauth-callback`);
+            const data = JSON.parse(stored);
+            handleMessage({ data } as MessageEvent);
+          }
+        }, 500);
+        
+        // Cleanup after 5 minutes
+        setTimeout(() => {
+          clearInterval(checkSessionStorage);
+          window.removeEventListener('message', handleMessage);
+        }, 300000);
       }
     } catch (error: any) {
       console.error('OAuth error details:', {
