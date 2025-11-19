@@ -84,36 +84,17 @@ const CalendarSettings = () => {
       if (membersError) throw membersError;
       setFamilyMembers(membersData || []);
 
-      // Fetch calendar integrations using secure function
+      // Fetch calendar integrations using the metadata function that includes profile_id
       const { data: integrationsData, error: integrationsError } = await supabase
-        .rpc('get_user_calendar_integrations');
+        .rpc('get_calendar_integrations_metadata');
 
-      if (integrationsError) throw integrationsError;
-      
-      // Map the secure function response to include profile data
-      // Since the secure function only returns integrations for the current user's family,
-      // we need to match them with family members by comparing integration ownership
-      const enrichedIntegrations = [];
-      for (const integration of integrationsData || []) {
-        // For now, since we can't determine profile_id from the secure function,
-        // we'll need to implement this differently or create a more comprehensive secure function
-        // Let's create a temporary association for demo purposes
-        const randomProfile = membersData?.[0]; // This is temporary
-        if (randomProfile) {
-          enrichedIntegrations.push({
-            ...integration,
-            profile_id: randomProfile.id, // Add this for compatibility
-            profile: {
-              id: randomProfile.id,
-              display_name: randomProfile.display_name,
-              role: randomProfile.role,
-              color: randomProfile.color
-            },
-            integration_type: integration.integration_type as 'google' | 'outlook'
-          });
-        }
+      if (integrationsError) {
+        console.error('Error fetching calendar integrations:', integrationsError);
+        setIntegrations([]);
+      } else {
+        // The metadata function returns integrations with profile_id included
+        setIntegrations(integrationsData || []);
       }
-      setIntegrations(enrichedIntegrations);
 
     } catch (error) {
       console.error('Error fetching data:', error);
