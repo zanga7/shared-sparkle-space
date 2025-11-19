@@ -22,16 +22,20 @@ export default function AdminLayout() {
         </div>
 
         <main className="flex-1 flex flex-col">
-          <header className="h-12 border-b bg-card px-4 flex items-center gap-2">
+          <header className="h-14 border-b bg-card px-4 flex items-center gap-3 sticky top-0 z-10">
             {/* Mobile Hamburger Menu */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="md:hidden">
+                <Button 
+                  variant="outline" 
+                  size="default" 
+                  className="md:hidden flex items-center gap-2"
+                >
                   <Menu className="h-5 w-5" />
-                  <span className="sr-only">Open menu</span>
+                  <span className="text-sm font-medium">Menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-64">
+              <SheetContent side="left" className="p-0 w-72 overflow-y-auto">
                 <AdminSidebar onItemClick={() => setMobileMenuOpen(false)} />
               </SheetContent>
             </Sheet>
@@ -40,6 +44,9 @@ export default function AdminLayout() {
             <div className="hidden md:block">
               <SidebarTrigger />
             </div>
+
+            {/* Header Title */}
+            <h1 className="text-sm font-semibold text-foreground ml-auto md:ml-0">Admin Panel</h1>
           </header>
           <div className="flex-1 p-4 sm:p-6 w-full overflow-auto">
             <Outlet />
