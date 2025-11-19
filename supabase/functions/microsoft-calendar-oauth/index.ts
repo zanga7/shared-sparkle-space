@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
 
     const clientId = Deno.env.get('MICROSOFT_CALENDAR_CLIENT_ID');
     const clientSecret = Deno.env.get('MICROSOFT_CALENDAR_CLIENT_SECRET');
-    const redirectUri = `${new URL(req.url).origin}/microsoft-calendar-oauth`;
+    const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/microsoft-calendar-oauth`;
 
     if (!clientId || !clientSecret) {
       throw new Error('Microsoft OAuth credentials not configured');

@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
 
     const clientId = Deno.env.get('GOOGLE_CALENDAR_CLIENT_ID');
     const clientSecret = Deno.env.get('GOOGLE_CALENDAR_CLIENT_SECRET');
-    const redirectUri = `${new URL(req.url).origin}/google-calendar-oauth`;
+    const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar-oauth`;
 
     if (!clientId || !clientSecret) {
       throw new Error('Google OAuth credentials not configured');
