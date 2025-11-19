@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
         attempts++;
         
         if (window.opener && !window.opener.closed) {
-          window.opener.postMessage(message, window.location.origin);
+          window.opener.postMessage(message, '*');
           
           document.querySelector('.container').innerHTML = \`
             <h2>Success!</h2>
