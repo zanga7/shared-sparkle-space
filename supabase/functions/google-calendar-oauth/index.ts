@@ -18,12 +18,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify user is authenticated FIRST
+    // Get JWT from Authorization header (already validated by Supabase due to verify_jwt=true)
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('Missing authorization header');
     }
 
+    // Create Supabase client with auth context
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -34,13 +35,14 @@ Deno.serve(async (req) => {
       }
     );
 
+    // Get authenticated user
     const {
       data: { user },
       error: userError,
     } = await supabaseClient.auth.getUser();
 
     if (userError || !user) {
-      console.error('Auth error:', userError?.message || 'No user found');
+      console.error('Authentication failed:', userError?.message || 'No user found');
       throw new Error('Unauthorized - please sign in');
     }
 
