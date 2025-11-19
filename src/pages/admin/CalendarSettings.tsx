@@ -109,7 +109,7 @@ const CalendarSettings = () => {
   };
 
   const handleConnectCalendar = async (memberId: string, integrationType: 'google' | 'microsoft') => {
-    setConnectingProvider(integrationType);
+    setConnectingProvider(`${memberId}-${integrationType}`);
     try {
       // Call OAuth start endpoint (auth is handled automatically by SDK)
       const functionName = integrationType === 'google' ? 'google-calendar-oauth' : 'microsoft-calendar-oauth';
@@ -167,10 +167,15 @@ const CalendarSettings = () => {
         window.addEventListener('message', handleMessage);
       }
     } catch (error: any) {
-      console.error('OAuth error:', error);
+      console.error('OAuth error details:', {
+        message: error.message,
+        error: error,
+        provider: integrationType,
+        memberId: memberId
+      });
       toast({
         title: 'Connection failed',
-        description: error.message || 'Failed to connect calendar',
+        description: error.message || 'Failed to connect calendar. Please check console for details.',
         variant: 'destructive',
       });
     } finally {
@@ -404,7 +409,7 @@ const CalendarSettings = () => {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleSyncNow(googleIntegration.id)}
-                                    disabled={connectingProvider === 'google'}
+                                    disabled={!!connectingProvider}
                                   >
                                     <RefreshCw className="h-4 w-4 mr-1" />
                                     Sync
@@ -422,10 +427,10 @@ const CalendarSettings = () => {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleConnectCalendar(member.id, 'google')}
-                                  disabled={connectingProvider === 'google'}
+                                  disabled={connectingProvider === `${member.id}-google`}
                                 >
                                   <ExternalLink className="h-4 w-4 mr-1" />
-                                  {connectingProvider === 'google' ? 'Connecting...' : 'Connect'}
+                                  {connectingProvider === `${member.id}-google` ? 'Connecting...' : 'Connect'}
                                 </Button>
                               )}
                             </div>
@@ -468,7 +473,7 @@ const CalendarSettings = () => {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleSyncNow(outlookIntegration.id)}
-                                    disabled={connectingProvider === 'microsoft'}
+                                    disabled={!!connectingProvider}
                                   >
                                     <RefreshCw className="h-4 w-4 mr-1" />
                                     Sync
@@ -486,10 +491,10 @@ const CalendarSettings = () => {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleConnectCalendar(member.id, 'microsoft')}
-                                  disabled={connectingProvider === 'microsoft'}
+                                  disabled={connectingProvider === `${member.id}-microsoft`}
                                 >
                                   <ExternalLink className="h-4 w-4 mr-1" />
-                                  {connectingProvider === 'microsoft' ? 'Connecting...' : 'Connect'}
+                                  {connectingProvider === `${member.id}-microsoft` ? 'Connecting...' : 'Connect'}
                                 </Button>
                               )}
                             </div>
