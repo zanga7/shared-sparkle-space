@@ -130,11 +130,20 @@ const CalendarSettings = () => {
   const handleConnectCalendar = async (memberId: string, integrationType: 'google' | 'microsoft') => {
     setConnectingProvider(integrationType);
     try {
+      // Ensure we have a valid session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Please sign in to connect calendars');
+      }
+
       // Call OAuth start endpoint
       const functionName = integrationType === 'google' ? 'google-calendar-oauth' : 'microsoft-calendar-oauth';
       
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: { action: 'start', profileId: memberId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (error) throw error;
@@ -157,11 +166,20 @@ const CalendarSettings = () => {
           if (event.data.type === 'oauth-success') {
             const { code, state } = event.data;
             
+            // Get fresh session for callback
+            const { data: { session: callbackSession } } = await supabase.auth.getSession();
+            if (!callbackSession) {
+              throw new Error('Session expired');
+            }
+            
             // Exchange code for tokens
             const { data: callbackData, error: callbackError } = await supabase.functions.invoke(
               functionName,
               {
                 body: { action: 'callback', code, state, profileId: memberId },
+                headers: {
+                  Authorization: `Bearer ${callbackSession.access_token}`,
+                },
               }
             );
 
@@ -199,6 +217,12 @@ const CalendarSettings = () => {
 
   const handleSyncNow = async (integrationId: string) => {
     try {
+      // Ensure we have a valid session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Please sign in to sync calendars');
+      }
+
       toast({
         title: 'Syncing...',
         description: 'Starting calendar sync',
@@ -206,6 +230,9 @@ const CalendarSettings = () => {
 
       const { data, error } = await supabase.functions.invoke('calendar-sync', {
         body: { integrationId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (error) throw error;

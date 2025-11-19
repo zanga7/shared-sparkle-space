@@ -26,14 +26,22 @@ Deno.serve(async (req) => {
     );
 
     // Verify user is authenticated
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Missing authorization header');
+    }
+
     const {
       data: { user },
       error: userError,
     } = await supabaseClient.auth.getUser();
 
     if (userError || !user) {
-      throw new Error('Unauthorized');
+      console.error('Auth error:', userError?.message || 'No user found');
+      throw new Error('Unauthorized - please sign in');
     }
+
+    console.log('Sync request from user:', user.id);
 
     const { integrationId } = await req.json() as SyncRequest;
 
