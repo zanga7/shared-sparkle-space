@@ -19,6 +19,11 @@ Deno.serve(async (req) => {
 
   // Handle GET requests (OAuth callback from Microsoft)
   if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const code = url.searchParams.get('code');
+    const state = url.searchParams.get('state');
+    const error = url.searchParams.get('error');
+
     const callbackHtml = `<!DOCTYPE html>
 <html>
 <head>
@@ -58,21 +63,32 @@ Deno.serve(async (req) => {
 <body>
   <div class="container">
     <div class="spinner"></div>
-    <p>Completing authentication...</p>
+    <p id="message">Completing authentication...</p>
   </div>
   <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const state = urlParams.get('state');
-    const error = urlParams.get('error');
+    (function() {
+      const code = ${JSON.stringify(code)};
+      const state = ${JSON.stringify(state)};
+      const error = ${JSON.stringify(error)};
+      const messageEl = document.getElementById('message');
 
-    if (error) {
-      document.querySelector('.container').innerHTML = \`
-        <h2>Authentication Failed</h2>
-        <p>\${error}</p>
-        <p>You can close this window.</p>
-      \`;
-    } else if (code && state) {
+      if (error) {
+        document.querySelector('.container').innerHTML = \`
+          <h2>Authentication Failed</h2>
+          <p>\${error}</p>
+          <p>You can close this window.</p>
+        \`;
+        return;
+      }
+
+      if (!code || !state) {
+        document.querySelector('.container').innerHTML = \`
+          <h2>Invalid Request</h2>
+          <p>Missing authentication data. Please try again.</p>
+        \`;
+        return;
+      }
+
       const message = {
         type: 'oauth-success',
         code: code,
@@ -80,50 +96,40 @@ Deno.serve(async (req) => {
         provider: 'microsoft'
       };
 
-      // Try postMessage with retries
-      let attempts = 0;
-      const maxAttempts = 5;
+      // Check if we're in a popup
+      const isPopup = window.opener && !window.opener.closed;
       
-      const sendMessage = () => {
-        attempts++;
-        
-        if (window.opener && !window.opener.closed) {
+      if (isPopup) {
+        try {
           window.opener.postMessage(message, '*');
-          
-          document.querySelector('.container').innerHTML = \`
-            <h2>Success!</h2>
-            <p>Authentication complete. This window will close automatically.</p>
-          \`;
-          
-          setTimeout(() => window.close(), 1500);
-        } else if (attempts < maxAttempts) {
-          // Retry after a short delay
-          setTimeout(sendMessage, 300);
-        } else {
-          // Fallback: store in localStorage
-          try {
-            sessionStorage.setItem('ms-oauth-callback', JSON.stringify(message));
-            document.querySelector('.container').innerHTML = \`
-              <h2>Almost Done!</h2>
-              <p>Please close this window and return to the app.</p>
-            \`;
-            setTimeout(() => window.close(), 3000);
-          } catch (e) {
-            document.querySelector('.container').innerHTML = \`
-              <h2>Please Close This Window</h2>
-              <p>Return to the app to complete authentication.</p>
-            \`;
-          }
+          messageEl.textContent = 'Success! Closing window...';
+          setTimeout(() => {
+            try {
+              window.close();
+            } catch (e) {
+              messageEl.textContent = 'Please close this window manually.';
+            }
+          }, 1000);
+        } catch (e) {
+          console.error('Failed to send message:', e);
+          sessionStorage.setItem('ms-oauth-callback', JSON.stringify(message));
+          messageEl.textContent = 'Please close this window and return to the app.';
         }
-      };
-      
-      sendMessage();
-    } else {
-      document.querySelector('.container').innerHTML = \`
-        <h2>Invalid Request</h2>
-        <p>Missing authentication data. Please try again.</p>
-      \`;
-    }
+      } else {
+        // Not in a popup - store in sessionStorage and redirect
+        try {
+          sessionStorage.setItem('ms-oauth-callback', JSON.stringify(message));
+          messageEl.textContent = 'Redirecting...';
+          // Redirect to the calendar settings page
+          setTimeout(() => {
+            window.location.href = '/admin/calendar-settings';
+          }, 500);
+        } catch (e) {
+          console.error('Storage failed:', e);
+          messageEl.textContent = 'Please navigate back to the Calendar Settings page.';
+        }
+      }
+    })();
   </script>
 </body>
 </html>`;
