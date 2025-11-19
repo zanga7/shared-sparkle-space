@@ -111,11 +111,22 @@ const CalendarSettings = () => {
   const handleConnectCalendar = async (memberId: string, integrationType: 'google' | 'microsoft') => {
     setConnectingProvider(integrationType);
     try {
-      // Call OAuth start endpoint (auth is automatic with supabase.functions.invoke)
+      // Ensure we have a valid session with fresh token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        console.error('Session error:', sessionError);
+        throw new Error('Please sign in again to connect calendars');
+      }
+
+      // Call OAuth start endpoint with explicit auth header
       const functionName = integrationType === 'google' ? 'google-calendar-oauth' : 'microsoft-calendar-oauth';
       
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: { action: 'start', profileId: memberId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (error) throw error;
@@ -138,11 +149,20 @@ const CalendarSettings = () => {
           if (event.data.type === 'oauth-success') {
             const { code, state } = event.data;
             
-            // Exchange code for tokens (auth is automatic)
+            // Get fresh session for callback
+            const { data: { session: cbSession }, error: cbSessionError } = await supabase.auth.getSession();
+            if (cbSessionError || !cbSession) {
+              throw new Error('Session expired. Please refresh and try again.');
+            }
+            
+            // Exchange code for tokens with explicit auth
             const { data: callbackData, error: callbackError } = await supabase.functions.invoke(
               functionName,
               {
                 body: { action: 'callback', code, state, profileId: memberId },
+                headers: {
+                  Authorization: `Bearer ${cbSession.access_token}`,
+                },
               }
             );
 
@@ -180,6 +200,12 @@ const CalendarSettings = () => {
 
   const handleSyncNow = async (integrationId: string) => {
     try {
+      // Get fresh session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Please sign in again to sync calendars');
+      }
+
       toast({
         title: 'Syncing...',
         description: 'Starting calendar sync',
@@ -187,6 +213,9 @@ const CalendarSettings = () => {
 
       const { data, error } = await supabase.functions.invoke('calendar-sync', {
         body: { integrationId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (error) throw error;
