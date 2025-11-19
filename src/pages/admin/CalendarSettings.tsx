@@ -127,27 +127,114 @@ const CalendarSettings = () => {
     }
   };
 
-  const handleConnectCalendar = async (memberId: string, integrationType: 'google' | 'outlook') => {
-    toast({
-      title: 'Coming Soon',
-      description: `${integrationType === 'google' ? 'Google' : 'Outlook'} Calendar integration will be available soon.`,
-    });
+  const handleConnectCalendar = async (memberId: string, integrationType: 'google' | 'microsoft') => {
+    setConnectingProvider(integrationType);
+    try {
+      // Call OAuth start endpoint
+      const functionName = integrationType === 'google' ? 'google-calendar-oauth' : 'microsoft-calendar-oauth';
+      
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: { action: 'start', profileId: memberId },
+      });
+
+      if (error) throw error;
+
+      if (data.authUrl) {
+        // Open OAuth flow in popup
+        const width = 600;
+        const height = 700;
+        const left = window.screen.width / 2 - width / 2;
+        const top = window.screen.height / 2 - height / 2;
+        
+        const popup = window.open(
+          data.authUrl,
+          'oauth',
+          `width=${width},height=${height},left=${left},top=${top}`
+        );
+
+        // Listen for OAuth callback
+        const handleMessage = async (event: MessageEvent) => {
+          if (event.data.type === 'oauth-success') {
+            const { code, state } = event.data;
+            
+            // Exchange code for tokens
+            const { data: callbackData, error: callbackError } = await supabase.functions.invoke(
+              functionName,
+              {
+                body: { action: 'callback', code, state, profileId: memberId },
+              }
+            );
+
+            if (callbackError) throw callbackError;
+
+            if (callbackData.success) {
+              // Show calendar selection modal
+              setCalendarModalData({
+                calendars: callbackData.calendars,
+                tokens: callbackData.tokens,
+                integrationType: integrationType as 'google' | 'microsoft',
+                profileId: callbackData.profileId || memberId,
+              });
+              setCalendarModalOpen(true);
+            }
+
+            popup?.close();
+            window.removeEventListener('message', handleMessage);
+          }
+        };
+
+        window.addEventListener('message', handleMessage);
+      }
+    } catch (error: any) {
+      console.error('OAuth error:', error);
+      toast({
+        title: 'Connection failed',
+        description: error.message || 'Failed to connect calendar',
+        variant: 'destructive',
+      });
+    } finally {
+      setConnectingProvider(null);
+    }
+  };
+
+  const handleSyncNow = async (integrationId: string) => {
+    try {
+      toast({
+        title: 'Syncing...',
+        description: 'Starting calendar sync',
+      });
+
+      const { data, error } = await supabase.functions.invoke('calendar-sync', {
+        body: { integrationId },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sync complete',
+        description: `Synced ${data.eventCount} events`,
+      });
+
+      fetchUserData();
+    } catch (error: any) {
+      console.error('Sync error:', error);
+      toast({
+        title: 'Sync failed',
+        description: error.message || 'Failed to sync calendar',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDisconnectCalendar = async () => {
     if (!deletingIntegration) return;
 
     try {
-      const { data, error } = await supabase.rpc('delete_calendar_integration', {
+      const { error } = await supabase.rpc('delete_calendar_integration_secure', {
         integration_id_param: deletingIntegration.id
       });
 
       if (error) throw error;
-      
-      const result = data as { success: boolean; error?: string; message?: string };
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to delete integration');
-      }
 
       toast({
         title: 'Calendar Disconnected',
@@ -156,11 +243,11 @@ const CalendarSettings = () => {
 
       setDeletingIntegration(null);
       fetchUserData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error disconnecting calendar:', error);
       toast({
         title: 'Error',
-        description: 'Failed to disconnect calendar',
+        description: error.message || 'Failed to disconnect calendar',
         variant: 'destructive',
       });
     }
@@ -224,9 +311,9 @@ const CalendarSettings = () => {
     <div className="w-full max-w-full p-4 sm:p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Calendar Settings</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">Calendar Sync</h1>
         <p className="text-muted-foreground text-sm sm:text-base">
-          Manage external calendar integrations for your family members
+          Connect and sync external calendars for your family members
         </p>
       </div>
 
@@ -254,7 +341,7 @@ const CalendarSettings = () => {
               </div>
               <div className="text-center p-4 border rounded-lg">
                 <div className="text-2xl font-bold text-orange-600">
-                  {integrations.filter(i => i.integration_type === 'outlook').length}
+                  {integrations.filter(i => i.integration_type === 'microsoft').length}
                 </div>
                 <div className="text-sm text-muted-foreground">Outlook Calendar</div>
               </div>
@@ -270,10 +357,10 @@ const CalendarSettings = () => {
             <div>
               <h3 className="text-lg font-semibold mb-4">Family Member Calendars</h3>
                <div className="grid gap-4">
-                 {familyMembers.map((member) => {
-                  const memberIntegrations = integrations.filter(i => i.profile_id === member.id);
-                  const googleIntegration = memberIntegrations.find(i => i.integration_type === 'google');
-                  const outlookIntegration = memberIntegrations.find(i => i.integration_type === 'outlook');
+                  {familyMembers.map((member) => {
+                   const memberIntegrations = integrations.filter(i => i.profile_id === member.id);
+                   const googleIntegration = memberIntegrations.find(i => i.integration_type === 'google');
+                   const outlookIntegration = memberIntegrations.find(i => i.integration_type === 'microsoft');
 
                   return (
                     <Card key={member.id} className="overflow-hidden">
@@ -331,21 +418,33 @@ const CalendarSettings = () => {
                                 </div>
                               )}
                               {googleIntegration ? (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setDeletingIntegration(googleIntegration)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleSyncNow(googleIntegration.id)}
+                                    disabled={connectingProvider === 'google'}
+                                  >
+                                    <RefreshCw className="h-4 w-4 mr-1" />
+                                    Sync
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setDeletingIntegration(googleIntegration)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
                               ) : (
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleConnectCalendar(member.id, 'google')}
+                                  disabled={connectingProvider === 'google'}
                                 >
                                   <ExternalLink className="h-4 w-4 mr-1" />
-                                  Connect
+                                  {connectingProvider === 'google' ? 'Connecting...' : 'Connect'}
                                 </Button>
                               )}
                             </div>
@@ -383,21 +482,33 @@ const CalendarSettings = () => {
                                 </div>
                               )}
                               {outlookIntegration ? (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setDeletingIntegration(outlookIntegration)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleSyncNow(outlookIntegration.id)}
+                                    disabled={connectingProvider === 'microsoft'}
+                                  >
+                                    <RefreshCw className="h-4 w-4 mr-1" />
+                                    Sync
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setDeletingIntegration(outlookIntegration)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
                               ) : (
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleConnectCalendar(member.id, 'outlook')}
+                                  onClick={() => handleConnectCalendar(member.id, 'microsoft')}
+                                  disabled={connectingProvider === 'microsoft'}
                                 >
                                   <ExternalLink className="h-4 w-4 mr-1" />
-                                  Connect
+                                  {connectingProvider === 'microsoft' ? 'Connecting...' : 'Connect'}
                                 </Button>
                               )}
                             </div>
@@ -489,6 +600,22 @@ const CalendarSettings = () => {
 
       {/* Token Security Status */}
       <TokenEncryptionStatus />
+
+      {/* Calendar Selection Modal */}
+      {calendarModalData && (
+        <CalendarSelectionModal
+          open={calendarModalOpen}
+          onOpenChange={setCalendarModalOpen}
+          calendars={calendarModalData.calendars}
+          tokens={calendarModalData.tokens}
+          integrationType={calendarModalData.integrationType}
+          profileId={calendarModalData.profileId}
+          onSuccess={() => {
+            fetchUserData();
+            setCalendarModalData(null);
+          }}
+        />
+      )}
     </div>
   );
 };
