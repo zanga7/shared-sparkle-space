@@ -17,6 +17,90 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Handle GET requests (OAuth callback from Google)
+  if (req.method === 'GET') {
+    const callbackHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Calendar OAuth Callback</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: #f5f5f5;
+    }
+    .container {
+      text-align: center;
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #3498db;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="spinner"></div>
+    <p>Completing authentication...</p>
+  </div>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
+    const error = urlParams.get('error');
+
+    if (error) {
+      document.querySelector('.container').innerHTML = \`
+        <h2>Authentication Failed</h2>
+        <p>\${error}</p>
+        <p>You can close this window.</p>
+      \`;
+    } else if (code && state && window.opener) {
+      window.opener.postMessage({
+        type: 'oauth-success',
+        code: code,
+        state: state,
+        provider: 'google'
+      }, '*');
+      
+      document.querySelector('.container').innerHTML = \`
+        <h2>Success!</h2>
+        <p>Authentication complete. This window will close automatically.</p>
+      \`;
+      
+      setTimeout(() => window.close(), 2000);
+    } else {
+      document.querySelector('.container').innerHTML = \`
+        <h2>Invalid Request</h2>
+        <p>Missing authentication data. Please try again.</p>
+      \`;
+    }
+  </script>
+</body>
+</html>`;
+    
+    return new Response(callbackHtml, {
+      headers: { ...corsHeaders, 'Content-Type': 'text/html' },
+    });
+  }
+
   try {
     // Get JWT from Authorization header (already validated by Supabase due to verify_jwt=true)
     const authHeader = req.headers.get('Authorization');
