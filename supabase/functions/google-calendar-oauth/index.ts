@@ -72,20 +72,52 @@ Deno.serve(async (req) => {
         <p>\${error}</p>
         <p>You can close this window.</p>
       \`;
-    } else if (code && state && window.opener) {
-      window.opener.postMessage({
+    } else if (code && state) {
+      const message = {
         type: 'oauth-success',
         code: code,
         state: state,
         provider: 'google'
-      }, '*');
+      };
+
+      // Try postMessage with retries
+      let attempts = 0;
+      const maxAttempts = 5;
       
-      document.querySelector('.container').innerHTML = \`
-        <h2>Success!</h2>
-        <p>Authentication complete. This window will close automatically.</p>
-      \`;
+      const sendMessage = () => {
+        attempts++;
+        
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage(message, window.location.origin);
+          
+          document.querySelector('.container').innerHTML = \`
+            <h2>Success!</h2>
+            <p>Authentication complete. This window will close automatically.</p>
+          \`;
+          
+          setTimeout(() => window.close(), 1500);
+        } else if (attempts < maxAttempts) {
+          // Retry after a short delay
+          setTimeout(sendMessage, 300);
+        } else {
+          // Fallback: store in sessionStorage
+          try {
+            sessionStorage.setItem('google-oauth-callback', JSON.stringify(message));
+            document.querySelector('.container').innerHTML = \`
+              <h2>Almost Done!</h2>
+              <p>Please close this window and return to the app.</p>
+            \`;
+            setTimeout(() => window.close(), 3000);
+          } catch (e) {
+            document.querySelector('.container').innerHTML = \`
+              <h2>Please Close This Window</h2>
+              <p>Return to the app to complete authentication.</p>
+            \`;
+          }
+        }
+      };
       
-      setTimeout(() => window.close(), 2000);
+      sendMessage();
     } else {
       document.querySelector('.container').innerHTML = \`
         <h2>Invalid Request</h2>
