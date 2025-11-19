@@ -24,7 +24,26 @@ Deno.serve(async (req) => {
       throw new Error('Missing authorization header');
     }
 
-    // Create Supabase client with auth context
+    // Extract JWT token and decode it to get user info
+    // When verify_jwt=true, Supabase has already validated the JWT
+    const jwt = authHeader.replace('Bearer ', '');
+    const parts = jwt.split('.');
+    if (parts.length !== 3) {
+      throw new Error('Invalid JWT format');
+    }
+
+    // Decode the payload (middle part of JWT)
+    const payload = JSON.parse(atob(parts[1]));
+    const userId = payload.sub;
+    
+    if (!userId) {
+      console.error('No user ID found in JWT payload');
+      throw new Error('Unauthorized - invalid token');
+    }
+
+    console.log('Authenticated user from JWT:', userId);
+
+    // Create Supabase client for database operations (not auth)
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -34,19 +53,6 @@ Deno.serve(async (req) => {
         },
       }
     );
-
-    // Get authenticated user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser();
-
-    if (userError || !user) {
-      console.error('Authentication failed:', userError?.message || 'No user found');
-      throw new Error('Unauthorized - please sign in');
-    }
-
-    console.log('Authenticated user:', user.id);
 
     const { action, code, state, profileId } = await req.json() as OAuthRequest;
 
@@ -69,9 +75,9 @@ Deno.serve(async (req) => {
       authUrl.searchParams.set('scope', scope);
       authUrl.searchParams.set('access_type', 'offline');
       authUrl.searchParams.set('prompt', 'consent');
-      authUrl.searchParams.set('state', JSON.stringify({ userId: user.id, profileId }));
+      authUrl.searchParams.set('state', JSON.stringify({ userId: userId, profileId }));
 
-      console.log('Generated OAuth URL for user:', user.id);
+      console.log('Generated OAuth URL for user:', userId);
 
       return new Response(
         JSON.stringify({ authUrl: authUrl.toString() }),
