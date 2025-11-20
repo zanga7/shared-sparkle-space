@@ -17,35 +17,11 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Handle GET requests (OAuth callback from Microsoft)
+  // Handle GET requests (OAuth callback from Microsoft) - No longer used, redirect handled by frontend
   if (req.method === 'GET') {
     const url = new URL(req.url);
-    const code = url.searchParams.get('code');
-    const state = url.searchParams.get('state');
-    const error = url.searchParams.get('error');
-
-    // If there's an error, redirect back with error
-    if (error) {
-      return Response.redirect(
-        `${url.origin}/admin/calendar-settings?error=${encodeURIComponent(error)}`,
-        302
-      );
-    }
-
-    // If we have code and state, store them in a way the frontend can pick up
-    // and redirect back to calendar settings
-    if (code && state) {
-      // Create a simple redirect with the data as URL parameters
-      const redirectUrl = new URL(`${url.origin}/admin/calendar-settings`);
-      redirectUrl.searchParams.set('ms_code', code);
-      redirectUrl.searchParams.set('ms_state', state);
-      
-      return Response.redirect(redirectUrl.toString(), 302);
-    }
-
-    // Missing parameters
     return Response.redirect(
-      `${url.origin}/admin/calendar-settings?error=invalid_request`,
+      `${url.origin}/admin/calendar-settings?error=deprecated_callback`,
       302
     );
   }
@@ -84,7 +60,8 @@ Deno.serve(async (req) => {
 
       const clientId = Deno.env.get('MICROSOFT_CALENDAR_CLIENT_ID');
       const clientSecret = Deno.env.get('MICROSOFT_CALENDAR_CLIENT_SECRET');
-      const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/microsoft-calendar-oauth`;
+      // Redirect to frontend, not back to edge function
+      const redirectUri = `${req.headers.get('origin') || 'https://37c95a9c-b1e8-415f-88ac-4c7efbf8cecf.lovableproject.com'}/admin/calendar-settings`;
 
       if (!clientId || !clientSecret) {
         throw new Error('Microsoft OAuth credentials not configured');
@@ -100,7 +77,7 @@ Deno.serve(async (req) => {
         authUrl.searchParams.set('response_type', 'code');
         authUrl.searchParams.set('scope', scope);
         authUrl.searchParams.set('response_mode', 'query');
-        authUrl.searchParams.set('state', JSON.stringify({ userId: userId, profileId }));
+        authUrl.searchParams.set('state', JSON.stringify({ userId: userId, profileId, provider: 'microsoft' }));
 
         console.log('Generated Microsoft OAuth URL for user:', userId);
 
