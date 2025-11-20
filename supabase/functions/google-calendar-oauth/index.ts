@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
       `${url.origin}/admin/calendar-settings?error=invalid_request`,
       302
     );
+  }
 
   try {
     // For POST requests, verify JWT manually (GET requests are OAuth callbacks and don't need auth)
