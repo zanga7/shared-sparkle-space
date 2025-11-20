@@ -55,10 +55,8 @@ const CalendarSettings = () => {
   // Check for OAuth callback parameters in URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const msCode = urlParams.get('ms_code');
-    const msState = urlParams.get('ms_state');
-    const googleCode = urlParams.get('google_code');
-    const googleState = urlParams.get('google_state');
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
     const error = urlParams.get('error');
 
     if (error) {
@@ -72,14 +70,13 @@ const CalendarSettings = () => {
       return;
     }
 
-    if (msCode && msState) {
-      // Process Microsoft OAuth callback
-      handleOAuthCallback(msCode, msState, 'microsoft');
-      // Clean URL
-      window.history.replaceState({}, '', '/admin/calendar-settings');
-    } else if (googleCode && googleState) {
-      // Process Google OAuth callback
-      handleOAuthCallback(googleCode, googleState, 'google');
+    if (code && state) {
+      // Determine provider from state or URL
+      const stateData = JSON.parse(state);
+      const provider = stateData.provider || 'google'; // Determine based on your state structure
+      
+      // Process OAuth callback
+      handleOAuthCallback(code, state, provider as 'google' | 'microsoft');
       // Clean URL
       window.history.replaceState({}, '', '/admin/calendar-settings');
     }
@@ -87,11 +84,15 @@ const CalendarSettings = () => {
 
   const handleOAuthCallback = async (code: string, state: string, provider: 'google' | 'microsoft') => {
     try {
+      const stateData = JSON.parse(state);
+      const profileId = stateData.profileId;
+      
       const { data, error } = await supabase.functions.invoke(`${provider}-calendar-oauth`, {
         body: {
           action: 'callback',
           code,
-          state
+          state,
+          profileId
         }
       });
 
@@ -102,7 +103,7 @@ const CalendarSettings = () => {
           calendars: data.calendars,
           tokens: data.tokens,
           integrationType: provider,
-          profileId: data.profileId
+          profileId: data.profileId || profileId
         });
         setCalendarModalOpen(true);
       }
@@ -187,68 +188,8 @@ const CalendarSettings = () => {
       if (error) throw error;
 
       if (data.authUrl) {
-        // Open OAuth flow in popup
-        const width = 600;
-        const height = 700;
-        const left = window.screen.width / 2 - width / 2;
-        const top = window.screen.height / 2 - height / 2;
-        
-        const popup = window.open(
-          data.authUrl,
-          'oauth',
-          `width=${width},height=${height},left=${left},top=${top}`
-        );
-
-        // Listen for OAuth callback via postMessage
-        const handleMessage = async (event: MessageEvent) => {
-          // Security: check origin if needed
-          if (event.data.type === 'oauth-success' && event.data.provider === integrationType) {
-            const { code, state } = event.data;
-            
-            // Exchange code for tokens (auth handled automatically by SDK)
-            const { data: callbackData, error: callbackError } = await supabase.functions.invoke(
-              functionName,
-              {
-                body: { action: 'callback', code, state, profileId: memberId },
-              }
-            );
-
-            if (callbackError) throw callbackError;
-
-            if (callbackData.success) {
-              // Show calendar selection modal
-              setCalendarModalData({
-                calendars: callbackData.calendars,
-                tokens: callbackData.tokens,
-                integrationType: integrationType as 'google' | 'microsoft',
-                profileId: callbackData.profileId || memberId,
-              });
-              setCalendarModalOpen(true);
-            }
-
-            popup?.close();
-            window.removeEventListener('message', handleMessage);
-          }
-        };
-
-        window.addEventListener('message', handleMessage);
-        
-        // Fallback: check sessionStorage if popup closes without postMessage
-        const checkSessionStorage = setInterval(() => {
-          const stored = sessionStorage.getItem(`${integrationType === 'microsoft' ? 'ms' : 'google'}-oauth-callback`);
-          if (stored) {
-            clearInterval(checkSessionStorage);
-            sessionStorage.removeItem(`${integrationType === 'microsoft' ? 'ms' : 'google'}-oauth-callback`);
-            const data = JSON.parse(stored);
-            handleMessage({ data } as MessageEvent);
-          }
-        }, 500);
-        
-        // Cleanup after 5 minutes
-        setTimeout(() => {
-          clearInterval(checkSessionStorage);
-          window.removeEventListener('message', handleMessage);
-        }, 300000);
+        // Redirect to OAuth provider
+        window.location.href = data.authUrl;
       }
     } catch (error: any) {
       console.error('OAuth error details:', {
