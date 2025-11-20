@@ -48,7 +48,6 @@ Deno.serve(async (req) => {
       `${url.origin}/admin/calendar-settings?error=invalid_request`,
       302
     );
-
   }
 
   try {
