@@ -51,32 +51,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // For POST requests, verify JWT manually (GET requests are OAuth callbacks and don't need auth)
+    // For POST requests, get user from JWT (automatically verified by Supabase)
     if (req.method === 'POST') {
       const authHeader = req.headers.get('Authorization');
       if (!authHeader) {
         throw new Error('Missing authorization header');
       }
 
-      // Extract JWT token and decode it to get user info
-      const jwt = authHeader.replace('Bearer ', '');
-      const parts = jwt.split('.');
-      if (parts.length !== 3) {
-        throw new Error('Invalid JWT format');
-      }
-
-      // Decode the payload (middle part of JWT)
-      const payload = JSON.parse(atob(parts[1]));
-      const userId = payload.sub;
-      
-      if (!userId) {
-        console.error('No user ID found in JWT payload');
-        throw new Error('Unauthorized - invalid token');
-      }
-
-      console.log('Authenticated user from JWT:', userId);
-
-      // Create Supabase client for database operations
+      // Create Supabase client - JWT is already verified by Supabase
       const supabaseClient = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -86,6 +68,15 @@ Deno.serve(async (req) => {
           },
         }
       );
+
+      // Get user from the verified JWT
+      const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+      if (userError || !user) {
+        throw new Error('Unauthorized');
+      }
+
+      const userId = user.id;
+      console.log('Authenticated user:', userId);
 
       const { action, code, state, profileId } = await req.json() as OAuthRequest;
 
