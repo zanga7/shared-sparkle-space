@@ -7,10 +7,10 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.google-calendar-oauth]
-verify_jwt = false
+verify_jwt = true
 
 [functions.microsoft-calendar-oauth]
-verify_jwt = false
+verify_jwt = true
 
 [functions.calendar-sync]
 verify_jwt = true
