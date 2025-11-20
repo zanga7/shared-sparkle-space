@@ -52,6 +52,72 @@ const CalendarSettings = () => {
     }
   }, [user]);
 
+  // Check for OAuth callback parameters in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const msCode = urlParams.get('ms_code');
+    const msState = urlParams.get('ms_state');
+    const googleCode = urlParams.get('google_code');
+    const googleState = urlParams.get('google_state');
+    const error = urlParams.get('error');
+
+    if (error) {
+      toast({
+        title: 'Connection Failed',
+        description: `Failed to connect calendar: ${error}`,
+        variant: 'destructive'
+      });
+      // Clean URL
+      window.history.replaceState({}, '', '/admin/calendar-settings');
+      return;
+    }
+
+    if (msCode && msState) {
+      // Process Microsoft OAuth callback
+      handleOAuthCallback(msCode, msState, 'microsoft');
+      // Clean URL
+      window.history.replaceState({}, '', '/admin/calendar-settings');
+    } else if (googleCode && googleState) {
+      // Process Google OAuth callback
+      handleOAuthCallback(googleCode, googleState, 'google');
+      // Clean URL
+      window.history.replaceState({}, '', '/admin/calendar-settings');
+    }
+  }, []);
+
+  const handleOAuthCallback = async (code: string, state: string, provider: 'google' | 'microsoft') => {
+    try {
+      const { data, error } = await supabase.functions.invoke(`${provider}-calendar-oauth`, {
+        body: {
+          action: 'callback',
+          code,
+          state
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success && data.calendars) {
+        setCalendarModalData({
+          calendars: data.calendars,
+          tokens: data.tokens,
+          integrationType: provider,
+          profileId: data.profileId
+        });
+        setCalendarModalOpen(true);
+      }
+    } catch (error: any) {
+      console.error('OAuth callback error:', error);
+      toast({
+        title: 'Connection Failed',
+        description: error.message || 'Failed to process calendar connection',
+        variant: 'destructive'
+      });
+    } finally {
+      setConnectingProvider(null);
+    }
+  };
+
   const fetchUserData = async () => {
     try {
       // Fetch current user profile

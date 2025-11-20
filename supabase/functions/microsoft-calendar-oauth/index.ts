@@ -24,119 +24,31 @@ Deno.serve(async (req) => {
     const state = url.searchParams.get('state');
     const error = url.searchParams.get('error');
 
-    const callbackHtml = `<!DOCTYPE html>
-<html>
-<head>
-  <title>Calendar OAuth Callback</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-      background: #f5f5f5;
+    // If there's an error, redirect back with error
+    if (error) {
+      return Response.redirect(
+        `${url.origin}/admin/calendar-settings?error=${encodeURIComponent(error)}`,
+        302
+      );
     }
-    .container {
-      text-align: center;
-      background: white;
-      padding: 2rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .spinner {
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid #3498db;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 1rem;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="spinner"></div>
-    <p id="message">Completing authentication...</p>
-  </div>
-  <script>
-    (function() {
-      const code = ${JSON.stringify(code)};
-      const state = ${JSON.stringify(state)};
-      const error = ${JSON.stringify(error)};
-      const messageEl = document.getElementById('message');
 
-      if (error) {
-        document.querySelector('.container').innerHTML = \`
-          <h2>Authentication Failed</h2>
-          <p>\${error}</p>
-          <p>You can close this window.</p>
-        \`;
-        return;
-      }
-
-      if (!code || !state) {
-        document.querySelector('.container').innerHTML = \`
-          <h2>Invalid Request</h2>
-          <p>Missing authentication data. Please try again.</p>
-        \`;
-        return;
-      }
-
-      const message = {
-        type: 'oauth-success',
-        code: code,
-        state: state,
-        provider: 'microsoft'
-      };
-
-      // Check if we're in a popup
-      const isPopup = window.opener && !window.opener.closed;
+    // If we have code and state, store them in a way the frontend can pick up
+    // and redirect back to calendar settings
+    if (code && state) {
+      // Create a simple redirect with the data as URL parameters
+      const redirectUrl = new URL(`${url.origin}/admin/calendar-settings`);
+      redirectUrl.searchParams.set('ms_code', code);
+      redirectUrl.searchParams.set('ms_state', state);
       
-      if (isPopup) {
-        try {
-          window.opener.postMessage(message, '*');
-          messageEl.textContent = 'Success! Closing window...';
-          setTimeout(() => {
-            try {
-              window.close();
-            } catch (e) {
-              messageEl.textContent = 'Please close this window manually.';
-            }
-          }, 1000);
-        } catch (e) {
-          console.error('Failed to send message:', e);
-          sessionStorage.setItem('ms-oauth-callback', JSON.stringify(message));
-          messageEl.textContent = 'Please close this window and return to the app.';
-        }
-      } else {
-        // Not in a popup - store in sessionStorage and redirect
-        try {
-          sessionStorage.setItem('ms-oauth-callback', JSON.stringify(message));
-          messageEl.textContent = 'Redirecting...';
-          // Redirect to the calendar settings page
-          setTimeout(() => {
-            window.location.href = '/admin/calendar-settings';
-          }, 500);
-        } catch (e) {
-          console.error('Storage failed:', e);
-          messageEl.textContent = 'Please navigate back to the Calendar Settings page.';
-        }
-      }
-    })();
-  </script>
-</body>
-</html>`;
-    
-    return new Response(callbackHtml, {
-      headers: { ...corsHeaders, 'Content-Type': 'text/html' },
-    });
+      return Response.redirect(redirectUrl.toString(), 302);
+    }
+
+    // Missing parameters
+    return Response.redirect(
+      `${url.origin}/admin/calendar-settings?error=invalid_request`,
+      302
+    );
+
   }
 
   try {
