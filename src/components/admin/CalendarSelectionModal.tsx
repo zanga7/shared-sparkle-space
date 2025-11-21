@@ -61,11 +61,13 @@ export const CalendarSelectionModal = ({
       return;
     }
 
+    console.log(`🔗 Connecting calendar: ${selectedCalendarId} (${integrationType})`);
     setLoading(true);
+    
     try {
       const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
-      // Create integration using secure function
+      console.log('💾 Calling create_secure_calendar_integration RPC...');
       const { data, error } = await supabase.rpc('create_secure_calendar_integration', {
         access_token_param: tokens.access_token,
         refresh_token_param: tokens.refresh_token || null,
@@ -74,20 +76,25 @@ export const CalendarSelectionModal = ({
         expires_at_param: expiresAt,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ RPC error:', error);
+        throw error;
+      }
+
+      console.log('✅ Calendar integration created successfully:', data);
 
       toast({
-        title: 'Calendar connected',
+        title: '✓ Calendar Connected',
         description: `Successfully connected to ${integrationType === 'google' ? 'Google' : 'Microsoft'} Calendar`,
       });
 
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      console.error('Error connecting calendar:', error);
+      console.error('❌ Error connecting calendar:', error);
       toast({
-        title: 'Connection failed',
-        description: error.message || 'Failed to connect calendar',
+        title: 'Connection Failed',
+        description: error.message || 'Failed to connect calendar. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -96,12 +103,29 @@ export const CalendarSelectionModal = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog open={open} onOpenChange={(open) => {
+      // Prevent closing by clicking outside or escape key during loading
+      if (!open && loading) {
+        return;
+      }
+      // Warn user if trying to close without completing
+      if (!open && !loading) {
+        console.log('⚠️ User attempting to close calendar selection modal');
+      }
+      onOpenChange(open);
+    }}>
+      <DialogContent 
+        className="sm:max-w-[500px]"
+        onInteractOutside={(e) => {
+          // Prevent closing by clicking outside
+          e.preventDefault();
+        }}
+      >
         <DialogHeader>
-          <DialogTitle>Select Calendar</DialogTitle>
+          <DialogTitle>⚠️ Complete Calendar Setup</DialogTitle>
           <DialogDescription>
-            Choose which calendar you want to sync with your family calendar
+            Choose which calendar you want to sync with your family calendar.
+            You must select a calendar to complete the connection.
           </DialogDescription>
         </DialogHeader>
 
@@ -138,10 +162,20 @@ export const CalendarSelectionModal = ({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              console.log('⚠️ User cancelled calendar selection');
+              onOpenChange(false);
+            }} 
+            disabled={loading}
+          >
             Cancel
           </Button>
-          <Button onClick={handleConnect} disabled={loading}>
+          <Button 
+            onClick={handleConnect} 
+            disabled={loading || !selectedCalendarId}
+          >
             {loading ? 'Connecting...' : 'Connect Calendar'}
           </Button>
         </DialogFooter>

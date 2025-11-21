@@ -45,6 +45,8 @@ const CalendarSettings = () => {
     profileId: string;
   } | null>(null);
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
+  const [processingCallback, setProcessingCallback] = useState(false);
+  const [pendingSelection, setPendingSelection] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -83,10 +85,14 @@ const CalendarSettings = () => {
   }, []);
 
   const handleOAuthCallback = async (code: string, state: string, provider: 'google' | 'microsoft') => {
+    setProcessingCallback(true);
+    console.log(`🔄 Processing ${provider} OAuth callback...`);
+    
     try {
       const stateData = JSON.parse(state);
       const profileId = stateData.profileId;
       
+      console.log(`📞 Calling ${provider}-calendar-oauth function...`);
       const { data, error } = await supabase.functions.invoke(`${provider}-calendar-oauth`, {
         body: {
           action: 'callback',
@@ -96,25 +102,46 @@ const CalendarSettings = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error(`❌ OAuth function error:`, error);
+        throw error;
+      }
+
+      console.log(`✅ OAuth callback successful:`, { 
+        success: data.success, 
+        calendarsCount: data.calendars?.length,
+        provider 
+      });
 
       if (data.success && data.calendars) {
-        setCalendarModalData({
+        const modalData = {
           calendars: data.calendars,
           tokens: data.tokens,
           integrationType: provider,
           profileId: data.profileId || profileId
-        });
+        };
+        
+        setCalendarModalData(modalData);
         setCalendarModalOpen(true);
+        setPendingSelection(true);
+        
+        console.log(`📋 Calendar selection modal opened with ${data.calendars.length} calendars`);
+        
+        toast({
+          title: '✓ Calendars Retrieved',
+          description: `Found ${data.calendars.length} calendar(s). Please select one to complete setup.`,
+          duration: 10000,
+        });
       }
     } catch (error: any) {
-      console.error('OAuth callback error:', error);
+      console.error('❌ OAuth callback error:', error);
       toast({
         title: 'Connection Failed',
         description: error.message || 'Failed to process calendar connection',
         variant: 'destructive'
       });
     } finally {
+      setProcessingCallback(false);
       setConnectingProvider(null);
     }
   };
@@ -291,11 +318,18 @@ const CalendarSettings = () => {
     }
   };
 
-  if (loading) {
+  if (loading || processingCallback) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-lg">Loading calendar settings...</div>
+        <div className="text-center space-y-4">
+          <div className="text-lg font-medium">
+            {processingCallback ? 'Processing calendar connection...' : 'Loading calendar settings...'}
+          </div>
+          {processingCallback && (
+            <div className="text-sm text-muted-foreground">
+              Please wait while we retrieve your calendars
+            </div>
+          )}
         </div>
       </div>
     );
@@ -612,16 +646,49 @@ const CalendarSettings = () => {
       {/* Token Security Status */}
       <TokenEncryptionStatus />
 
+      {/* Pending Selection Warning */}
+      {pendingSelection && !calendarModalOpen && (
+        <Card className="border-orange-500 bg-orange-50 dark:bg-orange-950">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <h3 className="font-semibold text-orange-900 dark:text-orange-100">
+                  Calendar Setup Incomplete
+                </h3>
+                <p className="text-sm text-orange-700 dark:text-orange-200 mt-1">
+                  You started connecting a calendar but didn't complete the setup. 
+                  Please select a calendar to finish the connection.
+                </p>
+              </div>
+              <Button 
+                onClick={() => setCalendarModalOpen(true)}
+                variant="default"
+              >
+                Complete Setup
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Calendar Selection Modal */}
       {calendarModalData && (
         <CalendarSelectionModal
           open={calendarModalOpen}
-          onOpenChange={setCalendarModalOpen}
+          onOpenChange={(open) => {
+            setCalendarModalOpen(open);
+            if (!open) {
+              // User closed modal without selecting - keep warning visible
+              console.log('⚠️ Modal closed without completing calendar selection');
+            }
+          }}
           calendars={calendarModalData.calendars}
           tokens={calendarModalData.tokens}
           integrationType={calendarModalData.integrationType}
           profileId={calendarModalData.profileId}
           onSuccess={() => {
+            console.log('✅ Calendar integration saved successfully');
+            setPendingSelection(false);
             fetchUserData();
             setCalendarModalData(null);
           }}
