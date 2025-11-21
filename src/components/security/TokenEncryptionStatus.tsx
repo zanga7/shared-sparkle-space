@@ -32,13 +32,14 @@ export const TokenEncryptionStatus = ({ className }: TokenEncryptionStatusProps)
 
       if (calendarError) throw calendarError;
 
-      // Check Google Photos encryption status - using metadata approach since direct access is blocked
+      // Check Google Photos encryption status - using metadata approach since direct access might be blocked
       const { data: googlePhotosCount, error: googlePhotosError } = await supabase
         .from('google_photos_integrations')
         .select('id', { count: 'exact' })
         .eq('is_active', true);
 
-      if (googlePhotosError) throw googlePhotosError;
+      // If permission denied, assume no Google Photos integrations exist (which is fine)
+      if (googlePhotosError && googlePhotosError.code !== '42501') throw googlePhotosError;
 
       // For security, we can't directly check encryption status of Google Photos tokens
       // since they should all be encrypted going forward. We'll assume they need migration
