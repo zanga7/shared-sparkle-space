@@ -67,13 +67,14 @@ export const CalendarSelectionModal = ({
     try {
       const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
-      console.log('💾 Calling create_secure_calendar_integration RPC...');
+      console.log('💾 Calling create_secure_calendar_integration RPC...', { profileId });
       const { data, error } = await supabase.rpc('create_secure_calendar_integration', {
         access_token_param: tokens.access_token,
         refresh_token_param: tokens.refresh_token || null,
         calendar_id_param: selectedCalendarId,
         integration_type_param: integrationType,
         expires_at_param: expiresAt,
+        target_profile_id_param: profileId, // Pass the target profile ID
       });
 
       if (error) {
