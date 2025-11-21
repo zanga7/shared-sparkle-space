@@ -52,7 +52,10 @@ export const CalendarSelectionModal = ({
   const { toast } = useToast();
 
   const handleConnect = async () => {
+    console.log(`🎯 handleConnect called - selectedCalendarId: ${selectedCalendarId}`);
+    
     if (!selectedCalendarId) {
+      console.warn('❌ No calendar selected');
       toast({
         title: 'No calendar selected',
         description: 'Please select a calendar to sync',
@@ -61,13 +64,18 @@ export const CalendarSelectionModal = ({
       return;
     }
 
-    console.log(`🔗 Connecting calendar: ${selectedCalendarId} (${integrationType})`);
+    console.log(`🔗 Connecting calendar: ${selectedCalendarId} (${integrationType}) for profile: ${profileId}`);
     setLoading(true);
     
     try {
       const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
-      console.log('💾 Calling create_secure_calendar_integration RPC...', { profileId });
+      console.log('💾 Calling create_secure_calendar_integration RPC...', { 
+        profileId,
+        integrationType,
+        calendarId: selectedCalendarId 
+      });
+      
       const { data, error } = await supabase.rpc('create_secure_calendar_integration', {
         access_token_param: tokens.access_token,
         refresh_token_param: tokens.refresh_token || null,
@@ -104,22 +112,29 @@ export const CalendarSelectionModal = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(open) => {
-      // Prevent closing by clicking outside or escape key during loading
-      if (!open && loading) {
-        return;
-      }
-      // Warn user if trying to close without completing
-      if (!open && !loading) {
-        console.log('⚠️ User attempting to close calendar selection modal');
-      }
-      onOpenChange(open);
-    }}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(open) => {
+        // Prevent closing by clicking outside or escape key during loading
+        if (!open && loading) {
+          console.log('🚫 Cannot close modal while connecting...');
+          return;
+        }
+        onOpenChange(open);
+      }}
+    >
       <DialogContent 
         className="sm:max-w-[500px]"
         onInteractOutside={(e) => {
+          // Prevent closing modal by clicking outside - force user to use buttons
+          e.preventDefault();
+          console.log('⚠️ Please use the buttons to complete or cancel setup');
+        }}
+        onEscapeKeyDown={(e) => {
+          // Prevent closing with escape key during loading
           if (loading) {
             e.preventDefault();
+            console.log('🚫 Cannot close modal while connecting...');
           }
         }}
       >
