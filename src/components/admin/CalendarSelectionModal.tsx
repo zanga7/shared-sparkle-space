@@ -70,24 +70,36 @@ export const CalendarSelectionModal = ({
     try {
       const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
-      console.log('💾 Calling create_secure_calendar_integration RPC...', { 
-        profileId,
-        integrationType,
-        calendarId: selectedCalendarId 
+      console.log('💾 Calling create_secure_calendar_integration RPC with params:', { 
+        integration_type_param: integrationType,
+        calendar_id_param: selectedCalendarId,
+        expires_at_param: expiresAt,
+        target_profile_id_param: profileId,
+        has_access_token: !!tokens.access_token,
+        has_refresh_token: !!tokens.refresh_token
       });
       
       const { data, error } = await supabase.rpc('create_secure_calendar_integration', {
+        integration_type_param: integrationType,
+        calendar_id_param: selectedCalendarId,
         access_token_param: tokens.access_token,
         refresh_token_param: tokens.refresh_token || null,
-        calendar_id_param: selectedCalendarId,
-        integration_type_param: integrationType,
         expires_at_param: expiresAt,
-        target_profile_id_param: profileId, // Pass the target profile ID
+        target_profile_id_param: profileId,
       });
+
+      console.log('📡 RPC Response:', { data, error });
 
       if (error) {
         console.error('❌ RPC error:', error);
         throw error;
+      }
+
+      // Check if the RPC returned a success response
+      const result = data as any;
+      if (result && !result.success) {
+        console.error('❌ RPC returned error:', result.error);
+        throw new Error(result.error || 'Failed to create integration');
       }
 
       console.log('✅ Calendar integration created successfully:', data);
