@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Check } from 'lucide-react';
+import { Calendar, Check, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -118,15 +118,16 @@ export const CalendarSelectionModal = ({
       <DialogContent 
         className="sm:max-w-[500px]"
         onInteractOutside={(e) => {
-          // Prevent closing by clicking outside
-          e.preventDefault();
+          if (loading) {
+            e.preventDefault();
+          }
         }}
       >
         <DialogHeader>
-          <DialogTitle>⚠️ Complete Calendar Setup</DialogTitle>
+          <DialogTitle className="text-lg font-semibold">Select Calendar to Connect</DialogTitle>
           <DialogDescription>
-            Choose which calendar you want to sync with your family calendar.
-            You must select a calendar to complete the connection.
+            Choose which {integrationType === 'google' ? 'Google' : 'Microsoft'} calendar you want to sync. 
+            <span className="block mt-1 font-medium text-foreground">Important: Click "Connect Calendar" below to complete setup.</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -167,6 +168,11 @@ export const CalendarSelectionModal = ({
             variant="outline" 
             onClick={() => {
               console.log('⚠️ User cancelled calendar selection');
+              toast({
+                title: 'Setup Cancelled',
+                description: 'Calendar connection was not completed.',
+                variant: 'destructive',
+              });
               onOpenChange(false);
             }} 
             disabled={loading}
@@ -176,8 +182,19 @@ export const CalendarSelectionModal = ({
           <Button 
             onClick={handleConnect} 
             disabled={loading || !selectedCalendarId}
+            className="min-w-[150px]"
           >
-            {loading ? 'Connecting...' : 'Connect Calendar'}
+            {loading ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              <>
+                <Calendar className="mr-2 h-4 w-4" />
+                Connect Calendar
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

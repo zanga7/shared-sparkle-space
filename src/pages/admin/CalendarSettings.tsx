@@ -462,8 +462,11 @@ const CalendarSettings = () => {
                                   />
                                 </div>
                               )}
-                              {googleIntegration ? (
-                                <>
+                                {googleIntegration ? (
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="default" className="bg-green-600">
+                                    Connected
+                                  </Badge>
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -479,12 +482,12 @@ const CalendarSettings = () => {
                                     onClick={() => setDeletingIntegration(googleIntegration)}
                                   >
                                     <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </>
+                                   </Button>
+                                  </div>
                               ) : (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
+                                  <Button
+                                    variant="default"
+                                    size="sm"
                                   onClick={() => handleConnectCalendar(member.id, 'google')}
                                   disabled={connectingProvider === `${member.id}-google`}
                                 >
@@ -526,36 +529,39 @@ const CalendarSettings = () => {
                                   />
                                 </div>
                               )}
-                              {outlookIntegration ? (
-                                <>
+                               {outlookIntegration ? (
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="default" className="bg-green-600">
+                                      Connected
+                                    </Badge>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleSyncNow(outlookIntegration.id)}
+                                      disabled={!!connectingProvider}
+                                    >
+                                      <RefreshCw className="h-4 w-4 mr-1" />
+                                      Sync
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setDeletingIntegration(outlookIntegration)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ) : (
                                   <Button
-                                    variant="outline"
+                                    variant="default"
                                     size="sm"
-                                    onClick={() => handleSyncNow(outlookIntegration.id)}
-                                    disabled={!!connectingProvider}
+                                    onClick={() => handleConnectCalendar(member.id, 'microsoft')}
+                                    disabled={connectingProvider === `${member.id}-microsoft`}
                                   >
-                                    <RefreshCw className="h-4 w-4 mr-1" />
-                                    Sync
+                                    <ExternalLink className="h-4 w-4 mr-1" />
+                                    {connectingProvider === `${member.id}-microsoft` ? 'Connecting...' : 'Connect'}
                                   </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setDeletingIntegration(outlookIntegration)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              ) : (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleConnectCalendar(member.id, 'microsoft')}
-                                  disabled={connectingProvider === `${member.id}-microsoft`}
-                                >
-                                  <ExternalLink className="h-4 w-4 mr-1" />
-                                  {connectingProvider === `${member.id}-microsoft` ? 'Connecting...' : 'Connect'}
-                                </Button>
-                              )}
+                                )}
                             </div>
                           </div>
                         </div>
