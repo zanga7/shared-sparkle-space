@@ -2034,6 +2034,7 @@ export type Database = {
           expires_at_param?: string
           integration_type_param: string
           refresh_token_param?: string
+          target_profile_id_param?: string
         }
         Returns: Json
       }
