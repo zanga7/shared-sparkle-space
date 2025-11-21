@@ -121,17 +121,20 @@ const CalendarSettings = () => {
           profileId: data.profileId || profileId
         };
         
+        console.log(`📋 Setting modal data and opening modal with ${data.calendars.length} calendars`);
         setCalendarModalData(modalData);
         setCalendarModalOpen(true);
         setPendingSelection(true);
         
-        console.log(`📋 Calendar selection modal opened with ${data.calendars.length} calendars`);
-        
-        toast({
-          title: '✓ Calendars Retrieved',
-          description: `Found ${data.calendars.length} calendar(s). Please select one to complete setup.`,
-          duration: 10000,
-        });
+        // Use setTimeout to ensure modal opens after state updates
+        setTimeout(() => {
+          console.log(`🔔 Modal should now be visible - calendarModalOpen: true, calendarModalData exists: ${!!modalData}`);
+          toast({
+            title: '✓ Step 1 Complete',
+            description: `Found ${data.calendars.length} calendar(s). Now SELECT A CALENDAR and click "Connect Calendar" to finish.`,
+            duration: 15000,
+          });
+        }, 100);
       }
     } catch (error: any) {
       console.error('❌ OAuth callback error:', error);
