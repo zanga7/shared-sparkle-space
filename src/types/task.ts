@@ -44,6 +44,7 @@ export interface Task {
   isException?: boolean;
   exceptionType?: 'skip' | 'override';
   overrideData?: any;
+  task_source?: string | null; // Source of the task (e.g., 'series', 'rotating', etc.)
 }
 
 export interface Profile {

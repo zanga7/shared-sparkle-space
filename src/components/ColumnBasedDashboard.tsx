@@ -294,6 +294,8 @@ const ColumnBasedDashboard = () => {
     const handler = () => {
       console.log('🔁 [SERIES] series-updated event received, refreshing task series');
       fetchTaskSeries();
+      // Force UI refresh to show new virtual tasks
+      setTasks(prev => [...prev]);
     };
     window.addEventListener('series-updated', handler);
     return () => window.removeEventListener('series-updated', handler);
@@ -310,7 +312,9 @@ const ColumnBasedDashboard = () => {
         { event: '*', schema: 'public', table: 'task_series', filter: `family_id=eq.${profile.family_id}` },
         async () => {
           console.log('🛰️ [REALTIME] task_series change detected, refreshing');
-          fetchTaskSeries();
+          await fetchTaskSeries();
+          // Force UI refresh to regenerate virtual tasks
+          setTasks(prev => [...prev]);
         }
       )
       .on(
@@ -318,7 +322,9 @@ const ColumnBasedDashboard = () => {
         { event: '*', schema: 'public', table: 'recurrence_exceptions' },
         async () => {
           console.log('🛰️ [REALTIME] recurrence_exceptions change detected, refreshing');
-          fetchTaskSeries();
+          await fetchTaskSeries();
+          // Force UI refresh to regenerate virtual tasks
+          setTasks(prev => [...prev]);
         }
       )
       .subscribe();
@@ -509,6 +515,9 @@ const ColumnBasedDashboard = () => {
   }, [profile?.family_id]);
 
   // Subscribe to profile updates to reflect points changes in real-time
+  // Use a debounced approach to prevent duplicate updates
+  const profileUpdateTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  
   useEffect(() => {
     if (!profile?.family_id) return;
 
@@ -529,20 +538,32 @@ const ColumnBasedDashboard = () => {
           
           const updatedProfile = payload.new as Profile;
           
-          // Update the current profile if it's the user's profile
-          if (updatedProfile.id === profile.id) {
-            console.log('📊 Updating current user points:', updatedProfile.total_points);
-            setProfile(prev => prev ? { ...prev, total_points: updatedProfile.total_points } : null);
+          // Debounce profile updates to prevent duplicate point updates
+          const existingTimeout = profileUpdateTimeoutRef.current.get(updatedProfile.id);
+          if (existingTimeout) {
+            clearTimeout(existingTimeout);
           }
           
-          // Update family members list
-          setFamilyMembers(prev =>
-            prev.map(member =>
-              member.id === updatedProfile.id
-                ? { ...member, total_points: updatedProfile.total_points }
-                : member
-            )
-          );
+          const timeout = setTimeout(() => {
+            // Update the current profile if it's the user's profile
+            if (updatedProfile.id === profile.id) {
+              console.log('📊 Updating current user points:', updatedProfile.total_points);
+              setProfile(prev => prev ? { ...prev, total_points: updatedProfile.total_points } : null);
+            }
+            
+            // Update family members list
+            setFamilyMembers(prev =>
+              prev.map(member =>
+                member.id === updatedProfile.id
+                  ? { ...member, total_points: updatedProfile.total_points }
+                  : member
+              )
+            );
+            
+            profileUpdateTimeoutRef.current.delete(updatedProfile.id);
+          }, 100); // 100ms debounce
+          
+          profileUpdateTimeoutRef.current.set(updatedProfile.id, timeout);
         }
       )
       .subscribe((status) => {
@@ -551,6 +572,9 @@ const ColumnBasedDashboard = () => {
 
     return () => {
       console.log('🔌 Removing profiles realtime subscription');
+      // Clear all pending timeouts
+      profileUpdateTimeoutRef.current.forEach(timeout => clearTimeout(timeout));
+      profileUpdateTimeoutRef.current.clear();
       supabase.removeChannel(profilesChannel);
     };
   }, [profile?.family_id, profile?.id]);
@@ -1340,50 +1364,67 @@ const ColumnBasedDashboard = () => {
     
     const virtualInstances = Array.from(seriesInstanceMap.values());
     
-    // Map virtual instances to Task format
-    const virtualTasks: Task[] = virtualInstances.map(vTask => ({
-      id: vTask.id,
-      title: vTask.title,
-      description: vTask.description || null,
-      points: vTask.points,
-      due_date: vTask.due_date,
-      assigned_to: vTask.assigned_profiles[0] || null,
-      created_by: vTask.created_by,
-      completion_rule: (vTask.completion_rule || 'everyone') as 'any_one' | 'everyone',
-      task_group: vTask.task_group,
-      assignees: vTask.assigned_profiles.map(profileId => {
-        const memberProfile = familyMembers.find(m => m.id === profileId);
-        return {
-          id: `${vTask.id}-${profileId}`,
-          profile_id: profileId,
-          assigned_at: new Date().toISOString(),
-          assigned_by: vTask.created_by,
-          profile: memberProfile ? {
-            id: memberProfile.id,
-            display_name: memberProfile.display_name,
-            role: memberProfile.role,
-            color: memberProfile.color,
-            avatar_url: memberProfile.avatar_url || null
-          } : {
-            id: profileId,
-            display_name: 'Unknown',
-            role: 'child' as const,
-            color: 'gray',
-            avatar_url: null
-          }
-        };
-      }),
-      task_completions: [],
-      // Virtual task properties
-      isVirtual: true,
-      series_id: vTask.series_id,
-      occurrence_date: vTask.occurrence_date,
-      isException: vTask.isException,
-      exceptionType: vTask.exceptionType
-    }));
+    // Map virtual instances to Task format with completion checking
+    const virtualTasks: Task[] = virtualInstances.map(vTask => {
+      // Check if this virtual instance has been completed by looking at materialized tasks
+      // The RPC creates materialized tasks with task_source='recurring' when completed
+      const materializedTask = tasks.find(t => 
+        t.task_source === 'recurring' && 
+        t.title === vTask.title &&
+        t.due_date && vTask.due_date &&
+        new Date(t.due_date).toISOString().split('T')[0] === new Date(vTask.due_date).toISOString().split('T')[0]
+      );
+      
+      // Use completions from materialized task if it exists
+      const completions = materializedTask?.task_completions || [];
+      
+      return {
+        id: vTask.id,
+        title: vTask.title,
+        description: vTask.description || null,
+        points: vTask.points,
+        due_date: vTask.due_date,
+        assigned_to: vTask.assigned_profiles[0] || null,
+        created_by: vTask.created_by,
+        completion_rule: (vTask.completion_rule || 'everyone') as 'any_one' | 'everyone',
+        task_group: vTask.task_group,
+        assignees: vTask.assigned_profiles.map(profileId => {
+          const memberProfile = familyMembers.find(m => m.id === profileId);
+          return {
+            id: `${vTask.id}-${profileId}`,
+            profile_id: profileId,
+            assigned_at: new Date().toISOString(),
+            assigned_by: vTask.created_by,
+            profile: memberProfile ? {
+              id: memberProfile.id,
+              display_name: memberProfile.display_name,
+              role: memberProfile.role,
+              color: memberProfile.color,
+              avatar_url: memberProfile.avatar_url || null
+            } : {
+              id: profileId,
+              display_name: 'Unknown',
+              role: 'child' as const,
+              color: 'gray',
+              avatar_url: null
+            }
+          };
+        }),
+        task_completions: completions,
+        // Virtual task properties
+        isVirtual: true,
+        series_id: vTask.series_id,
+        occurrence_date: vTask.occurrence_date,
+        isException: vTask.isException,
+        exceptionType: vTask.exceptionType,
+        task_source: 'series'
+      };
+    });
     
     // Combine regular tasks with virtual task instances
-    const allTasks = [...tasks, ...virtualTasks];
+    // Exclude materialized recurring tasks since they'll be shown as virtual instances
+    const regularTasks = tasks.filter(t => t.task_source !== 'recurring');
+    const allTasks = [...regularTasks, ...virtualTasks];
     
     // Add all tasks (regular + virtual)
     allTasks.forEach(task => {
