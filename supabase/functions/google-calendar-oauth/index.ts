@@ -58,14 +58,21 @@ Deno.serve(async (req) => {
 
       const { action, code, state, profileId } = await req.json() as OAuthRequest;
 
-      const clientId = Deno.env.get('GOOGLE_CALENDAR_CLIENT_ID');
-      const clientSecret = Deno.env.get('GOOGLE_CALENDAR_CLIENT_SECRET');
+      // Get OAuth credentials from database
+      const { data: googleClientId, error: clientIdError } = await supabaseClient
+        .rpc('get_oauth_credential', { credential_key: 'google_client_id' });
+      
+      const { data: googleClientSecret, error: clientSecretError } = await supabaseClient
+        .rpc('get_oauth_credential', { credential_key: 'google_client_secret' });
+
+      if (clientIdError || clientSecretError || !googleClientId || !googleClientSecret) {
+        throw new Error('Google OAuth credentials not configured in super admin');
+      }
+
+      const clientId = googleClientId;
+      const clientSecret = googleClientSecret;
       // Redirect to frontend, not back to edge function
       const redirectUri = `${req.headers.get('origin') || 'https://37c95a9c-b1e8-415f-88ac-4c7efbf8cecf.lovableproject.com'}/admin/calendar-settings`;
-
-      if (!clientId || !clientSecret) {
-        throw new Error('Google OAuth credentials not configured');
-      }
 
       if (action === 'start') {
         // Generate OAuth URL
