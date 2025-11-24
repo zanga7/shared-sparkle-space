@@ -45,6 +45,7 @@ export interface Task {
   exceptionType?: 'skip' | 'override';
   overrideData?: any;
   task_source?: string | null; // Source of the task (e.g., 'series', 'rotating', etc.)
+  hidden_at?: string | null; // Timestamp when task was hidden (null if visible)
 }
 
 export interface Profile {
