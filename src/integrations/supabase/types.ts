@@ -1000,6 +1000,55 @@ export type Database = {
           },
         ]
       }
+      materialized_task_instances: {
+        Row: {
+          id: string
+          materialized_at: string | null
+          materialized_by: string | null
+          materialized_task_id: string | null
+          occurrence_date: string
+          series_id: string
+        }
+        Insert: {
+          id?: string
+          materialized_at?: string | null
+          materialized_by?: string | null
+          materialized_task_id?: string | null
+          occurrence_date: string
+          series_id: string
+        }
+        Update: {
+          id?: string
+          materialized_at?: string | null
+          materialized_by?: string | null
+          materialized_task_id?: string | null
+          occurrence_date?: string
+          series_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "materialized_task_instances_materialized_by_fkey"
+            columns: ["materialized_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "materialized_task_instances_materialized_task_id_fkey"
+            columns: ["materialized_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "materialized_task_instances_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "task_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       oauth_secrets: {
         Row: {
           created_at: string | null
@@ -1849,6 +1898,7 @@ export type Database = {
           recurrence_options: Json | null
           rotating_task_id: string | null
           task_group: string | null
+          task_source: string | null
           title: string
           updated_at: string
         }
@@ -1866,6 +1916,7 @@ export type Database = {
           recurrence_options?: Json | null
           rotating_task_id?: string | null
           task_group?: string | null
+          task_source?: string | null
           title: string
           updated_at?: string
         }
@@ -1883,6 +1934,7 @@ export type Database = {
           recurrence_options?: Json | null
           rotating_task_id?: string | null
           task_group?: string | null
+          task_source?: string | null
           title?: string
           updated_at?: string
         }
@@ -2046,6 +2098,16 @@ export type Database = {
             Returns: Json
           }
         | { Args: { p_completed_by: string; p_task_id: string }; Returns: Json }
+      complete_task_unified: {
+        Args: {
+          p_completer_profile_id: string
+          p_is_virtual?: boolean
+          p_occurrence_date?: string
+          p_series_id?: string
+          p_task_id: string
+        }
+        Returns: Json
+      }
       create_audit_log: {
         Args: {
           p_action: string
