@@ -117,10 +117,20 @@ export const useTaskCompletion = ({
       });
 
       // Call RPC to ensure points are properly handled
-      const { error: insertError } = await supabase.rpc('complete_task_for_member', {
-        p_task_id: task.id,
-        p_completed_by: completerId,
-      });
+      let insertError = null;
+      try {
+        const { error } = await supabase.rpc('complete_task_for_member', {
+          p_task_id: task.id,
+          p_completed_by: completerId,
+        });
+        insertError = error;
+      } catch (fetchError: any) {
+        console.error('Network error completing task:', fetchError);
+        insertError = {
+          message: 'Network error. Please check your connection and try again.',
+          code: 'FETCH_ERROR'
+        };
+      }
 
       if (insertError) {
         console.error('Error completing task:', insertError);
@@ -185,20 +195,36 @@ export const useTaskCompletion = ({
         if (rotatingTaskId || familyId) {
           console.log('🔄 Triggering rotating task generation for:', { rotatingTaskId, familyId, taskName });
           
-          // Call the edge function to generate the next task (scoped if possible)
-          const { data, error } = await supabase.functions.invoke('generate-rotating-tasks', {
-            body: {
-              rotating_task_id: rotatingTaskId,
-              task_name: taskName,
-              family_id: familyId,
-              assign_next_member: true,
-            }
-          });
+          // Call the edge function to generate the next task with timeout
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+            
+            const { data, error } = await supabase.functions.invoke('generate-rotating-tasks', {
+              body: {
+                rotating_task_id: rotatingTaskId,
+                task_name: taskName,
+                family_id: familyId,
+                assign_next_member: true,
+              },
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
 
-          if (error) {
-            console.error('Error generating next rotating task:', error);
-          } else {
-            console.log('✅ Rotating task generation response:', data);
+            clearTimeout(timeoutId);
+
+            if (error) {
+              console.error('Error generating next rotating task:', error);
+            } else {
+              console.log('✅ Rotating task generation response:', data);
+            }
+          } catch (edgeFunctionError: any) {
+            if (edgeFunctionError.name === 'AbortError') {
+              console.warn('Rotating task generation timed out (non-fatal)');
+            } else {
+              console.error('Edge function network error (non-fatal):', edgeFunctionError);
+            }
           }
 
           // Fallback: after a short delay, fetch the most recent uncompleted task for this series
