@@ -301,7 +301,14 @@ const CalendarSettings = () => {
         body: { integrationId },
       });
 
-      if (error) throw error;
+      // Check for function errors or data with error property
+      if (error) {
+        throw new Error(error.message || 'Failed to sync calendar');
+      }
+      
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
       toast({
         title: 'Sync complete',
@@ -311,9 +318,16 @@ const CalendarSettings = () => {
       fetchUserData();
     } catch (error: any) {
       console.error('Sync error:', error);
+      
+      // Check if this is a legacy token error
+      const errorMessage = error.message || 'Failed to sync calendar';
+      const isLegacyError = errorMessage.includes('outdated') || errorMessage.includes('reconnect');
+      
       toast({
-        title: 'Sync failed',
-        description: error.message || 'Failed to sync calendar',
+        title: isLegacyError ? 'Legacy Connection Detected' : 'Sync failed',
+        description: isLegacyError 
+          ? 'This calendar uses an outdated connection format. Please disconnect and reconnect it below.'
+          : errorMessage,
         variant: 'destructive',
       });
     }
