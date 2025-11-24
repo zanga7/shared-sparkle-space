@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Shield, LayoutDashboard, Users, Package, Settings } from 'lucide-react';
+import { Shield, LayoutDashboard, Users, Package, Settings, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function SuperAdminLayout() {
@@ -9,6 +9,7 @@ export default function SuperAdminLayout() {
     { path: '/super-admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
     { path: '/super-admin/families', label: 'Families', icon: Users },
     { path: '/super-admin/plans', label: 'Plans', icon: Package },
+    { path: '/super-admin/integrations', label: 'Integrations', icon: Link2 },
     { path: '/super-admin/themes', label: 'Themes', icon: Settings },
   ];
 
