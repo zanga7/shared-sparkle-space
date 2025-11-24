@@ -7,6 +7,7 @@ const corsHeaders = {
 
 interface SyncRequest {
   integrationId: string;
+  direction?: 'pull' | 'push' | 'both';
 }
 
 interface GoogleEvent {
@@ -66,13 +67,13 @@ Deno.serve(async (req) => {
       }
     );
 
-    const { integrationId } = await req.json() as SyncRequest;
+    const { integrationId, direction = 'both' } = await req.json() as SyncRequest;
 
     if (!integrationId) {
       throw new Error('Integration ID is required');
     }
 
-    console.log('Starting sync for integration:', integrationId);
+    console.log('Starting sync for integration:', integrationId, 'direction:', direction);
 
     const { data: integrations, error: integrationError } = await supabaseClient
       .rpc('get_calendar_integration_safe', { integration_id: integrationId });
@@ -161,34 +162,7 @@ Deno.serve(async (req) => {
       console.log('Token refreshed successfully');
     }
 
-    // Fetch events from external calendar
-    let eventsUrl = '';
-    if (integration.integration_type === 'google') {
-      eventsUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(integration.calendar_id)}/events?maxResults=250&timeMin=${new Date().toISOString()}`;
-    } else if (integration.integration_type === 'microsoft') {
-      eventsUrl = `https://graph.microsoft.com/v1.0/me/calendars/${integration.calendar_id}/events?$top=250&$filter=start/dateTime ge '${new Date().toISOString()}'`;
-    }
-
-    console.log('Fetching events from:', eventsUrl);
-
-    const eventsResponse = await fetch(eventsUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    if (!eventsResponse.ok) {
-      const errorText = await eventsResponse.text();
-      console.error('External API error:', eventsResponse.status, errorText);
-      throw new Error(`Failed to fetch external events: ${eventsResponse.status}`);
-    }
-
-    const eventsData = await eventsResponse.json();
-    const rawEvents = integration.integration_type === 'google' 
-      ? (eventsData.items || [])
-      : (eventsData.value || []);
-
-    console.log(`Fetched ${rawEvents.length} events from external calendar`);
-
-    // Get profile to use as creator
+    // Get profile info
     const { data: profileData } = await supabaseClient
       .from('profiles')
       .select('id, family_id')
@@ -199,64 +173,203 @@ Deno.serve(async (req) => {
       throw new Error('Profile not found for integration');
     }
 
-    // Parse and store events
-    let syncedCount = 0;
-    for (const rawEvent of rawEvents) {
-      try {
-        let eventData: any;
+    let pulledCount = 0;
+    let pushedCount = 0;
 
-        if (integration.integration_type === 'google') {
-          const gEvent = rawEvent as GoogleEvent;
-          const isAllDay = !!gEvent.start.date;
-          
-          eventData = {
-            title: gEvent.summary || 'Untitled Event',
-            description: gEvent.description || null,
-            location: gEvent.location || null,
-            start_date: isAllDay ? `${gEvent.start.date}T00:00:00Z` : gEvent.start.dateTime,
-            end_date: isAllDay ? `${gEvent.end.date}T23:59:59Z` : gEvent.end.dateTime,
-            is_all_day: isAllDay,
-            family_id: profileData.family_id,
-            created_by: profileData.id,
-            source_integration_id: integrationId,
-            source_type: 'google',
-            external_event_id: gEvent.id,
-            last_synced_at: new Date().toISOString(),
-          };
-        } else {
-          const mEvent = rawEvent as MicrosoftEvent;
-          
-          eventData = {
-            title: mEvent.subject || 'Untitled Event',
-            description: mEvent.bodyPreview || null,
-            location: mEvent.location?.displayName || null,
-            start_date: mEvent.start.dateTime,
-            end_date: mEvent.end.dateTime,
-            is_all_day: mEvent.isAllDay,
-            family_id: profileData.family_id,
-            created_by: profileData.id,
-            source_integration_id: integrationId,
-            source_type: 'microsoft',
-            external_event_id: mEvent.id,
-            last_synced_at: new Date().toISOString(),
-          };
+    // PULL: Fetch events from external calendar
+    if (direction === 'pull' || direction === 'both') {
+      let eventsUrl = '';
+      if (integration.integration_type === 'google') {
+        eventsUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(integration.calendar_id)}/events?maxResults=250&timeMin=${new Date().toISOString()}`;
+      } else if (integration.integration_type === 'microsoft') {
+        eventsUrl = `https://graph.microsoft.com/v1.0/me/calendars/${integration.calendar_id}/events?$top=250&$filter=start/dateTime ge '${new Date().toISOString()}'`;
+      }
+
+      console.log('Fetching events from external calendar...');
+
+      const eventsResponse = await fetch(eventsUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (eventsResponse.ok) {
+        const eventsData = await eventsResponse.json();
+        const rawEvents = integration.integration_type === 'google' 
+          ? (eventsData.items || [])
+          : (eventsData.value || []);
+
+        console.log(`Fetched ${rawEvents.length} events from external calendar`);
+
+        for (const rawEvent of rawEvents) {
+          try {
+            let eventData: any;
+
+            if (integration.integration_type === 'google') {
+              const gEvent = rawEvent as GoogleEvent;
+              const isAllDay = !!gEvent.start.date;
+              
+              eventData = {
+                title: gEvent.summary || 'Untitled Event',
+                description: gEvent.description || null,
+                location: gEvent.location || null,
+                start_date: isAllDay ? `${gEvent.start.date}T00:00:00Z` : gEvent.start.dateTime,
+                end_date: isAllDay ? `${gEvent.end.date}T23:59:59Z` : gEvent.end.dateTime,
+                is_all_day: isAllDay,
+                family_id: profileData.family_id,
+                created_by: profileData.id,
+                source_integration_id: integrationId,
+                source_type: 'google',
+                external_event_id: gEvent.id,
+                last_synced_at: new Date().toISOString(),
+              };
+            } else {
+              const mEvent = rawEvent as MicrosoftEvent;
+              
+              eventData = {
+                title: mEvent.subject || 'Untitled Event',
+                description: mEvent.bodyPreview || null,
+                location: mEvent.location?.displayName || null,
+                start_date: mEvent.start.dateTime,
+                end_date: mEvent.end.dateTime,
+                is_all_day: mEvent.isAllDay,
+                family_id: profileData.family_id,
+                created_by: profileData.id,
+                source_integration_id: integrationId,
+                source_type: 'microsoft',
+                external_event_id: mEvent.id,
+                last_synced_at: new Date().toISOString(),
+              };
+            }
+
+            const { error: upsertError } = await supabaseClient
+              .from('events')
+              .upsert(eventData, {
+                onConflict: 'external_event_id,source_integration_id',
+                ignoreDuplicates: false,
+              });
+
+            if (!upsertError) {
+              pulledCount++;
+            }
+          } catch (error) {
+            console.error('Error processing pulled event:', error);
+          }
         }
+      } else {
+        console.error('Failed to fetch external events:', eventsResponse.status);
+      }
+    }
 
-        // Upsert event (insert or update based on external_event_id + source_integration_id)
-        const { error: upsertError } = await supabaseClient
-          .from('events')
-          .upsert(eventData, {
-            onConflict: 'external_event_id,source_integration_id',
-            ignoreDuplicates: false,
-          });
+    // PUSH: Push internal events to external calendar
+    if (direction === 'push' || direction === 'both') {
+      console.log('Fetching internal events to push...');
 
-        if (upsertError) {
-          console.error('Error upserting event:', upsertError);
-        } else {
-          syncedCount++;
+      const { data: internalEvents } = await supabaseClient
+        .from('events')
+        .select('*, event_attendees(profile_id)')
+        .eq('family_id', profileData.family_id)
+        .is('source_integration_id', null)
+        .gte('start_date', new Date().toISOString());
+
+      console.log(`Found ${internalEvents?.length || 0} internal events`);
+
+      for (const internalEvent of internalEvents || []) {
+        try {
+          const attendees = internalEvent.event_attendees || [];
+          const isAttendee = attendees.some((a: any) => a.profile_id === integration.profile_id);
+
+          if (!isAttendee) {
+            console.log(`Skipping "${internalEvent.title}" - profile not an attendee`);
+            continue;
+          }
+
+          console.log(`Pushing event: ${internalEvent.title}`);
+
+          let externalEventId: string | null = null;
+
+          if (integration.integration_type === 'google') {
+            const googleEvent = {
+              summary: internalEvent.title,
+              description: internalEvent.description || '',
+              location: internalEvent.location || '',
+              start: internalEvent.is_all_day 
+                ? { date: new Date(internalEvent.start_date).toISOString().split('T')[0] }
+                : { dateTime: internalEvent.start_date, timeZone: 'UTC' },
+              end: internalEvent.is_all_day
+                ? { date: new Date(internalEvent.end_date).toISOString().split('T')[0] }
+                : { dateTime: internalEvent.end_date, timeZone: 'UTC' },
+            };
+
+            const createUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(integration.calendar_id)}/events`;
+            const createResponse = await fetch(createUrl, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(googleEvent),
+            });
+
+            if (createResponse.ok) {
+              const createdEvent = await createResponse.json();
+              externalEventId = createdEvent.id;
+              console.log(`✓ Pushed to Google Calendar: ${internalEvent.title}`);
+            } else {
+              console.error(`✗ Failed to push to Google:`, await createResponse.text());
+            }
+          } else if (integration.integration_type === 'microsoft') {
+            const msEvent = {
+              subject: internalEvent.title,
+              body: {
+                contentType: 'text',
+                content: internalEvent.description || '',
+              },
+              location: {
+                displayName: internalEvent.location || '',
+              },
+              start: internalEvent.is_all_day
+                ? { dateTime: new Date(internalEvent.start_date).toISOString().split('T')[0] + 'T00:00:00', timeZone: 'UTC' }
+                : { dateTime: internalEvent.start_date, timeZone: 'UTC' },
+              end: internalEvent.is_all_day
+                ? { dateTime: new Date(internalEvent.end_date).toISOString().split('T')[0] + 'T23:59:59', timeZone: 'UTC' }
+                : { dateTime: internalEvent.end_date, timeZone: 'UTC' },
+              isAllDay: internalEvent.is_all_day,
+            };
+
+            const createUrl = `https://graph.microsoft.com/v1.0/me/calendars/${integration.calendar_id}/events`;
+            const createResponse = await fetch(createUrl, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(msEvent),
+            });
+
+            if (createResponse.ok) {
+              const createdEvent = await createResponse.json();
+              externalEventId = createdEvent.id;
+              console.log(`✓ Pushed to Microsoft Calendar: ${internalEvent.title}`);
+            } else {
+              console.error(`✗ Failed to push to Microsoft:`, await createResponse.text());
+            }
+          }
+
+          if (externalEventId) {
+            await supabaseClient
+              .from('events')
+              .update({
+                source_integration_id: integrationId,
+                source_type: integration.integration_type,
+                external_event_id: externalEventId,
+                last_synced_at: new Date().toISOString(),
+              })
+              .eq('id', internalEvent.id);
+
+            pushedCount++;
+          }
+        } catch (eventError) {
+          console.error(`Error pushing event ${internalEvent.title}:`, eventError);
         }
-      } catch (error) {
-        console.error('Error processing event:', error);
       }
     }
 
@@ -270,8 +383,8 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         message: 'Sync completed successfully',
-        eventCount: rawEvents.length,
-        syncedCount,
+        pulledCount,
+        pushedCount,
         timestamp: new Date().toISOString(),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
