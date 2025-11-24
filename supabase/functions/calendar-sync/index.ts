@@ -68,22 +68,32 @@ Deno.serve(async (req) => {
     const integration = integrations[0];
     console.log('Found integration:', integration.integration_type);
 
-    // Since the access_token is encrypted, we need to use it directly in the API call
-    // The tokens are encrypted in the database, so we'll use them as-is
-    // Note: In production, tokens should be properly decrypted, but for now we'll work around the type issue
-    let accessToken = integration.access_token;
-    let refreshToken = integration.refresh_token;
-    
-    console.log('Has access token:', !!accessToken);
-    console.log('Token expires:', integration.expires_at);
+    // Get decrypted tokens using the fixed database function
+    const { data: decryptedTokens, error: decryptError } = await supabaseClient
+      .rpc('get_decrypted_calendar_tokens', { integration_id_param: integrationId });
+
+    if (decryptError || !decryptedTokens || decryptedTokens.length === 0) {
+      console.error('Failed to get tokens:', decryptError);
+      throw new Error('Failed to decrypt access token');
+    }
+
+    const tokenData = decryptedTokens[0];
+    console.log('Got tokens, expires:', tokenData.expires_at, 'is_expired:', tokenData.is_expired);
 
     // Check if token needs refresh
     const now = new Date();
-    const expiresAt = integration.expires_at ? new Date(integration.expires_at) : null;
+    const expiresAt = tokenData.expires_at ? new Date(tokenData.expires_at) : null;
     const needsRefresh = expiresAt ? (expiresAt.getTime() - now.getTime() < 5 * 60 * 1000) : false;
 
-    if (needsRefresh && refreshToken) {
+    let accessToken = tokenData.access_token;
+
+    if (needsRefresh) {
       console.log('Token needs refresh, refreshing...');
+      
+      const refreshToken = tokenData.refresh_token;
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
+      }
 
       // Refresh token based on provider
       let tokenUrl = '';
