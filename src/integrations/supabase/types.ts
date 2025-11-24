@@ -2124,6 +2124,7 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_calendar_integration_status: { Args: never; Returns: Json }
       get_calendar_integrations_metadata: {
         Args: never
         Returns: {
@@ -2465,6 +2466,10 @@ export type Database = {
         Returns: boolean
       }
       is_current_user_parent: { Args: never; Returns: boolean }
+      is_legacy_calendar_token: {
+        Args: { token_value: string }
+        Returns: boolean
+      }
       is_parent_in_same_family: {
         Args: { target_profile_id: string }
         Returns: boolean
@@ -2547,6 +2552,7 @@ export type Database = {
         Args: { p_exdate: string; p_series_id: string; p_table_name: string }
         Returns: undefined
       }
+      remove_legacy_calendar_integrations: { Args: never; Returns: Json }
       revoke_calendar_integration: {
         Args: { integration_id: string; reason?: string }
         Returns: boolean
