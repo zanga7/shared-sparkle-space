@@ -68,12 +68,25 @@ Deno.serve(async (req) => {
     const integration = integrations[0];
     console.log('Found integration:', integration.integration_type);
 
+    // Decrypt the access token for use
+    const { data: decryptedAccessToken, error: decryptError } = await supabaseClient
+      .rpc('decrypt_oauth_token', {
+        encrypted_data: integration.access_token,
+        requesting_integration_id: integrationId,
+        token_type: 'access_token'
+      });
+
+    if (decryptError || !decryptedAccessToken) {
+      console.error('Failed to decrypt access token:', decryptError);
+      throw new Error('Failed to decrypt access token');
+    }
+
     // Check if token needs refresh
     const expiresAt = new Date(integration.expires_at);
     const now = new Date();
     const needsRefresh = expiresAt.getTime() - now.getTime() < 5 * 60 * 1000; // Refresh if expires in < 5 minutes
 
-    let accessToken = integration.access_token;
+    let accessToken = decryptedAccessToken;
 
     if (needsRefresh) {
       console.log('Token needs refresh, refreshing...');
@@ -153,7 +166,9 @@ Deno.serve(async (req) => {
     });
 
     if (!eventsResponse.ok) {
-      throw new Error('Failed to fetch external events');
+      const errorText = await eventsResponse.text();
+      console.error('External API error:', eventsResponse.status, errorText);
+      throw new Error(`Failed to fetch external events: ${eventsResponse.status}`);
     }
 
     const eventsData = await eventsResponse.json();
