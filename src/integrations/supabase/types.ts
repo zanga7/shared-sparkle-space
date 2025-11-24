@@ -2066,16 +2066,16 @@ export type Database = {
       decrypt_oauth_token:
         | {
             Args: {
-              encrypted_data: string
+              encrypted_token: string
               integration_id: string
-              token_type: string
+              token_type?: string
             }
             Returns: string
           }
         | {
             Args: {
               encrypted_token: string
-              integration_id: string
+              integration_id?: string
               token_type?: string
             }
             Returns: string
