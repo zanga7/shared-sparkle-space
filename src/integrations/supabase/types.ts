@@ -974,6 +974,30 @@ export type Database = {
           },
         ]
       }
+      oauth_secrets: {
+        Row: {
+          created_at: string | null
+          id: string
+          key: string
+          updated_at: string | null
+          value: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          key: string
+          updated_at?: string | null
+          value?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          key?: string
+          updated_at?: string | null
+          value?: string | null
+        }
+        Relationships: []
+      }
       plan_modules: {
         Row: {
           id: string
@@ -2312,6 +2336,10 @@ export type Database = {
           expires_at: string
           refresh_token: string
         }[]
+      }
+      get_oauth_credential: {
+        Args: { credential_key: string }
+        Returns: string
       }
       get_oauth_credentials: { Args: never; Returns: Json }
       get_profile_points_balance: {
