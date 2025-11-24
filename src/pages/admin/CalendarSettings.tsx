@@ -387,6 +387,14 @@ const CalendarSettings = () => {
     }
   };
 
+  // Helper to check if an integration might be legacy (created before encryption update)
+  const isLikelyLegacyIntegration = (integration: any) => {
+    // Check if created before Nov 24, 2024 (when encryption was added)
+    const encryptionUpdateDate = new Date('2024-11-24');
+    const createdDate = new Date(integration.created_at);
+    return createdDate < encryptionUpdateDate;
+  };
+
   if (loading || processingCallback) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -506,14 +514,27 @@ const CalendarSettings = () => {
                               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                                 <Calendar className="h-4 w-4 text-blue-600" />
                               </div>
-                              <div>
-                                <div className="font-medium">Google Calendar</div>
+                              <div className="flex-1">
+                                <div className="font-medium flex items-center gap-2">
+                                  Google Calendar
+                                  {googleIntegration && isLikelyLegacyIntegration(googleIntegration) && (
+                                    <Badge variant="destructive" className="text-xs">
+                                      <AlertTriangle className="h-3 w-3 mr-1" />
+                                      Legacy
+                                    </Badge>
+                                  )}
+                                </div>
                                 <div className="text-sm text-muted-foreground">
                                   {googleIntegration 
                                     ? `Connected on ${format(new Date(googleIntegration.created_at), 'MMM d, yyyy')}`
                                     : 'Not connected'
                                   }
                                 </div>
+                                {googleIntegration && isLikelyLegacyIntegration(googleIntegration) && (
+                                  <div className="text-xs text-destructive mt-1">
+                                    Outdated connection - Please disconnect and reconnect
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div className="flex items-center gap-3">
@@ -533,20 +554,24 @@ const CalendarSettings = () => {
                               )}
                                 {googleIntegration ? (
                                 <div className="flex items-center gap-2">
-                                  <Badge variant="default" className="bg-green-600">
-                                    Connected
-                                  </Badge>
+                                  {!isLikelyLegacyIntegration(googleIntegration) && (
+                                    <>
+                                      <Badge variant="default" className="bg-green-600">
+                                        Connected
+                                      </Badge>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleSyncNow(googleIntegration.id)}
+                                        disabled={!!connectingProvider}
+                                      >
+                                        <RefreshCw className="h-4 w-4 mr-1" />
+                                        Sync
+                                      </Button>
+                                    </>
+                                  )}
                                   <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleSyncNow(googleIntegration.id)}
-                                    disabled={!!connectingProvider}
-                                  >
-                                    <RefreshCw className="h-4 w-4 mr-1" />
-                                    Sync
-                                  </Button>
-                                  <Button
-                                    variant="outline"
+                                    variant={isLikelyLegacyIntegration(googleIntegration) ? "destructive" : "outline"}
                                     size="sm"
                                     onClick={() => setDeletingIntegration(googleIntegration)}
                                   >
@@ -573,14 +598,27 @@ const CalendarSettings = () => {
                               <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
                                 <Calendar className="h-4 w-4 text-orange-600" />
                               </div>
-                              <div>
-                                <div className="font-medium">Outlook Calendar</div>
+                              <div className="flex-1">
+                                <div className="font-medium flex items-center gap-2">
+                                  Outlook Calendar
+                                  {outlookIntegration && isLikelyLegacyIntegration(outlookIntegration) && (
+                                    <Badge variant="destructive" className="text-xs">
+                                      <AlertTriangle className="h-3 w-3 mr-1" />
+                                      Legacy
+                                    </Badge>
+                                  )}
+                                </div>
                                 <div className="text-sm text-muted-foreground">
                                   {outlookIntegration 
                                     ? `Connected on ${format(new Date(outlookIntegration.created_at), 'MMM d, yyyy')}`
                                     : 'Not connected'
                                   }
                                 </div>
+                                {outlookIntegration && isLikelyLegacyIntegration(outlookIntegration) && (
+                                  <div className="text-xs text-destructive mt-1">
+                                    Outdated connection - Please disconnect and reconnect
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div className="flex items-center gap-3">
@@ -600,20 +638,24 @@ const CalendarSettings = () => {
                               )}
                                {outlookIntegration ? (
                                   <div className="flex items-center gap-2">
-                                    <Badge variant="default" className="bg-green-600">
-                                      Connected
-                                    </Badge>
+                                    {!isLikelyLegacyIntegration(outlookIntegration) && (
+                                      <>
+                                        <Badge variant="default" className="bg-green-600">
+                                          Connected
+                                        </Badge>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleSyncNow(outlookIntegration.id)}
+                                          disabled={!!connectingProvider}
+                                        >
+                                          <RefreshCw className="h-4 w-4 mr-1" />
+                                          Sync
+                                        </Button>
+                                      </>
+                                    )}
                                     <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleSyncNow(outlookIntegration.id)}
-                                      disabled={!!connectingProvider}
-                                    >
-                                      <RefreshCw className="h-4 w-4 mr-1" />
-                                      Sync
-                                    </Button>
-                                    <Button
-                                      variant="outline"
+                                      variant={isLikelyLegacyIntegration(outlookIntegration) ? "destructive" : "outline"}
                                       size="sm"
                                       onClick={() => setDeletingIntegration(outlookIntegration)}
                                     >
