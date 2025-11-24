@@ -178,11 +178,16 @@ Deno.serve(async (req) => {
 
     // PULL: Fetch events from external calendar
     if (direction === 'pull' || direction === 'both') {
+      // Use start of today to include all events from today onwards
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const timeMin = todayStart.toISOString();
+      
       let eventsUrl = '';
       if (integration.integration_type === 'google') {
-        eventsUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(integration.calendar_id)}/events?maxResults=250&timeMin=${new Date().toISOString()}`;
+        eventsUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(integration.calendar_id)}/events?maxResults=250&timeMin=${timeMin}`;
       } else if (integration.integration_type === 'microsoft') {
-        eventsUrl = `https://graph.microsoft.com/v1.0/me/calendars/${integration.calendar_id}/events?$top=250&$filter=start/dateTime ge '${new Date().toISOString()}'`;
+        eventsUrl = `https://graph.microsoft.com/v1.0/me/calendars/${integration.calendar_id}/events?$top=250&$filter=start/dateTime ge '${timeMin}'`;
       }
 
       console.log('Fetching events from external calendar...');
@@ -263,12 +268,19 @@ Deno.serve(async (req) => {
     if (direction === 'push' || direction === 'both') {
       console.log('Fetching internal events to push...');
 
+      // Use start of today to include all events from today onwards
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      // Fetch events that either:
+      // 1. Have no source (never been synced)
+      // 2. Have this integration as source (for updates)
       const { data: internalEvents } = await supabaseClient
         .from('events')
         .select('*, event_attendees(profile_id)')
         .eq('family_id', profileData.family_id)
-        .is('source_integration_id', null)
-        .gte('start_date', new Date().toISOString());
+        .or(`source_integration_id.is.null,source_integration_id.eq.${integrationId}`)
+        .gte('start_date', todayStart.toISOString());
 
       console.log(`Found ${internalEvents?.length || 0} internal events`);
 
@@ -385,6 +397,7 @@ Deno.serve(async (req) => {
         message: 'Sync completed successfully',
         pulledCount,
         pushedCount,
+        eventCount: pulledCount + pushedCount,
         timestamp: new Date().toISOString(),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
