@@ -69,6 +69,55 @@ export const useTaskCompletion = ({
         }
       }
 
+      // Handle virtual recurring task instances - materialize them first
+      let actualTaskId = task.id;
+      const isVirtualTask = (task as any).isVirtual === true;
+      
+      if (isVirtualTask) {
+        console.log('Materializing virtual task instance:', task.id);
+        
+        // Create the actual task from the virtual instance
+        const { data: newTask, error: createError } = await supabase
+          .from('tasks')
+          .insert({
+            title: task.title,
+            description: task.description,
+            points: task.points,
+            due_date: task.due_date,
+            task_group: task.task_group,
+            completion_rule: task.completion_rule || 'everyone',
+            family_id: (task as any).family_id || currentUserProfile?.family_id,
+            created_by: (task as any).created_by || currentUserProfile?.id,
+            series_id: (task as any).series_id,
+          })
+          .select()
+          .single();
+
+        if (createError || !newTask) {
+          console.error('Error materializing virtual task:', createError);
+          toast({
+            title: "Error",
+            description: "Failed to create task instance",
+            variant: "destructive",
+          });
+          return false;
+        }
+
+        // Assign to the same profiles
+        if (task.assignees && task.assignees.length > 0) {
+          const assigneesData = task.assignees.map(assignee => ({
+            task_id: newTask.id,
+            profile_id: assignee.profile_id,
+            assigned_by: currentUserProfile?.id || (task as any).created_by,
+          }));
+
+          await supabase.from('task_assignees').insert(assigneesData);
+        }
+
+        actualTaskId = newTask.id;
+        console.log('Materialized task ID:', actualTaskId);
+      }
+
       // Optimistic UI update - update local state immediately
       const optimisticCompletion = {
         id: crypto.randomUUID(),
@@ -120,7 +169,7 @@ export const useTaskCompletion = ({
       let insertError = null;
       try {
         const { error } = await supabase.rpc('complete_task_for_member', {
-          p_task_id: task.id,
+          p_task_id: actualTaskId,
           p_completed_by: completerId,
         });
         insertError = error;
