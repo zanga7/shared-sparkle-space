@@ -2018,6 +2018,10 @@ export type Database = {
         Args: { integration_profile_id: string }
         Returns: boolean
       }
+      can_view_event: {
+        Args: { event_id: string; event_source_integration_id: string }
+        Returns: boolean
+      }
       check_member_pin_cache: {
         Args: { device_id_param?: string; profile_id_param: string }
         Returns: boolean
