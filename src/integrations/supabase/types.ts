@@ -2480,16 +2480,27 @@ export type Database = {
         }
         Returns: undefined
       }
-      log_sensitive_access: {
-        Args: {
-          p_action: string
-          p_details?: Json
-          p_entity_id: string
-          p_entity_type: string
-          p_success?: boolean
-        }
-        Returns: undefined
-      }
+      log_sensitive_access:
+        | {
+            Args: {
+              p_action: string
+              p_details?: Json
+              p_entity_id: string
+              p_entity_type: string
+              p_success?: boolean
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_action: string
+              p_details?: Json
+              p_entity_id: string
+              p_entity_type: string
+              p_success?: boolean
+            }
+            Returns: undefined
+          }
       mark_reward_claimed: { Args: { request_id_param: string }; Returns: Json }
       migrate_existing_tokens_to_encrypted: { Args: never; Returns: Json }
       remove_exdate_from_series: {
