@@ -732,8 +732,8 @@ const CalendarSettings = () => {
         </CardContent>
       </Card>
 
-      {/* Encryption Fix Notice - Only show if there are integrations */}
-      {integrations.length > 0 && (
+      {/* Encryption Fix Notice - Only show if there are LEGACY integrations */}
+      {legacyStatus?.needs_migration && (
         <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-100">
