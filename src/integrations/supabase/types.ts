@@ -1893,6 +1893,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           family_id: string
+          hidden_at: string | null
           id: string
           points: number
           recurrence_options: Json | null
@@ -1911,6 +1912,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           family_id: string
+          hidden_at?: string | null
           id?: string
           points?: number
           recurrence_options?: Json | null
@@ -1929,6 +1931,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           family_id?: string
+          hidden_at?: string | null
           id?: string
           points?: number
           recurrence_options?: Json | null
@@ -2553,6 +2556,7 @@ export type Database = {
       }
       get_user_family_id: { Args: never; Returns: string }
       hash_pin: { Args: { pin_text: string }; Returns: string }
+      hide_completed_tasks: { Args: { p_family_id: string }; Returns: Json }
       is_calendar_integration_owner: {
         Args: { integration_id: string }
         Returns: boolean

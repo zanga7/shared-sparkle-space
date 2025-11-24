@@ -52,6 +52,7 @@ import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { useDashboardMode } from '@/hooks/useDashboardMode';
 import { useTaskCompletion } from '@/hooks/useTaskCompletion';
 import { useTaskSeries } from '@/hooks/useTaskSeries';
+import { useMidnightTaskCleanup } from '@/hooks/useMidnightTaskCleanup';
 import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
 import { MemberSwitchDialog } from '@/components/dashboard/MemberSwitchDialog';
 import { MemberSelectorDialog } from '@/components/dashboard/MemberSelectorDialog';
@@ -98,6 +99,9 @@ const ColumnBasedDashboard = () => {
     canPerformAction,
     isAuthenticating
   } = useDashboardAuth();
+  
+  // Auto-hide completed tasks at midnight
+  useMidnightTaskCleanup();
 
   // Task completion hook
   const { completeTask: completeTaskHandler, uncompleteTask: uncompleteTaskHandler, isCompleting } = useTaskCompletion({
@@ -210,7 +214,7 @@ const ColumnBasedDashboard = () => {
           await new Promise(resolve => setTimeout(resolve, 100));
           console.log('⏱️ [REALTIME] Waited 100ms, now fetching full task data...');
           
-          // Fetch full task data with relations
+          // Fetch full task data with relations (exclude hidden tasks)
           const { data: newTaskData } = await supabase
             .from('tasks')
             .select(`
@@ -223,12 +227,14 @@ const ColumnBasedDashboard = () => {
               created_by,
               completion_rule,
               task_group,
+              task_source,
               rotating_task_id,
               assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
               assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
               task_completions(id, completed_at, completed_by)
             `)
             .eq('id', payload.new.id)
+            .is('hidden_at', null)
             .single();
 
           // Retry once if assignees are not yet available (race-safe hydration)
@@ -247,12 +253,14 @@ const ColumnBasedDashboard = () => {
                 created_by,
                 completion_rule,
                 task_group,
+                task_source,
                 rotating_task_id,
                 assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
                 assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
                 task_completions(id, completed_at, completed_by)
               `)
               .eq('id', payload.new.id)
+              .is('hidden_at', null)
               .single();
             if (retryData) hydratedTask = retryData;
           }
@@ -334,6 +342,19 @@ const ColumnBasedDashboard = () => {
     };
   }, [profile?.family_id, fetchTaskSeries]);
 
+  // Listen for midnight cleanup events
+  useEffect(() => {
+    const handleCleanup = () => {
+      console.log('🧹 Tasks cleaned up at midnight, refreshing...');
+      fetchUserData();
+    };
+    window.addEventListener('tasks-cleaned-up', handleCleanup);
+    
+    return () => {
+      window.removeEventListener('tasks-cleaned-up', handleCleanup);
+    };
+  }, []);
+
   // Subscribe to task_assignees inserts to hydrate assignees after rotating task generation
   useEffect(() => {
     if (!profile?.family_id) return;
@@ -354,7 +375,7 @@ const ColumnBasedDashboard = () => {
               profileId: (payload as any).new.profile_id
             });
             
-            // Fetch the full task with relations once an assignee is added
+            // Fetch the full task with relations once an assignee is added (exclude hidden)
             const { data: taskData } = await supabase
               .from('tasks')
               .select(`
@@ -367,12 +388,14 @@ const ColumnBasedDashboard = () => {
                 created_by,
                 completion_rule,
                 task_group,
+                task_source,
                 family_id,
                 assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
                 assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
                 task_completions(id, completed_at, completed_by)
               `)
               .eq('id', (payload as any).new.task_id)
+              .is('hidden_at', null)
               .single();
 
             if (!taskData || taskData.family_id !== profile.family_id) {
@@ -863,7 +886,7 @@ const ColumnBasedDashboard = () => {
       // Cleanup duplicate rotating tasks for today
       await cleanupDuplicateRotatingTasksToday(profileData.family_id);
 
-      // Fetch family tasks with completion status
+      // Fetch family tasks with completion status (filter out hidden tasks)
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .select(`
@@ -876,11 +899,13 @@ const ColumnBasedDashboard = () => {
           created_by,
           completion_rule,
           task_group,
+          task_source,
           assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color, avatar_url),
           assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color, avatar_url)),
           task_completions(id, completed_at, completed_by)
         `)
-        .eq('family_id', profileData.family_id);
+        .eq('family_id', profileData.family_id)
+        .is('hidden_at', null);
 
       if (tasksError) {
         console.error('Tasks error:', tasksError);
