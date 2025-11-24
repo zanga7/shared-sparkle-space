@@ -114,6 +114,22 @@ export const useTaskCompletion = ({
         description: `+${completionResult?.points_awarded || task.points} points earned`,
       });
 
+      // If this is a rotating task, trigger rotation to next member
+      if (task.rotating_task_id && !isVirtualTask) {
+        console.log('🔄 Rotating task completed, triggering rotation to next member');
+        try {
+          await supabase.functions.invoke('generate-rotating-tasks', {
+            body: { 
+              rotating_task_id: task.rotating_task_id,
+              assign_next_member: true
+            }
+          });
+        } catch (rotationError) {
+          console.error('Error triggering rotation:', rotationError);
+          // Don't fail the whole completion if rotation fails
+        }
+      }
+
       // Success callback if provided
       if (onSuccess) {
         onSuccess();
