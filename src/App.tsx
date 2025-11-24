@@ -35,6 +35,7 @@ import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
 import FamilyManagement from "./pages/super-admin/FamilyManagement";
 import PlanManagement from "./pages/super-admin/PlanManagement";
 import ThemesManagement from "./pages/super-admin/ThemesManagement";
+import IntegrationsManagement from "./pages/super-admin/IntegrationsManagement";
 import CelebrationsManagement from "./pages/admin/CelebrationsManagement";
 import Welcome from "./pages/onboarding/Welcome";
 import CreateCrew from "./pages/onboarding/CreateCrew";
@@ -97,6 +98,7 @@ const App = () => (
           <Route index element={<SuperAdminDashboard />} />
           <Route path="families" element={<FamilyManagement />} />
           <Route path="plans" element={<PlanManagement />} />
+          <Route path="integrations" element={<IntegrationsManagement />} />
           <Route path="themes" element={<ThemesManagement />} />
         </Route>
 
