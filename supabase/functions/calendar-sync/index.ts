@@ -21,7 +21,24 @@ Deno.serve(async (req) => {
       throw new Error('Missing authorization header');
     }
 
-    // Create Supabase client with auth header
+    // Extract JWT token and decode to get user ID
+    const token = authHeader.replace('Bearer ', '');
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      throw new Error('Invalid JWT token format');
+    }
+
+    // Decode JWT payload (base64url)
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const userId = payload.sub;
+
+    if (!userId) {
+      throw new Error('No user ID in token');
+    }
+
+    console.log('Sync request from user:', userId);
+
+    // Create Supabase client with auth header for database queries
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -31,19 +48,6 @@ Deno.serve(async (req) => {
         },
       }
     );
-
-    // Get user from auth header (JWT already verified by platform)
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser();
-
-    if (userError || !user) {
-      console.error('Auth error:', userError?.message || 'No user found');
-      throw new Error('Unauthorized - please sign in');
-    }
-
-    console.log('Sync request from user:', user.id);
 
     const { integrationId } = await req.json() as SyncRequest;
 
