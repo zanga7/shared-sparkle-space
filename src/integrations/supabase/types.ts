@@ -2063,14 +2063,23 @@ export type Database = {
         }
         Returns: Json
       }
-      decrypt_oauth_token: {
-        Args: {
-          encrypted_data: string
-          integration_id: string
-          token_type: string
-        }
-        Returns: string
-      }
+      decrypt_oauth_token:
+        | {
+            Args: {
+              encrypted_data: string
+              integration_id: string
+              token_type: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              encrypted_token: string
+              integration_id: string
+              token_type?: string
+            }
+            Returns: string
+          }
       delete_calendar_integration: {
         Args: { integration_id_param: string }
         Returns: Json
@@ -2094,7 +2103,7 @@ export type Database = {
       encrypt_calendar_token: { Args: { token_value: string }; Returns: string }
       encrypt_google_photos_tokens: { Args: never; Returns: Json }
       encrypt_oauth_token: {
-        Args: { token_type: string; token_value: string }
+        Args: { token_type?: string; token_value: string }
         Returns: string
       }
       fix_my_missing_profile: { Args: never; Returns: Json }
