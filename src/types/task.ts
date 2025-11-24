@@ -46,6 +46,7 @@ export interface Task {
   overrideData?: any;
   task_source?: string | null; // Source of the task (e.g., 'series', 'rotating', etc.)
   hidden_at?: string | null; // Timestamp when task was hidden (null if visible)
+  rotating_task_id?: string | null; // ID of the rotating task that created this task
 }
 
 export interface Profile {
