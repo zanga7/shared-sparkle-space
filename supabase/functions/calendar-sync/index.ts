@@ -74,10 +74,17 @@ Deno.serve(async (req) => {
 
     if (decryptError || !decryptedTokens || decryptedTokens.length === 0) {
       console.error('Failed to get tokens:', decryptError);
-      throw new Error('Failed to decrypt access token');
+      throw new Error('Calendar tokens need reconnection. Please disconnect and reconnect your calendar.');
     }
 
     const tokenData = decryptedTokens[0];
+    
+    // Check if decryption failed (legacy tokens)
+    if (tokenData.access_token?.startsWith('DECRYPTION_FAILED:')) {
+      console.error('Token decryption failed:', tokenData.access_token);
+      throw new Error('Calendar connection is outdated. Please reconnect your calendar.');
+    }
+    
     console.log('Got tokens, expires:', tokenData.expires_at, 'is_expired:', tokenData.is_expired);
 
     // Check if token needs refresh

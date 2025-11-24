@@ -624,6 +624,64 @@ const CalendarSettings = () => {
         </CardContent>
       </Card>
 
+      {/* Encryption Fix Notice - Only show if there are integrations */}
+      {integrations.length > 0 && (
+        <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-100">
+              <Shield className="h-5 w-5" />
+              Calendar Encryption Update
+            </CardTitle>
+            <CardDescription className="text-amber-700 dark:text-amber-200">
+              Your calendar tokens have been updated to use a new, more secure encryption system. 
+              Existing connections need to be removed and reconnected.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-amber-800 dark:text-amber-300">
+                <strong>What happened:</strong> We fixed a critical security issue in how calendar tokens were encrypted. 
+                Old tokens cannot be decrypted with the new system.
+              </p>
+              <p className="text-sm text-amber-800 dark:text-amber-300">
+                <strong>What to do:</strong> Click the button below to remove broken connections, then reconnect your calendars 
+                using the Google or Outlook buttons above. Your calendar data is safe - only the connection needs to be re-established.
+              </p>
+            </div>
+            <Button
+              onClick={async () => {
+                try {
+                  const { data, error } = await supabase.rpc('cleanup_broken_calendar_integrations');
+                  
+                  if (error) throw error;
+                  
+                  const result = data as { success: boolean; deleted_count: number; message: string };
+                  
+                  toast({
+                    title: 'Cleanup Complete',
+                    description: result?.message || `Removed ${result?.deleted_count || 0} broken connection(s). You can now reconnect your calendars.`,
+                  });
+                  
+                  fetchUserData();
+                } catch (error: any) {
+                  console.error('Cleanup error:', error);
+                  toast({
+                    title: 'Cleanup Failed',
+                    description: error.message || 'Failed to clean up connections',
+                    variant: 'destructive',
+                  });
+                }
+              }}
+              className="w-full sm:w-auto"
+              variant="default"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Remove Broken Connections & Prepare for Reconnection
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Token Security Management */}
       <TokenSecurityManager />
 
