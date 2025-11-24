@@ -69,155 +69,27 @@ export const useTaskCompletion = ({
         }
       }
 
-      // Handle virtual recurring task instances - materialize them first
-      let actualTaskId = task.id;
+      // Extract virtual task metadata if present
       const isVirtualTask = (task as any).isVirtual === true;
-      
-      if (isVirtualTask) {
-        console.log('Materializing virtual task instance:', task.id);
-        
-        // Create the actual task from the virtual instance
-        const { data: newTask, error: createError } = await supabase
-          .from('tasks')
-          .insert({
-            title: task.title,
-            description: task.description,
-            points: task.points,
-            due_date: task.due_date,
-            task_group: task.task_group,
-            completion_rule: task.completion_rule || 'everyone',
-            family_id: (task as any).family_id || currentUserProfile?.family_id,
-            created_by: (task as any).created_by || currentUserProfile?.id,
-          })
-          .select()
-          .single();
+      const seriesId = (task as any).series_id || null;
+      const occurrenceDate = (task as any).occurrence_date 
+        ? new Date((task as any).occurrence_date).toISOString().split('T')[0] 
+        : null;
 
-        if (createError || !newTask) {
-          console.error('Error materializing virtual task:', createError);
-          toast({
-            title: "Error",
-            description: "Failed to create task instance",
-            variant: "destructive",
-          });
-          return false;
-        }
-
-        // Assign to the same profiles
-        if (task.assignees && task.assignees.length > 0) {
-          const assigneesData = task.assignees.map(assignee => ({
-            task_id: newTask.id,
-            profile_id: assignee.profile_id,
-            assigned_by: currentUserProfile?.id || (task as any).created_by,
-          }));
-
-          await supabase.from('task_assignees').insert(assigneesData);
-        }
-
-        actualTaskId = newTask.id;
-        console.log('Materialized task ID:', actualTaskId);
-      }
-
-      // Optimistic UI update - update local state immediately
-      const optimisticCompletion = {
-        id: crypto.randomUUID(),
-        task_id: task.id,
-        completed_by: completerId,
-        points_earned: task.points,
-        completed_at: new Date().toISOString(),
-        approved_by: null,
-        approved_at: null,
-      };
-
-      if (setTasks) {
-        setTasks((prev) =>
-          prev.map((t) =>
-            t.id === task.id
-              ? {
-                  ...t,
-                  task_completions: [...(t.task_completions || []), optimisticCompletion],
-                }
-              : t
-          )
-        );
-      }
-
-      // Optimistically update points for the completer
-      if (setProfile && currentUserProfile?.id === completerId) {
-        setProfile((prev) =>
-          prev ? { ...prev, total_points: prev.total_points + task.points } : null
-        );
-      }
-      
-      if (setFamilyMembers) {
-        setFamilyMembers((prev) =>
-          prev.map((member) =>
-            member.id === completerId
-              ? { ...member, total_points: member.total_points + task.points }
-              : member
-          )
-        );
-      }
-
-      // Show immediate feedback
-      toast({
-        title: "Task Completed!",
-        description: `+${task.points} points earned`,
+      // Call unified RPC that handles everything in one transaction
+      const { data: result, error } = await supabase.rpc('complete_task_unified', {
+        p_task_id: isVirtualTask ? null : task.id,
+        p_completer_profile_id: completerId,
+        p_is_virtual: isVirtualTask,
+        p_series_id: seriesId,
+        p_occurrence_date: occurrenceDate,
       });
 
-      // Call RPC to ensure points are properly handled
-      let insertError = null;
-      try {
-        const { error } = await supabase.rpc('complete_task_for_member', {
-          p_task_id: actualTaskId,
-          p_completed_by: completerId,
-        });
-        insertError = error;
-      } catch (fetchError: any) {
-        console.error('Network error completing task:', fetchError);
-        insertError = {
-          message: 'Network error. Please check your connection and try again.',
-          code: 'FETCH_ERROR'
-        };
-      }
-
-      if (insertError) {
-        console.error('Error completing task:', insertError);
-        
-        // Rollback optimistic update for tasks
-        if (setTasks) {
-          setTasks((prev) =>
-            prev.map((t) =>
-              t.id === task.id
-                ? {
-                    ...t,
-                    task_completions: (t.task_completions || []).filter(
-                      (c) => c.id !== optimisticCompletion.id
-                    ),
-                  }
-                : t
-            )
-          );
-        }
-
-        // Rollback optimistic points update
-        if (setProfile && currentUserProfile?.id === completerId) {
-          setProfile((prev) =>
-            prev ? { ...prev, total_points: prev.total_points - task.points } : null
-          );
-        }
-        
-        if (setFamilyMembers) {
-          setFamilyMembers((prev) =>
-            prev.map((member) =>
-              member.id === completerId
-                ? { ...member, total_points: member.total_points - task.points }
-                : member
-            )
-          );
-        }
+      if (error) {
+        console.error('Error completing task:', error);
         
         // Check if it's a duplicate completion
-        if (insertError.code === '23505') {
+        if (error.message?.includes('already completed')) {
           toast({
             title: "Already Completed",
             description: "This task has already been completed",
@@ -226,104 +98,25 @@ export const useTaskCompletion = ({
         } else {
           toast({
             title: "Error",
-            description: insertError.message || "Failed to complete task",
+            description: error.message || "Failed to complete task",
             variant: "destructive",
           });
         }
         return false;
       }
 
-      // If this was a rotating task, trigger generation of next instance and robustly hydrate UI
-      try {
-        const rotatingTaskId = (task as any).rotating_task_id as string | undefined;
-        const familyId = (task as any).family_id || currentUserProfile?.family_id;
-        const taskName = task.title;
-        const startedAt = new Date();
+      // Parse result
+      const completionResult = result as { success: boolean; points_awarded: number; task_id: string } | null;
 
-        if (rotatingTaskId || familyId) {
-          console.log('🔄 Triggering rotating task generation for:', { rotatingTaskId, familyId, taskName });
-          
-          // Call the edge function to generate the next task with timeout
-          try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
-            
-            const { data, error } = await supabase.functions.invoke('generate-rotating-tasks', {
-              body: {
-                rotating_task_id: rotatingTaskId,
-                task_name: taskName,
-                family_id: familyId,
-                assign_next_member: true,
-              },
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            });
+      // Show success feedback
+      toast({
+        title: "Task Completed!",
+        description: `+${completionResult?.points_awarded || task.points} points earned`,
+      });
 
-            clearTimeout(timeoutId);
-
-            if (error) {
-              console.error('Error generating next rotating task:', error);
-            } else {
-              console.log('✅ Rotating task generation response:', data);
-            }
-          } catch (edgeFunctionError: any) {
-            if (edgeFunctionError.name === 'AbortError') {
-              console.warn('Rotating task generation timed out (non-fatal)');
-            } else {
-              console.error('Edge function network error (non-fatal):', edgeFunctionError);
-            }
-          }
-
-          // Fallback: after a short delay, fetch the most recent uncompleted task for this series
-          if (setTasks && familyId) {
-            await new Promise((r) => setTimeout(r, 350));
-            let query = supabase
-              .from('tasks')
-              .select(`
-                id,
-                title,
-                description,
-                points,
-                due_date,
-                assigned_to,
-                created_by,
-                completion_rule,
-                task_group,
-                family_id,
-                rotating_task_id,
-                assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
-                assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
-                task_completions(id, completed_at, completed_by)
-              `)
-              .eq('family_id', familyId)
-              .eq('title', taskName)
-              .gte('created_at', startedAt.toISOString())
-              .order('created_at', { ascending: false })
-              .limit(1);
-
-            if (rotatingTaskId) {
-              query = query.eq('rotating_task_id', rotatingTaskId);
-            }
-
-            const { data: nextTasks } = await query;
-            const nextTask = nextTasks?.[0];
-            if (nextTask) {
-              setTasks((prev) => {
-                if (prev.some((t) => t.id === nextTask.id)) return prev;
-                return [
-                  ...prev,
-                  {
-                    ...nextTask,
-                    completion_rule: (nextTask.completion_rule || 'everyone') as 'any_one' | 'everyone',
-                  },
-                ];
-              });
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('Rotating-task generation/fallback failed (non-fatal):', e);
+      // Success callback if provided
+      if (onSuccess) {
+        onSuccess();
       }
 
       return true;
