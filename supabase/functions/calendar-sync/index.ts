@@ -144,8 +144,14 @@ Deno.serve(async (req) => {
       });
 
       if (!tokenResponse.ok) {
-        console.error('Token refresh failed');
-        throw new Error('Failed to refresh access token');
+        const errorText = await tokenResponse.text();
+        console.error('Token refresh failed:', {
+          status: tokenResponse.status,
+          statusText: tokenResponse.statusText,
+          error: errorText,
+          provider: integration.integration_type
+        });
+        throw new Error(`Failed to refresh ${integration.integration_type} access token: ${errorText}`);
       }
 
       const tokens = await tokenResponse.json();
