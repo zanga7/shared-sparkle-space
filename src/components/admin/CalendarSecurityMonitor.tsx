@@ -27,6 +27,8 @@ interface SecuritySummary {
   token_refresh_count: number;
   access_count_7_days: number;
   failed_access_count_7_days: number;
+  is_encrypted?: boolean;
+  last_sync?: string;
 }
 
 export const CalendarSecurityMonitor = () => {
@@ -50,15 +52,45 @@ export const CalendarSecurityMonitor = () => {
         setAlerts(alertsData || []);
       }
 
-      // Fetch security summary using the secure function
+      // Fetch integration metadata for better display
+      const { data: metadataData, error: metadataError } = await supabase
+        .rpc('get_calendar_integrations_metadata');
+
+      if (metadataError) {
+        console.error('Error fetching integration metadata:', metadataError);
+      }
+
+      // Fetch security summary for audit data
       const { data: summaryData, error: summaryError } = await supabase
         .rpc('get_calendar_security_summary');
 
       if (summaryError) {
         console.error('Error fetching security summary:', summaryError);
-      } else {
-        setSummaries(summaryData || []);
       }
+
+      // Merge metadata with summary data
+      const metadata = metadataData || [];
+      const summaries = summaryData || [];
+
+      // Create enhanced summary by combining both
+      const enhancedSummaries = metadata.map((meta: any) => {
+        const summary = summaries.find((s: any) => s.id === meta.id);
+        return {
+          id: meta.id,
+          integration_type: meta.integration_type,
+          is_active: meta.is_active,
+          owner_name: 'Family Member', // Profile name would need join
+          created_at: meta.created_at,
+          last_token_refresh: meta.last_token_refresh,
+          token_refresh_count: meta.token_refresh_count || 0,
+          access_count_7_days: summary?.access_count_7_days || 0,
+          failed_access_count_7_days: summary?.failed_access_count_7_days || 0,
+          is_encrypted: meta.is_encrypted,
+          last_sync: meta.updated_at
+        };
+      });
+
+      setSummaries(enhancedSummaries);
 
     } catch (error) {
       console.error('Error fetching security data:', error);
@@ -224,11 +256,16 @@ export const CalendarSecurityMonitor = () => {
                       <Badge variant={summary.is_active ? "default" : "secondary"}>
                         {summary.is_active ? "Active" : "Inactive"}
                       </Badge>
+                      {summary.is_encrypted && (
+                        <Badge variant="outline" className="text-green-600 border-green-600">
+                          v2 Encrypted
+                        </Badge>
+                      )}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Created: {format(new Date(summary.created_at), 'MMM d, yyyy')}
-                      {summary.last_token_refresh && (
-                        <> • Last refresh: {format(new Date(summary.last_token_refresh), 'MMM d, yyyy')}</>
+                      {summary.last_sync && (
+                        <> • Last sync: {format(new Date(summary.last_sync), 'MMM d, yyyy HH:mm')}</>
                       )}
                     </div>
                   </div>

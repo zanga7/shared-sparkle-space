@@ -2548,6 +2548,7 @@ export type Database = {
           }
       mark_reward_claimed: { Args: { request_id_param: string }; Returns: Json }
       migrate_existing_tokens_to_encrypted: { Args: never; Returns: Json }
+      migrate_tokens_to_v2_format: { Args: never; Returns: Json }
       remove_exdate_from_series: {
         Args: { p_exdate: string; p_series_id: string; p_table_name: string }
         Returns: undefined
