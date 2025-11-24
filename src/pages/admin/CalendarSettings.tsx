@@ -27,7 +27,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { CalendarSecurityMonitor } from '@/components/admin/CalendarSecurityMonitor';
-import { TokenSecurityManager } from '@/components/admin/TokenSecurityManager';
 
 const CalendarSettings = () => {
   const { user } = useAuth();
@@ -789,9 +788,6 @@ const CalendarSettings = () => {
           </CardContent>
         </Card>
       )}
-
-      {/* Token Security Management */}
-      <TokenSecurityManager />
 
       {/* Security Monitoring Section */}
       <CalendarSecurityMonitor />
