@@ -13,7 +13,12 @@ export interface CalendarEvent {
   created_by: string;
   family_id: string;
   updated_at: string;
-  recurrence_options?: EventRecurrenceOptions | null; // Recurrence configuration
+  recurrence_options?: EventRecurrenceOptions | null;
+  // Source tracking for synced events
+  source_integration_id?: string | null;
+  source_type?: 'google' | 'microsoft' | 'internal' | null;
+  external_event_id?: string | null;
+  last_synced_at?: string | null;
   // Virtual event properties for series instances
   isVirtual?: boolean;
   series_id?: string;

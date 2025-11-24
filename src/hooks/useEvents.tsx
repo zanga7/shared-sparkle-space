@@ -169,10 +169,10 @@ export const useEvents = (familyId?: string) => {
     }
 
     try {
-      // First get regular events (non-recurring legacy events)
+      // Fetch events including source tracking fields
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
-        .select('*')
+        .select('*, source_integration_id, source_type, external_event_id, last_synced_at')
         .eq('family_id', familyId)
         .order('start_date', { ascending: true });
 
