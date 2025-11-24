@@ -132,6 +132,13 @@ Deno.serve(async (req) => {
       const originalIndex = rotatingTask.current_member_index;
       let selectedIndex = originalIndex;
 
+      // If assign_next_member is set, immediately advance before any other logic
+      if (assignNextMember) {
+        console.log('➡️ assign_next_member flag detected; advancing to next member FIRST');
+        // Start from the next position in the rotation
+        selectedIndex = (originalIndex + 1) % len;
+      }
+
       // Helper: verify candidate exists in profiles for this family
       const candidateIsValid = async (profileId: string | null): Promise<boolean> => {
         if (!profileId) return false;
@@ -171,9 +178,9 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Find the first valid member starting from current index
+        // Find the first valid member starting from selected index
         for (let i = 0; i < len; i++) {
-          const idx = (originalIndex + i) % len;
+          const idx = (selectedIndex + i) % len;
           const candidateId = rotatingTask.member_order[idx] || null;
           if (await candidateIsValid(candidateId)) {
             targetMemberId = candidateId;
@@ -198,7 +205,7 @@ Deno.serve(async (req) => {
       } else {
         // Multiple completions allowed: find the next member who doesn't have an incomplete task today
         for (let i = 0; i < len; i++) {
-          const idx = (originalIndex + i) % len;
+          const idx = (selectedIndex + i) % len;
           const candidateId = rotatingTask.member_order[idx];
           if (!candidateId) continue;
 
@@ -241,48 +248,6 @@ Deno.serve(async (req) => {
             reason: 'All members have incomplete tasks'
           });
           continue;
-        }
-      }
-
-      // If assign_next_member is set, rotate assignee to the next valid member before reserving
-      if (assignNextMember) {
-        console.log('➡️ assign_next_member flag detected; rotating assignee to next member');
-        let rotated = false;
-        if (!rotatingTask.allow_multiple_completions) {
-          for (let i = 1; i <= len; i++) {
-            const idx = (selectedIndex + i) % len;
-            const candidateId = rotatingTask.member_order[idx] || null;
-            if (await candidateIsValid(candidateId)) {
-              targetMemberId = candidateId;
-              selectedIndex = idx;
-              rotated = true;
-              break;
-            }
-          }
-        } else {
-          for (let i = 1; i <= len; i++) {
-            const idx = (selectedIndex + i) % len;
-            const candidateId = rotatingTask.member_order[idx];
-            if (!candidateId) continue;
-            if (!(await candidateIsValid(candidateId))) continue;
-            const { data: existingForMember, error: checkError } = await supabaseClient
-              .from('tasks')
-              .select('id, task_assignees!inner(profile_id), task_completions(id)')
-              .eq('family_id', rotatingTask.family_id)
-              .eq('rotating_task_id', rotatingTask.id)
-              .eq('task_assignees.profile_id', candidateId);
-            if (checkError) continue;
-            const hasIncompleteTask = existingForMember?.some(task => !task.task_completions || task.task_completions.length === 0);
-            if (!hasIncompleteTask) {
-              targetMemberId = candidateId;
-              selectedIndex = idx;
-              rotated = true;
-              break;
-            }
-          }
-        }
-        if (!rotated) {
-          console.log('⚠️ assign_next_member requested but no valid next candidate found; keeping current selection');
         }
       }
 
