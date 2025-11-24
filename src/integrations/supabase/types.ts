@@ -112,10 +112,12 @@ export type Database = {
           integration_type: string
           is_active: boolean
           last_access_ip: unknown
+          last_sync_at: string | null
           last_token_refresh: string | null
           profile_id: string
           refresh_token: string | null
           security_flags: Json | null
+          sync_token: string | null
           token_refresh_count: number | null
           updated_at: string
         }
@@ -129,10 +131,12 @@ export type Database = {
           integration_type: string
           is_active?: boolean
           last_access_ip?: unknown
+          last_sync_at?: string | null
           last_token_refresh?: string | null
           profile_id: string
           refresh_token?: string | null
           security_flags?: Json | null
+          sync_token?: string | null
           token_refresh_count?: number | null
           updated_at?: string
         }
@@ -146,10 +150,12 @@ export type Database = {
           integration_type?: string
           is_active?: boolean
           last_access_ip?: unknown
+          last_sync_at?: string | null
           last_token_refresh?: string | null
           profile_id?: string
           refresh_token?: string | null
           security_flags?: Json | null
+          sync_token?: string | null
           token_refresh_count?: number | null
           updated_at?: string
         }
@@ -494,12 +500,16 @@ export type Database = {
           created_by: string
           description: string | null
           end_date: string
+          external_event_id: string | null
           family_id: string
           id: string
           is_all_day: boolean
+          last_synced_at: string | null
           location: string | null
           migrated_to_series: boolean | null
           recurrence_options: Json | null
+          source_integration_id: string | null
+          source_type: string | null
           start_date: string
           title: string
           updated_at: string
@@ -509,12 +519,16 @@ export type Database = {
           created_by: string
           description?: string | null
           end_date: string
+          external_event_id?: string | null
           family_id: string
           id?: string
           is_all_day?: boolean
+          last_synced_at?: string | null
           location?: string | null
           migrated_to_series?: boolean | null
           recurrence_options?: Json | null
+          source_integration_id?: string | null
+          source_type?: string | null
           start_date: string
           title: string
           updated_at?: string
@@ -524,17 +538,29 @@ export type Database = {
           created_by?: string
           description?: string | null
           end_date?: string
+          external_event_id?: string | null
           family_id?: string
           id?: string
           is_all_day?: boolean
+          last_synced_at?: string | null
           location?: string | null
           migrated_to_series?: boolean | null
           recurrence_options?: Json | null
+          source_integration_id?: string | null
+          source_type?: string | null
           start_date?: string
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "events_source_integration_id_fkey"
+            columns: ["source_integration_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       families: {
         Row: {

@@ -9,26 +9,44 @@ interface SyncRequest {
   integrationId: string;
 }
 
+interface GoogleEvent {
+  id: string;
+  summary: string;
+  description?: string;
+  location?: string;
+  start: { dateTime?: string; date?: string };
+  end: { dateTime?: string; date?: string };
+  attendees?: Array<{ email: string }>;
+}
+
+interface MicrosoftEvent {
+  id: string;
+  subject: string;
+  bodyPreview?: string;
+  location?: { displayName?: string };
+  start: { dateTime: string; timeZone: string };
+  end: { dateTime: string; timeZone: string };
+  isAllDay: boolean;
+  attendees?: Array<{ emailAddress: { address: string } }>;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Get auth header - JWT is already verified since verify_jwt = true in config
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('Missing authorization header');
     }
 
-    // Extract JWT token and decode to get user ID
     const token = authHeader.replace('Bearer ', '');
     const parts = token.split('.');
     if (parts.length !== 3) {
       throw new Error('Invalid JWT token format');
     }
 
-    // Decode JWT payload (base64url)
     const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
     const userId = payload.sub;
 
@@ -38,7 +56,6 @@ Deno.serve(async (req) => {
 
     console.log('Sync request from user:', userId);
 
-    // Create Supabase client with auth header for database queries
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -57,7 +74,6 @@ Deno.serve(async (req) => {
 
     console.log('Starting sync for integration:', integrationId);
 
-    // Fetch integration details using secure function
     const { data: integrations, error: integrationError } = await supabaseClient
       .rpc('get_calendar_integration_safe', { integration_id: integrationId });
 
@@ -68,7 +84,6 @@ Deno.serve(async (req) => {
     const integration = integrations[0];
     console.log('Found integration:', integration.integration_type);
 
-    // Get decrypted tokens using the fixed database function
     const { data: decryptedTokens, error: decryptError } = await supabaseClient
       .rpc('get_decrypted_calendar_tokens', { integration_id_param: integrationId });
 
@@ -79,7 +94,6 @@ Deno.serve(async (req) => {
 
     const tokenData = decryptedTokens[0];
     
-    // Check if decryption failed (legacy tokens)
     if (tokenData.access_token?.startsWith('DECRYPTION_FAILED:')) {
       console.error('Token decryption failed:', tokenData.access_token);
       throw new Error('Calendar connection is outdated. Please reconnect your calendar.');
@@ -87,7 +101,6 @@ Deno.serve(async (req) => {
     
     console.log('Got tokens, expires:', tokenData.expires_at, 'is_expired:', tokenData.is_expired);
 
-    // Check if token needs refresh
     const now = new Date();
     const expiresAt = tokenData.expires_at ? new Date(tokenData.expires_at) : null;
     const needsRefresh = expiresAt ? (expiresAt.getTime() - now.getTime() < 5 * 60 * 1000) : false;
@@ -102,7 +115,6 @@ Deno.serve(async (req) => {
         throw new Error('No refresh token available');
       }
 
-      // Refresh token based on provider
       let tokenUrl = '';
       let clientId = '';
       let clientSecret = '';
@@ -138,7 +150,6 @@ Deno.serve(async (req) => {
       const tokens = await tokenResponse.json();
       accessToken = tokens.access_token;
 
-      // Update tokens in database using secure function
       const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
       
       await supabaseClient.rpc('update_calendar_integration_tokens', {
@@ -150,12 +161,12 @@ Deno.serve(async (req) => {
       console.log('Token refreshed successfully');
     }
 
-    // Fetch events from external calendar (stub for now)
+    // Fetch events from external calendar
     let eventsUrl = '';
     if (integration.integration_type === 'google') {
-      eventsUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(integration.calendar_id)}/events`;
+      eventsUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(integration.calendar_id)}/events?maxResults=250&timeMin=${new Date().toISOString()}`;
     } else if (integration.integration_type === 'microsoft') {
-      eventsUrl = `https://graph.microsoft.com/v1.0/me/calendars/${integration.calendar_id}/events`;
+      eventsUrl = `https://graph.microsoft.com/v1.0/me/calendars/${integration.calendar_id}/events?$top=250&$filter=start/dateTime ge '${new Date().toISOString()}'`;
     }
 
     console.log('Fetching events from:', eventsUrl);
@@ -171,24 +182,96 @@ Deno.serve(async (req) => {
     }
 
     const eventsData = await eventsResponse.json();
-    const eventCount = integration.integration_type === 'google' 
-      ? eventsData.items?.length || 0
-      : eventsData.value?.length || 0;
+    const rawEvents = integration.integration_type === 'google' 
+      ? (eventsData.items || [])
+      : (eventsData.value || []);
 
-    console.log(`Fetched ${eventCount} events from external calendar`);
+    console.log(`Fetched ${rawEvents.length} events from external calendar`);
 
-    // TODO: In next phase, we will:
-    // 1. Parse external events
-    // 2. Map to internal event format
-    // 3. Upsert into events table
-    // 4. Handle recurring events
-    // 5. Store sync cursor (syncToken/deltaLink)
+    // Get profile to use as creator
+    const { data: profileData } = await supabaseClient
+      .from('profiles')
+      .select('id, family_id')
+      .eq('id', integration.profile_id)
+      .single();
+
+    if (!profileData) {
+      throw new Error('Profile not found for integration');
+    }
+
+    // Parse and store events
+    let syncedCount = 0;
+    for (const rawEvent of rawEvents) {
+      try {
+        let eventData: any;
+
+        if (integration.integration_type === 'google') {
+          const gEvent = rawEvent as GoogleEvent;
+          const isAllDay = !!gEvent.start.date;
+          
+          eventData = {
+            title: gEvent.summary || 'Untitled Event',
+            description: gEvent.description || null,
+            location: gEvent.location || null,
+            start_date: isAllDay ? `${gEvent.start.date}T00:00:00Z` : gEvent.start.dateTime,
+            end_date: isAllDay ? `${gEvent.end.date}T23:59:59Z` : gEvent.end.dateTime,
+            is_all_day: isAllDay,
+            family_id: profileData.family_id,
+            created_by: profileData.id,
+            source_integration_id: integrationId,
+            source_type: 'google',
+            external_event_id: gEvent.id,
+            last_synced_at: new Date().toISOString(),
+          };
+        } else {
+          const mEvent = rawEvent as MicrosoftEvent;
+          
+          eventData = {
+            title: mEvent.subject || 'Untitled Event',
+            description: mEvent.bodyPreview || null,
+            location: mEvent.location?.displayName || null,
+            start_date: mEvent.start.dateTime,
+            end_date: mEvent.end.dateTime,
+            is_all_day: mEvent.isAllDay,
+            family_id: profileData.family_id,
+            created_by: profileData.id,
+            source_integration_id: integrationId,
+            source_type: 'microsoft',
+            external_event_id: mEvent.id,
+            last_synced_at: new Date().toISOString(),
+          };
+        }
+
+        // Upsert event (insert or update based on external_event_id + source_integration_id)
+        const { error: upsertError } = await supabaseClient
+          .from('events')
+          .upsert(eventData, {
+            onConflict: 'external_event_id,source_integration_id',
+            ignoreDuplicates: false,
+          });
+
+        if (upsertError) {
+          console.error('Error upserting event:', upsertError);
+        } else {
+          syncedCount++;
+        }
+      } catch (error) {
+        console.error('Error processing event:', error);
+      }
+    }
+
+    // Update integration last_sync_at
+    await supabaseClient
+      .from('calendar_integrations')
+      .update({ last_sync_at: new Date().toISOString() })
+      .eq('id', integrationId);
 
     return new Response(
       JSON.stringify({
         success: true,
         message: 'Sync completed successfully',
-        eventCount,
+        eventCount: rawEvents.length,
+        syncedCount,
         timestamp: new Date().toISOString(),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
