@@ -15,11 +15,13 @@ export const TokenEncryptionStatus = ({ className }: TokenEncryptionStatusProps)
   const [status, setStatus] = useState<{
     calendar_total: number;
     calendar_encrypted: number;
+    calendar_broken: number;
     calendar_unencrypted: number;
     google_photos_total: number;
     google_photos_encrypted: number;
     google_photos_unencrypted: number;
     encryption_complete: boolean;
+    has_broken_tokens: boolean;
   } | null>(null);
   const { toast } = useToast();
 
@@ -50,12 +52,14 @@ export const TokenEncryptionStatus = ({ className }: TokenEncryptionStatusProps)
       setStatus({
         calendar_total: calendarData?.total_integrations || 0,
         calendar_encrypted: calendarData?.encrypted_integrations || 0,
+        calendar_broken: calendarData?.broken_integrations || 0,
         calendar_unencrypted: calendarData?.unencrypted_integrations || 0,
         google_photos_total: googlePhotosTotal,
         google_photos_encrypted: googlePhotosTotal, // Assume encrypted since RLS blocks direct access
         google_photos_unencrypted: 0,
         encryption_complete: 
-          (calendarData?.encryption_complete || true)
+          (calendarData?.encryption_complete || true),
+        has_broken_tokens: calendarData?.has_broken_tokens || false
       });
     } catch (error) {
       console.error('Error checking encryption status:', error);
@@ -69,30 +73,27 @@ export const TokenEncryptionStatus = ({ className }: TokenEncryptionStatusProps)
     }
   };
 
-  const migrateTokens = async () => {
+  const cleanupBrokenTokens = async () => {
     setLoading(true);
     try {
-      // Migrate calendar tokens
-      const { data: calendarResult, error: calendarError } = await supabase
-        .rpc('migrate_existing_tokens_to_encrypted');
+      const { data, error } = await supabase
+        .rpc('cleanup_broken_calendar_integrations');
 
-      if (calendarError) throw calendarError;
+      if (error) throw error;
 
-      const calendarData = calendarResult as any;
-      const migratedCount = calendarData?.migrated_count || 0;
-
+      const result = data as any;
       toast({
-        title: 'Migration Complete',
-        description: `Successfully migrated ${migratedCount} calendar token(s) to encrypted format`,
+        title: 'Cleanup Complete',
+        description: `Removed ${result?.deleted_count || 0} broken calendar connection(s). Please reconnect your calendars.`,
       });
 
       // Refresh status
       await checkEncryptionStatus();
     } catch (error) {
-      console.error('Error migrating tokens:', error);
+      console.error('Error cleaning up tokens:', error);
       toast({
-        title: 'Migration Failed',
-        description: 'Failed to migrate tokens. Please try again.',
+        title: 'Cleanup Failed',
+        description: 'Failed to remove broken connections. Please try again.',
         variant: 'destructive'
       });
     } finally {
@@ -153,7 +154,10 @@ export const TokenEncryptionStatus = ({ className }: TokenEncryptionStatusProps)
                 <h4 className="font-medium">Calendar Integrations</h4>
                 <div className="space-y-1 text-muted-foreground">
                   <div>Total: {status.calendar_total}</div>
-                  <div className="text-green-600">Encrypted: {status.calendar_encrypted}</div>
+                  <div className="text-green-600">Secure (v2): {status.calendar_encrypted}</div>
+                  {status.calendar_broken > 0 && (
+                    <div className="text-red-600">Broken (v1): {status.calendar_broken}</div>
+                  )}
                   {status.calendar_unencrypted > 0 && (
                     <div className="text-red-600">Unencrypted: {status.calendar_unencrypted}</div>
                   )}
@@ -172,24 +176,30 @@ export const TokenEncryptionStatus = ({ className }: TokenEncryptionStatusProps)
               </div>
             </div>
 
-            {!status.encryption_complete && (
-              <div className="pt-2">
+            {status.has_broken_tokens && (
+              <div className="pt-2 space-y-2">
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                  <p className="text-sm text-destructive font-medium">
+                    Broken Encrypted Tokens Detected
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    These calendar connections were encrypted with a broken algorithm and cannot be recovered. 
+                    You must remove them and reconnect your calendars.
+                  </p>
+                </div>
                 <Button
-                  onClick={migrateTokens}
+                  onClick={cleanupBrokenTokens}
                   disabled={loading}
-                  variant="default"
+                  variant="destructive"
                   size="sm"
                 >
                   {loading ? (
                     <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                   ) : (
-                    <Shield className="h-4 w-4 mr-2" />
+                    <AlertTriangle className="h-4 w-4 mr-2" />
                   )}
-                  Encrypt All Tokens
+                  Remove Broken Connections
                 </Button>
-                <p className="text-xs text-muted-foreground mt-2">
-                  This will securely encrypt all plaintext OAuth tokens using application-level encryption.
-                </p>
               </div>
             )}
 
