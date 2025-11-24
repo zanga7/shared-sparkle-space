@@ -68,9 +68,15 @@ export const MemberTasksWidget = ({
     );
 
     if (isCompleted) {
-      await uncompleteTask(task);
+      await uncompleteTask(task, () => {
+        // Refetch tasks after uncompleting
+        onTaskUpdated();
+      });
     } else {
-      await completeTask(task);
+      await completeTask(task, () => {
+        // Refetch tasks after completing
+        onTaskUpdated();
+      });
     }
   };
   
