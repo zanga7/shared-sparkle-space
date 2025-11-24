@@ -68,39 +68,31 @@ Deno.serve(async (req) => {
     const integration = integrations[0];
     console.log('Found integration:', integration.integration_type);
 
-    // Decrypt the access token for use
-    const { data: decryptedAccessToken, error: decryptError } = await supabaseClient
-      .rpc('decrypt_oauth_token', {
-        encrypted_data: integration.access_token,
-        requesting_integration_id: integrationId,
-        token_type: 'access_token'
-      });
+    // Get decrypted tokens using the proper database function
+    const { data: decryptedTokens, error: decryptError } = await supabaseClient
+      .rpc('get_decrypted_calendar_tokens', { integration_id_param: integrationId });
 
-    if (decryptError || !decryptedAccessToken) {
-      console.error('Failed to decrypt access token:', decryptError);
+    if (decryptError || !decryptedTokens || decryptedTokens.length === 0) {
+      console.error('Failed to decrypt tokens:', decryptError);
       throw new Error('Failed to decrypt access token');
     }
 
-    // Check if token needs refresh
-    const expiresAt = new Date(integration.expires_at);
-    const now = new Date();
-    const needsRefresh = expiresAt.getTime() - now.getTime() < 5 * 60 * 1000; // Refresh if expires in < 5 minutes
+    const tokenData = decryptedTokens[0];
+    console.log('Token decrypted, expires:', tokenData.expires_at, 'is_expired:', tokenData.is_expired);
 
-    let accessToken = decryptedAccessToken;
+    // Check if token needs refresh
+    const now = new Date();
+    const expiresAt = tokenData.expires_at ? new Date(tokenData.expires_at) : null;
+    const needsRefresh = expiresAt ? (expiresAt.getTime() - now.getTime() < 5 * 60 * 1000) : false;
+
+    let accessToken = tokenData.access_token;
 
     if (needsRefresh) {
       console.log('Token needs refresh, refreshing...');
       
-      // Decrypt refresh token
-      const { data: refreshToken, error: decryptError } = await supabaseClient
-        .rpc('decrypt_oauth_token', {
-          encrypted_data: integration.refresh_token,
-          requesting_integration_id: integrationId,
-          token_type: 'refresh_token'
-        });
-
-      if (decryptError || !refreshToken) {
-        throw new Error('Failed to decrypt refresh token');
+      const refreshToken = tokenData.refresh_token;
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
       }
 
       // Refresh token based on provider
