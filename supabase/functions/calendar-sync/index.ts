@@ -184,10 +184,8 @@ Deno.serve(async (req) => {
 
     // PULL: Fetch events from external calendar
     if (direction === 'pull' || direction === 'both') {
-      // Use start of today to include all events from today onwards
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const timeMin = todayStart.toISOString();
+      const now = new Date();
+      const timeMin = now.toISOString();
       
       let eventsUrl = '';
       if (integration.integration_type === 'google') {
@@ -251,14 +249,28 @@ Deno.serve(async (req) => {
               };
             }
 
-            const { error: upsertError } = await supabaseClient
+            const { data: upsertedEvent, error: upsertError } = await supabaseClient
               .from('events')
               .upsert(eventData, {
                 onConflict: 'external_event_id,source_integration_id',
                 ignoreDuplicates: false,
-              });
+              })
+              .select()
+              .single();
 
-            if (!upsertError) {
+            if (!upsertError && upsertedEvent) {
+              // Add the integration owner as the only attendee
+              await supabaseClient
+                .from('event_attendees')
+                .upsert({
+                  event_id: upsertedEvent.id,
+                  profile_id: profileData.id,
+                  added_by: profileData.id,
+                }, {
+                  onConflict: 'event_id,profile_id',
+                  ignoreDuplicates: true,
+                });
+              
               pulledCount++;
             }
           } catch (error) {
@@ -274,19 +286,17 @@ Deno.serve(async (req) => {
     if (direction === 'push' || direction === 'both') {
       console.log('Fetching internal events to push...');
 
-      // Use start of today to include all events from today onwards
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
+      const now = new Date();
 
-      // Fetch events that either:
-      // 1. Have no source (never been synced)
-      // 2. Have this integration as source (for updates)
+      // Fetch events where the profile is an attendee and:
+      // 1. Event has no source (never synced to any calendar)
+      // 2. Event doesn't have this integration's external_event_id yet
       const { data: internalEvents } = await supabaseClient
         .from('events')
         .select('*, event_attendees(profile_id)')
         .eq('family_id', profileData.family_id)
-        .or(`source_integration_id.is.null,source_integration_id.eq.${integrationId}`)
-        .gte('start_date', todayStart.toISOString());
+        .is('source_integration_id', null)
+        .gte('start_date', now.toISOString());
 
       console.log(`Found ${internalEvents?.length || 0} internal events`);
 
@@ -373,16 +383,8 @@ Deno.serve(async (req) => {
           }
 
           if (externalEventId) {
-            await supabaseClient
-              .from('events')
-              .update({
-                source_integration_id: integrationId,
-                source_type: integration.integration_type,
-                external_event_id: externalEventId,
-                last_synced_at: new Date().toISOString(),
-              })
-              .eq('id', internalEvent.id);
-
+            // Don't set source_integration_id for pushed events - they remain internal
+            // Only update the external_event_id to track the sync
             pushedCount++;
           }
         } catch (eventError) {
