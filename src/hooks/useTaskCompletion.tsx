@@ -88,7 +88,6 @@ export const useTaskCompletion = ({
             completion_rule: task.completion_rule || 'everyone',
             family_id: (task as any).family_id || currentUserProfile?.family_id,
             created_by: (task as any).created_by || currentUserProfile?.id,
-            series_id: (task as any).series_id,
           })
           .select()
           .single();
