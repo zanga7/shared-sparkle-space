@@ -10,6 +10,32 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Grid3X3, Rows3, CheckCircle2, Clock, Flame, TrendingUp, Plus, Filter, BarChart3, Eye, Edit, Target, Users, Calendar, Sun, MapPin, Repeat, PartyPopper } from 'lucide-react';
+
+// Helper to get source icon for synced events
+const getSourceIcon = (sourceType: string | null | undefined) => {
+  if (sourceType === 'google') {
+    return (
+      <span title="Google Calendar">
+        <svg className="h-3 w-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+      </span>
+    );
+  }
+  if (sourceType === 'microsoft') {
+    return (
+      <span title="Outlook">
+        <svg className="h-3 w-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z" fill="#00A4EF"/>
+        </svg>
+      </span>
+    );
+  }
+  return null;
+};
 import { AddButton } from '@/components/ui/add-button';
 import { EventAttendeesDisplay } from '@/components/ui/event-attendees-display';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addWeeks, addMonths, addDays, subWeeks, subMonths, subDays, isSameDay, isToday, isPast, isSameMonth } from 'date-fns';
@@ -915,8 +941,11 @@ export const CalendarView = ({
                                                onClick={() => handleEditEvent(event)}
                                              >
                                                <div className="flex items-center justify-between">
-                                                 <span className="font-medium text-sm text-foreground">{event.title}</span>
-                                                 <div className="flex items-center gap-1">
+                                                 <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                                   <span className="font-medium text-sm text-foreground truncate">{event.title}</span>
+                                                   {event.source_type && getSourceIcon(event.source_type)}
+                                                 </div>
+                                                 <div className="flex items-center gap-1 flex-shrink-0">
                                                    <Badge variant="outline" className="text-xs h-4 px-1">
                                                      {event.isMultiDay ? 'Multi' : 'Event'}
                                                    </Badge>
@@ -1080,8 +1109,11 @@ export const CalendarView = ({
                                     onClick={() => handleEditEvent(event)}
                                   >
                                  <div className="flex items-center justify-between">
-                                   <span className="font-medium text-sm text-foreground">{event.title}</span>
-                                   <div className="flex items-center gap-1">
+                                   <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                     <span className="font-medium text-sm text-foreground truncate">{event.title}</span>
+                                     {event.source_type && getSourceIcon(event.source_type)}
+                                   </div>
+                                   <div className="flex items-center gap-1 flex-shrink-0">
                                     <Badge variant="outline" className="text-xs h-4 px-1">
                                       {event.isMultiDay ? 'Multi' : 'Event'}
                                     </Badge>
@@ -1241,36 +1273,39 @@ export const CalendarView = ({
                                     index={dayTasks.length + eventIndex}
                                     isDragDisabled={isDragDisabled}
                                   >
-                                    {(provided, snapshot) => <div 
-                                      ref={provided.innerRef} 
-                                      {...provided.draggableProps} 
-                                      {...provided.dragHandleProps} 
-                                      className={cn(
-                                        "group p-3 mb-1 hover:shadow-md transition-all shadow-sm", 
-                                        event.isMultiDay && !event.isFirstDay && !event.isLastDay && "rounded-none", 
-                                        event.isMultiDay && event.isFirstDay && "rounded-r-none", 
-                                        event.isMultiDay && event.isLastDay && "rounded-l-none", 
-                                        !event.isMultiDay && "rounded-md",
-                                        !isDragDisabled && "cursor-move",
-                                        isDragDisabled && "cursor-not-allowed opacity-70",
-                                        snapshot.isDragging && "shadow-lg rotate-2 scale-105 z-[9999]"
-                                      )}
-                                      style={bgStyle}
-                                      onClick={e => {
-                                        e.stopPropagation();
-                                        handleEditEvent(event);
-                                      }}>
-                                      <div className="flex items-center justify-between">
-                                        <span className="font-medium text-sm text-foreground truncate">
-                                          {event.isMultiDay && !event.isFirstDay ? `↳ ${event.title}` : event.title}
-                                        </span>
-                                        <div className="flex items-center gap-1 shrink-0">
-                                          <Badge variant="outline" className="text-xs h-4 px-1">
-                                            {event.isMultiDay ? 'Multi' : event.recurrence_options?.enabled || event.isVirtual ? 'Series' : 'Single'}
-                                          </Badge>
-                                          <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-muted-foreground" />
-                                        </div>
-                                      </div>
+                                     {(provided, snapshot) => <div 
+                                       ref={provided.innerRef} 
+                                       {...provided.draggableProps} 
+                                       {...provided.dragHandleProps} 
+                                       className={cn(
+                                         "group p-3 mb-1 hover:shadow-md transition-all shadow-sm", 
+                                         event.isMultiDay && !event.isFirstDay && !event.isLastDay && "rounded-none", 
+                                         event.isMultiDay && event.isFirstDay && "rounded-r-none", 
+                                         event.isMultiDay && event.isLastDay && "rounded-l-none", 
+                                         !event.isMultiDay && "rounded-md",
+                                         !isDragDisabled && "cursor-move",
+                                         isDragDisabled && "cursor-not-allowed opacity-70",
+                                         snapshot.isDragging && "shadow-lg rotate-2 scale-105 z-[9999]"
+                                       )}
+                                       style={bgStyle}
+                                       onClick={e => {
+                                         e.stopPropagation();
+                                         handleEditEvent(event);
+                                       }}>
+                                       <div className="flex items-center justify-between">
+                                         <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                           <span className="font-medium text-sm text-foreground truncate">
+                                             {event.isMultiDay && !event.isFirstDay ? `↳ ${event.title}` : event.title}
+                                           </span>
+                                           {event.source_type && getSourceIcon(event.source_type)}
+                                         </div>
+                                         <div className="flex items-center gap-1 shrink-0">
+                                           <Badge variant="outline" className="text-xs h-4 px-1">
+                                             {event.isMultiDay ? 'Multi' : event.recurrence_options?.enabled || event.isVirtual ? 'Series' : 'Single'}
+                                           </Badge>
+                                           <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-muted-foreground" />
+                                         </div>
+                                       </div>
                                       
                                       {/* Attendees Display */}
                                       {event.attendees && event.attendees.length > 0 && <div className="mt-2">
