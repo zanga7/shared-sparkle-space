@@ -8,12 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Calendar, Settings, ExternalLink, RefreshCw, Trash2, Shield } from 'lucide-react';
+import { Calendar, Settings, ExternalLink, RefreshCw, Trash2, Shield, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Profile } from '@/types/task';
 import { TokenEncryptionStatus } from '@/components/security/TokenEncryptionStatus';
 import { CalendarSelectionModal } from '@/components/admin/CalendarSelectionModal';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 import {
   AlertDialog,
@@ -47,12 +48,63 @@ const CalendarSettings = () => {
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
   const [processingCallback, setProcessingCallback] = useState(false);
   const [pendingSelection, setPendingSelection] = useState(false);
+  const [legacyStatus, setLegacyStatus] = useState<{
+    needs_migration: boolean;
+    legacy_integrations: number;
+    total_integrations: number;
+  } | null>(null);
+  const [cleaningLegacy, setCleaningLegacy] = useState(false);
 
   useEffect(() => {
     if (user) {
       fetchUserData();
+      checkLegacyIntegrations();
     }
   }, [user]);
+
+  const checkLegacyIntegrations = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_calendar_integration_status');
+      
+      if (error) {
+        console.error('Error checking legacy integrations:', error);
+        return;
+      }
+
+      setLegacyStatus(data as { needs_migration: boolean; legacy_integrations: number; total_integrations: number });
+    } catch (error) {
+      console.error('Error checking legacy integrations:', error);
+    }
+  };
+
+  const handleRemoveLegacyIntegrations = async () => {
+    setCleaningLegacy(true);
+    try {
+      const { data, error } = await supabase.rpc('remove_legacy_calendar_integrations');
+      
+      if (error) throw error;
+
+      const result = data as { success: boolean; message?: string; deleted_count: number };
+
+      toast({
+        title: 'Legacy Connections Removed',
+        description: result.message || 'Please reconnect your calendars with the updated encryption.',
+      });
+
+      // Refresh data
+      await fetchUserData();
+      await checkLegacyIntegrations();
+    } catch (error: any) {
+      console.error('Error removing legacy integrations:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to remove legacy integrations',
+        variant: 'destructive',
+      });
+    } finally {
+      setCleaningLegacy(false);
+    }
+  };
 
   // Check for OAuth callback parameters in URL
   useEffect(() => {
@@ -709,6 +761,32 @@ const CalendarSettings = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Legacy Integration Warning */}
+      {legacyStatus?.needs_migration && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Calendar Connections Outdated</AlertTitle>
+          <AlertDescription className="space-y-4">
+            <p>
+              Your calendar connections were created with an old encryption method and need to be updated. 
+              You have {legacyStatus.legacy_integrations} connection(s) that need to be reconnected.
+            </p>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleRemoveLegacyIntegrations} 
+                disabled={cleaningLegacy}
+                size="sm"
+              >
+                {cleaningLegacy ? 'Removing...' : 'Remove Old Connections'}
+              </Button>
+              <p className="text-sm self-center">
+                Then reconnect your calendars below
+              </p>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Token Security Status */}
       <TokenEncryptionStatus />
