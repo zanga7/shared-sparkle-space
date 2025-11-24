@@ -2351,6 +2351,7 @@ export type Database = {
         Returns: string
       }
       get_oauth_credentials: { Args: never; Returns: Json }
+      get_oauth_encryption_key: { Args: never; Returns: string }
       get_profile_points_balance: {
         Args: { profile_id_param: string }
         Returns: number
