@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,18 +34,21 @@ export default function IntegrationsManagement() {
   const { data: credentials, isLoading } = useQuery({
     queryKey: ['oauth-credentials'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_oauth_credentials');
+      const { data, error } = await supabase.rpc('get_oauth_credentials' as any);
       if (error) throw error;
-      return data as OAuthCredentials;
-    },
-    onSuccess: (data) => {
-      setFormData(data);
+      return data as unknown as OAuthCredentials;
     }
   });
 
+  useEffect(() => {
+    if (credentials) {
+      setFormData(credentials);
+    }
+  }, [credentials]);
+
   const updateMutation = useMutation({
     mutationFn: async (updates: Partial<OAuthCredentials>) => {
-      const { error } = await supabase.rpc('update_oauth_credentials', {
+      const { error } = await supabase.rpc('update_oauth_credentials' as any, {
         credentials: updates
       });
       if (error) throw error;
@@ -97,8 +100,8 @@ export default function IntegrationsManagement() {
     );
   }
 
-  const hasGoogleCreds = credentials?.google_client_id && credentials?.google_client_secret;
-  const hasMicrosoftCreds = credentials?.microsoft_client_id && credentials?.microsoft_client_secret;
+  const hasGoogleCreds = !!(credentials?.google_client_id && credentials?.google_client_secret);
+  const hasMicrosoftCreds = !!(credentials?.microsoft_client_id && credentials?.microsoft_client_secret);
 
   return (
     <div className="space-y-6">

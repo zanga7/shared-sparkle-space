@@ -2313,6 +2313,7 @@ export type Database = {
           refresh_token: string
         }[]
       }
+      get_oauth_credentials: { Args: never; Returns: Json }
       get_profile_points_balance: {
         Args: { profile_id_param: string }
         Returns: number
@@ -2573,6 +2574,7 @@ export type Database = {
         }
         Returns: Json
       }
+      update_oauth_credentials: { Args: { credentials: Json }; Returns: Json }
       update_reward: {
         Args: {
           cost_points_param?: number
