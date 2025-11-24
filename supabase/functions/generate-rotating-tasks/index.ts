@@ -111,21 +111,20 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Helper: check if any INCOMPLETE task with this title exists today (regardless of assignee)
-      const anyIncompleteTaskExistsToday = async (): Promise<boolean> => {
+      // Helper: check if any INCOMPLETE task with this rotating_task_id exists (regardless of date)
+      const anyIncompleteTaskExists = async (): Promise<boolean> => {
         const { data: existing, error } = await supabaseClient
           .from('tasks')
           .select('id, task_completions(id)')
           .eq('family_id', rotatingTask.family_id)
-          .eq('title', rotatingTask.name)
-          .gte('created_at', `${today}T00:00:00Z`)
-          .lte('created_at', `${today}T23:59:59Z`);
+          .eq('rotating_task_id', rotatingTask.id);
         if (error) {
-          console.error(`Error checking series-level existing tasks for ${rotatingTask.name}:`, error);
+          console.error(`Error checking existing tasks for ${rotatingTask.name}:`, error);
           return true; // fail-safe: avoid duplicate creation on error
         }
         // Filter to only incomplete tasks (no completion records)
         const incompleteTasks = existing?.filter(task => !task.task_completions || task.task_completions.length === 0) || [];
+        console.log(`📊 Found ${incompleteTasks.length} incomplete task(s) for ${rotatingTask.name}`);
         return incompleteTasks.length > 0;
       };
 
@@ -156,10 +155,10 @@ Deno.serve(async (req) => {
       };
 
       if (!rotatingTask.allow_multiple_completions) {
-        // Single instance per day for the series
-        const exists = await anyIncompleteTaskExistsToday();
+        // Single instance at a time for this rotating task
+        const exists = await anyIncompleteTaskExists();
         if (exists) {
-          console.log(`⏭️  ${rotatingTask.name}: an incomplete task already exists today (single-instance mode)`);
+          console.log(`⏭️  ${rotatingTask.name}: an incomplete task already exists (single-instance mode)`);
           await logRotationEvent({
             previous_index: originalIndex,
             selected_index: originalIndex,
@@ -167,7 +166,7 @@ Deno.serve(async (req) => {
             chosen_member_id: null,
             new_task_id: null,
             status: 'skipped',
-            reason: 'Incomplete task already exists today'
+            reason: 'Incomplete task already exists'
           });
           continue;
         }
@@ -212,10 +211,8 @@ Deno.serve(async (req) => {
             .from('tasks')
             .select('id, task_assignees!inner(profile_id), task_completions(id)')
             .eq('family_id', rotatingTask.family_id)
-            .eq('title', rotatingTask.name)
-            .eq('task_assignees.profile_id', candidateId)
-            .gte('created_at', `${today}T00:00:00Z`)
-            .lte('created_at', `${today}T23:59:59Z`);
+            .eq('rotating_task_id', rotatingTask.id)
+            .eq('task_assignees.profile_id', candidateId);
 
           if (checkError) {
             console.error(`Error checking existing tasks for ${rotatingTask.name} and member ${candidateId}:`, checkError);
@@ -233,7 +230,7 @@ Deno.serve(async (req) => {
         }
 
         if (!targetMemberId) {
-          console.log(`⏭️  ${rotatingTask.name}: all members already have incomplete tasks today or are invalid`);
+          console.log(`⏭️  ${rotatingTask.name}: all members already have incomplete tasks or are invalid`);
           await logRotationEvent({
             previous_index: originalIndex,
             selected_index: originalIndex,
@@ -241,7 +238,7 @@ Deno.serve(async (req) => {
             chosen_member_id: null,
             new_task_id: null,
             status: 'skipped',
-            reason: 'All members have incomplete tasks today'
+            reason: 'All members have incomplete tasks'
           });
           continue;
         }
@@ -272,10 +269,8 @@ Deno.serve(async (req) => {
               .from('tasks')
               .select('id, task_assignees!inner(profile_id), task_completions(id)')
               .eq('family_id', rotatingTask.family_id)
-              .eq('title', rotatingTask.name)
-              .eq('task_assignees.profile_id', candidateId)
-              .gte('created_at', `${today}T00:00:00Z`)
-              .lte('created_at', `${today}T23:59:59Z`);
+              .eq('rotating_task_id', rotatingTask.id)
+              .eq('task_assignees.profile_id', candidateId);
             if (checkError) continue;
             const hasIncompleteTask = existingForMember?.some(task => !task.task_completions || task.task_completions.length === 0);
             if (!hasIncompleteTask) {
