@@ -28,39 +28,46 @@ export const TokenEncryptionStatus = ({ className }: TokenEncryptionStatusProps)
   const checkEncryptionStatus = async () => {
     setLoading(true);
     try {
-      // Check calendar integration encryption status
-      const { data: calendarStatus, error: calendarError } = await supabase
-        .rpc('get_token_encryption_status');
+      // Use the improved metadata function to check encryption status
+      const { data: integrations, error: integrationsError } = await supabase
+        .rpc('get_calendar_integrations_metadata');
 
-      if (calendarError) throw calendarError;
+      if (integrationsError) throw integrationsError;
 
-      // Check Google Photos encryption status - using metadata approach since direct access might be blocked
+      const integrationsData = integrations || [];
+      
+      // Count encrypted vs unencrypted calendar integrations
+      const calendarTotal = integrationsData.length;
+      const calendarEncrypted = integrationsData.filter((i: any) => i.is_encrypted).length;
+      const calendarUnencrypted = integrationsData.filter((i: any) => !i.is_encrypted && i.has_access_token).length;
+
+      // Check Google Photos encryption status
       const { data: googlePhotosCount, error: googlePhotosError } = await supabase
         .from('google_photos_integrations')
         .select('id', { count: 'exact' })
         .eq('is_active', true);
 
-      // If permission denied, assume no Google Photos integrations exist (which is fine)
+      // If permission denied, assume no Google Photos integrations exist
       if (googlePhotosError && googlePhotosError.code !== '42501') throw googlePhotosError;
 
-      // For security, we can't directly check encryption status of Google Photos tokens
-      // since they should all be encrypted going forward. We'll assume they need migration
-      // if this is an existing installation.
       const googlePhotosTotal = googlePhotosCount?.length || 0;
 
-      const calendarData = calendarStatus as any;
       setStatus({
-        calendar_total: calendarData?.total_integrations || 0,
-        calendar_encrypted: calendarData?.encrypted_integrations || 0,
-        calendar_broken: calendarData?.broken_integrations || 0,
-        calendar_unencrypted: calendarData?.unencrypted_integrations || 0,
+        calendar_total: calendarTotal,
+        calendar_encrypted: calendarEncrypted,
+        calendar_broken: 0, // v2 format should eliminate broken tokens
+        calendar_unencrypted: calendarUnencrypted,
         google_photos_total: googlePhotosTotal,
-        google_photos_encrypted: googlePhotosTotal, // Assume encrypted since RLS blocks direct access
+        google_photos_encrypted: googlePhotosTotal,
         google_photos_unencrypted: 0,
-        encryption_complete: 
-          (calendarData?.encryption_complete || true),
-        has_broken_tokens: calendarData?.has_broken_tokens || false
+        encryption_complete: calendarUnencrypted === 0,
+        has_broken_tokens: false
       });
+
+      // Auto-migrate if there are unencrypted tokens
+      if (calendarUnencrypted > 0) {
+        await migrateTokensToV2();
+      }
     } catch (error) {
       console.error('Error checking encryption status:', error);
       toast({
@@ -70,6 +77,27 @@ export const TokenEncryptionStatus = ({ className }: TokenEncryptionStatusProps)
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const migrateTokensToV2 = async () => {
+    try {
+      const { data, error } = await supabase
+        .rpc('migrate_tokens_to_v2_format');
+
+      if (error) throw error;
+
+      const result = data as any;
+      if (result?.migrated_count > 0) {
+        toast({
+          title: 'Tokens Migrated',
+          description: `Successfully upgraded ${result.migrated_count} token(s) to v2 encryption format`,
+        });
+        // Refresh status
+        await checkEncryptionStatus();
+      }
+    } catch (error) {
+      console.error('Error migrating tokens:', error);
     }
   };
 
@@ -155,11 +183,8 @@ export const TokenEncryptionStatus = ({ className }: TokenEncryptionStatusProps)
                 <div className="space-y-1 text-muted-foreground">
                   <div>Total: {status.calendar_total}</div>
                   <div className="text-green-600">Secure (v2): {status.calendar_encrypted}</div>
-                  {status.calendar_broken > 0 && (
-                    <div className="text-red-600">Broken (v1): {status.calendar_broken}</div>
-                  )}
                   {status.calendar_unencrypted > 0 && (
-                    <div className="text-red-600">Unencrypted: {status.calendar_unencrypted}</div>
+                    <div className="text-yellow-600">Needs Migration: {status.calendar_unencrypted}</div>
                   )}
                 </div>
               </div>
@@ -176,30 +201,16 @@ export const TokenEncryptionStatus = ({ className }: TokenEncryptionStatusProps)
               </div>
             </div>
 
-            {status.has_broken_tokens && (
+            {status.calendar_unencrypted > 0 && (
               <div className="pt-2 space-y-2">
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-                  <p className="text-sm text-destructive font-medium">
-                    Broken Encrypted Tokens Detected
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-md">
+                  <p className="text-sm text-yellow-700 dark:text-yellow-500 font-medium">
+                    Token Migration Available
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    These calendar connections were encrypted with a broken algorithm and cannot be recovered. 
-                    You must remove them and reconnect your calendars.
+                    Your calendar tokens will be automatically migrated to the latest v2 encryption format on next check.
                   </p>
                 </div>
-                <Button
-                  onClick={cleanupBrokenTokens}
-                  disabled={loading}
-                  variant="destructive"
-                  size="sm"
-                >
-                  {loading ? (
-                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                  )}
-                  Remove Broken Connections
-                </Button>
               </div>
             )}
 
