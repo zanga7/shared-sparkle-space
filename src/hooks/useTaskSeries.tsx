@@ -116,33 +116,70 @@ export const useTaskSeries = (familyId?: string) => {
       instances.forEach(instance => {
         if (instance.exceptionType === 'skip') return; // Skip this occurrence
         
-        const virtualTask: VirtualTaskInstance = {
-          id: `${series.id}-${format(instance.date, 'yyyy-MM-dd')}`,
-          series_id: series.id,
-          title: instance.overrideData?.title || series.title,
-          description: instance.overrideData?.description || series.description,
-          points: instance.overrideData?.points || series.points,
-          task_group: instance.overrideData?.task_group || series.task_group,
-          completion_rule: instance.overrideData?.completion_rule || series.completion_rule,
-          assigned_profiles: instance.overrideData?.assigned_profiles || series.assigned_profiles,
-          due_date: instance.date.toISOString(),
-          family_id: series.family_id,
-          created_by: series.created_by,
-          isVirtual: true,
-          isException: instance.isException,
-          exceptionType: instance.exceptionType,
-          occurrence_date: format(instance.date, 'yyyy-MM-dd'),
-          recurrence_options: {
-            enabled: true,
-            rule: series.recurrence_rule,
-            repeatFrom: 'scheduled',
-            rotateBetweenMembers: false,
-            skipWeekends: false,
-            pauseDuringHolidays: false
-          }
-        };
+        const completionRule = instance.overrideData?.completion_rule || series.completion_rule;
+        const assignedProfiles = instance.overrideData?.assigned_profiles || series.assigned_profiles;
         
-        virtualTasks.push(virtualTask);
+        // For "everyone" completion rule with multiple assignees, create separate instances for each person
+        if (completionRule === 'everyone' && assignedProfiles && assignedProfiles.length > 1) {
+          assignedProfiles.forEach((profileId, index) => {
+            const virtualTask: VirtualTaskInstance = {
+              id: `${series.id}-${format(instance.date, 'yyyy-MM-dd')}-${profileId}`,
+              series_id: series.id,
+              title: instance.overrideData?.title || series.title,
+              description: instance.overrideData?.description || series.description,
+              points: instance.overrideData?.points || series.points,
+              task_group: instance.overrideData?.task_group || series.task_group,
+              completion_rule: completionRule,
+              assigned_profiles: [profileId], // Single assignee per instance
+              due_date: instance.date.toISOString(),
+              family_id: series.family_id,
+              created_by: series.created_by,
+              isVirtual: true,
+              isException: instance.isException,
+              exceptionType: instance.exceptionType,
+              occurrence_date: format(instance.date, 'yyyy-MM-dd'),
+              recurrence_options: {
+                enabled: true,
+                rule: series.recurrence_rule,
+                repeatFrom: 'scheduled',
+                rotateBetweenMembers: false,
+                skipWeekends: false,
+                pauseDuringHolidays: false
+              }
+            };
+            
+            virtualTasks.push(virtualTask);
+          });
+        } else {
+          // For "any_one" or single assignee, create one shared instance
+          const virtualTask: VirtualTaskInstance = {
+            id: `${series.id}-${format(instance.date, 'yyyy-MM-dd')}`,
+            series_id: series.id,
+            title: instance.overrideData?.title || series.title,
+            description: instance.overrideData?.description || series.description,
+            points: instance.overrideData?.points || series.points,
+            task_group: instance.overrideData?.task_group || series.task_group,
+            completion_rule: completionRule,
+            assigned_profiles: assignedProfiles,
+            due_date: instance.date.toISOString(),
+            family_id: series.family_id,
+            created_by: series.created_by,
+            isVirtual: true,
+            isException: instance.isException,
+            exceptionType: instance.exceptionType,
+            occurrence_date: format(instance.date, 'yyyy-MM-dd'),
+            recurrence_options: {
+              enabled: true,
+              rule: series.recurrence_rule,
+              repeatFrom: 'scheduled',
+              rotateBetweenMembers: false,
+              skipWeekends: false,
+              pauseDuringHolidays: false
+            }
+          };
+          
+          virtualTasks.push(virtualTask);
+        }
       });
     });
     

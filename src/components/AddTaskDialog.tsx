@@ -499,7 +499,7 @@ export const AddTaskDialog = ({
                       Any one
                     </Label>
                     <p className="text-xs text-muted-foreground mt-1">
-                      First person to complete it finishes for everyone
+                      One shared task. When anyone completes it, it's done for everyone (no points for others).
                     </p>
                   </div>
                 </div>
@@ -511,7 +511,7 @@ export const AddTaskDialog = ({
                       Everyone
                     </Label>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Each person must complete their own instance
+                      Separate tasks for each person. Everyone must complete their own to earn points.
                     </p>
                   </div>
                 </div>
