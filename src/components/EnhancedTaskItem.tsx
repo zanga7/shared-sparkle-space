@@ -49,12 +49,12 @@ export const EnhancedTaskItem = ({
 }: EnhancedTaskItemProps) => {
   const [showDetails, setShowDetails] = useState(false);
 
-  const isCompleted = task.task_completions && task.task_completions.length > 0;
-  const isOverdue = task.due_date && isAfter(new Date(), new Date(task.due_date)) && !isCompleted;
+  // Determine the completion status based on the task's completion rule
+  const hasAnyCompletion = task.task_completions && task.task_completions.length > 0;
+  const isOverdue = task.due_date && isAfter(new Date(), new Date(task.due_date)) && !hasAnyCompletion;
   const assignedProfile = familyMembers.find(member => member.id === task.assigned_to);
   
-  // For display purposes, check if current member OR the single assignee has completed
-  // This ensures the UI shows the correct state when parents view children's tasks
+  // For display purposes, determine which member we're checking for
   let checkMemberId = currentMemberId;
   if (!currentMemberId && task.assignees?.length === 1) {
     checkMemberId = task.assignees[0].profile_id;
@@ -62,7 +62,18 @@ export const EnhancedTaskItem = ({
     checkMemberId = task.assigned_to;
   }
   
-  const isCompletedByMe = (task.task_completions || []).some(c => c.completed_by === checkMemberId);
+  // Determine completion status based on completion rule
+  // For "any_one" tasks: if ANYONE completed it, show as complete for ALL members
+  // For "everyone" tasks: only show as complete if THIS SPECIFIC member completed it
+  const isCompletedByMe = task.completion_rule === 'any_one' 
+    ? hasAnyCompletion  // Any completion means it's done for everyone
+    : (task.task_completions || []).some(c => c.completed_by === checkMemberId); // Only this member's completion
+  
+  // For "any_one" tasks that are completed, the task is truly complete (anyone completing = task done)
+  // For "everyone" tasks, we check if everyone has completed
+  const isCompleted = task.completion_rule === 'any_one' 
+    ? hasAnyCompletion 
+    : hasAnyCompletion; // This will be refined by the component's display logic
 
   // Get days until due
   const getDaysUntilDue = () => {
@@ -93,21 +104,31 @@ export const EnhancedTaskItem = ({
           variant={isCompletedByMe ? "default" : "outline"}
           onClick={(e) => {
             e.stopPropagation();
+            // For "any_one" tasks completed by someone else, prevent interaction
+            if (task.completion_rule === 'any_one' && isCompleted && !isCompletedByMe) {
+              return;
+            }
             onToggle(task);
           }}
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
-          disabled={isCompleting}
+          disabled={isCompleting || (task.completion_rule === 'any_one' && isCompleted && !isCompletedByMe)}
           className={cn(
             "shrink-0 w-7 h-7 p-0 cursor-pointer transition-all",
             isCompletedByMe 
               ? "bg-green-500 hover:bg-green-600 hover:scale-110 active:scale-95" 
               : "hover:border-green-500 hover:text-green-500",
-            isCompleting && "opacity-50 cursor-wait"
+            isCompleting && "opacity-50 cursor-wait",
+            (task.completion_rule === 'any_one' && isCompleted && !isCompletedByMe) && "opacity-50 cursor-not-allowed"
           )}
-          title={isCompletedByMe 
-            ? "Click to uncomplete and remove points" 
-            : (isCompleted ? "Already completed by someone; click to attempt your completion" : "Click to complete and earn points")
+          title={
+            isCompletedByMe 
+              ? (task.completion_rule === 'any_one' 
+                  ? "Click to uncomplete and remove points" 
+                  : "Click to uncomplete your completion and remove your points")
+              : (isCompleted && task.completion_rule === 'any_one'
+                  ? "Already completed by someone" 
+                  : "Click to complete and earn points")
           }
         >
           {isCompleting ? (

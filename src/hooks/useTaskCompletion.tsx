@@ -39,9 +39,13 @@ export const useTaskCompletion = ({
       // Determine who is completing the task
       let completerId: string | null = null;
 
-      if (isDashboardMode && activeMemberId) {
+      // Priority order:
+      // 1. If activeMemberId is set (from column or dashboard session), always use it
+      // 2. For single-assignee tasks without activeMemberId, use that assignee
+      // 3. Fall back to current user profile
+      if (activeMemberId) {
         completerId = activeMemberId;
-      } else if (task.assignees && task.assignees.length === 1 && !activeMemberId) {
+      } else if (task.assignees && task.assignees.length === 1) {
         completerId = task.assignees[0].profile_id;
       } else if (currentUserProfile) {
         completerId = currentUserProfile.id;
@@ -56,7 +60,7 @@ export const useTaskCompletion = ({
         return false;
       }
 
-      // Check if PIN is required
+      // Check if PIN is required (only when in dashboard mode)
       if (isDashboardMode && activeMemberId) {
         const { canProceed } = await canPerformAction(activeMemberId, 'task_completion');
         if (!canProceed) {
@@ -186,9 +190,10 @@ export const useTaskCompletion = ({
       // Determine which completion to remove - MUST match completeTask logic
       let completerId: string | null = null;
 
-      if (isDashboardMode && activeMemberId) {
+      // Use same priority as completeTask
+      if (activeMemberId) {
         completerId = activeMemberId;
-      } else if (task.assignees && task.assignees.length === 1 && !activeMemberId) {
+      } else if (task.assignees && task.assignees.length === 1) {
         // For single-assignee tasks, use the assignee's ID
         completerId = task.assignees[0].profile_id;
       } else if (currentUserProfile) {
