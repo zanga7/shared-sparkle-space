@@ -1004,14 +1004,31 @@ const ColumnBasedDashboard = () => {
   };
 
   const handleTaskToggle = (task: Task) => {
+    // Prevent action if task is currently being processed
+    if (isCompleting(task.id)) {
+      console.log('🚫 Task already being processed:', task.id);
+      return;
+    }
+
     // Determine who we're checking for (same logic as the hook)
     const completerId = activeMemberId || profile?.id;
-    if (!completerId) return;
+    if (!completerId) {
+      console.warn('⚠️ No completer ID found');
+      return;
+    }
 
     // Check if THIS specific user/member has completed the task
     const isCompleted = task.task_completions?.some(
       (c) => c.completed_by === completerId
     );
+
+    console.log('🔄 Task toggle:', { 
+      taskId: task.id, 
+      title: task.title,
+      completerId, 
+      isCompleted,
+      completions: task.task_completions 
+    });
 
     if (isCompleted) {
       uncompleteTask(task);
@@ -1734,20 +1751,21 @@ const ColumnBasedDashboard = () => {
                          );
                          return (
                            <div key={member.id} className="snap-center shrink-0 w-[calc(100vw-2rem)]">
-                             <MemberTaskColumn
-                               member={member}
-                               memberTasks={memberTasks}
-                               completedTasks={completedTasks}
-                               allTasks={tasks}
-                               familyMembers={familyMembers}
-                               onTaskToggle={handleTaskToggle}
-                               onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
-                               onDeleteTask={profile.role === 'parent' ? initiateTaskDeletion : undefined}
-                               onAddTask={handleAddTaskForMember}
-                               onAddTaskForMember={handleAddTaskForMember}
-                               onDragEnd={handleDragEnd}
-                               showActions={profile.role === 'parent'}
-                             />
+                              <MemberTaskColumn
+                                member={member}
+                                memberTasks={memberTasks}
+                                completedTasks={completedTasks}
+                                allTasks={tasks}
+                                familyMembers={familyMembers}
+                                onTaskToggle={handleTaskToggle}
+                                onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
+                                onDeleteTask={profile.role === 'parent' ? initiateTaskDeletion : undefined}
+                                onAddTask={handleAddTaskForMember}
+                                onAddTaskForMember={handleAddTaskForMember}
+                                onDragEnd={handleDragEnd}
+                                showActions={profile.role === 'parent'}
+                                isCompleting={isCompleting}
+                              />
                            </div>
                          );
                        })}
@@ -1780,16 +1798,18 @@ const ColumnBasedDashboard = () => {
                                                snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50"
                                              )}
                                            >
-                                             <EnhancedTaskItem
-                                               task={task}
-                                               allTasks={tasks}
-                                               familyMembers={familyMembers}
-                                               onToggle={handleTaskToggle}
-                                               onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                               onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
-                                               showActions={profile.role === 'parent' && !snapshot.isDragging}
-                                               isUnassigned={true}
-                                             />
+                                              <EnhancedTaskItem
+                                                task={task}
+                                                allTasks={tasks}
+                                                familyMembers={familyMembers}
+                                                onToggle={handleTaskToggle}
+                                                onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                                                onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
+                                                showActions={profile.role === 'parent' && !snapshot.isDragging}
+                                                isCompleting={isCompleting(task.id)}
+                                                currentMemberId={activeMemberId || profile?.id}
+                                                isUnassigned={true}
+                                              />
                                            </div>
                                          )}
                                        </Draggable>
@@ -1819,20 +1839,21 @@ const ColumnBasedDashboard = () => {
 
                        return (
                          <div key={member.id} className="md:shrink-0 md:w-64 md:min-w-[16rem] md:max-w-[20rem] xl:shrink xl:w-auto xl:min-w-0 xl:max-w-none">
-                           <MemberTaskColumn
-                             member={member}
-                             memberTasks={memberTasks}
-                             completedTasks={completedTasks}
-                             allTasks={tasks}
-                             familyMembers={familyMembers}
-                             onTaskToggle={handleTaskToggle}
-                             onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
-                             onDeleteTask={profile.role === 'parent' ? initiateTaskDeletion : undefined}
-                             onAddTask={handleAddTaskForMember}
-                             onAddTaskForMember={handleAddTaskForMember}
-                             onDragEnd={handleDragEnd}
-                             showActions={profile.role === 'parent'}
-                           />
+                            <MemberTaskColumn
+                              member={member}
+                              memberTasks={memberTasks}
+                              completedTasks={completedTasks}
+                              allTasks={tasks}
+                              familyMembers={familyMembers}
+                              onTaskToggle={handleTaskToggle}
+                              onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
+                              onDeleteTask={profile.role === 'parent' ? initiateTaskDeletion : undefined}
+                              onAddTask={handleAddTaskForMember}
+                              onAddTaskForMember={handleAddTaskForMember}
+                              onDragEnd={handleDragEnd}
+                              showActions={profile.role === 'parent'}
+                              isCompleting={isCompleting}
+                            />
                          </div>
                        );
                      })}
@@ -1867,16 +1888,18 @@ const ColumnBasedDashboard = () => {
                                              snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50"
                                            )}
                                          >
-                                           <EnhancedTaskItem
-                                             task={task}
-                                             allTasks={tasks}
-                                             familyMembers={familyMembers}
-                                             onToggle={handleTaskToggle}
-                                             onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                             onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
-                                             showActions={profile.role === 'parent' && !snapshot.isDragging}
-                                             isUnassigned={true}
-                                           />
+                                            <EnhancedTaskItem
+                                              task={task}
+                                              allTasks={tasks}
+                                              familyMembers={familyMembers}
+                                              onToggle={handleTaskToggle}
+                                              onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                                              onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
+                                              showActions={profile.role === 'parent' && !snapshot.isDragging}
+                                              isCompleting={isCompleting(task.id)}
+                                              currentMemberId={activeMemberId || profile?.id}
+                                              isUnassigned={true}
+                                            />
                                          </div>
                                        )}
                                      </Draggable>
@@ -1948,28 +1971,32 @@ const ColumnBasedDashboard = () => {
                             ) : (
                               <>
                                 {pendingTasks.map((task) => (
-                                  <EnhancedTaskItem
-                                    key={task.id}
-                                    task={task}
-                                    allTasks={tasks}
-                                    familyMembers={familyMembers}
-                                    onToggle={handleTaskToggle}
-                                    onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                    onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
-                                    showActions={profile.role === 'parent'}
-                                  />
+                                   <EnhancedTaskItem
+                                     key={task.id}
+                                     task={task}
+                                     allTasks={tasks}
+                                     familyMembers={familyMembers}
+                                     onToggle={handleTaskToggle}
+                                     onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                                     onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
+                                     showActions={profile.role === 'parent'}
+                                     isCompleting={isCompleting(task.id)}
+                                     currentMemberId={activeMemberId || profile?.id}
+                                   />
                                 ))}
-                                {completedTasks.map((task) => (
-                                  <EnhancedTaskItem
-                                    key={task.id}
-                                    task={task}
-                                    allTasks={tasks}
-                                    familyMembers={familyMembers}
-                                    onToggle={handleTaskToggle}
-                                    onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                    onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
-                                    showActions={profile.role === 'parent'}
-                                  />
+                                 {completedTasks.map((task) => (
+                                   <EnhancedTaskItem
+                                     key={task.id}
+                                     task={task}
+                                     allTasks={tasks}
+                                     familyMembers={familyMembers}
+                                     onToggle={handleTaskToggle}
+                                     onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                                     onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
+                                     showActions={profile.role === 'parent'}
+                                     isCompleting={isCompleting(task.id)}
+                                     currentMemberId={activeMemberId || profile?.id}
+                                   />
                                 ))}
                               </>
                             )}

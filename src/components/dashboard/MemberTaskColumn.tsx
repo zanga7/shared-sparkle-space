@@ -22,6 +22,7 @@ interface MemberTaskColumnProps {
   onAddTaskForMember: (memberId: string) => void;
   onDragEnd: (result: DropResult) => void;
   showActions: boolean;
+  isCompleting?: (taskId: string) => boolean;
 }
 
 export function MemberTaskColumn({
@@ -37,6 +38,7 @@ export function MemberTaskColumn({
   onAddTaskForMember,
   onDragEnd,
   showActions,
+  isCompleting,
 }: MemberTaskColumnProps) {
   const { styles: colorStyles, hex: colorHex } = useMemberColor(member.color);
 
@@ -92,6 +94,7 @@ export function MemberTaskColumn({
           memberId={member.id}
           memberColor={member.color}
           droppableIdPrefix={`${member.id}-`}
+          isCompleting={isCompleting}
         />
       </CardContent>
 

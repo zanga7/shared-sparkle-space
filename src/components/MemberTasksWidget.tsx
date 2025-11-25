@@ -58,6 +58,12 @@ export const MemberTasksWidget = ({
   });
 
   const handleTaskToggle = async (task: Task) => {
+    // Prevent action if task is currently being processed
+    if (isCompleting(task.id)) {
+      console.log('🚫 Task already being processed:', task.id);
+      return;
+    }
+
     // Determine who we're checking for
     const completerId = activeMemberId || member.id;
     if (!completerId) return;
@@ -66,6 +72,12 @@ export const MemberTasksWidget = ({
     const isCompleted = task.task_completions?.some(
       (c) => c.completed_by === completerId
     );
+
+    console.log('🔄 Task toggle (widget):', { 
+      taskId: task.id, 
+      completerId, 
+      isCompleted 
+    });
 
     if (isCompleted) {
       await uncompleteTask(task, () => {
