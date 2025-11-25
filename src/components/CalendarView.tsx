@@ -214,41 +214,51 @@ export const CalendarView = ({
   const allTasks = useMemo(() => {
     const virtualInstances = generateVirtualTaskInstances(dateRange.start, dateRange.end);
     
-    // Map VirtualTaskInstance to Task format
-    const mappedVirtualTasks: Task[] = virtualInstances.map(vTask => ({
-      id: vTask.id,
-      title: vTask.title,
-      description: vTask.description || null,
-      points: vTask.points,
-      due_date: vTask.due_date,
-      assigned_to: vTask.assigned_profiles[0] || null,
-      created_by: vTask.created_by,
-      completion_rule: vTask.completion_rule as 'any_one' | 'everyone',
-      task_group: vTask.task_group,
-      recurrence_options: vTask.recurrence_options,
-      isVirtual: true,
-      series_id: vTask.series_id,
-      occurrence_date: vTask.occurrence_date,
-      isException: vTask.isException,
-      exceptionType: vTask.exceptionType,
-      // Map assigned_profiles to assignees format
-      assignees: vTask.assigned_profiles.map(profileId => {
-        const member = familyMembers.find(m => m.id === profileId);
-        return {
-          id: `${vTask.id}-${profileId}`,
-          profile_id: profileId,
-          assigned_at: vTask.due_date,
-          assigned_by: vTask.created_by,
-          profile: member || {
-            id: profileId,
-            display_name: 'Unknown',
-            role: 'child' as const,
-            color: 'gray',
-            avatar_url: null
-          }
-        };
-      })
-    }));
+    // Get the materialized completions map from window (set by ColumnBasedDashboard)
+    const materializedMap = (window as any).__materializedCompletionsMap || new Map();
+    
+    // Map VirtualTaskInstance to Task format with completion data
+    const mappedVirtualTasks: Task[] = virtualInstances.map(vTask => {
+      // Check if this virtual instance has been materialized and completed
+      const completionKey = `${vTask.series_id}-${vTask.occurrence_date}`;
+      const completions = materializedMap.get(completionKey) || [];
+      
+      return {
+        id: vTask.id,
+        title: vTask.title,
+        description: vTask.description || null,
+        points: vTask.points,
+        due_date: vTask.due_date,
+        assigned_to: vTask.assigned_profiles[0] || null,
+        created_by: vTask.created_by,
+        completion_rule: vTask.completion_rule as 'any_one' | 'everyone',
+        task_group: vTask.task_group,
+        recurrence_options: vTask.recurrence_options,
+        isVirtual: true,
+        series_id: vTask.series_id,
+        occurrence_date: vTask.occurrence_date,
+        isException: vTask.isException,
+        exceptionType: vTask.exceptionType,
+        task_completions: completions,
+        // Map assigned_profiles to assignees format
+        assignees: vTask.assigned_profiles.map(profileId => {
+          const member = familyMembers.find(m => m.id === profileId);
+          return {
+            id: `${vTask.id}-${profileId}`,
+            profile_id: profileId,
+            assigned_at: vTask.due_date,
+            assigned_by: vTask.created_by,
+            profile: member || {
+              id: profileId,
+              display_name: 'Unknown',
+              role: 'child' as const,
+              color: 'gray',
+              avatar_url: null
+            }
+          };
+        })
+      };
+    });
 
     return [...tasks, ...mappedVirtualTasks];
   }, [tasks, dateRange, generateVirtualTaskInstances, familyMembers]);
