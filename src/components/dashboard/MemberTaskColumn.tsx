@@ -15,7 +15,7 @@ interface MemberTaskColumnProps {
   completedTasks: Task[];
   allTasks: Task[];
   familyMembers: Profile[];
-  onTaskToggle: (task: Task) => void;
+  onTaskToggle: (task: Task, columnMemberId?: string) => void;
   onEditTask?: (task: Task) => void;
   onDeleteTask?: (task: Task) => void;
   onAddTask: (memberId: string, group?: TaskGroup) => void;
@@ -85,7 +85,7 @@ export function MemberTaskColumn({
           tasks={memberTasks}
           allTasks={allTasks}
           familyMembers={familyMembers}
-          onTaskToggle={onTaskToggle}
+          onTaskToggle={(task) => onTaskToggle(task, member.id)}
           onEditTask={onEditTask}
           onDeleteTask={onDeleteTask}
           onAddTask={(group) => onAddTask(member.id, group)}

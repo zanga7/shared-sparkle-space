@@ -103,10 +103,12 @@ const ColumnBasedDashboard = () => {
   // Auto-hide completed tasks at midnight
   useMidnightTaskCleanup();
 
-  // Task completion hook
+  // Task completion hook with columnMemberId support
+  const [completionColumnMemberId, setCompletionColumnMemberId] = useState<string | null>(null);
+  
   const { completeTask: completeTaskHandler, uncompleteTask: uncompleteTaskHandler, isCompleting } = useTaskCompletion({
     currentUserProfile: profile,
-    activeMemberId,
+    activeMemberId: completionColumnMemberId || activeMemberId,
     isDashboardMode: dashboardMode,
     setTasks,
     setProfile,
@@ -997,15 +999,19 @@ const ColumnBasedDashboard = () => {
     }
   };
 
-  const completeTask = async (task: Task) => {
+  const completeTask = async (task: Task, columnMemberId?: string) => {
+    if (columnMemberId) setCompletionColumnMemberId(columnMemberId);
     await completeTaskHandler(task, refreshTasksOnly);
+    if (columnMemberId) setCompletionColumnMemberId(null);
   };
 
-  const uncompleteTask = async (task: Task) => {
+  const uncompleteTask = async (task: Task, columnMemberId?: string) => {
+    if (columnMemberId) setCompletionColumnMemberId(columnMemberId);
     await uncompleteTaskHandler(task, refreshTasksOnly);
+    if (columnMemberId) setCompletionColumnMemberId(null);
   };
 
-  const handleTaskToggle = (task: Task) => {
+  const handleTaskToggle = (task: Task, columnMemberId?: string) => {
     // Prevent action if task is currently being processed
     if (isCompleting(task.id)) {
       console.log('🚫 Task already being processed:', task.id);
@@ -1013,7 +1019,8 @@ const ColumnBasedDashboard = () => {
     }
 
     // Determine who we're checking for
-    const completerId = activeMemberId || profile?.id;
+    // Priority: columnMemberId (from column view) > activeMemberId (from dashboard session) > logged-in user
+    const completerId = columnMemberId || activeMemberId || profile?.id;
     if (!completerId) {
       console.warn('⚠️ No completer ID found');
       return;
@@ -1025,9 +1032,9 @@ const ColumnBasedDashboard = () => {
     
     // If task has a single assignee and current user is viewing (not in active member mode),
     // check the assignee's completion status
-    if (!activeMemberId && task.assignees?.length === 1) {
+    if (!activeMemberId && !columnMemberId && task.assignees?.length === 1) {
       checkCompleterId = task.assignees[0].profile_id;
-    } else if (!activeMemberId && task.assigned_to) {
+    } else if (!activeMemberId && !columnMemberId && task.assigned_to) {
       checkCompleterId = task.assigned_to;
     }
 
@@ -1039,6 +1046,7 @@ const ColumnBasedDashboard = () => {
     console.log('🔄 Task toggle:', { 
       taskId: task.id, 
       title: task.title,
+      columnMemberId,
       completerId,
       checkCompleterId, 
       isCompleted,
@@ -1048,9 +1056,9 @@ const ColumnBasedDashboard = () => {
     });
 
     if (isCompleted) {
-      uncompleteTask(task);
+      uncompleteTask(task, columnMemberId);
     } else {
-      completeTask(task);
+      completeTask(task, columnMemberId);
     }
   };
 
