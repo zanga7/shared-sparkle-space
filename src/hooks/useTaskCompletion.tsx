@@ -169,11 +169,14 @@ export const useTaskCompletion = ({
     setCompletingTasks(prev => new Set(prev).add(task.id));
 
     try {
-      // Determine which completion to remove
+      // Determine which completion to remove - MUST match completeTask logic
       let completerId: string | null = null;
 
       if (isDashboardMode && activeMemberId) {
         completerId = activeMemberId;
+      } else if (task.assignees && task.assignees.length === 1 && !activeMemberId) {
+        // For single-assignee tasks, use the assignee's ID
+        completerId = task.assignees[0].profile_id;
       } else if (currentUserProfile) {
         completerId = currentUserProfile.id;
       }
