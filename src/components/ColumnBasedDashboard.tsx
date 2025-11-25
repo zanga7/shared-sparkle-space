@@ -841,6 +841,35 @@ const ColumnBasedDashboard = () => {
               }));
               setTasks(typedTasks);
             }
+
+            // Fetch materialized task instances for completion data
+            const { data: materializedData, error: materializedError } = await supabase
+              .from('materialized_task_instances')
+              .select(`
+                series_id,
+                occurrence_date,
+                materialized_task_id,
+                materialized_task:tasks!materialized_task_instances_materialized_task_id_fkey(
+                  id,
+                  task_completions(
+                    id,
+                    completed_at,
+                    completed_by
+                  )
+                )
+              `);
+
+            if (!materializedError && materializedData) {
+              const materializedMap = new Map<string, any[]>();
+              materializedData.forEach((instance: any) => {
+                if (instance.materialized_task?.task_completions) {
+                  const key = `${instance.series_id}-${instance.occurrence_date}`;
+                  materializedMap.set(key, instance.materialized_task.task_completions);
+                }
+              });
+              (window as any).__materializedCompletionsMap = materializedMap;
+            }
+            
             
             setLoading(false);
             return;
@@ -919,6 +948,41 @@ const ColumnBasedDashboard = () => {
         }));
         setTasks(typedTasks);
       }
+
+      // Fetch materialized task instances to get completion data for recurring tasks
+      const { data: materializedData, error: materializedError } = await supabase
+        .from('materialized_task_instances')
+        .select(`
+          series_id,
+          occurrence_date,
+          materialized_task_id,
+          materialized_task:tasks!materialized_task_instances_materialized_task_id_fkey(
+            id,
+            task_completions(
+              id,
+              completed_at,
+              completed_by
+            )
+          )
+        `);
+
+      if (materializedError) {
+        console.error('Error fetching materialized instances:', materializedError);
+      }
+
+      // Create a map of series_id + occurrence_date -> completions
+      const materializedMap = new Map<string, any[]>();
+      if (materializedData) {
+        materializedData.forEach((instance: any) => {
+          if (instance.materialized_task?.task_completions) {
+            const key = `${instance.series_id}-${instance.occurrence_date}`;
+            materializedMap.set(key, instance.materialized_task.task_completions);
+          }
+        });
+      }
+
+      // Store the materialized map globally for use in virtual task generation
+      (window as any).__materializedCompletionsMap = materializedMap;
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -1391,19 +1455,15 @@ const ColumnBasedDashboard = () => {
     
     const virtualInstances = Array.from(seriesInstanceMap.values());
     
+    // Get the materialized completions map from window
+    const materializedMap = (window as any).__materializedCompletionsMap || new Map();
+    
     // Map virtual instances to Task format with completion checking
     const virtualTasks: Task[] = virtualInstances.map(vTask => {
-      // Check if this virtual instance has been completed by looking at materialized tasks
-      // The RPC creates materialized tasks with task_source='recurring' when completed
-      const materializedTask = tasks.find(t => 
-        t.task_source === 'recurring' && 
-        t.title === vTask.title &&
-        t.due_date && vTask.due_date &&
-        new Date(t.due_date).toISOString().split('T')[0] === new Date(vTask.due_date).toISOString().split('T')[0]
-      );
-      
-      // Use completions from materialized task if it exists
-      const completions = materializedTask?.task_completions || [];
+      // Check if this virtual instance has been materialized and completed
+      // Use series_id + occurrence_date to look up completions
+      const completionKey = `${vTask.series_id}-${vTask.occurrence_date}`;
+      const completions = materializedMap.get(completionKey) || [];
       
       return {
         id: vTask.id,
