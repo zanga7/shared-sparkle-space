@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
+import { Copy, Check } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -21,15 +22,46 @@ const alertVariants = cva(
 
 const Alert = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
->(({ className, variant, ...props }, ref) => (
-  <div
-    ref={ref}
-    role="alert"
-    className={cn(alertVariants({ variant }), className)}
-    {...props}
-  />
-))
+  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants> & {
+    allowCopy?: boolean
+  }
+>(({ className, variant, allowCopy = false, children, ...props }, ref) => {
+  const [copied, setCopied] = React.useState(false)
+  const isDestructive = variant === "destructive"
+  
+  const handleCopy = async () => {
+    const textContent = ref && 'current' in ref && ref.current 
+      ? ref.current.textContent || ""
+      : ""
+    await navigator.clipboard.writeText(textContent)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  
+  return (
+    <div
+      ref={ref}
+      role="alert"
+      className={cn(alertVariants({ variant }), "relative", className)}
+      {...props}
+    >
+      {children}
+      {allowCopy && isDestructive && (
+        <button
+          onClick={handleCopy}
+          className="absolute top-4 right-4 rounded-md p-1 hover:bg-destructive-foreground/10 transition-colors"
+          title="Copy error message"
+        >
+          {copied ? (
+            <Check className="h-4 w-4" />
+          ) : (
+            <Copy className="h-4 w-4" />
+          )}
+        </button>
+      )}
+    </div>
+  )
+})
 Alert.displayName = "Alert"
 
 const AlertTitle = React.forwardRef<

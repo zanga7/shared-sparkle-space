@@ -7,21 +7,46 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast"
+import { Copy, Check } from "lucide-react"
+import { useState } from "react"
 
 export function Toaster() {
   const { toasts } = useToast()
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const handleCopy = async (text: string, id: string) => {
+    await navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
+      {toasts.map(function ({ id, title, description, action, variant, ...props }) {
+        const isError = variant === "destructive"
+        const errorText = `${title || ""}${title && description ? ": " : ""}${description || ""}`
+        
         return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
+          <Toast key={id} variant={variant} {...props}>
+            <div className="grid gap-1 flex-1">
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && (
                 <ToastDescription>{description}</ToastDescription>
               )}
             </div>
+            {isError && (
+              <button
+                onClick={() => handleCopy(errorText, id)}
+                className="shrink-0 rounded-md p-1.5 text-destructive-foreground/70 hover:text-destructive-foreground transition-colors"
+                title="Copy error message"
+              >
+                {copiedId === id ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </button>
+            )}
             {action}
             <ToastClose />
           </Toast>

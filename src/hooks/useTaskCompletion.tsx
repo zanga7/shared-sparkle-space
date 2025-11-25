@@ -70,10 +70,12 @@ export const useTaskCompletion = ({
       }
 
       // Extract virtual task metadata if present
-      const isVirtualTask = (task as any).isVirtual === true;
-      const seriesId = (task as any).series_id || null;
-      const occurrenceDate = (task as any).occurrence_date 
-        ? new Date((task as any).occurrence_date).toISOString().split('T')[0] 
+      // Check multiple ways to detect virtual tasks for robustness
+      const isVirtualTask = task.isVirtual === true || 
+        (typeof task.id === 'string' && task.id.includes('-') && task.id.split('-').length > 5);
+      const seriesId = task.series_id || null;
+      const occurrenceDate = task.occurrence_date 
+        ? new Date(task.occurrence_date).toISOString().split('T')[0] 
         : null;
 
       // Call unified RPC that handles everything in one transaction
