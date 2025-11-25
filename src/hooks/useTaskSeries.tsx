@@ -237,6 +237,10 @@ export const useTaskSeries = (familyId?: string) => {
       if (error) throw error;
 
       await fetchTaskSeries();
+      
+      // Emit event to notify dashboard immediately
+      window.dispatchEvent(new Event('series-updated'));
+      
       return data;
     } catch (error) {
       console.error('Error creating task series:', error);
