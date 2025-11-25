@@ -757,6 +757,7 @@ export type Database = {
         Row: {
           auto_return_enabled: boolean
           auto_return_timeout_minutes: number | null
+          completed_tasks_hide_hours: number | null
           created_at: string
           dashboard_mode_enabled: boolean | null
           family_id: string
@@ -773,6 +774,7 @@ export type Database = {
         Insert: {
           auto_return_enabled?: boolean
           auto_return_timeout_minutes?: number | null
+          completed_tasks_hide_hours?: number | null
           created_at?: string
           dashboard_mode_enabled?: boolean | null
           family_id: string
@@ -789,6 +791,7 @@ export type Database = {
         Update: {
           auto_return_enabled?: boolean
           auto_return_timeout_minutes?: number | null
+          completed_tasks_hide_hours?: number | null
           created_at?: string
           dashboard_mode_enabled?: boolean | null
           family_id?: string

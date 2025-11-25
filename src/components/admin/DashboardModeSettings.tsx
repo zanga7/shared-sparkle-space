@@ -14,6 +14,7 @@ interface DashboardSettings {
   auto_return_enabled: boolean;
   auto_return_timeout_minutes: number;
   require_parent_pin_for_dashboard: boolean;
+  completed_tasks_hide_hours: number;
 }
 
 export const DashboardModeSettings = React.memo(() => {
@@ -22,7 +23,8 @@ export const DashboardModeSettings = React.memo(() => {
     dashboard_mode_enabled: false,
     auto_return_enabled: true,
     auto_return_timeout_minutes: 10,
-    require_parent_pin_for_dashboard: false
+    require_parent_pin_for_dashboard: false,
+    completed_tasks_hide_hours: 12
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,7 +42,7 @@ export const DashboardModeSettings = React.memo(() => {
     try {
       const { data, error } = await supabase
         .from('household_settings')
-        .select('dashboard_mode_enabled, auto_return_enabled, auto_return_timeout_minutes, require_parent_pin_for_dashboard')
+        .select('dashboard_mode_enabled, auto_return_enabled, auto_return_timeout_minutes, require_parent_pin_for_dashboard, completed_tasks_hide_hours')
         .eq('family_id', profile.family_id)
         .single();
 
@@ -53,7 +55,8 @@ export const DashboardModeSettings = React.memo(() => {
           dashboard_mode_enabled: (data as any).dashboard_mode_enabled || false,
           auto_return_enabled: (data as any).auto_return_enabled !== false,
           auto_return_timeout_minutes: (data as any).auto_return_timeout_minutes || 10,
-          require_parent_pin_for_dashboard: (data as any).require_parent_pin_for_dashboard || false
+          require_parent_pin_for_dashboard: (data as any).require_parent_pin_for_dashboard || false,
+          completed_tasks_hide_hours: (data as any).completed_tasks_hide_hours || 12
         });
       }
     } catch (error) {
@@ -75,7 +78,8 @@ export const DashboardModeSettings = React.memo(() => {
           dashboard_mode_enabled: settings.dashboard_mode_enabled,
           auto_return_enabled: settings.auto_return_enabled,
           auto_return_timeout_minutes: settings.auto_return_timeout_minutes,
-          require_parent_pin_for_dashboard: settings.require_parent_pin_for_dashboard
+          require_parent_pin_for_dashboard: settings.require_parent_pin_for_dashboard,
+          completed_tasks_hide_hours: settings.completed_tasks_hide_hours
         }, {
           onConflict: 'family_id'
         });
@@ -206,6 +210,38 @@ export const DashboardModeSettings = React.memo(() => {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Completed Tasks Hide Setting */}
+          <div className="space-y-4 pt-4 border-t">
+            <div className="space-y-1">
+              <Label className="text-base font-medium">Completed Tasks Auto-Hide</Label>
+              <p className="text-sm text-muted-foreground">
+                Automatically hide completed tasks after a specified time period
+              </p>
+            </div>
+            
+            <div className="pl-6 space-y-2">
+              <Label htmlFor="completed-tasks-hide-hours">Hours After Completion</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="completed-tasks-hide-hours"
+                  type="number"
+                  min="1"
+                  max="168"
+                  value={settings.completed_tasks_hide_hours}
+                  onChange={(e) => setSettings({ 
+                    ...settings, 
+                    completed_tasks_hide_hours: parseInt(e.target.value) || 12
+                  })}
+                  className="w-20"
+                />
+                <span className="text-sm text-muted-foreground">hours</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Tasks will be hidden {settings.completed_tasks_hide_hours} hour{settings.completed_tasks_hide_hours !== 1 ? 's' : ''} after completion (Default: 12 hours)
+              </p>
+            </div>
           </div>
 
           <div className="flex justify-end">
