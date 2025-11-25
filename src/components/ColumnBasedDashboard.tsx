@@ -724,14 +724,16 @@ const ColumnBasedDashboard = () => {
       }
 
       if (toDelete.length > 0) {
-        const { error: delError } = await supabase
+        // Instead of deleting, mark tasks as hidden to avoid cascade issues
+        const { error: hideError } = await supabase
           .from('tasks')
-          .delete()
+          .update({ hidden_at: new Date().toISOString() })
           .in('id', toDelete);
-        if (delError) {
-          console.error('Failed deleting duplicates:', delError);
+        
+        if (hideError) {
+          console.error('Failed hiding duplicates:', hideError);
         } else {
-          console.log(`🧹 Removed ${toDelete.length} duplicate rotating tasks`);
+          console.log(`🧹 Hid ${toDelete.length} duplicate rotating tasks`);
         }
       }
     } catch (e) {
@@ -1383,7 +1385,7 @@ const ColumnBasedDashboard = () => {
     if (!profile?.family_id) return;
     
     try {
-      // Refresh tasks
+      // Refresh tasks (filter out hidden tasks)
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .select(`
@@ -1400,7 +1402,8 @@ const ColumnBasedDashboard = () => {
           assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
           task_completions(id, completed_at, completed_by)
         `)
-        .eq('family_id', profile.family_id);
+        .eq('family_id', profile.family_id)
+        .is('hidden_at', null);
 
       if (!tasksError && tasksData) {
         const typedTasks = tasksData.map(task => ({
