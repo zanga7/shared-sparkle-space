@@ -575,6 +575,12 @@ export const CalendarView = ({
   const handleTaskToggle = async (task: Task, event: React.MouseEvent) => {
     event.stopPropagation();
     
+    // Prevent action if task is currently being processed
+    if (isCompleting(task.id)) {
+      console.log('🚫 Task already being processed (calendar):', task.id);
+      return;
+    }
+
     // Use dashboard mode completion handler if available
     if (dashboardMode && onTaskComplete) {
       await onTaskComplete(task);
@@ -586,6 +592,12 @@ export const CalendarView = ({
     if (!completerId) return;
 
     const isCompleted = task.task_completions?.some(c => c.completed_by === completerId);
+
+    console.log('🔄 Task toggle (calendar):', { 
+      taskId: task.id, 
+      completerId, 
+      isCompleted 
+    });
 
     if (isCompleted) {
       await uncompleteTaskHandler(task, onTaskUpdated);

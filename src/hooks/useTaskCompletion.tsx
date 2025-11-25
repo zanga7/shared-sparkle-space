@@ -162,6 +162,7 @@ export const useTaskCompletion = ({
   ): Promise<boolean> => {
     // Prevent double-submissions
     if (completingTasks.has(task.id)) {
+      console.log('🚫 Task already being processed (uncomplete):', task.id);
       return false;
     }
 
@@ -178,6 +179,7 @@ export const useTaskCompletion = ({
       }
 
       if (!completerId) {
+        console.error('❌ No completer ID found for uncomplete');
         toast({
           title: "Error",
           description: "Could not determine which completion to remove",
@@ -192,6 +194,11 @@ export const useTaskCompletion = ({
       );
 
       if (!completion) {
+        console.error('❌ No completion found:', { 
+          taskId: task.id, 
+          completerId, 
+          completions: task.task_completions 
+        });
         toast({
           title: "Error",
           description: "No completion found to remove",
@@ -199,6 +206,12 @@ export const useTaskCompletion = ({
         });
         return false;
       }
+
+      console.log('✅ Uncompleting task:', { 
+        taskId: task.id, 
+        completionId: completion.id, 
+        completerId 
+      });
 
       // Optimistic UI update - remove completion immediately
       if (setTasks) {
