@@ -1010,24 +1010,39 @@ const ColumnBasedDashboard = () => {
       return;
     }
 
-    // Determine who we're checking for (same logic as the hook)
+    // Determine who we're checking for
     const completerId = activeMemberId || profile?.id;
     if (!completerId) {
       console.warn('⚠️ No completer ID found');
       return;
     }
 
-    // Check if THIS specific user/member has completed the task
+    // For single-assignee tasks, check if the ASSIGNEE has completed it
+    // This allows parents/admins to uncomplete tasks on behalf of children
+    let checkCompleterId = completerId;
+    
+    // If task has a single assignee and current user is viewing (not in active member mode),
+    // check the assignee's completion status
+    if (!activeMemberId && task.assignees?.length === 1) {
+      checkCompleterId = task.assignees[0].profile_id;
+    } else if (!activeMemberId && task.assigned_to) {
+      checkCompleterId = task.assigned_to;
+    }
+
+    // Check if the relevant user has completed the task
     const isCompleted = task.task_completions?.some(
-      (c) => c.completed_by === completerId
+      (c) => c.completed_by === checkCompleterId
     );
 
     console.log('🔄 Task toggle:', { 
       taskId: task.id, 
       title: task.title,
-      completerId, 
+      completerId,
+      checkCompleterId, 
       isCompleted,
-      completions: task.task_completions 
+      completions: task.task_completions,
+      assignees: task.assignees,
+      assigned_to: task.assigned_to
     });
 
     if (isCompleted) {

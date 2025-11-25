@@ -52,7 +52,17 @@ export const EnhancedTaskItem = ({
   const isCompleted = task.task_completions && task.task_completions.length > 0;
   const isOverdue = task.due_date && isAfter(new Date(), new Date(task.due_date)) && !isCompleted;
   const assignedProfile = familyMembers.find(member => member.id === task.assigned_to);
-  const isCompletedByMe = (task.task_completions || []).some(c => c.completed_by === currentMemberId);
+  
+  // For display purposes, check if current member OR the single assignee has completed
+  // This ensures the UI shows the correct state when parents view children's tasks
+  let checkMemberId = currentMemberId;
+  if (!currentMemberId && task.assignees?.length === 1) {
+    checkMemberId = task.assignees[0].profile_id;
+  } else if (!currentMemberId && task.assigned_to) {
+    checkMemberId = task.assigned_to;
+  }
+  
+  const isCompletedByMe = (task.task_completions || []).some(c => c.completed_by === checkMemberId);
 
   // Get days until due
   const getDaysUntilDue = () => {
