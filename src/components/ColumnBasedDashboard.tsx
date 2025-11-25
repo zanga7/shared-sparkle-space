@@ -1510,6 +1510,7 @@ const ColumnBasedDashboard = () => {
         created_by: vTask.created_by,
         completion_rule: (vTask.completion_rule || 'everyone') as 'any_one' | 'everyone',
         task_group: vTask.task_group,
+        recurrence_options: vTask.recurrence_options,
         assignees: vTask.assigned_profiles.map(profileId => {
           const memberProfile = familyMembers.find(m => m.id === profileId);
           return {
@@ -1533,7 +1534,7 @@ const ColumnBasedDashboard = () => {
           };
         }),
         task_completions: completions,
-        // Virtual task properties
+        // CRITICAL: All virtual task flags must be explicitly set
         isVirtual: true,
         series_id: vTask.series_id,
         occurrence_date: vTask.occurrence_date,
