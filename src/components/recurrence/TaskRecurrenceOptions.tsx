@@ -43,11 +43,13 @@ export const TaskRecurrenceOptionsComponent = ({
         {/* Repeat From */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium">Repeat from</Label>
+            <Label className="text-sm font-medium">When to show next occurrence</Label>
             <div className="group relative">
               <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-              <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-black text-white rounded whitespace-nowrap z-10">
-                Completion date keeps habits moving forward when done late
+              <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs bg-popover text-popover-foreground border rounded shadow-md whitespace-normal w-64 z-10">
+                <strong>Scheduled date:</strong> New occurrence appears at the scheduled time (e.g., daily at midnight) regardless of when you complete it.
+                <br/><br/>
+                <strong>Completion date:</strong> New occurrence only appears after you complete the current one (not yet implemented).
               </div>
             </div>
           </div>
@@ -65,20 +67,20 @@ export const TaskRecurrenceOptionsComponent = ({
                   Scheduled date
                 </Label>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Always repeats on the same schedule
+                  Repeats on schedule (e.g., daily at midnight)
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-background cursor-pointer">
-              <RadioGroupItem value="completion" id="completion" />
+            <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-background cursor-pointer opacity-50 pointer-events-none">
+              <RadioGroupItem value="completion" id="completion" disabled />
               <div className="flex-1">
                 <Label htmlFor="completion" className="cursor-pointer flex items-center gap-2 font-medium text-sm">
                   <RotateCcw className="h-4 w-4" />
                   Completion date
                 </Label>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Next task starts from when completed
+                  Coming soon: Appears only after completion
                 </p>
               </div>
             </div>
