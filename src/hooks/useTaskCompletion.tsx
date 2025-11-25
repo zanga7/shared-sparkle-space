@@ -72,6 +72,8 @@ export const useTaskCompletion = ({
       // Extract virtual task metadata if present
       // Check multiple ways to detect virtual tasks for robustness
       const isVirtualTask = task.isVirtual === true || 
+        !!task.series_id || 
+        !!task.occurrence_date ||
         (typeof task.id === 'string' && task.id.includes('-') && task.id.split('-').length > 5);
       const seriesId = task.series_id || null;
       const occurrenceDate = task.occurrence_date 
@@ -79,8 +81,20 @@ export const useTaskCompletion = ({
         : null;
 
       // Call unified RPC that handles everything in one transaction
+      // CRITICAL: Never pass composite virtual task IDs as UUIDs
+      const taskIdForRpc = isVirtualTask ? null : task.id;
+      
+      console.log('🔄 Completing task:', {
+        taskId: task.id,
+        isVirtual: isVirtualTask,
+        seriesId,
+        occurrenceDate,
+        taskIdForRpc,
+        completerId
+      });
+      
       const { data: result, error } = await supabase.rpc('complete_task_unified', {
-        p_task_id: isVirtualTask ? null : task.id,
+        p_task_id: taskIdForRpc,
         p_completer_profile_id: completerId,
         p_is_virtual: isVirtualTask,
         p_series_id: seriesId,

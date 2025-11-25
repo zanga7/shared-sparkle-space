@@ -234,11 +234,13 @@ export const CalendarView = ({
         completion_rule: vTask.completion_rule as 'any_one' | 'everyone',
         task_group: vTask.task_group,
         recurrence_options: vTask.recurrence_options,
+        // CRITICAL: All virtual task flags must be explicitly set
         isVirtual: true,
         series_id: vTask.series_id,
         occurrence_date: vTask.occurrence_date,
         isException: vTask.isException,
         exceptionType: vTask.exceptionType,
+        task_source: 'series',
         task_completions: completions,
         // Map assigned_profiles to assignees format
         assignees: vTask.assigned_profiles.map(profileId => {
