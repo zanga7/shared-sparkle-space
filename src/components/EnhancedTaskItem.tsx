@@ -206,9 +206,12 @@ export const EnhancedTaskItem = ({
               <Target className="h-2.5 w-2.5" />
               {task.points} pts
               {(() => {
-                const assignees = task.assignees?.map(a => a.profile) || 
-                                (task.assigned_profile ? [task.assigned_profile] : []);
-                if (assignees.length > 1) {
+                // Handle both regular tasks and virtual tasks
+                const virtualTask = task as any;
+                const assigneeCount = task.assignees?.length || 
+                                     virtualTask.assigned_profiles?.length || 
+                                     (task.assigned_profile ? 1 : 0);
+                if (assigneeCount > 1) {
                   if (task.completion_rule === 'any_one') {
                     return <span className="text-muted-foreground ml-1">→ first</span>;
                   } else {

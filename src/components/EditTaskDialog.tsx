@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Trash2, Calendar, User, Users, Repeat } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,7 +44,8 @@ export const EditTaskDialog = ({
     assigned_to: 'unassigned',
     assignees: [] as string[],
     due_date: null as Date | null,
-    task_group: 'general'
+    task_group: 'general',
+    completion_rule: 'everyone' as 'any_one' | 'everyone'
   });
   
   const [loading, setLoading] = useState(false);
@@ -84,7 +86,8 @@ export const EditTaskDialog = ({
         assigned_to: task.assigned_to || 'unassigned',
         assignees: currentAssignees,
         due_date: task.due_date ? new Date(task.due_date) : null,
-        task_group: (task as any).task_group || 'general'
+        task_group: (task as any).task_group || 'general',
+        completion_rule: task.completion_rule || 'everyone'
       });
 
       // Load existing recurrence options
@@ -135,6 +138,7 @@ export const EditTaskDialog = ({
         task_group: formData.task_group,
         assignees: formData.assignees,
         due_date: formData.due_date,
+        completion_rule: formData.completion_rule,
         recurrence_options: recurrenceEnabled ? taskRecurrenceOptions : null
       };
 
@@ -176,6 +180,7 @@ export const EditTaskDialog = ({
       assigned_to: updateData.assignees.length === 1 ? updateData.assignees[0] : null,
       due_date: updateData.due_date ? updateData.due_date.toISOString() : null,
       task_group: updateData.task_group,
+      completion_rule: updateData.completion_rule,
       recurrence_options: updateData.recurrence_options ? {
         ...updateData.recurrence_options,
         enabled: true
@@ -490,6 +495,45 @@ export const EditTaskDialog = ({
                 <option value="evening">Evening</option>
               </select>
             </div>
+
+            {/* Completion Rule - only show when multiple assignees */}
+            {formData.assignees.length > 1 && (
+              <div className="space-y-3">
+                <Label>Completion Rule</Label>
+                <RadioGroup 
+                  value={formData.completion_rule} 
+                  onValueChange={(value: 'any_one' | 'everyone') => 
+                    setFormData(prev => ({ ...prev, completion_rule: value }))
+                  }
+                  className="grid grid-cols-2 gap-4"
+                >
+                  <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted/30 cursor-pointer">
+                    <RadioGroupItem value="any_one" id="edit_any_one" />
+                    <div className="flex-1">
+                      <Label htmlFor="edit_any_one" className="cursor-pointer flex items-center gap-2 font-medium">
+                        <User className="h-4 w-4" />
+                        Any one
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        First to complete finishes for all
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted/30 cursor-pointer">
+                    <RadioGroupItem value="everyone" id="edit_everyone" />
+                    <div className="flex-1">
+                      <Label htmlFor="edit_everyone" className="cursor-pointer flex items-center gap-2 font-medium">
+                        <Users className="h-4 w-4" />
+                        Everyone
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Each person completes independently
+                      </p>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
 
             {/* Recurrence Options - only show for non-virtual tasks or when editing series */}
             {!(task as any).isVirtual && (
