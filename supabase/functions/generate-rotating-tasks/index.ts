@@ -20,7 +20,8 @@ interface RotatingTask {
   is_paused: boolean;
   task_group: string;
   created_by: string;
-  allow_multiple_completions: boolean;
+  // Note: allow_multiple_completions field exists in DB but is always false
+  // Rotating tasks are single-visibility only (one member at a time)
 }
 
 interface RotationEvent {
@@ -161,94 +162,45 @@ Deno.serve(async (req) => {
         });
       };
 
-      if (!rotatingTask.allow_multiple_completions) {
-        // Single instance at a time for this rotating task
-        const exists = await anyIncompleteTaskExists();
-        if (exists) {
-          console.log(`⏭️  ${rotatingTask.name}: an incomplete task already exists (single-instance mode)`);
-          await logRotationEvent({
-            previous_index: originalIndex,
-            selected_index: originalIndex,
-            next_index: originalIndex,
-            chosen_member_id: null,
-            new_task_id: null,
-            status: 'skipped',
-            reason: 'Incomplete task already exists'
-          });
-          continue;
+      // Rotating tasks are always single-instance: one member at a time
+      const exists = await anyIncompleteTaskExists();
+      if (exists) {
+        console.log(`⏭️  ${rotatingTask.name}: an incomplete task already exists`);
+        await logRotationEvent({
+          previous_index: originalIndex,
+          selected_index: originalIndex,
+          next_index: originalIndex,
+          chosen_member_id: null,
+          new_task_id: null,
+          status: 'skipped',
+          reason: 'Incomplete task already exists'
+        });
+        continue;
+      }
+
+      // Find the first valid member starting from selected index
+      for (let i = 0; i < len; i++) {
+        const idx = (selectedIndex + i) % len;
+        const candidateId = rotatingTask.member_order[idx] || null;
+        if (await candidateIsValid(candidateId)) {
+          targetMemberId = candidateId;
+          selectedIndex = idx;
+          break;
         }
+      }
 
-        // Find the first valid member starting from selected index
-        for (let i = 0; i < len; i++) {
-          const idx = (selectedIndex + i) % len;
-          const candidateId = rotatingTask.member_order[idx] || null;
-          if (await candidateIsValid(candidateId)) {
-            targetMemberId = candidateId;
-            selectedIndex = idx;
-            break;
-          }
-        }
-
-        if (!targetMemberId) {
-          console.log(`❌ No valid members found in rotation for ${rotatingTask.name}`);
-          await logRotationEvent({
-            previous_index: originalIndex,
-            selected_index: originalIndex,
-            next_index: originalIndex,
-            chosen_member_id: null,
-            new_task_id: null,
-            status: 'failed',
-            reason: 'No valid members in rotation'
-          });
-          continue;
-        }
-      } else {
-        // Multiple completions allowed: find the next member who doesn't have an incomplete task today
-        for (let i = 0; i < len; i++) {
-          const idx = (selectedIndex + i) % len;
-          const candidateId = rotatingTask.member_order[idx];
-          if (!candidateId) continue;
-
-          // Ensure candidate exists
-          if (!(await candidateIsValid(candidateId))) {
-            continue;
-          }
-
-          const { data: existingForMember, error: checkError } = await supabaseClient
-            .from('tasks')
-            .select('id, task_assignees!inner(profile_id), task_completions(id)')
-            .eq('family_id', rotatingTask.family_id)
-            .eq('rotating_task_id', rotatingTask.id)
-            .eq('task_assignees.profile_id', candidateId);
-
-          if (checkError) {
-            console.error(`Error checking existing tasks for ${rotatingTask.name} and member ${candidateId}:`, checkError);
-            continue;
-          }
-
-          // Check if member has an incomplete task
-          const hasIncompleteTask = existingForMember?.some(task => !task.task_completions || task.task_completions.length === 0);
-
-          if (!hasIncompleteTask) {
-            targetMemberId = candidateId;
-            selectedIndex = idx;
-            break;
-          }
-        }
-
-        if (!targetMemberId) {
-          console.log(`⏭️  ${rotatingTask.name}: all members already have incomplete tasks or are invalid`);
-          await logRotationEvent({
-            previous_index: originalIndex,
-            selected_index: originalIndex,
-            next_index: originalIndex,
-            chosen_member_id: null,
-            new_task_id: null,
-            status: 'skipped',
-            reason: 'All members have incomplete tasks'
-          });
-          continue;
-        }
+      if (!targetMemberId) {
+        console.log(`❌ No valid members found in rotation for ${rotatingTask.name}`);
+        await logRotationEvent({
+          previous_index: originalIndex,
+          selected_index: originalIndex,
+          next_index: originalIndex,
+          chosen_member_id: null,
+          new_task_id: null,
+          status: 'failed',
+          reason: 'No valid members in rotation'
+        });
+        continue;
       }
 
       // Calculate due_date based on task_group
