@@ -2095,6 +2095,7 @@ export type Database = {
       }
       cleanup_broken_calendar_integrations: { Args: never; Returns: Json }
       complete_task_for_member:
+        | { Args: { p_completed_by: string; p_task_id: string }; Returns: Json }
         | {
             Args: {
               p_completed_by: string
@@ -2103,7 +2104,6 @@ export type Database = {
             }
             Returns: Json
           }
-        | { Args: { p_completed_by: string; p_task_id: string }; Returns: Json }
       complete_task_unified: {
         Args: {
           p_completer_profile_id: string
