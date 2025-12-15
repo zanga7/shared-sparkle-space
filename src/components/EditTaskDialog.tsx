@@ -115,6 +115,16 @@ export const EditTaskDialog = ({
     e.preventDefault();
     if (!formData.title.trim()) return;
     
+    // Require at least one assignee
+    if (formData.assignees.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'At least one assignee is required',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     setLoading(true);
 
     try {

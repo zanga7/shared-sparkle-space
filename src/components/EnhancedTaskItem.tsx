@@ -10,7 +10,8 @@ import {
   Trash2,
   AlertTriangle,
   Target,
-  Repeat
+  Repeat,
+  UserCheck
 } from 'lucide-react';
 import { format, isAfter, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -62,18 +63,27 @@ export const EnhancedTaskItem = ({
     checkMemberId = task.assigned_to;
   }
   
+  // Get the first completer for "anyone" tasks
+  const firstCompletion = task.task_completions?.[0];
+  const firstCompleterProfile = firstCompletion 
+    ? familyMembers.find(m => m.id === firstCompletion.completed_by) 
+    : null;
+  
   // Determine completion status based on completion rule
   // For "any_one" tasks: if ANYONE completed it, show as complete for ALL members
   // For "everyone" tasks: only show as complete if THIS SPECIFIC member completed it
   const isCompletedByMe = task.completion_rule === 'any_one' 
-    ? hasAnyCompletion  // Any completion means it's done for everyone
+    ? (task.task_completions || []).some(c => c.completed_by === checkMemberId) // Did I complete it?
     : (task.task_completions || []).some(c => c.completed_by === checkMemberId); // Only this member's completion
   
-  // For "any_one" tasks that are completed, the task is truly complete (anyone completing = task done)
-  // For "everyone" tasks, we check if everyone has completed
+  // For "any_one" tasks: task is complete if anyone completed it
+  // For "everyone" tasks: for THIS viewer, it's complete if THEY completed it
   const isCompleted = task.completion_rule === 'any_one' 
     ? hasAnyCompletion 
-    : hasAnyCompletion; // This will be refined by the component's display logic
+    : isCompletedByMe; // Each person sees their own completion state
+  
+  // For "anyone" tasks completed by someone else - show who completed it
+  const isCompletedBySomeoneElse = task.completion_rule === 'any_one' && hasAnyCompletion && !isCompletedByMe;
 
   // Get days until due
   const getDaysUntilDue = () => {
@@ -92,10 +102,11 @@ export const EnhancedTaskItem = ({
       className={cn(
         "group/task relative rounded-lg p-3 transition-all hover:shadow-md",
         isOverdue && "ring-1 ring-destructive/50",
-        !isCompleted && !(task as any).isVirtual && "cursor-grab active:cursor-grabbing",
-        isUnassigned && "bg-muted/30"
+        !isCompleted && !isCompletedBySomeoneElse && !(task as any).isVirtual && "cursor-grab active:cursor-grabbing",
+        isUnassigned && "bg-muted/30",
+        isCompletedBySomeoneElse && "opacity-60" // Grey out for "anyone" tasks completed by someone else
       )}
-      style={!isUnassigned ? (isCompleted ? colorStyles.bg20 : colorStyles.bg50) : undefined}
+      style={!isUnassigned ? (isCompleted || isCompletedBySomeoneElse ? colorStyles.bg20 : colorStyles.bg50) : undefined}
     >
       <div className="flex items-start gap-2">
         {/* Complete/Uncomplete Button */}
@@ -208,8 +219,16 @@ export const EnhancedTaskItem = ({
               })()}
             </Badge>
 
+            {/* Show "Completed by [Name]" for "anyone" tasks completed by someone else */}
+            {isCompletedBySomeoneElse && firstCompleterProfile && (
+              <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
+                <UserCheck className="h-2 w-2" />
+                Completed by {firstCompleterProfile.display_name}
+              </Badge>
+            )}
+
             {/* Assignees Display - Hidden when completed */}
-            {!isCompleted && (
+            {!isCompleted && !isCompletedBySomeoneElse && (
               <TaskAssigneesDisplay 
                 task={task} 
                 showNames={false}
