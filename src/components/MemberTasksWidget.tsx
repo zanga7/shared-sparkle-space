@@ -92,18 +92,37 @@ export const MemberTasksWidget = ({
     }
   };
   
-  const memberTasks = tasks.filter(task => 
-    task.assigned_to === member.id || 
-    task.assignees?.some(a => a.profile_id === member.id)
-  );
+  // Filter tasks for this member - handle both regular tasks and virtual tasks
+  const memberTasks = tasks.filter(task => {
+    // Check regular assigned_to field
+    if (task.assigned_to === member.id) return true;
+    
+    // Check assignees array (regular tasks from DB)
+    if (task.assignees?.some(a => a.profile_id === member.id)) return true;
+    
+    // Check assigned_profiles array (virtual tasks from series)
+    const virtualTask = task as any;
+    if (virtualTask.assigned_profiles?.includes(member.id)) return true;
+    
+    return false;
+  });
   
-  const pendingTasks = memberTasks.filter(task => 
-    !task.task_completions || task.task_completions.length === 0
-  );
+  // For "everyone" tasks, check if THIS member completed
+  // For "any_one" tasks, check if anyone completed
+  const isTaskCompletedForMember = (task: Task): boolean => {
+    if (!task.task_completions || task.task_completions.length === 0) return false;
+    
+    if (task.completion_rule === 'everyone') {
+      // For "everyone" tasks, only consider completed if THIS member completed
+      return task.task_completions.some(c => c.completed_by === member.id);
+    } else {
+      // For "any_one" tasks, any completion counts
+      return true;
+    }
+  };
   
-  const completedTasks = memberTasks.filter(task => 
-    task.task_completions && task.task_completions.length > 0
-  );
+  const pendingTasks = memberTasks.filter(task => !isTaskCompletedForMember(task));
+  const completedTasks = memberTasks.filter(task => isTaskCompletedForMember(task));
 
   // Calculate progress percentage
   const progressPercentage = memberTasks.length > 0 
