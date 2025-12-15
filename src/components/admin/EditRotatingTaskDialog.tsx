@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useQuery } from "@tanstack/react-query";
@@ -48,7 +48,6 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
   const [monthlyDay, setMonthlyDay] = useState(1);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [taskGroup, setTaskGroup] = useState<TaskGroup>('general');
-  const [allowMultipleCompletions, setAllowMultipleCompletions] = useState(false);
   const [currentMemberIndex, setCurrentMemberIndex] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,7 +88,6 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
       setMonthlyDay(task.monthly_day || 1);
       setSelectedMembers([...task.member_order]);
       setTaskGroup((task as any).task_group || 'general');
-      setAllowMultipleCompletions(task.allow_multiple_completions || false);
       setCurrentMemberIndex(task.current_member_index);
       setIsActive(task.is_active);
     }
@@ -199,7 +197,7 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
           monthly_day: cadence === 'monthly' ? monthlyDay : null,
           member_order: selectedMembers,
           task_group: taskGroup,
-          allow_multiple_completions: allowMultipleCompletions,
+          allow_multiple_completions: false, // Rotating tasks are always single-visibility
           current_member_index: Math.min(currentMemberIndex, selectedMembers.length - 1),
           is_active: isActive,
         })
@@ -430,37 +428,10 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
             )}
           </div>
 
-          <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
-            <Label className="text-base font-medium">Task Assignment Mode</Label>
-            <RadioGroup
-              value={allowMultipleCompletions ? "shared" : "rotating"}
-              onValueChange={(value) => setAllowMultipleCompletions(value === "shared")}
-            >
-              <div className="space-y-3">
-                <div className="flex items-start space-x-3">
-                  <RadioGroupItem value="rotating" id="rotating-mode" />
-                  <div className="space-y-1">
-                    <Label htmlFor="rotating-mode" className="text-sm font-medium cursor-pointer">
-                      Rotating Assignment Mode
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Creates one task for the current member in rotation. Only that member will see the task. After completion, the next member gets the task.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <RadioGroupItem value="shared" id="shared-mode" />
-                  <div className="space-y-1">
-                    <Label htmlFor="shared-mode" className="text-sm font-medium cursor-pointer">
-                      Shared Task Mode
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Creates one task for each member in the rotation. All members will see their own instance of the task.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </RadioGroup>
+          <div className="border rounded-lg p-4 bg-muted/30">
+            <p className="text-sm text-muted-foreground">
+              <strong>How it works:</strong> Creates one task for the current member in rotation. Only that member will see the task. After completion, the next member gets the task.
+            </p>
           </div>
 
           <div className="flex items-center space-x-2">

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,7 +29,6 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
   const [monthlyDay, setMonthlyDay] = useState(1);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [taskGroup, setTaskGroup] = useState<TaskGroup>('general');
-  const [allowMultipleCompletions, setAllowMultipleCompletions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -140,7 +139,7 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
           member_order: selectedMembers,
           current_member_index: 0,
           task_group: taskGroup,
-          allow_multiple_completions: allowMultipleCompletions,
+          allow_multiple_completions: false, // Rotating tasks are always single-visibility
           family_id: profile.family_id,
           created_by: profile.id,
         });
@@ -161,7 +160,6 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
       setMonthlyDay(1);
       setSelectedMembers([]);
       setTaskGroup('general');
-      setAllowMultipleCompletions(false);
 
       onSuccess();
     } catch (error) {
@@ -343,37 +341,10 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
             )}
           </div>
 
-          <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
-            <Label className="text-base font-medium">Task Assignment Mode</Label>
-            <RadioGroup
-              value={allowMultipleCompletions ? "shared" : "rotating"}
-              onValueChange={(value) => setAllowMultipleCompletions(value === "shared")}
-            >
-              <div className="space-y-3">
-                <div className="flex items-start space-x-3">
-                  <RadioGroupItem value="rotating" id="rotating-mode" />
-                  <div className="space-y-1">
-                    <Label htmlFor="rotating-mode" className="text-sm font-medium cursor-pointer">
-                      Rotating Assignment Mode
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Creates one task for the current member in rotation. Only that member will see the task. After completion, the next member gets the task.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <RadioGroupItem value="shared" id="shared-mode" />
-                  <div className="space-y-1">
-                    <Label htmlFor="shared-mode" className="text-sm font-medium cursor-pointer">
-                      Shared Task Mode
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Creates one task for each member in the rotation. All members will see their own instance of the task.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </RadioGroup>
+          <div className="border rounded-lg p-4 bg-muted/30">
+            <p className="text-sm text-muted-foreground">
+              <strong>How it works:</strong> Creates one task for the current member in rotation. Only that member will see the task. After completion, the next member gets the task.
+            </p>
           </div>
         </div>
 
