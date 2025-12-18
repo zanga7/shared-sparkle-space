@@ -77,12 +77,27 @@ export const useTaskCompletion = ({
       // Check multiple ways to detect virtual tasks for robustness
       const isVirtualTask = task.isVirtual === true || 
         !!task.series_id || 
-        !!task.occurrence_date ||
-        (typeof task.id === 'string' && task.id.includes('-') && task.id.split('-').length > 5);
-      const seriesId = task.series_id || null;
-      const occurrenceDate = task.occurrence_date 
+        !!task.occurrence_date;
+      
+      // Extract series_id properly - it could be a direct property or embedded in the virtual task ID
+      // Virtual task ID format: "seriesId-YYYY-MM-DD" or "seriesId-YYYY-MM-DD-profileId"
+      let seriesId = task.series_id || null;
+      let occurrenceDate = task.occurrence_date 
         ? new Date(task.occurrence_date).toISOString().split('T')[0] 
         : null;
+      
+      // If we have a virtual task but no series_id/occurrence_date properties, try to parse from ID
+      // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 chars)
+      // Virtual ID: UUID-YYYY-MM-DD or UUID-YYYY-MM-DD-profileId
+      if (isVirtualTask && !seriesId && typeof task.id === 'string' && task.id.length > 36) {
+        const uuidPart = task.id.substring(0, 36);
+        const remainder = task.id.substring(37); // Skip the hyphen after UUID
+        // Extract date (YYYY-MM-DD is first 10 chars of remainder)
+        if (remainder.length >= 10) {
+          seriesId = uuidPart;
+          occurrenceDate = remainder.substring(0, 10);
+        }
+      }
 
       // Call unified RPC that handles everything in one transaction
       // CRITICAL: Never pass composite virtual task IDs as UUIDs
