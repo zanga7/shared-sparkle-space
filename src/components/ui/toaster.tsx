@@ -37,13 +37,14 @@ export function Toaster() {
             {isError && (
               <button
                 onClick={() => handleCopy(errorText, id)}
-                className="shrink-0 rounded-md p-1.5 text-destructive-foreground/70 hover:text-destructive-foreground transition-colors"
+                className="shrink-0 rounded-md p-2 bg-destructive-foreground/10 hover:bg-destructive-foreground/20 text-destructive-foreground transition-colors"
                 title="Copy error message"
+                aria-label="Copy error message"
               >
                 {copiedId === id ? (
-                  <Check className="h-4 w-4" />
+                  <Check className="h-5 w-5" />
                 ) : (
-                  <Copy className="h-4 w-4" />
+                  <Copy className="h-5 w-5" />
                 )}
               </button>
             )}
