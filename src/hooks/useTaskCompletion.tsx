@@ -62,19 +62,8 @@ export const useTaskCompletion = ({
         return false;
       }
 
-      // Check if PIN is required (only when in dashboard mode)
-      if (isDashboardMode && memberIdContext) {
-        const { canProceed } = await canPerformAction(memberIdContext, 'task_completion');
-        if (!canProceed) {
-          toast({
-            title: "PIN Required",
-            description: "Please enter your PIN to complete this task",
-            variant: "destructive",
-          });
-          return false;
-        }
-      }
-
+      // Note: PIN checks are handled by the calling component (ColumnBasedDashboard)
+      // to allow it to show the PIN dialog before attempting completion
       // Extract virtual task metadata if present
       // Virtual task ID formats:
       // - "UUID-YYYY-MM-DD" (any_one rule or single assignee)

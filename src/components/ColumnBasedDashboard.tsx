@@ -1017,7 +1017,7 @@ const ColumnBasedDashboard = () => {
     await uncompleteTaskHandler(task, refreshTasksOnly, columnMemberId);
   };
 
-  const handleTaskToggle = (task: Task, columnMemberId?: string) => {
+  const handleTaskToggle = async (task: Task, columnMemberId?: string) => {
     // Prevent action if task is currently being processed
     if (isCompleting(task.id)) {
       console.log('🚫 Task already being processed:', task.id);
@@ -1060,6 +1060,28 @@ const ColumnBasedDashboard = () => {
       assignees: task.assignees,
       assigned_to: task.assigned_to
     });
+
+    // Check if PIN is required before proceeding (only in dashboard mode and for completing, not uncompleting)
+    if (dashboardMode && !isCompleted && completerId) {
+      const { canProceed, needsPin, profile: memberProfile } = await canPerformAction(completerId, 'task_completion');
+      
+      if (needsPin && !canProceed) {
+        // Need PIN - set up pending action and open dialog
+        const member = familyMembers.find(m => m.id === completerId);
+        if (member) {
+          setPendingAction({
+            type: 'complete_task',
+            taskId: task.id,
+            requiredMemberId: completerId,
+            onSuccess: () => {
+              completeTask(task, columnMemberId);
+            }
+          });
+          setPinDialogOpen(true);
+          return;
+        }
+      }
+    }
 
     if (isCompleted) {
       uncompleteTask(task, columnMemberId);
