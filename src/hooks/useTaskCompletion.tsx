@@ -74,28 +74,42 @@ export const useTaskCompletion = ({
       }
 
       // Extract virtual task metadata if present
-      // Check multiple ways to detect virtual tasks for robustness
+      // Virtual task ID formats:
+      // - "UUID-YYYY-MM-DD" (any_one rule or single assignee)
+      // - "UUID-YYYY-MM-DD-profileUUID" (everyone rule with multiple assignees)
+      // Where UUID is 36 chars: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+      
+      // Helper to check if a string looks like a virtual task ID (contains date pattern after UUID)
+      const isVirtualTaskId = (id: string): boolean => {
+        if (!id || id.length <= 36) return false;
+        // Check if there's a date pattern (YYYY-MM-DD) after the first UUID
+        const afterUuid = id.substring(37);
+        return /^\d{4}-\d{2}-\d{2}/.test(afterUuid);
+      };
+      
+      // Determine if this is a virtual task
       const isVirtualTask = task.isVirtual === true || 
         !!task.series_id || 
-        !!task.occurrence_date;
+        !!task.occurrence_date ||
+        isVirtualTaskId(task.id);
       
-      // Extract series_id properly - it could be a direct property or embedded in the virtual task ID
-      // Virtual task ID format: "seriesId-YYYY-MM-DD" or "seriesId-YYYY-MM-DD-profileId"
-      let seriesId = task.series_id || null;
-      let occurrenceDate = task.occurrence_date 
+      // Extract series_id and occurrence_date
+      let seriesId: string | null = task.series_id || null;
+      let occurrenceDate: string | null = task.occurrence_date 
         ? new Date(task.occurrence_date).toISOString().split('T')[0] 
         : null;
       
-      // If we have a virtual task but no series_id/occurrence_date properties, try to parse from ID
-      // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 chars)
-      // Virtual ID: UUID-YYYY-MM-DD or UUID-YYYY-MM-DD-profileId
-      if (isVirtualTask && !seriesId && typeof task.id === 'string' && task.id.length > 36) {
+      // If we detected a virtual task but don't have explicit series_id/occurrence_date,
+      // parse them from the composite ID
+      if (isVirtualTask && (!seriesId || !occurrenceDate) && typeof task.id === 'string' && task.id.length > 36) {
         const uuidPart = task.id.substring(0, 36);
         const remainder = task.id.substring(37); // Skip the hyphen after UUID
+        
         // Extract date (YYYY-MM-DD is first 10 chars of remainder)
-        if (remainder.length >= 10) {
-          seriesId = uuidPart;
-          occurrenceDate = remainder.substring(0, 10);
+        const dateMatch = remainder.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (dateMatch) {
+          seriesId = seriesId || uuidPart;
+          occurrenceDate = occurrenceDate || dateMatch[1];
         }
       }
 
