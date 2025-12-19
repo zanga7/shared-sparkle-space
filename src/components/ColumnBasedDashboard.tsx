@@ -103,12 +103,10 @@ const ColumnBasedDashboard = () => {
   // Auto-hide completed tasks at midnight
   useMidnightTaskCleanup();
 
-  // Task completion hook with columnMemberId support
-  const [completionColumnMemberId, setCompletionColumnMemberId] = useState<string | null>(null);
-  
+  // Task completion hook
   const { completeTask: completeTaskHandler, uncompleteTask: uncompleteTaskHandler, isCompleting } = useTaskCompletion({
     currentUserProfile: profile,
-    activeMemberId: completionColumnMemberId || activeMemberId,
+    activeMemberId,
     isDashboardMode: dashboardMode,
     setTasks,
     setProfile,
@@ -999,16 +997,24 @@ const ColumnBasedDashboard = () => {
     }
   };
 
+  const isTaskCompletedForMember = (task: Task, memberId: string): boolean => {
+    const completions = task.task_completions || [];
+    if (completions.length === 0) return false;
+
+    if (task.completion_rule === 'everyone') {
+      return completions.some((c) => c.completed_by === memberId);
+    }
+
+    // any_one: once anyone completes, it counts as completed for everyone
+    return true;
+  };
+
   const completeTask = async (task: Task, columnMemberId?: string) => {
-    if (columnMemberId) setCompletionColumnMemberId(columnMemberId);
-    await completeTaskHandler(task, refreshTasksOnly);
-    if (columnMemberId) setCompletionColumnMemberId(null);
+    await completeTaskHandler(task, refreshTasksOnly, columnMemberId);
   };
 
   const uncompleteTask = async (task: Task, columnMemberId?: string) => {
-    if (columnMemberId) setCompletionColumnMemberId(columnMemberId);
-    await uncompleteTaskHandler(task, refreshTasksOnly);
-    if (columnMemberId) setCompletionColumnMemberId(null);
+    await uncompleteTaskHandler(task, refreshTasksOnly, columnMemberId);
   };
 
   const handleTaskToggle = (task: Task, columnMemberId?: string) => {
@@ -1771,11 +1777,11 @@ const ColumnBasedDashboard = () => {
                  <div className="block md:hidden w-full">
                    <div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide">
                      <div className="flex gap-4 pb-4">
-                       {familyMembers.map(member => {
-                         const memberTasks = tasksByMember.get(member.id) || [];
-                         const completedTasks = memberTasks.filter(task => 
-                           task.task_completions && task.task_completions.length > 0
-                         );
+                        {familyMembers.map(member => {
+                          const memberTasks = tasksByMember.get(member.id) || [];
+                          const completedTasks = memberTasks.filter(task => 
+                            isTaskCompletedForMember(task, member.id)
+                          );
                          return (
                            <div key={member.id} className="snap-center shrink-0 w-[calc(100vw-2rem)]">
                               <MemberTaskColumn
@@ -1859,10 +1865,10 @@ const ColumnBasedDashboard = () => {
                      <div className="flex xl:grid xl:grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-4 pb-4 md:min-w-fit xl:min-w-0">
                        {/* Family member columns - show all members in everyone mode */}
                        {familyMembers.map(member => {
-                       const memberTasks = tasksByMember.get(member.id) || [];
-                       const completedTasks = memberTasks.filter(task => 
-                         task.task_completions && task.task_completions.length > 0
-                       );
+                        const memberTasks = tasksByMember.get(member.id) || [];
+                        const completedTasks = memberTasks.filter(task => 
+                          isTaskCompletedForMember(task, member.id)
+                        );
 
                        return (
                          <div key={member.id} className="md:shrink-0 md:w-64 md:min-w-[16rem] md:max-w-[20rem] xl:shrink xl:w-auto xl:min-w-0 xl:max-w-none">
@@ -1953,10 +1959,10 @@ const ColumnBasedDashboard = () => {
                     
                     const memberTasks = tasksByMember.get(member.id) || [];
                     const completedTasks = memberTasks.filter(task => 
-                      task.task_completions && task.task_completions.length > 0
+                      isTaskCompletedForMember(task, member.id)
                     );
                     const pendingTasks = memberTasks.filter(task => 
-                      !task.task_completions || task.task_completions.length === 0
+                      !isTaskCompletedForMember(task, member.id)
                     );
                     
                     return (

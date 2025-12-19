@@ -26,7 +26,8 @@ export const useTaskCompletion = ({
 
   const completeTask = async (
     task: Task,
-    onSuccess?: () => void
+    onSuccess?: () => void,
+    completerIdOverride?: string | null
   ): Promise<boolean> => {
     // Prevent double-submissions
     if (completingTasks.has(task.id)) {
@@ -38,13 +39,14 @@ export const useTaskCompletion = ({
     try {
       // Determine who is completing the task
       let completerId: string | null = null;
+      const memberIdContext = completerIdOverride ?? activeMemberId ?? null;
 
       // Priority order:
-      // 1. If activeMemberId is set (from column or dashboard session), always use it
-      // 2. For single-assignee tasks without activeMemberId, use that assignee
+      // 1. If a member context is provided (from column/dashboard), always use it
+      // 2. For single-assignee tasks without member context, use that assignee
       // 3. Fall back to current user profile
-      if (activeMemberId) {
-        completerId = activeMemberId;
+      if (memberIdContext) {
+        completerId = memberIdContext;
       } else if (task.assignees && task.assignees.length === 1) {
         completerId = task.assignees[0].profile_id;
       } else if (currentUserProfile) {
@@ -61,8 +63,8 @@ export const useTaskCompletion = ({
       }
 
       // Check if PIN is required (only when in dashboard mode)
-      if (isDashboardMode && activeMemberId) {
-        const { canProceed } = await canPerformAction(activeMemberId, 'task_completion');
+      if (isDashboardMode && memberIdContext) {
+        const { canProceed } = await canPerformAction(memberIdContext, 'task_completion');
         if (!canProceed) {
           toast({
             title: "PIN Required",
@@ -205,7 +207,8 @@ export const useTaskCompletion = ({
 
   const uncompleteTask = async (
     task: Task,
-    onSuccess?: () => void
+    onSuccess?: () => void,
+    completerIdOverride?: string | null
   ): Promise<boolean> => {
     // Prevent double-submissions
     if (completingTasks.has(task.id)) {
@@ -218,10 +221,11 @@ export const useTaskCompletion = ({
     try {
       // Determine which completion to remove - MUST match completeTask logic
       let completerId: string | null = null;
+      const memberIdContext = completerIdOverride ?? activeMemberId ?? null;
 
       // Use same priority as completeTask
-      if (activeMemberId) {
-        completerId = activeMemberId;
+      if (memberIdContext) {
+        completerId = memberIdContext;
       } else if (task.assignees && task.assignees.length === 1) {
         // For single-assignee tasks, use the assignee's ID
         completerId = task.assignees[0].profile_id;
