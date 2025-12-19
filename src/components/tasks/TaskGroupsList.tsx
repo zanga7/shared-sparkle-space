@@ -46,6 +46,18 @@ export const TaskGroupsList = ({
 }: TaskGroupsListProps) => {
   const { styles: colorStyles } = useMemberColor(memberColor);
 
+  const isTaskCompletedForMember = (task: Task): boolean => {
+    const completions = task.task_completions || [];
+    if (completions.length === 0) return false;
+
+    if (task.completion_rule === 'everyone' && memberId) {
+      return completions.some((c) => c.completed_by === memberId);
+    }
+
+    // any_one (or unknown context): any completion counts
+    return true;
+  };
+
   // Group all tasks by task_group field (keeping them together)
   const groupAllTasks = (tasks: Task[]) => {
     const groups = {
@@ -60,8 +72,8 @@ export const TaskGroupsList = ({
     Object.keys(groups).forEach(key => {
       const groupKey = key as TaskGroup;
       groups[groupKey] = groups[groupKey].sort((a, b) => {
-        const aCompleted = a.task_completions && a.task_completions.length > 0;
-        const bCompleted = b.task_completions && b.task_completions.length > 0;
+        const aCompleted = isTaskCompletedForMember(a);
+        const bCompleted = isTaskCompletedForMember(b);
         
         // Pending tasks come before completed tasks
         if (!aCompleted && bCompleted) return -1;
@@ -83,9 +95,7 @@ export const TaskGroupsList = ({
     const groupTitle = getTaskGroupTitle(group);
     const droppableId = `${droppableIdPrefix}${group}`;
     
-    const completedGroupTasks = groupTasks.filter(task => 
-      task.task_completions && task.task_completions.length > 0
-    );
+    const completedGroupTasks = groupTasks.filter(isTaskCompletedForMember);
     const progress = groupTasks.length > 0 
       ? Math.round((completedGroupTasks.length / groupTasks.length) * 100)
       : 0;
