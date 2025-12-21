@@ -1228,6 +1228,20 @@ const ColumnBasedDashboard = () => {
       return;
     }
 
+    // Virtual/recurring instances have composite IDs like "UUID-YYYY-MM-DD" and cannot be updated via tasks/task_assignees tables.
+    const isUuid = typeof task.id === 'string' &&
+      task.id.length === 36 &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(task.id);
+
+    if (!isUuid) {
+      toast({
+        title: 'Not supported',
+        description: 'Recurring task instances can’t be dragged. Edit the recurring task series instead.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Store original state for rollback
     const previousTasks = [...tasks];
     
