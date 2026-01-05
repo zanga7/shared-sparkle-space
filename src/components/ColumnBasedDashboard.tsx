@@ -1466,6 +1466,32 @@ const ColumnBasedDashboard = () => {
         console.error('Error refreshing tasks:', tasksError);
       }
 
+      // CRITICAL: Also refresh materialized task instances for virtual task completions
+      const { data: materializedData, error: materializedError } = await supabase
+        .from('materialized_task_instances')
+        .select(`
+          id,
+          series_id,
+          occurrence_date,
+          materialized_task:tasks!materialized_task_instances_materialized_task_id_fkey(
+            id,
+            task_completions(id, completed_at, completed_by)
+          )
+        `)
+        .eq('series_id', supabase.rpc ? undefined : undefined); // Fetch all for family
+
+      if (!materializedError && materializedData) {
+        const materializedMap = new Map<string, any[]>();
+        materializedData.forEach((instance: any) => {
+          if (instance.materialized_task?.task_completions) {
+            const key = `${instance.series_id}-${instance.occurrence_date}`;
+            materializedMap.set(key, instance.materialized_task.task_completions);
+          }
+        });
+        (window as any).__materializedCompletionsMap = materializedMap;
+        console.log('Materialized completions map refreshed:', materializedMap.size, 'entries');
+      }
+
       // Also refresh profile and family members to get updated points
       const { data: updatedProfile } = await supabase
         .from('profiles')
@@ -1488,6 +1514,9 @@ const ColumnBasedDashboard = () => {
       if (updatedMembers) {
         setFamilyMembers(updatedMembers);
       }
+      
+      // Force a re-render by triggering task series refresh
+      await fetchTaskSeries();
     } catch (error) {
       console.error('Error in refreshTasksOnly:', error);
     }
