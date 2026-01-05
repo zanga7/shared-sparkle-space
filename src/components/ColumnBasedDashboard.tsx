@@ -1518,22 +1518,27 @@ const ColumnBasedDashboard = () => {
     
     const allVirtualInstances = generateVirtualTaskInstances(today, endOfWeek);
     
-    // Filter to show only the most relevant instance per series:
+    // Filter to show only the most relevant instance per series per assignee:
+    // - For "everyone" tasks: each assignee gets their own instance
+    // - For "any_one" tasks: all assignees share one instance
     // - Daily tasks: show today's instance only
     // - Weekly tasks: show this week's first instance
-    // - Monthly tasks: show this month's first instance
     const seriesInstanceMap = new Map<string, typeof allVirtualInstances[0]>();
     
     allVirtualInstances.forEach(instance => {
-      const existingInstance = seriesInstanceMap.get(instance.series_id);
+      // Use composite key: series_id + first assigned profile (for everyone tasks each person gets unique instance)
+      // This ensures "everyone" tasks don't overwrite each other
+      const instanceKey = `${instance.series_id}-${instance.assigned_profiles.join('-')}`;
+      
+      const existingInstance = seriesInstanceMap.get(instanceKey);
       if (!existingInstance) {
-        seriesInstanceMap.set(instance.series_id, instance);
+        seriesInstanceMap.set(instanceKey, instance);
       } else {
         // Keep the earliest instance (closest to today)
         const instanceDate = new Date(instance.occurrence_date);
         const existingDate = new Date(existingInstance.occurrence_date);
         if (instanceDate < existingDate) {
-          seriesInstanceMap.set(instance.series_id, instance);
+          seriesInstanceMap.set(instanceKey, instance);
         }
       }
     });
