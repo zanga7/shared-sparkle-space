@@ -53,13 +53,29 @@ export interface VirtualTaskInstance {
   recurrence_options: TaskRecurrenceOptions;
 }
 
+interface HolidayDate {
+  id: string;
+  start_date: string;
+  end_date: string;
+  name: string;
+}
+
 export const useTaskSeries = (familyId?: string) => {
   const [taskSeries, setTaskSeries] = useState<TaskSeries[]>([]);
   const [exceptions, setExceptions] = useState<TaskSeriesException[]>([]);
+  const [holidayDates, setHolidayDates] = useState<HolidayDate[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // Fetch all task series and exceptions
+  // Check if a date falls within any holiday period
+  const isDateInHoliday = (date: Date): boolean => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return holidayDates.some(holiday => {
+      return dateStr >= holiday.start_date && dateStr <= holiday.end_date;
+    });
+  };
+
+  // Fetch all task series, exceptions, and holiday dates
   const fetchTaskSeries = async () => {
     if (!familyId) return;
     
@@ -81,6 +97,18 @@ export const useTaskSeries = (familyId?: string) => {
         .eq('series_type', 'task');
 
       if (exceptionsError) throw exceptionsError;
+
+      // Fetch holiday dates for pause during holidays feature
+      const { data: holidaysData, error: holidaysError } = await supabase
+        .from('holiday_dates')
+        .select('id, start_date, end_date, name')
+        .eq('family_id', familyId);
+
+      if (holidaysError) {
+        console.warn('Could not fetch holiday dates:', holidaysError);
+      } else {
+        setHolidayDates(holidaysData || []);
+      }
 
       setTaskSeries((seriesData || []).map(item => ({
         ...item,
@@ -199,6 +227,9 @@ export const useTaskSeries = (familyId?: string) => {
     const seriesStart = new Date(series.series_start);
     const seriesEnd = series.series_end ? new Date(series.series_end) : null;
     
+    // Check if this series should pause during holidays
+    const shouldPauseDuringHolidays = rule.pauseDuringHolidays === true;
+    
     let currentDate = new Date(seriesStart);
     let count = 0;
     const maxInstances = rule.endCount || 100;
@@ -215,9 +246,15 @@ export const useTaskSeries = (familyId?: string) => {
         const dateStr = format(currentDate, 'yyyy-MM-dd');
         const exception = seriesExceptions.find(e => e.exception_date === dateStr);
 
+        // Skip if explicit skip exception
         if (exception && exception.exception_type === 'skip') {
           // Skip this instance
-        } else {
+        } 
+        // Skip if pause during holidays is enabled and date falls in a holiday
+        else if (shouldPauseDuringHolidays && isDateInHoliday(currentDate)) {
+          // Skip this instance - it's during a holiday period
+        } 
+        else {
           instances.push({
             date: new Date(currentDate),
             isException: !!exception,
