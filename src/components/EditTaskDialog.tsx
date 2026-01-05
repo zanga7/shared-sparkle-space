@@ -535,8 +535,15 @@ export const EditTaskDialog = ({
               </div>
             )}
 
-            {/* Recurrence Options - only show for non-virtual tasks or when editing series */}
-            {!(task as any).isVirtual && (
+            {/* Recurrence Options - show info for virtual tasks, full panel for regular tasks */}
+            {(task as any).isVirtual ? (
+              <div className="p-3 bg-muted/50 rounded-lg border border-dashed">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Repeat className="h-4 w-4" />
+                  <span>This is a recurring task from a series. Use the edit scope options when saving to modify the recurrence pattern.</span>
+                </div>
+              </div>
+            ) : (
               <UnifiedRecurrencePanel
                 type="task"
                 enabled={recurrenceEnabled}
