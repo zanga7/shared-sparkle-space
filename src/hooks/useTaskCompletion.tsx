@@ -71,18 +71,35 @@ export const useTaskCompletion = ({
       // Where UUID is 36 chars: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
       
       // Helper to check if a string looks like a virtual task ID (contains date pattern after UUID)
+      // Virtual IDs have format: UUID-YYYY-MM-DD (47 characters: 36 UUID + 1 hyphen + 10 date)
       const isVirtualTaskId = (id: string): boolean => {
-        if (!id || id.length <= 36) return false;
-        // Check if there's a date pattern (YYYY-MM-DD) after the first UUID
+        if (!id || typeof id !== 'string') return false;
+        // Must be longer than a standard UUID (36 chars)
+        if (id.length <= 36) return false;
+        // Check for date pattern after the first UUID
+        // Format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx-YYYY-MM-DD
         const afterUuid = id.substring(37);
-        return /^\d{4}-\d{2}-\d{2}/.test(afterUuid);
+        const hasDatePattern = /^\d{4}-\d{2}-\d{2}/.test(afterUuid);
+        console.log('🔍 Virtual ID check:', { id, length: id.length, afterUuid, hasDatePattern });
+        return hasDatePattern;
       };
       
-      // Determine if this is a virtual task
-      const isVirtualTask = task.isVirtual === true || 
-        !!task.series_id || 
-        !!task.occurrence_date ||
-        isVirtualTaskId(task.id);
+      // Determine if this is a virtual task - check ALL possible indicators
+      const hasVirtualFlag = task.isVirtual === true;
+      const hasSeriesId = !!task.series_id;
+      const hasOccurrenceDate = !!task.occurrence_date;
+      const hasVirtualIdFormat = isVirtualTaskId(task.id);
+      
+      const isVirtualTask = hasVirtualFlag || hasSeriesId || hasOccurrenceDate || hasVirtualIdFormat;
+      
+      console.log('🔍 Virtual task detection:', {
+        taskId: task.id,
+        hasVirtualFlag,
+        hasSeriesId,
+        hasOccurrenceDate,
+        hasVirtualIdFormat,
+        isVirtualTask
+      });
       
       // Extract series_id and occurrence_date
       let seriesId: string | null = task.series_id || null;
