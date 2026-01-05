@@ -535,26 +535,25 @@ export const EditTaskDialog = ({
               </div>
             )}
 
-            {/* Recurrence Options - show info for virtual tasks, full panel for regular tasks */}
-            {(task as any).isVirtual ? (
-              <div className="p-3 bg-muted/50 rounded-lg border border-dashed">
+            {/* Recurrence Options - show for all tasks including virtual/series tasks */}
+            {(task as any).isVirtual && (
+              <div className="p-3 bg-muted/50 rounded-lg border border-dashed mb-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Repeat className="h-4 w-4" />
-                  <span>This is a recurring task from a series. Use the edit scope options when saving to modify the recurrence pattern.</span>
+                  <span>This is a recurring task from a series. Changes to recurrence will prompt you to choose which occurrences to update.</span>
                 </div>
               </div>
-            ) : (
-              <UnifiedRecurrencePanel
-                type="task"
-                enabled={recurrenceEnabled}
-                onEnabledChange={setRecurrenceEnabled}
-                startDate={formData.due_date || new Date()}
-                taskOptions={taskRecurrenceOptions}
-                onTaskOptionsChange={setTaskRecurrenceOptions}
-                familyMembers={familyMembers}
-                selectedAssignees={formData.assignees}
-              />
             )}
+            <UnifiedRecurrencePanel
+              type="task"
+              enabled={recurrenceEnabled}
+              onEnabledChange={setRecurrenceEnabled}
+              startDate={formData.due_date || new Date()}
+              taskOptions={taskRecurrenceOptions}
+              onTaskOptionsChange={setTaskRecurrenceOptions}
+              familyMembers={familyMembers}
+              selectedAssignees={formData.assignees}
+            />
 
             <div className="flex justify-between pt-4">
               <Button
