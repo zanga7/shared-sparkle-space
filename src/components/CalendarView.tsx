@@ -516,7 +516,18 @@ export const CalendarView = ({
               duration: 2000
             });
       } else {
-        // Handle task drag and drop (existing logic)
+        // Handle task drag and drop - UUID validation already done above for virtual tasks
+        // Double-check the task ID is a valid UUID before querying
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(itemId)) {
+          toast({
+            title: 'Cannot Move Task',
+            description: 'This task cannot be rescheduled via drag-and-drop.',
+            variant: 'destructive'
+          });
+          return;
+        }
+        
         const {
           error
         } = await supabase.from('tasks').update({

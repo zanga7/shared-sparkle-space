@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useTaskCompletion } from '@/hooks/useTaskCompletion';
 import { useDashboardAuth } from '@/hooks/useDashboardAuth';
+import { canUpdateTaskDirectly } from '@/utils/taskIdUtils';
 
 interface MemberTasksWidgetProps {
   member: Profile;
@@ -146,6 +147,16 @@ export const MemberTasksWidget = ({
       toast({
         title: 'Error',
         description: 'Task not found. Please refresh and try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Block drag-and-drop for virtual/recurring tasks
+    if (!canUpdateTaskDirectly(task.id, task.isVirtual)) {
+      toast({
+        title: 'Not supported',
+        description: 'Recurring task instances cannot be moved. Edit the series instead.',
         variant: 'destructive',
       });
       return;
