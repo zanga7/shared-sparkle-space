@@ -1091,6 +1091,19 @@ const ColumnBasedDashboard = () => {
   };
 
   const initiateTaskDeletion = async (task: Task) => {
+    // Handle virtual/recurring task deletion - use skip mechanism instead of direct delete
+    if (task.isVirtual && task.series_id) {
+      // For virtual tasks, we can't delete the DB row directly
+      // Instead, we'll create a skip exception or prompt the user
+      setDeletingTask({
+        ...task,
+        isVirtual: true,
+        series_id: task.series_id,
+        occurrence_date: task.occurrence_date
+      } as Task);
+      return;
+    }
+
     // Check if this is a rotating task
     const { data: rotatingTask } = await supabase
       .from('rotating_tasks')
@@ -1133,6 +1146,42 @@ const ColumnBasedDashboard = () => {
 
   const deleteTask = async () => {
     if (!deletingTask) return;
+
+    // Handle virtual task deletion via skip exception
+    if ((deletingTask as any).isVirtual && (deletingTask as any).series_id) {
+      try {
+        const { error } = await supabase
+          .from('recurrence_exceptions')
+          .insert({
+            series_id: (deletingTask as any).series_id,
+            series_type: 'task',
+            exception_date: (deletingTask as any).occurrence_date,
+            exception_type: 'skip',
+            created_by: profile?.id
+          });
+
+        if (error) throw error;
+
+        toast({
+          title: 'Occurrence Skipped',
+          description: 'This task occurrence has been removed',
+        });
+
+        setDeletingTask(null);
+        // Refresh to show updated series
+        await fetchTaskSeries();
+        await refreshTasksOnly();
+        return;
+      } catch (error) {
+        console.error('Error skipping task occurrence:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to skip task occurrence',
+          variant: 'destructive'
+        });
+        return;
+      }
+    }
 
     const isRotatingTask = (deletingTask as any).isRotatingTask;
 
