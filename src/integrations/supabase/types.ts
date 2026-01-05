@@ -2106,11 +2106,11 @@ export type Database = {
           }
       complete_task_unified: {
         Args: {
-          p_completer_profile_id: string
+          p_completer_profile_id?: string
           p_is_virtual?: boolean
           p_occurrence_date?: string
           p_series_id?: string
-          p_task_id: string
+          p_task_id?: string
         }
         Returns: Json
       }
