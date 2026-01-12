@@ -73,40 +73,76 @@ export const EditTaskDialog = ({
     familyMembers.find(m => m.id === task.created_by)?.family_id
   );
 
-  // Fetch fresh assignees from database when dialog opens
+  // Load form state when dialog opens
   useEffect(() => {
     const loadTaskData = async () => {
       if (!task || !open) return;
-      
-      // For non-virtual tasks, fetch fresh assignees from the database
-      // This ensures we always have the complete list, even after UI operations
+
+      // Resolve assignees robustly:
+      // - For virtual recurring tasks, the authoritative assignee list lives on task_series.assigned_profiles
+      // - For regular tasks, it lives on task_assignees
       let currentAssignees: string[] = [];
-      
-      if (!(task as any).isVirtual) {
+      let resolvedCompletionRule: 'any_one' | 'everyone' = (task.completion_rule || 'everyone') as 'any_one' | 'everyone';
+
+      const isVirtualSeriesTask = Boolean((task as any).isVirtual && (task as any).series_id);
+
+      if (isVirtualSeriesTask) {
         try {
-          const { data: assigneeData } = await supabase
+          const seriesId = (task as any).series_id as string;
+          const { data: series, error: seriesError } = await supabase
+            .from('task_series')
+            .select('assigned_profiles, completion_rule')
+            .eq('id', seriesId)
+            .maybeSingle();
+
+          if (seriesError) throw seriesError;
+
+          if (series?.assigned_profiles && series.assigned_profiles.length > 0) {
+            currentAssignees = series.assigned_profiles;
+          } else {
+            // Fallback to the virtual instance payload (may be member-specific)
+            currentAssignees =
+              task.assignees?.map((a) => a.profile_id) ||
+              (task.assigned_to ? [task.assigned_to] : []);
+          }
+
+          if (series?.completion_rule) {
+            resolvedCompletionRule = series.completion_rule as 'any_one' | 'everyone';
+          }
+        } catch (error) {
+          console.error('Error fetching task series data:', error);
+          currentAssignees =
+            task.assignees?.map((a) => a.profile_id) ||
+            (task.assigned_to ? [task.assigned_to] : []);
+        }
+      } else if (!(task as any).isVirtual) {
+        // Non-virtual task: load assignees from task_assignees
+        try {
+          const { data: assigneeData, error: assigneeError } = await supabase
             .from('task_assignees')
             .select('profile_id')
             .eq('task_id', task.id);
-          
+
+          if (assigneeError) throw assigneeError;
+
           if (assigneeData && assigneeData.length > 0) {
-            currentAssignees = assigneeData.map(a => a.profile_id);
+            currentAssignees = assigneeData.map((a) => a.profile_id);
           } else if (task.assigned_to) {
-            // Fallback to assigned_to if no task_assignees found
             currentAssignees = [task.assigned_to];
           }
         } catch (error) {
           console.error('Error fetching task assignees:', error);
-          // Fallback to task object data
-          currentAssignees = task.assignees?.map(a => a.profile_id) || 
-                            (task.assigned_to ? [task.assigned_to] : []);
+          currentAssignees =
+            task.assignees?.map((a) => a.profile_id) ||
+            (task.assigned_to ? [task.assigned_to] : []);
         }
       } else {
-        // For virtual tasks, use the assignees from the task object
-        currentAssignees = task.assignees?.map(a => a.profile_id) || 
-                          (task.assigned_to ? [task.assigned_to] : []);
+        // Virtual task without series context: use payload
+        currentAssignees =
+          task.assignees?.map((a) => a.profile_id) ||
+          (task.assigned_to ? [task.assigned_to] : []);
       }
-      
+
       setFormData({
         title: task.title,
         description: task.description || '',
@@ -115,7 +151,7 @@ export const EditTaskDialog = ({
         assignees: currentAssignees,
         due_date: task.due_date ? new Date(task.due_date) : null,
         task_group: (task as any).task_group || 'general',
-        completion_rule: task.completion_rule || 'everyone'
+        completion_rule: resolvedCompletionRule,
       });
 
       // Load existing recurrence options
