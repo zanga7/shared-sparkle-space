@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { EnhancedPinInput } from '@/components/ui/enhanced-pin-input';
@@ -32,8 +32,15 @@ export function MemberPinDialog({
   action = "perform this action"
 }: MemberPinDialogProps) {
   const [pin, setPin] = useState('');
+  const isSubmittingRef = useRef(false);
+  const hasSucceededRef = useRef(false);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
+    // Prevent double submissions
+    if (isSubmittingRef.current || hasSucceededRef.current) {
+      return;
+    }
+
     // Check if PIN has the right format (4 digits or 4 icons)
     const isValidPin = pin.includes(',') ? 
       pin.split(',').filter(Boolean).length === 4 : 
@@ -41,20 +48,34 @@ export function MemberPinDialog({
     
     if (!isValidPin) return;
     
-    const success = await onAuthenticate(pin);
-    if (success) {
-      setPin('');
-      onOpenChange(false);
-      onSuccess();
-    } else {
-      setPin('');
+    isSubmittingRef.current = true;
+    
+    try {
+      const success = await onAuthenticate(pin);
+      if (success) {
+        hasSucceededRef.current = true;
+        setPin('');
+        onOpenChange(false);
+        onSuccess();
+      } else {
+        setPin('');
+      }
+    } finally {
+      isSubmittingRef.current = false;
     }
-  };
+  }, [pin, onAuthenticate, onOpenChange, onSuccess]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setPin('');
+    isSubmittingRef.current = false;
+    hasSucceededRef.current = false;
     onOpenChange(false);
-  };
+  }, [onOpenChange]);
+
+  // Reset refs when dialog opens
+  if (open && !isSubmittingRef.current) {
+    hasSucceededRef.current = false;
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
