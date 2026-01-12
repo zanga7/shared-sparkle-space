@@ -1683,24 +1683,38 @@ const ColumnBasedDashboard = () => {
     const allTasks = [...regularTasks, ...virtualTasks];
     
     // Add all tasks (regular + virtual)
+    // IMPORTANT: Use a Set to track which tasks have been added to prevent duplicates
+    const addedTaskIds = new Set<string>();
+    
     allTasks.forEach(task => {
+      // Skip if we've already processed this task (prevents duplicates)
+      const taskKey = task.id;
+      
       if (task.assignees && task.assignees.length > 0) {
-        // Task has multiple assignees - add to each
+        // Task has multiple assignees - add to each member's column
+        // For group tasks (everyone completion_rule), each member sees the same task
         task.assignees.forEach(assignee => {
           const memberTasks = tasksByMember.get(assignee.profile_id) || [];
-          memberTasks.push(task);
-          tasksByMember.set(assignee.profile_id, memberTasks);
+          // Check if this exact task is already in this member's list
+          if (!memberTasks.some(t => t.id === task.id)) {
+            memberTasks.push(task);
+            tasksByMember.set(assignee.profile_id, memberTasks);
+          }
         });
       } else if (task.assigned_to) {
         // Single assignee (old format)
         const memberTasks = tasksByMember.get(task.assigned_to) || [];
-        memberTasks.push(task);
-        tasksByMember.set(task.assigned_to, memberTasks);
+        if (!memberTasks.some(t => t.id === task.id)) {
+          memberTasks.push(task);
+          tasksByMember.set(task.assigned_to, memberTasks);
+        }
       } else {
         // Unassigned task
         const unassignedTasks = tasksByMember.get('unassigned') || [];
-        unassignedTasks.push(task);
-        tasksByMember.set('unassigned', unassignedTasks);
+        if (!unassignedTasks.some(t => t.id === task.id)) {
+          unassignedTasks.push(task);
+          tasksByMember.set('unassigned', unassignedTasks);
+        }
       }
     });
     

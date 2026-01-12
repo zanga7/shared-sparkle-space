@@ -399,6 +399,9 @@ export const EditTaskDialog = ({
     }
   };
 
+  // Determine if this is a group task (multiple assignees OR everyone completion rule)
+  const isGroupTask = formData.assignees.length > 1 || task.completion_rule === 'everyone';
+  
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -416,6 +419,12 @@ export const EditTaskDialog = ({
                 <Badge variant="secondary" className="ml-2 text-xs">
                   <RotateCcw className="h-3 w-3 mr-1" />
                   Rotating
+                </Badge>
+              )}
+              {isGroupTask && !task.rotating_task_id && !(task as any).isVirtual && (
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  <Users className="h-3 w-3 mr-1" />
+                  Group Task
                 </Badge>
               )}
             </DialogTitle>
@@ -546,8 +555,8 @@ export const EditTaskDialog = ({
               </select>
             </div>
 
-            {/* Completion Rule - only show when multiple assignees and not a rotating task */}
-            {formData.assignees.length > 1 && !task.rotating_task_id && (
+            {/* Completion Rule - show when multiple assignees OR task already has completion_rule set, and not a rotating task */}
+            {(formData.assignees.length > 1 || task.completion_rule === 'everyone' || task.completion_rule === 'any_one') && !task.rotating_task_id && (
               <div className="space-y-3">
                 <Label>Completion Rule</Label>
                 <RadioGroup 
