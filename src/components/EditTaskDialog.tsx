@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Trash2, Calendar, User, Users, Repeat } from 'lucide-react';
+import { Trash2, Calendar, User, Users, Repeat, RotateCcw } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -150,12 +150,17 @@ export const EditTaskDialog = ({
         return;
       }
 
-      // Regular task update
-      await updateRegularTask(updateData);
+      // Check if this is a rotating task - update the rotating_tasks table instead
+      if (task.rotating_task_id) {
+        await updateRotatingTask(updateData);
+      } else {
+        // Regular task update
+        await updateRegularTask(updateData);
+      }
       
       toast({
         title: 'Success',
-        description: 'Task updated successfully',
+        description: task.rotating_task_id ? 'Rotating task updated successfully' : 'Task updated successfully',
       });
 
       onTaskUpdated();
@@ -215,6 +220,34 @@ export const EditTaskDialog = ({
 
       if (assigneeError) throw assigneeError;
     }
+  };
+
+  const updateRotatingTask = async (updateData: any) => {
+    // Update the rotating_tasks table with the new values
+    const { error } = await supabase
+      .from('rotating_tasks')
+      .update({
+        name: updateData.title,
+        description: updateData.description,
+        points: updateData.points,
+        task_group: updateData.task_group,
+      })
+      .eq('id', task.rotating_task_id);
+
+    if (error) throw error;
+
+    // Also update the current task instance in the tasks table
+    const { error: taskError } = await supabase
+      .from('tasks')
+      .update({
+        title: updateData.title,
+        description: updateData.description,
+        points: updateData.points,
+        task_group: updateData.task_group,
+      })
+      .eq('id', task.id);
+
+    if (taskError) throw taskError;
   };
 
   const handleEditScopeSelect = async (scope: EditScope) => {
@@ -379,10 +412,21 @@ export const EditTaskDialog = ({
                   Recurring
                 </Badge>
               )}
+              {task.rotating_task_id && (
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                  Rotating
+                </Badge>
+              )}
             </DialogTitle>
             {(task as any).isVirtual && (
               <p className="text-sm text-muted-foreground">
                 This is a recurring task. Changes will show edit scope options.
+              </p>
+            )}
+            {task.rotating_task_id && (
+              <p className="text-sm text-muted-foreground">
+                This is a rotating task. Changes will update the rotation settings.
               </p>
             )}
           </DialogHeader>
@@ -442,43 +486,49 @@ export const EditTaskDialog = ({
               />
             </div>
 
-            <div>
-              <Label>Assign To</Label>
-              <MultiSelectAssignees
-                familyMembers={familyMembers}
-                selectedAssignees={formData.assignees}
-                onAssigneesChange={(assignees) => 
-                  setFormData(prev => ({ ...prev, assignees }))
-                }
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="due_date">Due Date</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="due_date"
-                  type="date"
-                  value={formData.due_date ? format(formData.due_date, 'yyyy-MM-dd') : ''}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    due_date: e.target.value ? new Date(e.target.value) : null 
-                  }))}
-                  className="flex-1"
+            {/* Hide assignee selection for rotating tasks - managed via rotation settings */}
+            {!task.rotating_task_id && (
+              <div>
+                <Label>Assign To</Label>
+                <MultiSelectAssignees
+                  familyMembers={familyMembers}
+                  selectedAssignees={formData.assignees}
+                  onAssigneesChange={(assignees) => 
+                    setFormData(prev => ({ ...prev, assignees }))
+                  }
                 />
-                {formData.due_date && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setFormData(prev => ({ ...prev, due_date: null }))}
-                    title="Clear due date"
-                  >
-                    ×
-                  </Button>
-                )}
               </div>
-            </div>
+            )}
+
+            {/* Hide due date for rotating tasks - managed via cadence settings */}
+            {!task.rotating_task_id && (
+              <div>
+                <Label htmlFor="due_date">Due Date</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="due_date"
+                    type="date"
+                    value={formData.due_date ? format(formData.due_date, 'yyyy-MM-dd') : ''}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      due_date: e.target.value ? new Date(e.target.value) : null 
+                    }))}
+                    className="flex-1"
+                  />
+                  {formData.due_date && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setFormData(prev => ({ ...prev, due_date: null }))}
+                      title="Clear due date"
+                    >
+                      ×
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="task_group">Task Group</Label>
@@ -496,8 +546,8 @@ export const EditTaskDialog = ({
               </select>
             </div>
 
-            {/* Completion Rule - only show when multiple assignees */}
-            {formData.assignees.length > 1 && (
+            {/* Completion Rule - only show when multiple assignees and not a rotating task */}
+            {formData.assignees.length > 1 && !task.rotating_task_id && (
               <div className="space-y-3">
                 <Label>Completion Rule</Label>
                 <RadioGroup 
@@ -535,25 +585,39 @@ export const EditTaskDialog = ({
               </div>
             )}
 
-            {/* Recurrence Options - show for all tasks including virtual/series tasks */}
-            {(task as any).isVirtual && (
-              <div className="p-3 bg-muted/50 rounded-lg border border-dashed mb-2">
+            {/* Recurrence Options - hide for rotating tasks */}
+            {!task.rotating_task_id && (
+              <>
+                {(task as any).isVirtual && (
+                  <div className="p-3 bg-muted/50 rounded-lg border border-dashed mb-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Repeat className="h-4 w-4" />
+                      <span>This is a recurring task from a series. Changes to recurrence will prompt you to choose which occurrences to update.</span>
+                    </div>
+                  </div>
+                )}
+                <UnifiedRecurrencePanel
+                  type="task"
+                  enabled={recurrenceEnabled}
+                  onEnabledChange={setRecurrenceEnabled}
+                  startDate={formData.due_date || new Date()}
+                  taskOptions={taskRecurrenceOptions}
+                  onTaskOptionsChange={setTaskRecurrenceOptions}
+                  familyMembers={familyMembers}
+                  selectedAssignees={formData.assignees}
+                />
+              </>
+            )}
+
+            {/* Info for rotating tasks about what can be edited */}
+            {task.rotating_task_id && (
+              <div className="p-3 bg-muted/50 rounded-lg border border-dashed">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Repeat className="h-4 w-4" />
-                  <span>This is a recurring task from a series. Changes to recurrence will prompt you to choose which occurrences to update.</span>
+                  <RotateCcw className="h-4 w-4" />
+                  <span>Rotation schedule and member order are managed in Admin → Rotating Tasks.</span>
                 </div>
               </div>
             )}
-            <UnifiedRecurrencePanel
-              type="task"
-              enabled={recurrenceEnabled}
-              onEnabledChange={setRecurrenceEnabled}
-              startDate={formData.due_date || new Date()}
-              taskOptions={taskRecurrenceOptions}
-              onTaskOptionsChange={setTaskRecurrenceOptions}
-              familyMembers={familyMembers}
-              selectedAssignees={formData.assignees}
-            />
 
             <div className="flex justify-between pt-4">
               <Button
