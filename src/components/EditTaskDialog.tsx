@@ -73,11 +73,39 @@ export const EditTaskDialog = ({
     familyMembers.find(m => m.id === task.created_by)?.family_id
   );
 
+  // Fetch fresh assignees from database when dialog opens
   useEffect(() => {
-    if (task && open) {
-      // Get current assignees from the task
-      const currentAssignees = task.assignees?.map(a => a.profile_id) || 
-                              (task.assigned_to ? [task.assigned_to] : []);
+    const loadTaskData = async () => {
+      if (!task || !open) return;
+      
+      // For non-virtual tasks, fetch fresh assignees from the database
+      // This ensures we always have the complete list, even after UI operations
+      let currentAssignees: string[] = [];
+      
+      if (!(task as any).isVirtual) {
+        try {
+          const { data: assigneeData } = await supabase
+            .from('task_assignees')
+            .select('profile_id')
+            .eq('task_id', task.id);
+          
+          if (assigneeData && assigneeData.length > 0) {
+            currentAssignees = assigneeData.map(a => a.profile_id);
+          } else if (task.assigned_to) {
+            // Fallback to assigned_to if no task_assignees found
+            currentAssignees = [task.assigned_to];
+          }
+        } catch (error) {
+          console.error('Error fetching task assignees:', error);
+          // Fallback to task object data
+          currentAssignees = task.assignees?.map(a => a.profile_id) || 
+                            (task.assigned_to ? [task.assigned_to] : []);
+        }
+      } else {
+        // For virtual tasks, use the assignees from the task object
+        currentAssignees = task.assignees?.map(a => a.profile_id) || 
+                          (task.assigned_to ? [task.assigned_to] : []);
+      }
       
       setFormData({
         title: task.title,
@@ -111,7 +139,9 @@ export const EditTaskDialog = ({
           rotateBetweenMembers: false
         });
       }
-    }
+    };
+    
+    loadTaskData();
   }, [task, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {

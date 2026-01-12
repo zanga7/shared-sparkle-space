@@ -1359,8 +1359,15 @@ const ColumnBasedDashboard = () => {
       const updateData: any = {};
       let needsUpdate = false;
       
-      // Handle member assignment change
-      if (sourceInfo.memberId !== destInfo.memberId && destInfo.memberId !== null) {
+      // Check if this is a group task (multiple assignees or everyone completion rule)
+      const currentTask = tasks.find(t => t.id === taskId);
+      const isGroupTask = currentTask && (
+        (currentTask.assignees && currentTask.assignees.length > 1) ||
+        currentTask.completion_rule === 'everyone'
+      );
+      
+      // Handle member assignment change - but NOT for group tasks
+      if (sourceInfo.memberId !== destInfo.memberId && destInfo.memberId !== null && !isGroupTask) {
         try {
           // First, remove existing task assignees
           const { error: deleteError } = await supabase
@@ -1406,15 +1413,25 @@ const ColumnBasedDashboard = () => {
       }
       
       if (needsUpdate) {
-
         // Optimistically update local state
         setTasks(prevTasks => prevTasks.map(t => {
           if (t.id === taskId) {
+            // For group tasks, don't change assignees during drag - only update group/date
+            if (isGroupTask && destInfo.memberId !== sourceInfo.memberId) {
+              // Group tasks should not have their assignees changed via drag-and-drop
+              // Only allow moving between task groups
+              return {
+                ...t,
+                task_group: updateData.task_group || t.task_group,
+                due_date: updateData.due_date || t.due_date
+              };
+            }
+            
             return {
               ...t,
               ...updateData,
-              // Update assignees if member changed
-              ...(destInfo.memberId !== sourceInfo.memberId && destInfo.memberId && {
+              // Update assignees if member changed (only for single-assignee tasks)
+              ...(destInfo.memberId !== sourceInfo.memberId && destInfo.memberId && !isGroupTask && {
                 assigned_to: destInfo.memberId,
                 assignees: [{
                   id: crypto.randomUUID(),
