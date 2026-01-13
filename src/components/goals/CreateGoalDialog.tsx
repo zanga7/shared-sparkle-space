@@ -126,7 +126,7 @@ export function CreateGoalDialog({
       goal_type: goalType,
       goal_scope: goalScope,
       assigned_to: goalScope === 'individual' ? (assignedTo || profileId) : undefined,
-      reward_id: rewardId || undefined,
+      reward_id: rewardId && rewardId !== 'none' ? rewardId : undefined,
       success_criteria: successCriteria,
       start_date: startDate,
       end_date: endDate,
@@ -406,7 +406,7 @@ export function CreateGoalDialog({
                   <SelectValue placeholder="Select reward on completion" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No reward</SelectItem>
+                  <SelectItem value="none">No reward</SelectItem>
                   {rewards.filter(r => r.is_active).map((reward) => (
                     <SelectItem key={reward.id} value={reward.id}>
                       <div className="flex items-center gap-2">
