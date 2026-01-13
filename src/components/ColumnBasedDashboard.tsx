@@ -64,6 +64,7 @@ const ColumnBasedDashboard = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [familyMembers, setFamilyMembers] = useState<Profile[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [materializedCompletionsMap, setMaterializedCompletionsMap] = useState<Map<string, any[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -1586,15 +1587,16 @@ const ColumnBasedDashboard = () => {
         .eq('series_id', supabase.rpc ? undefined : undefined); // Fetch all for family
 
       if (!materializedError && materializedData) {
-        const materializedMap = new Map<string, any[]>();
+        const newMaterializedMap = new Map<string, any[]>();
         materializedData.forEach((instance: any) => {
           if (instance.materialized_task?.task_completions) {
             const key = `${instance.series_id}-${instance.occurrence_date}`;
-            materializedMap.set(key, instance.materialized_task.task_completions);
+            newMaterializedMap.set(key, instance.materialized_task.task_completions);
           }
         });
-        (window as any).__materializedCompletionsMap = materializedMap;
-        console.log('Materialized completions map refreshed:', materializedMap.size, 'entries');
+        // Use React state instead of window to trigger re-render
+        setMaterializedCompletionsMap(newMaterializedMap);
+        console.log('Materialized completions map refreshed:', newMaterializedMap.size, 'entries');
       }
 
       // Also refresh profile and family members to get updated points
@@ -1670,15 +1672,14 @@ const ColumnBasedDashboard = () => {
     
     const virtualInstances = Array.from(seriesInstanceMap.values());
     
-    // Get the materialized completions map from window
-    const materializedMap = (window as any).__materializedCompletionsMap || new Map();
+    // Use React state for materialized completions to trigger re-renders on updates
     
     // Map virtual instances to Task format with completion checking
     const virtualTasks: Task[] = virtualInstances.map(vTask => {
       // Check if this virtual instance has been materialized and completed
       // Use series_id + occurrence_date to look up completions
       const completionKey = `${vTask.series_id}-${vTask.occurrence_date}`;
-      const completions = materializedMap.get(completionKey) || [];
+      const completions = materializedCompletionsMap.get(completionKey) || [];
       
       return {
         id: vTask.id,
@@ -1729,7 +1730,7 @@ const ColumnBasedDashboard = () => {
     // Exclude materialized recurring tasks since they'll be shown as virtual instances
     const regularTasks = tasks.filter(t => t.task_source !== 'recurring');
     return [...regularTasks, ...virtualTasks];
-  }, [tasks, familyMembers, generateVirtualTaskInstances]);
+  }, [tasks, familyMembers, generateVirtualTaskInstances, materializedCompletionsMap]);
 
   // Get tasks organized by family member with filtering
   const getTasksByMember = () => {
