@@ -1437,10 +1437,13 @@ const ColumnBasedDashboard = () => {
         }
       }
       
-      // Handle task group change
+      // Handle task group change - only update due_date if task already had one
       if (destInfo.group && destInfo.group !== sourceInfo.group) {
         updateData.task_group = destInfo.group;
-        updateData.due_date = getGroupDueDate(destInfo.group as TaskGroup);
+        // Only set due_date if the task already had a due_date, otherwise preserve null
+        if (currentTask?.due_date) {
+          updateData.due_date = getGroupDueDate(destInfo.group as TaskGroup);
+        }
         needsUpdate = true;
       }
       
