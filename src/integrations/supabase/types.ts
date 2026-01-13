@@ -639,6 +639,248 @@ export type Database = {
           },
         ]
       }
+      goal_linked_tasks: {
+        Row: {
+          goal_id: string
+          id: string
+          linked_at: string
+          linked_by: string
+          rotating_task_id: string | null
+          task_id: string | null
+          task_series_id: string | null
+        }
+        Insert: {
+          goal_id: string
+          id?: string
+          linked_at?: string
+          linked_by: string
+          rotating_task_id?: string | null
+          task_id?: string | null
+          task_series_id?: string | null
+        }
+        Update: {
+          goal_id?: string
+          id?: string
+          linked_at?: string
+          linked_by?: string
+          rotating_task_id?: string | null
+          task_id?: string | null
+          task_series_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_linked_tasks_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_linked_tasks_linked_by_fkey"
+            columns: ["linked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_linked_tasks_rotating_task_id_fkey"
+            columns: ["rotating_task_id"]
+            isOneToOne: false
+            referencedRelation: "rotating_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_linked_tasks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_linked_tasks_task_series_id_fkey"
+            columns: ["task_series_id"]
+            isOneToOne: false
+            referencedRelation: "task_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goal_milestones: {
+        Row: {
+          completed_at: string | null
+          completion_criteria: Json
+          created_at: string
+          goal_id: string
+          id: string
+          is_completed: boolean
+          milestone_order: number
+          reward_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completion_criteria: Json
+          created_at?: string
+          goal_id: string
+          id?: string
+          is_completed?: boolean
+          milestone_order?: number
+          reward_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completion_criteria?: Json
+          created_at?: string
+          goal_id?: string
+          id?: string
+          is_completed?: boolean
+          milestone_order?: number
+          reward_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_milestones_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_milestones_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "rewards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goal_progress_snapshots: {
+        Row: {
+          created_at: string
+          goal_id: string
+          id: string
+          progress_data: Json
+          snapshot_date: string
+        }
+        Insert: {
+          created_at?: string
+          goal_id: string
+          id?: string
+          progress_data: Json
+          snapshot_date: string
+        }
+        Update: {
+          created_at?: string
+          goal_id?: string
+          id?: string
+          progress_data?: Json
+          snapshot_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_progress_snapshots_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goals: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string | null
+          family_id: string
+          goal_scope: Database["public"]["Enums"]["goal_scope"]
+          goal_type: Database["public"]["Enums"]["goal_type"]
+          id: string
+          reward_id: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["goal_status"]
+          success_criteria: Json
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date?: string | null
+          family_id: string
+          goal_scope?: Database["public"]["Enums"]["goal_scope"]
+          goal_type: Database["public"]["Enums"]["goal_type"]
+          id?: string
+          reward_id?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["goal_status"]
+          success_criteria: Json
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          family_id?: string
+          goal_scope?: Database["public"]["Enums"]["goal_scope"]
+          goal_type?: Database["public"]["Enums"]["goal_type"]
+          id?: string
+          reward_id?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["goal_status"]
+          success_criteria?: Json
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goals_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goals_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goals_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goals_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "super_admin_family_stats"
+            referencedColumns: ["family_id"]
+          },
+          {
+            foreignKeyName: "goals_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "rewards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       google_photos_integrations: {
         Row: {
           access_token: string
@@ -2758,7 +3000,11 @@ export type Database = {
         | "rewards"
         | "rotating_tasks"
         | "screensaver"
+        | "goals"
       app_role: "super_admin" | "user"
+      goal_scope: "individual" | "family"
+      goal_status: "active" | "paused" | "completed" | "archived"
+      goal_type: "consistency" | "target_count" | "project"
       reward_request_status:
         | "pending"
         | "approved"
@@ -2901,8 +3147,12 @@ export const Constants = {
         "rewards",
         "rotating_tasks",
         "screensaver",
+        "goals",
       ],
       app_role: ["super_admin", "user"],
+      goal_scope: ["individual", "family"],
+      goal_status: ["active", "paused", "completed", "archived"],
+      goal_type: ["consistency", "target_count", "project"],
       reward_request_status: [
         "pending",
         "approved",
