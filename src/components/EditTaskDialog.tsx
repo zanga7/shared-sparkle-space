@@ -575,10 +575,10 @@ export const EditTaskDialog = ({
               </div>
             )}
 
-            {/* Hide due date for rotating tasks and recurring tasks - managed via cadence/recurrence settings */}
-            {!task.rotating_task_id && !(task as any).isVirtual && !recurrenceEnabled && (
+            {/* Hide due date for rotating tasks - managed via cadence settings */}
+            {!task.rotating_task_id && (
               <div>
-                <Label htmlFor="due_date">Due Date</Label>
+                <Label htmlFor="due_date">Due Date (Optional)</Label>
                 <div className="flex gap-2">
                   <Input
                     id="due_date"

@@ -79,9 +79,12 @@ export const AddTaskDialog = ({
 
   const { createTaskSeries } = useTaskSeries(familyId);
 
-  // Update due_date when selectedDate changes
+  // Only update due_date when selectedDate changes AND is explicitly set
+  // Don't auto-fill - leave blank by default
   useEffect(() => {
-    if (selectedDate) {
+    // Only set if selectedDate is explicitly provided (not undefined/null)
+    // This allows calendar clicks to set a date, but opening dialog without date keeps it blank
+    if (selectedDate !== undefined && selectedDate !== null) {
       setFormData(prev => ({ 
         ...prev, 
         due_date: selectedDate
@@ -478,52 +481,48 @@ export const AddTaskDialog = ({
             </div>
           )}
 
-          {/* Hide due date field when recurrence is enabled - recurrence uses start date internally */}
-          {!recurrenceEnabled && (
-            <div className="space-y-2">
-              <Label>Due Date (Optional)</Label>
-              <div className="flex gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "flex-1 justify-start text-left font-normal",
-                        !formData.due_date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.due_date ? format(formData.due_date, "PPP") : "No due date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formData.due_date}
-                      onSelect={(date) => {
-                        // Validate the date before setting it
-                        const validDate = date && !isNaN(date.getTime()) ? date : null;
-                        setFormData({ ...formData, due_date: validDate });
-                      }}
-                      initialFocus
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-                {formData.due_date && (
+          <div className="space-y-2">
+            <Label>Due Date (Optional)</Label>
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
                   <Button
-                    type="button"
                     variant="outline"
-                    size="icon"
-                    onClick={() => setFormData({ ...formData, due_date: null })}
-                    title="Clear due date"
+                    className={cn(
+                      "flex-1 justify-start text-left font-normal",
+                      !formData.due_date && "text-muted-foreground"
+                    )}
                   >
-                    ×
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.due_date ? format(formData.due_date, "PPP") : "No due date"}
                   </Button>
-                )}
-              </div>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.due_date}
+                    onSelect={(date) => {
+                      const validDate = date && !isNaN(date.getTime()) ? date : null;
+                      setFormData({ ...formData, due_date: validDate });
+                    }}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              {formData.due_date && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setFormData({ ...formData, due_date: null })}
+                  title="Clear due date"
+                >
+                  ×
+                </Button>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Recurrence Panel */}
           <UnifiedRecurrencePanel
