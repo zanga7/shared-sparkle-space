@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1589,18 +1589,9 @@ const ColumnBasedDashboard = () => {
   };
 
 
-  // Get tasks organized by family member with filtering
-  const getTasksByMember = () => {
-    const tasksByMember = new Map<string, Task[]>();
-    
-    // Initialize with all family members in the same order as familyMembers array
-    familyMembers.forEach(member => {
-      tasksByMember.set(member.id, []);
-    });
-    
-    // Add unassigned tasks category
-    tasksByMember.set('unassigned', []);
-    
+  // Memoized combined tasks (regular + virtual recurring instances)
+  // This is computed once and reused for MemberDashboard and column views
+  const allTasks = useMemo(() => {
     // Generate virtual task instances from task series
     // Show instances for the current week so weekly/monthly tasks appear
     const today = new Date();
@@ -1698,16 +1689,23 @@ const ColumnBasedDashboard = () => {
     // Combine regular tasks with virtual task instances
     // Exclude materialized recurring tasks since they'll be shown as virtual instances
     const regularTasks = tasks.filter(t => t.task_source !== 'recurring');
-    const allTasks = [...regularTasks, ...virtualTasks];
+    return [...regularTasks, ...virtualTasks];
+  }, [tasks, familyMembers, generateVirtualTaskInstances]);
+
+  // Get tasks organized by family member with filtering
+  const getTasksByMember = () => {
+    const tasksByMember = new Map<string, Task[]>();
     
-    // Add all tasks (regular + virtual)
-    // IMPORTANT: Use a Set to track which tasks have been added to prevent duplicates
-    const addedTaskIds = new Set<string>();
+    // Initialize with all family members in the same order as familyMembers array
+    familyMembers.forEach(member => {
+      tasksByMember.set(member.id, []);
+    });
     
+    // Add unassigned tasks category
+    tasksByMember.set('unassigned', []);
+    
+    // Add all tasks (regular + virtual) - use memoized allTasks
     allTasks.forEach(task => {
-      // Skip if we've already processed this task (prevents duplicates)
-      const taskKey = task.id;
-      
       if (task.assignees && task.assignees.length > 0) {
         // Task has multiple assignees - add to each member's column
         // For group tasks (everyone completion_rule), each member sees the same task
@@ -1897,7 +1895,7 @@ const ColumnBasedDashboard = () => {
             return (
               <MemberDashboard
                 member={member}
-                tasks={tasks}
+                tasks={allTasks}
                 familyMembers={familyMembers}
                 profile={profile}
                 onTaskUpdated={fetchUserData}
