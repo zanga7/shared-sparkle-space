@@ -30,17 +30,22 @@ export const MemberTodaysTasks = ({
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
   
-  // Filter tasks assigned to this member that are due today
+  // Filter tasks assigned to this member that are due/occurring today
   const todaysTasks = tasks.filter(task => {
     const isAssigned = task.assigned_to === member.id || 
                       task.assignees?.some(a => a.profile_id === member.id);
     
     if (!isAssigned) return false;
     
-    if (!task.due_date) return false;
+    // For virtual/recurring tasks, use occurrence_date; for regular tasks, use due_date
+    const dateToCheck = (task as any).isVirtual && (task as any).occurrence_date
+      ? (task as any).occurrence_date
+      : task.due_date;
     
-    const dueDate = new Date(task.due_date);
-    return dueDate >= today && dueDate < tomorrow;
+    if (!dateToCheck) return false;
+    
+    const taskDate = new Date(dateToCheck);
+    return taskDate >= today && taskDate < tomorrow;
   });
 
   return (

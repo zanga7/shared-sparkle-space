@@ -228,6 +228,7 @@ export const CalendarView = ({
         title: vTask.title,
         description: vTask.description || null,
         points: vTask.points,
+        // For virtual tasks, due_date is optional deadline; occurrence_date determines when it appears
         due_date: vTask.due_date,
         assigned_to: vTask.assigned_profiles[0] || null,
         created_by: vTask.created_by,
@@ -249,7 +250,7 @@ export const CalendarView = ({
           return {
             id: `${vTask.id}-${profileId}`,
             profile_id: profileId,
-            assigned_at: vTask.due_date,
+            assigned_at: vTask.occurrence_date, // Use occurrence_date, not due_date
             assigned_by: vTask.created_by,
             profile: member || {
               id: profileId,
@@ -306,8 +307,14 @@ export const CalendarView = ({
       [key: string]: Task[];
     } = {};
     filteredTasks.forEach(task => {
-      if (task.due_date) {
-        const dateKey = format(new Date(task.due_date), 'yyyy-MM-dd');
+      // For virtual tasks, use occurrence_date to determine which day they appear on
+      // For regular tasks, use due_date if set
+      const dateToUse = task.isVirtual && task.occurrence_date 
+        ? task.occurrence_date 
+        : task.due_date;
+      
+      if (dateToUse) {
+        const dateKey = format(new Date(dateToUse), 'yyyy-MM-dd');
         if (!grouped[dateKey]) {
           grouped[dateKey] = [];
         }
@@ -374,8 +381,12 @@ export const CalendarView = ({
   // Calculate analytics
   const analytics = useMemo(() => {
     const currentWeekTasks = filteredTasks.filter(task => {
-      if (!task.due_date) return false;
-      const taskDate = new Date(task.due_date);
+      // For virtual tasks, use occurrence_date; for regular tasks, use due_date
+      const dateToUse = task.isVirtual && task.occurrence_date 
+        ? task.occurrence_date 
+        : task.due_date;
+      if (!dateToUse) return false;
+      const taskDate = new Date(dateToUse);
       const weekStart = startOfWeek(currentDate, {
         weekStartsOn: 0
       });
