@@ -154,18 +154,6 @@ export const TaskGroupsList = ({
                   })
                 )}
                 {provided.placeholder}
-                
-                {/* Add Task Button for this group */}
-                {onAddTask && showActions && (
-                  <div className="pt-2 border-t border-dashed">
-                    <AddButton
-                      className="w-full text-xs"
-                      style={{ ...colorStyles.border, ...colorStyles.text }}
-                      text={`Add ${groupTitle} Task`}
-                      onClick={() => onAddTask(group)}
-                    />
-                  </div>
-                )}
               </div>
             )}
           </Droppable>
