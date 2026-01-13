@@ -18,6 +18,7 @@ import ChildAuth from "./pages/ChildAuth";
 import NotFound from "./pages/NotFound";
 import Rewards from "./pages/Rewards";
 import Lists from "./pages/Lists";
+import Goals from "./pages/Goals";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import MemberManagement from "./pages/admin/MemberManagement";
@@ -73,6 +74,7 @@ const App = () => (
                 <Route path="/child-auth" element={<ChildAuth />} />
                 <Route path="/rewards" element={<Rewards />} />
                 <Route path="/lists" element={<Lists />} />
+                <Route path="/goals" element={<Goals />} />
                 <Route path="/screensaver-preview" element={<ScreenSaverPreview />} />
                 
                 {/* Onboarding Routes */}
