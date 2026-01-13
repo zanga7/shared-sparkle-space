@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Users, List, Calendar, Gift, ArrowLeftRight, LayoutDashboard } from 'lucide-react';
+import { Settings, Users, List, Calendar, Gift, ArrowLeftRight, LayoutDashboard, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ActiveMemberChip } from '@/components/dashboard/ActiveMemberChip';
 import { useDashboardMode } from '@/hooks/useDashboardMode';
@@ -41,6 +41,10 @@ const navigationItems = [{
   label: 'Lists',
   value: 'lists',
   icon: List
+}, {
+  label: 'Goals',
+  value: 'goals',
+  icon: Target
 }, {
   label: 'Calendar',
   value: 'calendar',
