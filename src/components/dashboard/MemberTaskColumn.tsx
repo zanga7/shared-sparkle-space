@@ -78,6 +78,17 @@ export function MemberTaskColumn({
             }}
           />
         </div>
+        {showActions && (
+          <div className="pt-3">
+            <AddButton
+              className="text-xs"
+              style={{ ...colorStyles.border, ...colorStyles.text }}
+              text="Add Task"
+              showIcon={true}
+              onClick={() => onAddTaskForMember(member.id)}
+            />
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="p-0">
@@ -98,17 +109,6 @@ export function MemberTaskColumn({
         />
       </CardContent>
 
-      {showActions && (
-        <div className="px-4 pb-4">
-          <AddButton
-            className="w-full text-xs opacity-0 group-hover:opacity-75 transition-opacity"
-            style={{ ...colorStyles.border, ...colorStyles.text }}
-            text="Add Task"
-            showIcon={true}
-            onClick={() => onAddTaskForMember(member.id)}
-          />
-        </div>
-      )}
     </Card>
   );
 }
