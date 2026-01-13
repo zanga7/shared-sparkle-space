@@ -1265,7 +1265,8 @@ const ColumnBasedDashboard = () => {
     }
 
     const taskId = draggableId;
-    const task = tasks.find(t => t.id === taskId);
+    // Search in allTasks (includes virtual recurring instances) not just tasks
+    const task = allTasks.find(t => t.id === taskId);
     
     if (!task) {
       console.error('Task not found for drag operation:', taskId);
@@ -1277,16 +1278,51 @@ const ColumnBasedDashboard = () => {
       return;
     }
 
+    // Check if this is a virtual/recurring task instance
+    const isVirtualTask = (task as any).isVirtual === true;
+    
     // Virtual/recurring instances have composite IDs like "UUID-YYYY-MM-DD" and cannot be updated via tasks/task_assignees tables.
     const isUuid = typeof task.id === 'string' &&
       task.id.length === 36 &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(task.id);
 
-    if (!isUuid) {
+    // For virtual tasks, we need to check if they're trying to change members (not allowed)
+    // but changing task groups within the same member IS allowed (handled via series update)
+    if (isVirtualTask || !isUuid) {
+      // Parse source and destination to check if member is changing
+      const parseForMemberCheck = (id: string): string | null => {
+        if (id === 'unassigned') return null;
+        if (id.length === 36 && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+          return id;
+        }
+        const parts = id.split('-');
+        if (parts.length >= 6) {
+          const memberId = parts.slice(0, 5).join('-');
+          if (memberId.length === 36 && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(memberId)) {
+            return memberId;
+          }
+        }
+        return null;
+      };
+      
+      const sourceMember = parseForMemberCheck(source.droppableId);
+      const destMember = parseForMemberCheck(destination.droppableId);
+      
+      // If trying to change member assignment for a virtual task, block it
+      if (sourceMember !== destMember) {
+        toast({
+          title: 'Not supported',
+          description: 'Recurring task instances cannot be reassigned to different members. Edit the recurring task series instead.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // For task group changes within the same member, show info message
+      // (Virtual tasks don't persist group changes - they'd need series editing)
       toast({
-        title: 'Not supported',
-        description: 'Recurring task instances can’t be dragged. Edit the recurring task series instead.',
-        variant: 'destructive',
+        title: 'Recurring task',
+        description: 'To change the time slot for recurring tasks, edit the series in task settings.',
       });
       return;
     }
@@ -1360,7 +1396,8 @@ const ColumnBasedDashboard = () => {
       let needsUpdate = false;
       
       // Check if this is a group task (multiple assignees or everyone completion rule)
-      const currentTask = tasks.find(t => t.id === taskId);
+      // Use allTasks to also find virtual recurring tasks
+      const currentTask = allTasks.find(t => t.id === taskId);
       const isGroupTask = currentTask && (
         (currentTask.assignees && currentTask.assignees.length > 1) ||
         currentTask.completion_rule === 'everyone'
