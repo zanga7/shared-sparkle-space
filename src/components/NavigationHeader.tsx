@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Users, List, Calendar, Gift, ArrowLeftRight } from 'lucide-react';
+import { Settings, Users, List, Calendar, Gift, ArrowLeftRight, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ActiveMemberChip } from '@/components/dashboard/ActiveMemberChip';
 import { useDashboardMode } from '@/hooks/useDashboardMode';
@@ -33,6 +33,7 @@ interface NavigationHeaderProps {
 }
 
 const navigationItems = [
+  { label: 'Dashboard', value: 'dashboard', icon: LayoutDashboard },
   { label: 'Tasks', value: 'columns', icon: Users },
   { label: 'Lists', value: 'lists', icon: List },
   { label: 'Calendar', value: 'calendar', icon: Calendar },

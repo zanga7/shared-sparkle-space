@@ -23,6 +23,7 @@ import { EditTaskDialog } from '@/components/EditTaskDialog';
 import { CalendarView } from '@/components/CalendarView';
 import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
 import { MemberDashboard } from './MemberDashboard';
+import { FamilyDashboard } from './FamilyDashboard';
 import { RewardsGallery } from '@/components/rewards/RewardsGallery';
 import { ChildAuthProvider } from '@/hooks/useChildAuth';
 import Lists from '@/pages/Lists';
@@ -74,7 +75,7 @@ const ColumnBasedDashboard = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedMemberForTask, setSelectedMemberForTask] = useState<string | null>(null);
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('columns');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [viewMode, setViewMode] = useState<'everyone' | 'member'>('everyone'); // Track if showing everyone or specific member
   const [selectedTaskGroup, setSelectedTaskGroup] = useState<string | null>(null);
   
@@ -1962,11 +1963,25 @@ const ColumnBasedDashboard = () => {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             {/* Hidden tab list since navigation is in header */}
             <TabsList className="hidden">
+              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="columns">Tasks</TabsTrigger>
               <TabsTrigger value="lists">Lists</TabsTrigger>
               <TabsTrigger value="calendar">Calendar</TabsTrigger>
               <TabsTrigger value="rewards">Rewards</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="dashboard" className="mt-0">
+              <FamilyDashboard
+                familyMembers={familyMembers}
+                tasks={allTasks}
+                familyId={profile.family_id}
+                onNavigateToTasks={() => setActiveTab('columns')}
+                onMemberSelect={(memberId) => {
+                  setSelectedMemberFilter(memberId);
+                  setViewMode('member');
+                }}
+              />
+            </TabsContent>
 
           <TabsContent value="columns" className="mt-4 sm:mt-6">
             {viewMode === 'everyone' ? (
