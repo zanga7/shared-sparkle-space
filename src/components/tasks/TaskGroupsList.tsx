@@ -128,13 +128,14 @@ export const TaskGroupsList = ({
                 ) : (
                   groupTasks.map((task, index) => {
                     const isTaskCompleted = task.task_completions && task.task_completions.length > 0;
-                    const isVirtualTask = (task as any).isVirtual || false;
+                    // Virtual tasks CAN be dragged within their member's column (to change task group)
+                    // but cross-member drags for virtual tasks are blocked in handleDragEnd
                     return (
                       <Draggable 
                         key={task.id} 
                         draggableId={task.id} 
                         index={index}
-                        isDragDisabled={isTaskCompleted || isVirtualTask}
+                        isDragDisabled={isTaskCompleted}
                       >
                       {(provided, snapshot) => (
                         <div
