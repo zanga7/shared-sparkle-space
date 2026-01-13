@@ -234,6 +234,7 @@ export const CalendarView = ({
         completion_rule: vTask.completion_rule as 'any_one' | 'everyone',
         task_group: vTask.task_group,
         recurrence_options: vTask.recurrence_options,
+        series_assignee_count: (vTask as any).series_assignee_count,
         // CRITICAL: All virtual task flags must be explicitly set
         isVirtual: true,
         series_id: vTask.series_id,

@@ -43,6 +43,8 @@ export interface VirtualTaskInstance {
   task_group: string;
   completion_rule: string;
   assigned_profiles: string[];
+  /** Total assignees on the underlying series occurrence (used for UI like "Group" badge). */
+  series_assignee_count: number;
   due_date: string;
   family_id: string;
   created_by: string;
@@ -146,10 +148,11 @@ export const useTaskSeries = (familyId?: string) => {
         
         const completionRule = instance.overrideData?.completion_rule || series.completion_rule;
         const assignedProfiles = instance.overrideData?.assigned_profiles || series.assigned_profiles;
+        const seriesAssigneeCount = Array.isArray(assignedProfiles) ? assignedProfiles.length : 0;
         
         // For "everyone" completion rule with multiple assignees, create separate instances for each person
         if (completionRule === 'everyone' && assignedProfiles && assignedProfiles.length > 1) {
-          assignedProfiles.forEach((profileId, index) => {
+          assignedProfiles.forEach((profileId) => {
             const virtualTask: VirtualTaskInstance = {
               id: `${series.id}-${format(instance.date, 'yyyy-MM-dd')}-${profileId}`,
               series_id: series.id,
@@ -159,6 +162,7 @@ export const useTaskSeries = (familyId?: string) => {
               task_group: instance.overrideData?.task_group || series.task_group,
               completion_rule: completionRule,
               assigned_profiles: [profileId], // Single assignee per instance
+              series_assignee_count: seriesAssigneeCount,
               due_date: instance.date.toISOString(),
               family_id: series.family_id,
               created_by: series.created_by,
@@ -189,6 +193,7 @@ export const useTaskSeries = (familyId?: string) => {
             task_group: instance.overrideData?.task_group || series.task_group,
             completion_rule: completionRule,
             assigned_profiles: assignedProfiles,
+            series_assignee_count: seriesAssigneeCount,
             due_date: instance.date.toISOString(),
             family_id: series.family_id,
             created_by: series.created_by,

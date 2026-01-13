@@ -1661,6 +1661,7 @@ const ColumnBasedDashboard = () => {
         completion_rule: (vTask.completion_rule || 'everyone') as 'any_one' | 'everyone',
         task_group: vTask.task_group,
         recurrence_options: vTask.recurrence_options,
+        series_assignee_count: (vTask as any).series_assignee_count,
         assignees: vTask.assigned_profiles.map(profileId => {
           const memberProfile = familyMembers.find(m => m.id === profileId);
           return {

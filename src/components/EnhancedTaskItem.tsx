@@ -268,18 +268,20 @@ export const EnhancedTaskItem = ({
               </Badge>
             )}
 
-            {/* Group Task Indicator - show for group tasks with multiple assignees */}
-            {!task.rotating_task_id && (
-              // For virtual "everyone" tasks (split per person), show badge since they came from a group series
-              // For "any_one" tasks or regular tasks, require multiple assignees
-              (task as any).isVirtual && task.completion_rule === 'everyone' ? true :
-              (task.completion_rule === 'everyone' || task.completion_rule === 'any_one') && (task.assignees?.length ?? 0) > 1
-            ) && (
-              <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
-                <Users className="h-2 w-2" />
-                Group
-              </Badge>
-            )}
+            {/* Group Task Indicator - only when truly multi-assignee */}
+            {!task.rotating_task_id &&
+              (task.completion_rule === 'everyone' || task.completion_rule === 'any_one') &&
+              Math.max(
+                task.assignees?.length ?? 0,
+                typeof (task as any).series_assignee_count === 'number' ? (task as any).series_assignee_count : 0,
+                Array.isArray((task as any).assigned_profiles) ? (task as any).assigned_profiles.length : 0,
+                task.assigned_to ? 1 : 0
+              ) > 1 && (
+                <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
+                  <Users className="h-2 w-2" />
+                  Group
+                </Badge>
+              )}
 
             {/* Recurrence Indicator */}
             {(task.recurrence_options?.enabled || (task as any).isVirtual) && (
