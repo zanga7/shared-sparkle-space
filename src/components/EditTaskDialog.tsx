@@ -621,8 +621,8 @@ export const EditTaskDialog = ({
               </select>
             </div>
 
-            {/* Completion Rule - show when multiple assignees OR task already has completion_rule set, and not a rotating task */}
-            {(formData.assignees.length > 1 || task.completion_rule === 'everyone' || task.completion_rule === 'any_one') && !task.rotating_task_id && (
+            {/* Completion Rule - show when multiple assignees OR task/series already has completion_rule set, and not a rotating task */}
+            {(formData.assignees.length > 1 || task.completion_rule === 'everyone' || task.completion_rule === 'any_one' || formData.completion_rule === 'everyone' || formData.completion_rule === 'any_one') && !task.rotating_task_id && (
               <div className="space-y-3">
                 <Label>Completion Rule</Label>
                 <RadioGroup 
