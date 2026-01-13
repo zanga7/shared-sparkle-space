@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,25 +27,17 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // For POST requests, extract user from JWT (already verified by Supabase)
+    // For POST requests, verify user authentication properly
     if (req.method === 'POST') {
       const authHeader = req.headers.get('Authorization');
-      if (!authHeader) {
-        throw new Error('Missing authorization header');
+      if (!authHeader?.startsWith('Bearer ')) {
+        return new Response(
+          JSON.stringify({ error: 'Missing or invalid authorization header' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
-      // Extract and decode JWT - already verified by Supabase when verify_jwt=true
-      const jwt = authHeader.replace('Bearer ', '');
-      const payload = JSON.parse(atob(jwt.split('.')[1]));
-      const userId = payload.sub;
-      
-      if (!userId) {
-        throw new Error('No user ID in token');
-      }
-
-      console.log('Authenticated user:', userId);
-
-      // Create Supabase client for database operations
+      // Create Supabase client for authentication and database operations
       const supabaseClient = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -55,6 +47,29 @@ Deno.serve(async (req) => {
           },
         }
       );
+
+      // Properly verify JWT using Supabase auth - this cryptographically validates the token
+      const token = authHeader.replace('Bearer ', '');
+      const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+      
+      if (claimsError || !claimsData?.claims) {
+        console.error('JWT verification failed:', claimsError);
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized - invalid token' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const userId = claimsData.claims.sub;
+      
+      if (!userId) {
+        return new Response(
+          JSON.stringify({ error: 'No user ID in verified token' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('Authenticated user:', userId);
 
       const { action, code, state, profileId } = await req.json() as OAuthRequest;
 
@@ -162,6 +177,11 @@ Deno.serve(async (req) => {
 
       throw new Error('Invalid action or missing parameters');
     }
+
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }),
+      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
     console.error('Microsoft OAuth error:', error);
     return new Response(
