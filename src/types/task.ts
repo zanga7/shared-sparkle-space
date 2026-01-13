@@ -41,6 +41,8 @@ export interface Task {
   isVirtual?: boolean;
   series_id?: string;
   occurrence_date?: string;
+  /** Total assignees on the underlying series occurrence (used for UI like "Group" badge). */
+  series_assignee_count?: number;
   isException?: boolean;
   exceptionType?: 'skip' | 'override';
   overrideData?: any;
