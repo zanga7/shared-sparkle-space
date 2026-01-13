@@ -30,6 +30,7 @@ import { ScreenSaverPreview } from "./pages/ScreenSaverPreview";
 import Permissions from "./pages/admin/Permissions";
 import RotatingTasks from "./pages/admin/RotatingTasks";
 import RotationDebugger from "./pages/admin/RotationDebugger";
+import GoalsManagement from "./pages/admin/GoalsManagement";
 import HolidayManagement from "./pages/admin/HolidayManagement";
 import { SuperAdminGuard } from "./components/super-admin/SuperAdminGuard";
 import SuperAdminLayout from "./pages/super-admin/SuperAdminLayout";
@@ -93,6 +94,7 @@ const App = () => (
                   <Route path="permissions" element={<Permissions />} />
                   <Route path="screensaver" element={<ScreenSaverManagement />} />
                   <Route path="rotating-tasks" element={<RotatingTasks />} />
+                  <Route path="goals" element={<GoalsManagement />} />
                   <Route path="rotation-debugger" element={<RotationDebugger />} />
                   <Route path="holidays" element={<HolidayManagement />} />
                   <Route path="celebrations" element={<CelebrationsManagement />} />

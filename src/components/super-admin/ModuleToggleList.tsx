@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { CheckSquare, Calendar, List, Gift, RotateCw, Monitor } from 'lucide-react';
+import { CheckSquare, Calendar, List, Gift, RotateCw, Monitor, Target } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Module {
@@ -48,6 +48,12 @@ const AVAILABLE_MODULES: Module[] = [
     label: 'Screensaver',
     description: 'Custom screensaver with photos',
     icon: Monitor
+  },
+  {
+    name: 'goals',
+    label: 'Goals',
+    description: 'Track progress toward personal and family goals',
+    icon: Target
   }
 ];
 
