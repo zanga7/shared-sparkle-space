@@ -360,8 +360,12 @@ export const useTaskCompletion = ({
         return false;
       }
 
-      // Realtime will handle final state sync with correct data from DB
-      return true;
+       // Success callback if provided (important for virtual/recurring tasks which rely on refresh)
+       if (onSuccess) {
+         onSuccess();
+       }
+
+       return true;
 
     } catch (error) {
       console.error('Error in uncompleteTask:', error);
