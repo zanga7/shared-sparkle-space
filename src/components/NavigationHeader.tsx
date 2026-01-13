@@ -57,39 +57,29 @@ export function NavigationHeader({
   return (
     <header className="w-full border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="w-full px-2 sm:px-4 lg:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4 relative">
-        {/* Main Navigation - Only show if Dashboard Mode is enabled OR in member view */}
-        {dashboardModeEnabled && (
-          <nav className="flex items-center space-x-1 flex-shrink-0">
-            {navigationItems.map((item) => {
-              const IconComponent = item.icon;
-              return (
-                <Button
-                  key={item.value}
-                  variant={activeTab === item.value ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => onTabChange(item.value)}
-                  className={cn(
-                    "h-8 sm:h-9 px-2 sm:px-3 font-medium transition-colors",
-                    activeTab === item.value 
-                      ? "bg-primary text-primary-foreground shadow-sm" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                  )}
-                >
-                  <IconComponent className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">{item.label}</span>
-                </Button>
-              );
-            })}
-          </nav>
-        )}
-        
-        {/* Message when Dashboard Mode is disabled */}
-        {!dashboardModeEnabled && (
-          <div className="flex items-center space-x-2 text-muted-foreground flex-shrink-0">
-            <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="text-xs sm:text-sm font-medium">Member Dashboards Only</span>
-          </div>
-        )}
+        {/* Main Navigation - Always visible */}
+        <nav className="flex items-center space-x-1 flex-shrink-0">
+          {navigationItems.map((item) => {
+            const IconComponent = item.icon;
+            return (
+              <Button
+                key={item.value}
+                variant={activeTab === item.value ? "default" : "ghost"}
+                size="sm"
+                onClick={() => onTabChange(item.value)}
+                className={cn(
+                  "h-8 sm:h-9 px-2 sm:px-3 font-medium transition-colors",
+                  activeTab === item.value 
+                    ? "bg-primary text-primary-foreground shadow-sm" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                )}
+              >
+                <IconComponent className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">{item.label}</span>
+              </Button>
+            );
+          })}
+        </nav>
 
         {/* Member Management & Settings */}
         <div className="flex items-center space-x-1 sm:space-x-2 flex-1 justify-end mr-12 overflow-x-auto">
