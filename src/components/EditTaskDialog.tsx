@@ -465,8 +465,9 @@ export const EditTaskDialog = ({
     }
   };
 
-  // Determine if this is a group task (multiple assignees OR everyone completion rule)
-  const isGroupTask = formData.assignees.length > 1 || task.completion_rule === 'everyone';
+  // Determine if this is a group task (multiple assignees AND everyone completion rule)
+  // Single assignee with 'everyone' is NOT a group task
+  const isGroupTask = formData.assignees.length > 1 && formData.completion_rule === 'everyone';
   
   return (
     <>

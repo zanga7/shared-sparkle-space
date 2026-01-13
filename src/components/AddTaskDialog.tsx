@@ -50,7 +50,7 @@ export const AddTaskDialog = ({
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
   const setOpen = externalOnOpenChange || setInternalOpen;
   
-  // Initialize form data - no due date by default
+  // Initialize form data - no due date by default, completion_rule defaults to any_one
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -58,7 +58,7 @@ export const AddTaskDialog = ({
     assigned_to: 'unassigned',
     assignees: [] as string[],
     due_date: null as Date | null,
-    completion_rule: 'everyone' as 'any_one' | 'everyone',
+    completion_rule: 'any_one' as 'any_one' | 'everyone',
     task_group: preselectedTaskGroup || 'general',
   });
 
@@ -207,13 +207,16 @@ export const AddTaskDialog = ({
         });
       } else {
         // Create single task
+        // For single assignee, always use 'any_one' regardless of what's selected
+        const effectiveCompletionRule = formData.assignees.length === 1 ? 'any_one' : formData.completion_rule;
+        
         const taskData = {
           title: formData.title.trim(),
           description: formData.description.trim() || null,
           points: formData.points,
           assigned_to: formData.assignees.length === 1 ? formData.assignees[0] : null,
           due_date: formData.due_date?.toISOString() || null,
-          completion_rule: formData.completion_rule,
+          completion_rule: effectiveCompletionRule,
           task_group: formData.task_group,
           family_id: familyId,
           created_by: profileId,
@@ -264,7 +267,7 @@ export const AddTaskDialog = ({
         assigned_to: 'unassigned',
         assignees: [],
         due_date: null,
-        completion_rule: 'everyone',
+        completion_rule: 'any_one',
         task_group: preselectedTaskGroup || 'general',
       });
 
