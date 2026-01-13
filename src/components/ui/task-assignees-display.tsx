@@ -52,22 +52,9 @@ export function TaskAssigneesDisplay({
     );
   }
 
-  // For single assignee without showNames, show avatar
+  // For single assignee without showNames, don't show avatar (redundant)
   if (assignees.length === 1) {
-    return (
-      <div 
-        className={cn("cursor-pointer hover:opacity-80 transition-opacity", className)}
-        onClick={onClick}
-      >
-        <UserAvatar
-          name={assignees[0].display_name}
-          color={assignees[0].color}
-          avatarIcon={assignees[0].avatar_url || undefined}
-          size="sm"
-          title={assignees[0].display_name}
-        />
-      </div>
-    );
+    return null;
   }
 
   return (
