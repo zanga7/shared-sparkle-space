@@ -9,16 +9,42 @@ import type {
   GoalProgress, 
   CreateGoalData, 
   UpdateGoalData,
-  GoalStatus 
+  GoalStatus,
+  SuccessCriteria
 } from '@/types/goal';
+import type { Json } from '@/integrations/supabase/types';
 
 export function useGoals() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [familyId, setFamilyId] = useState<string | null>(null);
+  const [profileId, setProfileId] = useState<string | null>(null);
 
-  const familyId = profile?.family_id;
+  // Fetch the user's profile to get family_id
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) {
+        setFamilyId(null);
+        setProfileId(null);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, family_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profile) {
+        setFamilyId(profile.family_id);
+        setProfileId(profile.id);
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
 
   const fetchGoals = useCallback(async () => {
     if (!familyId) return;
@@ -56,7 +82,7 @@ export function useGoals() {
         
         milestonesData?.forEach(m => {
           if (!milestonesMap[m.goal_id]) milestonesMap[m.goal_id] = [];
-          milestonesMap[m.goal_id].push(m as GoalMilestone);
+          milestonesMap[m.goal_id].push(m as unknown as GoalMilestone);
         });
 
         // Fetch linked tasks
@@ -122,9 +148,10 @@ export function useGoals() {
           
           return {
             ...goal,
+            success_criteria: goal.success_criteria as unknown as SuccessCriteria,
             milestones: milestonesMap[goal.id] || [],
             linked_tasks: linkedTasksMap[goal.id] || [],
-            progress: progressData as GoalProgress
+            progress: progressData as unknown as GoalProgress
           } as Goal;
         })
       );
@@ -139,7 +166,7 @@ export function useGoals() {
   }, [familyId]);
 
   const createGoal = async (data: CreateGoalData): Promise<Goal | null> => {
-    if (!familyId || !profile?.id) {
+    if (!familyId || !profileId) {
       toast({ title: 'Error', description: 'Not authenticated', variant: 'destructive' });
       return null;
     }
@@ -156,10 +183,10 @@ export function useGoals() {
           goal_scope: data.goal_scope,
           assigned_to: data.assigned_to,
           reward_id: data.reward_id,
-          success_criteria: data.success_criteria,
+          success_criteria: data.success_criteria as unknown as Json,
           start_date: data.start_date,
           end_date: data.end_date,
-          created_by: profile.id
+          created_by: profileId
         })
         .select()
         .single();
@@ -172,7 +199,7 @@ export function useGoals() {
           goal_id: goal.id,
           title: m.title,
           milestone_order: m.milestone_order ?? idx,
-          completion_criteria: m.completion_criteria,
+          completion_criteria: m.completion_criteria as unknown as Json,
           reward_id: m.reward_id
         }));
 
@@ -188,17 +215,17 @@ export function useGoals() {
         ...(data.linked_task_ids || []).map(id => ({ 
           goal_id: goal.id, 
           task_id: id, 
-          linked_by: profile.id 
+          linked_by: profileId 
         })),
         ...(data.linked_series_ids || []).map(id => ({ 
           goal_id: goal.id, 
           task_series_id: id, 
-          linked_by: profile.id 
+          linked_by: profileId 
         })),
         ...(data.linked_rotating_ids || []).map(id => ({ 
           goal_id: goal.id, 
           rotating_task_id: id, 
-          linked_by: profile.id 
+          linked_by: profileId 
         }))
       ];
 
@@ -212,7 +239,10 @@ export function useGoals() {
 
       toast({ title: 'Success', description: 'Goal created successfully' });
       await fetchGoals();
-      return goal as Goal;
+      return {
+        ...goal,
+        success_criteria: goal.success_criteria as unknown as SuccessCriteria
+      } as Goal;
     } catch (err) {
       console.error('Error creating goal:', err);
       toast({ title: 'Error', description: 'Failed to create goal', variant: 'destructive' });
@@ -222,12 +252,22 @@ export function useGoals() {
 
   const updateGoal = async (goalId: string, data: UpdateGoalData): Promise<boolean> => {
     try {
+      const updateData: Record<string, unknown> = {
+        updated_at: new Date().toISOString()
+      };
+      
+      if (data.title !== undefined) updateData.title = data.title;
+      if (data.description !== undefined) updateData.description = data.description;
+      if (data.reward_id !== undefined) updateData.reward_id = data.reward_id;
+      if (data.end_date !== undefined) updateData.end_date = data.end_date;
+      if (data.status !== undefined) updateData.status = data.status;
+      if (data.success_criteria !== undefined) {
+        updateData.success_criteria = data.success_criteria as unknown as Json;
+      }
+
       const { error } = await supabase
         .from('goals')
-        .update({
-          ...data,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', goalId);
 
       if (error) throw error;
@@ -274,7 +314,7 @@ export function useGoals() {
     goalId: string, 
     taskRef: { task_id?: string; task_series_id?: string; rotating_task_id?: string }
   ): Promise<boolean> => {
-    if (!profile?.id) return false;
+    if (!profileId) return false;
 
     try {
       const { error } = await supabase
@@ -282,7 +322,7 @@ export function useGoals() {
         .insert({
           goal_id: goalId,
           ...taskRef,
-          linked_by: profile.id
+          linked_by: profileId
         });
 
       if (error) throw error;
@@ -336,9 +376,9 @@ export function useGoals() {
   };
 
   // Filter helpers
-  const getMyGoals = useCallback((profileId: string) => {
+  const getMyGoals = useCallback((id: string) => {
     return goals.filter(g => 
-      g.goal_scope === 'individual' && g.assigned_to === profileId
+      g.goal_scope === 'individual' && g.assigned_to === id
     );
   }, [goals]);
 
@@ -364,6 +404,8 @@ export function useGoals() {
     goals,
     loading,
     error,
+    profileId,
+    familyId,
     fetchGoals,
     createGoal,
     updateGoal,

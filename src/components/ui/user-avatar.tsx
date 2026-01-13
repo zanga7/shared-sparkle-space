@@ -10,11 +10,12 @@ import { useMemberColor } from "@/hooks/useMemberColor"
 interface UserAvatarProps extends React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root> {
   name: string
   color?: string
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'xs' | 'sm' | 'md' | 'lg'
   avatarIcon?: string
 }
 
 const sizeClasses = {
+  xs: 'h-5 w-5 text-[10px]',
   sm: 'h-6 w-6 text-xs',
   md: 'h-8 w-8 text-sm', 
   lg: 'h-10 w-10 text-base'
