@@ -262,15 +262,15 @@ export const EnhancedTaskItem = ({
 
             {/* Rotating Task Indicator */}
             {task.rotating_task_id && (
-              <Badge variant="outline" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 border-amber-500/50 text-amber-600 dark:text-amber-400">
+              <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
                 <RotateCw className="h-2 w-2" />
                 Rotate
               </Badge>
             )}
 
-            {/* Group Task Indicator - show for tasks with completion_rule set and multiple assignees */}
-            {!task.rotating_task_id && (task.completion_rule === 'everyone' || task.completion_rule === 'any_one') && (task.assignees?.length ?? 0) > 1 && (
-              <Badge variant="outline" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 border-violet-500/50 text-violet-600 dark:text-violet-400">
+            {/* Group Task Indicator - show for tasks with completion_rule set (virtual series tasks have this from series) */}
+            {!task.rotating_task_id && (task.completion_rule === 'everyone' || task.completion_rule === 'any_one') && (
+              <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
                 <Users className="h-2 w-2" />
                 Group
               </Badge>
@@ -278,7 +278,7 @@ export const EnhancedTaskItem = ({
 
             {/* Recurrence Indicator */}
             {(task.recurrence_options?.enabled || (task as any).isVirtual) && (
-              <Badge variant="outline" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 border-sky-500/50 text-sky-600 dark:text-sky-400">
+              <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
                 <Repeat className="h-2 w-2" />
                 Repeat
               </Badge>
