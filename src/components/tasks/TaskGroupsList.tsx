@@ -68,20 +68,7 @@ export const TaskGroupsList = ({
       general: tasks.filter(task => !task.task_group || task.task_group === 'general')
     };
     
-    // Sort each group: pending tasks first, then completed tasks
-    Object.keys(groups).forEach(key => {
-      const groupKey = key as TaskGroup;
-      groups[groupKey] = groups[groupKey].sort((a, b) => {
-        const aCompleted = isTaskCompletedForMember(a);
-        const bCompleted = isTaskCompletedForMember(b);
-        
-        // Pending tasks come before completed tasks
-        if (!aCompleted && bCompleted) return -1;
-        if (aCompleted && !bCompleted) return 1;
-        return 0;
-      });
-    });
-    
+    // Keep tasks in their original order - no reordering on completion
     return groups;
   };
 
