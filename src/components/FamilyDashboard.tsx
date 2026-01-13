@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useMemberColor } from '@/hooks/useMemberColor';
 import { useEvents } from '@/hooks/useEvents';
+import { useRewards } from '@/hooks/useRewards';
 import { Profile, Task } from '@/types/task';
 import { 
   CheckSquare, 
@@ -14,7 +15,7 @@ import {
   Sparkles,
   Clock,
   Star,
-  TrendingUp
+  Gift
 } from 'lucide-react';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { motion } from 'framer-motion';
@@ -24,6 +25,7 @@ interface FamilyDashboardProps {
   tasks: Task[];
   familyId: string;
   onNavigateToTasks: () => void;
+  onNavigateToCalendar?: () => void;
   onMemberSelect: (memberId: string) => void;
 }
 
@@ -32,11 +34,13 @@ const MemberStatCard = ({
   member, 
   todayTaskCount, 
   completedCount,
+  todayEventCount,
   onViewDashboard 
 }: { 
   member: Profile; 
   todayTaskCount: number;
   completedCount: number;
+  todayEventCount: number;
   onViewDashboard: () => void;
 }) => {
   const { hex, styles: colorStyles } = useMemberColor(member.color);
@@ -61,7 +65,7 @@ const MemberStatCard = ({
           style={{ background: `linear-gradient(135deg, ${hex}, transparent)` }}
         />
         
-        <CardContent className="p-4 sm:p-6 relative">
+        <CardContent className="p-4 relative">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="relative">
@@ -97,9 +101,12 @@ const MemberStatCard = ({
           </div>
           
           {/* Task progress */}
-          <div className="space-y-2">
+          <div className="space-y-2 mb-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Today's Tasks</span>
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <CheckSquare className="h-3.5 w-3.5" />
+                <span>Today's Tasks</span>
+              </div>
               <span className="font-medium">{completedCount}/{todayTaskCount}</span>
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -112,9 +119,18 @@ const MemberStatCard = ({
               />
             </div>
           </div>
+
+          {/* Events count */}
+          <div className="flex items-center justify-between text-sm mb-3">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Calendar className="h-3.5 w-3.5" />
+              <span>Today's Events</span>
+            </div>
+            <span className="font-medium">{todayEventCount}</span>
+          </div>
           
           {/* Quick action */}
-          <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">
               {pendingCount > 0 ? `${pendingCount} pending` : 'All done! 🎉'}
             </span>
@@ -127,7 +143,7 @@ const MemberStatCard = ({
 };
 
 // Today's events widget
-const TodayEventsWidget = ({ events, familyId }: { events: any[]; familyId: string }) => {
+const TodayEventsWidget = ({ events, onViewCalendar }: { events: any[]; onViewCalendar?: () => void }) => {
   const today = startOfDay(new Date());
   const todayEnd = endOfDay(today);
   
@@ -141,10 +157,23 @@ const TodayEventsWidget = ({ events, familyId }: { events: any[]; familyId: stri
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Calendar className="h-5 w-5 text-primary" />
-          Today's Schedule
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Calendar className="h-5 w-5 text-primary" />
+            Today's Schedule
+          </CardTitle>
+          {onViewCalendar && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={onViewCalendar}
+              className="gap-2"
+            >
+              <Calendar className="h-4 w-4" />
+              View Calendar
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {todayEvents.length === 0 ? (
@@ -153,7 +182,7 @@ const TodayEventsWidget = ({ events, familyId }: { events: any[]; familyId: stri
             <p className="text-sm">No events scheduled for today</p>
           </div>
         ) : (
-          <div className="space-y-3 max-h-[300px] overflow-y-auto">
+          <div className="space-y-3 max-h-[400px] overflow-y-auto">
             {todayEvents.map((event, index) => (
               <motion.div
                 key={event.id}
@@ -202,80 +231,66 @@ const TodayEventsWidget = ({ events, familyId }: { events: any[]; familyId: stri
   );
 };
 
-// Individual leaderboard row component to properly use hooks
-const LeaderboardRow = ({ 
-  member, 
-  index, 
-  topScore 
-}: { 
-  member: Profile; 
-  index: number; 
-  topScore: number;
-}) => {
-  const { hex } = useMemberColor(member.color);
-  const barWidth = topScore > 0 ? (member.total_points / topScore) * 100 : 0;
-  
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.1 }}
-      className="flex items-center gap-3"
-    >
-      <span className="w-6 text-center font-bold text-muted-foreground">
-        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`}
-      </span>
-      <UserAvatar 
-        name={member.display_name} 
-        color={member.color}
-        avatarIcon={member.avatar_url || undefined}
-        size="sm"
-      />
-      <div className="flex-1">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-sm font-medium">{member.display_name}</span>
-          <span className="text-sm font-bold" style={{ color: hex }}>
-            {member.total_points}
-          </span>
-        </div>
-        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-          <motion.div
-            className="h-full rounded-full"
-            style={{ backgroundColor: hex }}
-            initial={{ width: 0 }}
-            animate={{ width: `${barWidth}%` }}
-            transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
-          />
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-// Family leaderboard widget
-const LeaderboardWidget = ({ members }: { members: Profile[] }) => {
-  const sortedMembers = [...members].sort((a, b) => b.total_points - a.total_points);
-  const topScore = sortedMembers[0]?.total_points || 0;
+// Rewards widget
+const RewardsWidget = ({ rewards }: { rewards: any[] }) => {
+  const activeRewards = rewards.filter(r => r.is_active);
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <TrendingUp className="h-5 w-5 text-primary" />
-          Points Leaderboard
+          <Gift className="h-5 w-5 text-primary" />
+          Available Rewards
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          {sortedMembers.map((member, index) => (
-            <LeaderboardRow
-              key={member.id}
-              member={member}
-              index={index}
-              topScore={topScore}
-            />
-          ))}
-        </div>
+        {activeRewards.length === 0 ? (
+          <div className="text-center py-6 text-muted-foreground">
+            <Gift className="h-10 w-10 mx-auto mb-2 opacity-30" />
+            <p className="text-sm">No rewards available</p>
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            {activeRewards.slice(0, 6).map((reward, index) => (
+              <motion.div
+                key={reward.id}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+              >
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
+                    {reward.image_url ? (
+                      <img 
+                        src={reward.image_url} 
+                        alt={reward.title}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <Gift className="h-5 w-5 text-amber-500" />
+                    )}
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{reward.title}</p>
+                  <p className="text-sm text-muted-foreground capitalize">
+                    {reward.reward_type.replace('_', ' ')}
+                  </p>
+                </div>
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <Trophy className="h-3 w-3 text-amber-500" />
+                  {reward.cost_points}
+                </Badge>
+              </motion.div>
+            ))}
+            {activeRewards.length > 6 && (
+              <p className="text-xs text-center text-muted-foreground pt-2">
+                +{activeRewards.length - 6} more rewards
+              </p>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -286,10 +301,40 @@ export const FamilyDashboard = ({
   tasks,
   familyId,
   onNavigateToTasks,
+  onNavigateToCalendar,
   onMemberSelect
 }: FamilyDashboardProps) => {
   const { events = [] } = useEvents(familyId);
+  const { rewards = [] } = useRewards();
   
+  // Calculate today's events for each member
+  const todayMemberEvents = useMemo(() => {
+    const today = startOfDay(new Date());
+    const todayEnd = endOfDay(today);
+    
+    const memberEventCounts: Record<string, number> = {};
+    
+    familyMembers.forEach(member => {
+      memberEventCounts[member.id] = 0;
+    });
+    
+    events.forEach(event => {
+      const eventDate = new Date(event.start_date);
+      if (eventDate >= today && eventDate <= todayEnd) {
+        // Count events for each attendee
+        if (event.attendees && event.attendees.length > 0) {
+          event.attendees.forEach((attendee: any) => {
+            if (memberEventCounts[attendee.profile_id] !== undefined) {
+              memberEventCounts[attendee.profile_id]++;
+            }
+          });
+        }
+      }
+    });
+    
+    return memberEventCounts;
+  }, [events, familyMembers]);
+
   // Calculate task stats for each member
   const memberStats = useMemo(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
@@ -316,19 +361,20 @@ export const FamilyDashboard = ({
       return {
         member,
         todayTaskCount: memberTasks.length,
-        completedCount: completedTasks.length
+        completedCount: completedTasks.length,
+        todayEventCount: todayMemberEvents[member.id] || 0
       };
     });
-  }, [familyMembers, tasks]);
+  }, [familyMembers, tasks, todayMemberEvents]);
 
-  // Calculate total family stats
-  const totalTasks = memberStats.reduce((sum, s) => sum + s.todayTaskCount, 0);
-  const totalCompleted = memberStats.reduce((sum, s) => sum + s.completedCount, 0);
-  const totalPoints = familyMembers.reduce((sum, m) => sum + m.total_points, 0);
+  // Sort members by points (descending)
+  const sortedMemberStats = useMemo(() => {
+    return [...memberStats].sort((a, b) => b.member.total_points - a.member.total_points);
+  }, [memberStats]);
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
-      {/* Header with family stats */}
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -344,55 +390,10 @@ export const FamilyDashboard = ({
         </p>
       </motion.div>
 
-      {/* Quick stats row */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-            <CardContent className="p-4 text-center">
-              <CheckSquare className="h-8 w-8 mx-auto mb-2 text-primary" />
-              <p className="text-3xl font-bold">{totalCompleted}/{totalTasks}</p>
-              <p className="text-sm text-muted-foreground">Tasks Today</p>
-            </CardContent>
-          </Card>
-        </motion.div>
-        
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
-            <CardContent className="p-4 text-center">
-              <Trophy className="h-8 w-8 mx-auto mb-2 text-amber-500" />
-              <p className="text-3xl font-bold">{totalPoints}</p>
-              <p className="text-sm text-muted-foreground">Total Points</p>
-            </CardContent>
-          </Card>
-        </motion.div>
-        
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
-            <CardContent className="p-4 text-center">
-              <Calendar className="h-8 w-8 mx-auto mb-2 text-green-500" />
-              <p className="text-3xl font-bold">{familyMembers.length}</p>
-              <p className="text-sm text-muted-foreground">Family Members</p>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Main content grid */}
+      {/* Main content grid - 3 columns */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Member cards - takes 2 columns on large screens */}
-        <div className="lg:col-span-2">
+        {/* Left column - Family Members (sorted by points) */}
+        <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Family Members</h2>
             <Button 
@@ -402,27 +403,32 @@ export const FamilyDashboard = ({
               className="gap-2"
             >
               <CheckSquare className="h-4 w-4" />
-              View All Tasks
+              Tasks Dashboard
             </Button>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {memberStats.map((stat, index) => (
+          <div className="space-y-4">
+            {sortedMemberStats.map((stat, index) => (
               <MemberStatCard
                 key={stat.member.id}
                 member={stat.member}
                 todayTaskCount={stat.todayTaskCount}
                 completedCount={stat.completedCount}
+                todayEventCount={stat.todayEventCount}
                 onViewDashboard={() => onMemberSelect(stat.member.id)}
               />
             ))}
           </div>
         </div>
 
-        {/* Sidebar - Events and Leaderboard */}
-        <div className="space-y-6">
-          <TodayEventsWidget events={events} familyId={familyId} />
-          <LeaderboardWidget members={familyMembers} />
+        {/* Center column - Today's Schedule */}
+        <div>
+          <TodayEventsWidget events={events} onViewCalendar={onNavigateToCalendar} />
+        </div>
+
+        {/* Right column - Rewards */}
+        <div>
+          <RewardsWidget rewards={rewards} />
         </div>
       </div>
     </div>
