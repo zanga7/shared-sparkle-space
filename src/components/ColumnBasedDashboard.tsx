@@ -166,15 +166,7 @@ const ColumnBasedDashboard = () => {
     }
   };
 
-  // Force member view when Dashboard Mode is disabled
-  useEffect(() => {
-    if (!dashboardMode && profile && viewMode === 'everyone') {
-      // Automatically switch to the authenticated user's member view
-      setViewMode('member');
-      setSelectedMemberFilter(profile.id);
-      setActiveTab('');
-    }
-  }, [dashboardMode, profile, viewMode]);
+  // Dashboard tab is the default landing - no forced member view
 
   const hasFetchedRef = useRef(false);
   const isFetchingRef = useRef(false);
