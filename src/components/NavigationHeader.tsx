@@ -89,7 +89,7 @@ export function NavigationHeader({
             </> : <>
               {/* Member selection for dashboard views */}
               <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto">
-                {familyMembers.map(member => <Button key={member.id} variant={selectedMember === member.id && viewMode === 'member' ? "default" : "ghost"} size="sm" onClick={() => onMemberSelect(member.id)} className="h-8 sm:h-9 px-1 sm:px-2 font-medium space-x-1 sm:space-x-2 flex-shrink-0 flex items-center justify-center">
+                {familyMembers.map(member => <Button key={member.id} variant={selectedMember === member.id && viewMode === 'member' ? "default" : "ghost"} size="sm" onClick={() => onMemberSelect(member.id)} className="h-8 sm:h-9 px-1 sm:px-2 font-medium space-x-0.5 sm:space-x-1 flex-shrink-0 flex items-center justify-center">
                     <UserAvatar name={member.display_name} color={member.color} avatarIcon={member.avatar_url || undefined} size="sm" />
                     <span className="hidden md:inline text-xs sm:text-sm">{member.display_name}</span>
                     <Badge variant="secondary" className="text-[10px] sm:text-xs font-semibold bg-background/80 px-1 border border-muted-foreground sm:px-[10px]">
