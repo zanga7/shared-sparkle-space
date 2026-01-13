@@ -11,10 +11,8 @@ import {
   CheckSquare, 
   Calendar, 
   Trophy,
-  ArrowRight,
   Sparkles,
   Clock,
-  Star,
   Gift
 } from 'lucide-react';
 import { format, startOfDay, endOfDay } from 'date-fns';
@@ -43,8 +41,7 @@ const MemberStatCard = ({
   todayEventCount: number;
   onViewDashboard: () => void;
 }) => {
-  const { hex, styles: colorStyles } = useMemberColor(member.color);
-  const pendingCount = todayTaskCount - completedCount;
+  const { hex } = useMemberColor(member.color);
   const progressPercent = todayTaskCount > 0 ? (completedCount / todayTaskCount) * 100 : 0;
 
   return (
@@ -68,19 +65,12 @@ const MemberStatCard = ({
         <CardContent className="p-4 relative">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="relative">
-                <UserAvatar 
-                  name={member.display_name} 
-                  color={member.color}
-                  avatarIcon={member.avatar_url || undefined}
-                  size="lg"
-                />
-                {progressPercent === 100 && todayTaskCount > 0 && (
-                  <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5">
-                    <Star className="h-3 w-3 text-white fill-white" />
-                  </div>
-                )}
-              </div>
+              <UserAvatar 
+                name={member.display_name} 
+                color={member.color}
+                avatarIcon={member.avatar_url || undefined}
+                size="lg"
+              />
               <div>
                 <h3 className="font-semibold text-lg">{member.display_name}</h3>
                 <Badge variant="outline" className="text-xs capitalize">
@@ -106,6 +96,9 @@ const MemberStatCard = ({
               <div className="flex items-center gap-1.5 text-muted-foreground">
                 <CheckSquare className="h-3.5 w-3.5" />
                 <span>Today's Tasks</span>
+                {progressPercent === 100 && todayTaskCount > 0 && (
+                  <span className="ml-1">🎉</span>
+                )}
               </div>
               <span className="font-medium">{completedCount}/{todayTaskCount}</span>
             </div>
@@ -121,20 +114,12 @@ const MemberStatCard = ({
           </div>
 
           {/* Events count */}
-          <div className="flex items-center justify-between text-sm mb-3">
+          <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Calendar className="h-3.5 w-3.5" />
               <span>Today's Events</span>
             </div>
             <span className="font-medium">{todayEventCount}</span>
-          </div>
-          
-          {/* Quick action */}
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">
-              {pendingCount > 0 ? `${pendingCount} pending` : 'All done! 🎉'}
-            </span>
-            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
           </div>
         </CardContent>
       </Card>
