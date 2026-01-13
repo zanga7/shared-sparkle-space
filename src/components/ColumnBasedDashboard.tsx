@@ -863,14 +863,14 @@ const ColumnBasedDashboard = () => {
               `);
 
             if (!materializedError && materializedData) {
-              const materializedMap = new Map<string, any[]>();
+              const newMaterializedMap = new Map<string, any[]>();
               materializedData.forEach((instance: any) => {
                 if (instance.materialized_task?.task_completions) {
                   const key = `${instance.series_id}-${instance.occurrence_date}`;
-                  materializedMap.set(key, instance.materialized_task.task_completions);
+                  newMaterializedMap.set(key, instance.materialized_task.task_completions);
                 }
               });
-              (window as any).__materializedCompletionsMap = materializedMap;
+              setMaterializedCompletionsMap(newMaterializedMap);
             }
             
             
@@ -974,18 +974,18 @@ const ColumnBasedDashboard = () => {
       }
 
       // Create a map of series_id + occurrence_date -> completions
-      const materializedMap = new Map<string, any[]>();
+      const newMaterializedMap = new Map<string, any[]>();
       if (materializedData) {
         materializedData.forEach((instance: any) => {
           if (instance.materialized_task?.task_completions) {
             const key = `${instance.series_id}-${instance.occurrence_date}`;
-            materializedMap.set(key, instance.materialized_task.task_completions);
+            newMaterializedMap.set(key, instance.materialized_task.task_completions);
           }
         });
       }
 
-      // Store the materialized map globally for use in virtual task generation
-      (window as any).__materializedCompletionsMap = materializedMap;
+      // Use React state for materialized completions map
+      setMaterializedCompletionsMap(newMaterializedMap);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
