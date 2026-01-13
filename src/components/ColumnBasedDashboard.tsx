@@ -116,6 +116,7 @@ const ColumnBasedDashboard = () => {
 
   // Task series hook for generating virtual recurring task instances
   const {
+    taskSeries,
     generateVirtualTaskInstances,
     fetchTaskSeries
   } = useTaskSeries(profile?.family_id || null);
@@ -1573,7 +1574,10 @@ const ColumnBasedDashboard = () => {
       }
 
       // CRITICAL: Also refresh materialized task instances for virtual task completions
-      const { data: materializedData, error: materializedError } = await supabase
+      // NOTE: materialized_task_instances doesn't have family_id, so we filter by this family's series ids.
+      const seriesIds = (taskSeries || []).map(s => s.id).filter(Boolean);
+
+      let materializedQuery = supabase
         .from('materialized_task_instances')
         .select(`
           id,
@@ -1583,8 +1587,13 @@ const ColumnBasedDashboard = () => {
             id,
             task_completions(id, completed_at, completed_by)
           )
-        `)
-        .eq('series_id', supabase.rpc ? undefined : undefined); // Fetch all for family
+        `);
+
+      if (seriesIds.length > 0) {
+        materializedQuery = materializedQuery.in('series_id', seriesIds);
+      }
+
+      const { data: materializedData, error: materializedError } = await materializedQuery;
 
       if (!materializedError && materializedData) {
         const newMaterializedMap = new Map<string, any[]>();
