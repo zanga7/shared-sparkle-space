@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Target, Users, Filter } from 'lucide-react';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { Button } from '@/components/ui/button';
@@ -18,18 +18,50 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRewards } from '@/hooks/useRewards';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
 import { Skeleton } from '@/components/ui/skeleton';
+import { supabase } from '@/integrations/supabase/client';
 import type { Goal, GoalStatus } from '@/types/goal';
 
+interface FamilyMember {
+  id: string;
+  display_name: string;
+  color: string;
+  avatar_url?: string | null;
+  total_points: number;
+  role: 'parent' | 'child';
+}
+
 export default function Goals() {
-  const { profile, familyMembers } = useAuth();
-  const { goals, loading, pauseGoal, resumeGoal, archiveGoal, getMyGoals, getFamilyGoals } = useGoals();
+  const { user } = useAuth();
+  const { goals, loading, pauseGoal, resumeGoal, archiveGoal, getMyGoals, getFamilyGoals, profileId, familyId } = useGoals();
   const { rewards } = useRewards();
-  const { hasModule } = useModuleAccess(profile?.family_id);
+  const { hasModule } = useModuleAccess(familyId);
   
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [statusFilter, setStatusFilter] = useState<GoalStatus | 'all'>('active');
   const [activeTab, setActiveTab] = useState('my');
+
+  // Fetch family members
+  useEffect(() => {
+    const fetchFamilyMembers = async () => {
+      if (!familyId) return;
+
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, display_name, color, avatar_url, total_points, role')
+        .eq('family_id', familyId)
+        .eq('status', 'active')
+        .order('role', { ascending: false })
+        .order('display_name');
+
+      if (data) {
+        setFamilyMembers(data as FamilyMember[]);
+      }
+    };
+
+    fetchFamilyMembers();
+  }, [familyId]);
 
   // Check module access
   if (!hasModule('goals')) {
@@ -39,8 +71,10 @@ export default function Goals() {
           familyMembers={familyMembers}
           selectedMember={null}
           onMemberSelect={() => {}}
-          viewMode="family"
-          onViewModeChange={() => {}}
+          onSettingsClick={() => {}}
+          activeTab="goals"
+          onTabChange={() => {}}
+          viewMode="everyone"
         />
         <div className="container max-w-4xl mx-auto px-4 py-16 text-center">
           <Target className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
@@ -53,7 +87,7 @@ export default function Goals() {
     );
   }
 
-  const myGoals = profile?.id ? getMyGoals(profile.id) : [];
+  const myGoals = profileId ? getMyGoals(profileId) : [];
   const familyGoalsList = getFamilyGoals();
 
   const filterByStatus = (goalsList: Goal[]) => {
@@ -70,8 +104,10 @@ export default function Goals() {
         familyMembers={familyMembers}
         selectedMember={null}
         onMemberSelect={() => {}}
-        viewMode="family"
-        onViewModeChange={() => {}}
+        onSettingsClick={() => {}}
+        activeTab="goals"
+        onTabChange={() => {}}
+        viewMode="everyone"
       />
       
       <div className="container max-w-4xl mx-auto px-4 py-6">

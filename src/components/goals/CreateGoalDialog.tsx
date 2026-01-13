@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { useAuth } from '@/hooks/useAuth';
 import { useGoals } from '@/hooks/useGoals';
 import type { 
   GoalType, 
@@ -45,8 +44,7 @@ export function CreateGoalDialog({
   familyMembers, 
   rewards 
 }: CreateGoalDialogProps) {
-  const { profile } = useAuth();
-  const { createGoal } = useGoals();
+  const { createGoal, profileId } = useGoals();
   
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -127,7 +125,7 @@ export function CreateGoalDialog({
       description: description || undefined,
       goal_type: goalType,
       goal_scope: goalScope,
-      assigned_to: goalScope === 'individual' ? (assignedTo || profile?.id) : undefined,
+      assigned_to: goalScope === 'individual' ? (assignedTo || profileId) : undefined,
       reward_id: rewardId || undefined,
       success_criteria: successCriteria,
       start_date: startDate,
@@ -246,7 +244,7 @@ export function CreateGoalDialog({
             {goalScope === 'individual' && (
               <div className="space-y-2">
                 <Label>Assigned to</Label>
-                <Select value={assignedTo || profile?.id || ''} onValueChange={setAssignedTo}>
+                <Select value={assignedTo || profileId || ''} onValueChange={setAssignedTo}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select member" />
                   </SelectTrigger>
