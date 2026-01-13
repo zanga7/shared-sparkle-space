@@ -1976,6 +1976,7 @@ const ColumnBasedDashboard = () => {
                 tasks={allTasks}
                 familyId={profile.family_id}
                 onNavigateToTasks={() => setActiveTab('columns')}
+                onNavigateToCalendar={() => setActiveTab('calendar')}
                 onMemberSelect={(memberId) => {
                   setSelectedMemberFilter(memberId);
                   setViewMode('member');
