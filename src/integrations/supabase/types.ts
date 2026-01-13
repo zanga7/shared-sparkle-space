@@ -2314,6 +2314,7 @@ export type Database = {
             }
             Returns: Json
           }
+      calculate_goal_progress: { Args: { p_goal_id: string }; Returns: Json }
       can_access_calendar_integration: {
         Args: { integration_profile_id: string }
         Returns: boolean
