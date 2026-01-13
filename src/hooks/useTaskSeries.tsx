@@ -45,13 +45,15 @@ export interface VirtualTaskInstance {
   assigned_profiles: string[];
   /** Total assignees on the underlying series occurrence (used for UI like "Group" badge). */
   series_assignee_count: number;
-  due_date: string;
+  /** Optional deadline - separate from occurrence_date. Can be null if no specific deadline. */
+  due_date: string | null;
+  /** The date this instance appears based on recurrence schedule (YYYY-MM-DD format) */
+  occurrence_date: string;
   family_id: string;
   created_by: string;
   isVirtual: true;
   isException: boolean;
   exceptionType?: 'skip' | 'override';
-  occurrence_date: string;
   recurrence_options: TaskRecurrenceOptions;
 }
 
@@ -163,13 +165,15 @@ export const useTaskSeries = (familyId?: string) => {
               completion_rule: completionRule,
               assigned_profiles: [profileId], // Single assignee per instance
               series_assignee_count: seriesAssigneeCount,
-              due_date: instance.date.toISOString(),
+              // due_date is optional deadline, separate from when the task occurs
+              due_date: instance.overrideData?.due_date || null,
+              // occurrence_date is when this instance appears based on recurrence
+              occurrence_date: format(instance.date, 'yyyy-MM-dd'),
               family_id: series.family_id,
               created_by: series.created_by,
               isVirtual: true,
               isException: instance.isException,
               exceptionType: instance.exceptionType,
-              occurrence_date: format(instance.date, 'yyyy-MM-dd'),
               recurrence_options: {
                 enabled: true,
                 rule: series.recurrence_rule,
@@ -194,13 +198,15 @@ export const useTaskSeries = (familyId?: string) => {
             completion_rule: completionRule,
             assigned_profiles: assignedProfiles,
             series_assignee_count: seriesAssigneeCount,
-            due_date: instance.date.toISOString(),
+            // due_date is optional deadline, separate from when the task occurs
+            due_date: instance.overrideData?.due_date || null,
+            // occurrence_date is when this instance appears based on recurrence
+            occurrence_date: format(instance.date, 'yyyy-MM-dd'),
             family_id: series.family_id,
             created_by: series.created_by,
             isVirtual: true,
             isException: instance.isException,
             exceptionType: instance.exceptionType,
-            occurrence_date: format(instance.date, 'yyyy-MM-dd'),
             recurrence_options: {
               enabled: true,
               rule: series.recurrence_rule,
