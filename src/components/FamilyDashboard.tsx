@@ -27,7 +27,7 @@ interface FamilyDashboardProps {
   onMemberSelect: (memberId: string) => void;
 }
 
-// Member card component with dynamic stats
+// Member card component with dynamic stats - full color background
 const MemberStatCard = ({ 
   member, 
   todayTaskCount, 
@@ -52,28 +52,31 @@ const MemberStatCard = ({
       transition={{ duration: 0.2 }}
     >
       <Card 
-        className="relative overflow-hidden cursor-pointer group transition-all duration-300 hover:shadow-xl border-2"
-        style={{ borderColor: `${hex}40` }}
+        className="relative overflow-hidden cursor-pointer group transition-all duration-300 hover:shadow-xl border-0"
+        style={{ backgroundColor: hex }}
         onClick={onViewDashboard}
       >
-        {/* Gradient background accent */}
+        {/* Gradient overlay for depth */}
         <div 
-          className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity"
-          style={{ background: `linear-gradient(135deg, ${hex}, transparent)` }}
+          className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity"
+          style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.2), transparent)' }}
         />
         
         <CardContent className="p-4 relative">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
-              <UserAvatar 
-                name={member.display_name} 
-                color={member.color}
-                avatarIcon={member.avatar_url || undefined}
-                size="lg"
-              />
+              <div className="bg-white/20 rounded-full p-0.5">
+                <UserAvatar 
+                  name={member.display_name} 
+                  color="white"
+                  avatarIcon={member.avatar_url || undefined}
+                  size="lg"
+                  className="border-2 border-white/50"
+                />
+              </div>
               <div>
-                <h3 className="font-semibold text-lg">{member.display_name}</h3>
-                <Badge variant="outline" className="text-xs capitalize">
+                <h3 className="font-semibold text-lg text-white">{member.display_name}</h3>
+                <Badge variant="secondary" className="text-xs capitalize bg-white/20 text-white border-0">
                   {member.role}
                 </Badge>
               </div>
@@ -81,31 +84,30 @@ const MemberStatCard = ({
             
             <div className="text-right">
               <div className="flex items-center gap-1 justify-end">
-                <Trophy className="h-4 w-4 text-amber-500" />
-                <span className="text-2xl font-bold" style={{ color: hex }}>
+                <Trophy className="h-4 w-4 text-white/80" />
+                <span className="text-2xl font-bold text-white">
                   {member.total_points}
                 </span>
               </div>
-              <span className="text-xs text-muted-foreground">points</span>
+              <span className="text-xs text-white/70">points</span>
             </div>
           </div>
           
           {/* Task progress */}
           <div className="space-y-2 mb-3">
             <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-1.5 text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-white/80">
                 <CheckSquare className="h-3.5 w-3.5" />
                 <span>Today's Tasks</span>
                 {progressPercent === 100 && todayTaskCount > 0 && (
                   <span className="ml-1">🎉</span>
                 )}
               </div>
-              <span className="font-medium">{completedCount}/{todayTaskCount}</span>
+              <span className="font-medium text-white">{completedCount}/{todayTaskCount}</span>
             </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div className="h-2 bg-white/20 rounded-full overflow-hidden">
               <motion.div 
-                className="h-full rounded-full"
-                style={{ backgroundColor: hex }}
+                className="h-full rounded-full bg-white"
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPercent}%` }}
                 transition={{ duration: 0.5, delay: 0.2 }}
@@ -115,11 +117,11 @@ const MemberStatCard = ({
 
           {/* Events count */}
           <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-1.5 text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-white/80">
               <Calendar className="h-3.5 w-3.5" />
               <span>Today's Events</span>
             </div>
-            <span className="font-medium">{todayEventCount}</span>
+            <span className="font-medium text-white">{todayEventCount}</span>
           </div>
         </CardContent>
       </Card>
@@ -141,12 +143,12 @@ const TodayEventsWidget = ({ events, onViewCalendar }: { events: any[]; onViewCa
 
   return (
     <Card className="h-full">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 pt-0">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
+          <h2 className="flex items-center gap-2 text-xl font-semibold">
             <Calendar className="h-5 w-5 text-primary" />
             Today's Schedule
-          </CardTitle>
+          </h2>
           {onViewCalendar && (
             <Button 
               variant="outline" 
@@ -222,11 +224,11 @@ const RewardsWidget = ({ rewards }: { rewards: any[] }) => {
 
   return (
     <Card className="h-full">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
+      <CardHeader className="pb-3 pt-0">
+        <h2 className="flex items-center gap-2 text-xl font-semibold">
           <Gift className="h-5 w-5 text-primary" />
           Available Rewards
-        </CardTitle>
+        </h2>
       </CardHeader>
       <CardContent>
         {activeRewards.length === 0 ? (
@@ -375,22 +377,29 @@ export const FamilyDashboard = ({
         </p>
       </motion.div>
 
-      {/* Main content grid - 3 columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main content grid - 3 columns with aligned headers */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Left column - Family Members (sorted by points) */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Family Members</h2>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={onNavigateToTasks}
-              className="gap-2"
-            >
-              <CheckSquare className="h-4 w-4" />
-              Tasks Dashboard
-            </Button>
-          </div>
+        <div className="space-y-4">
+          <Card className="border-0 shadow-none bg-transparent">
+            <CardHeader className="pb-3 pt-0 px-0">
+              <div className="flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-xl font-semibold">
+                  <Trophy className="h-5 w-5 text-primary" />
+                  Family Members
+                </h2>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={onNavigateToTasks}
+                  className="gap-2"
+                >
+                  <CheckSquare className="h-4 w-4" />
+                  Tasks Dashboard
+                </Button>
+              </div>
+            </CardHeader>
+          </Card>
           
           <div className="space-y-4">
             {sortedMemberStats.map((stat, index) => (
