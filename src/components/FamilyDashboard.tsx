@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import { Badge } from '@/components/ui/badge';
 import { useMemberColor } from '@/hooks/useMemberColor';
 import { useEvents } from '@/hooks/useEvents';
 import { useRewards } from '@/hooks/useRewards';
@@ -27,7 +27,7 @@ interface FamilyDashboardProps {
   onMemberSelect: (memberId: string) => void;
 }
 
-// Member card component with dynamic stats - full color background
+// Member card component with split layout - avatar left, stats right
 const MemberStatCard = ({ 
   member, 
   todayTaskCount, 
@@ -56,74 +56,71 @@ const MemberStatCard = ({
         style={{ backgroundColor: hex }}
         onClick={onViewDashboard}
       >
-        {/* Gradient overlay for depth */}
-        <div 
-          className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity"
-          style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.2), transparent)' }}
-        />
-        
-        <CardContent className="p-4 relative">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 rounded-full p-0.5">
-                <UserAvatar 
-                  name={member.display_name} 
-                  color="white"
-                  avatarIcon={member.avatar_url || undefined}
-                  size="lg"
-                  className="border-2 border-white/50"
-                />
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg text-white">{member.display_name}</h3>
-                <Badge variant="secondary" className="text-xs capitalize bg-white/20 text-white border-0">
-                  {member.role}
-                </Badge>
-              </div>
-            </div>
+        <div className="flex">
+          {/* Left column - Avatar and Name (25% width, white background) */}
+          <div className="w-1/4 bg-white flex flex-col items-center justify-center p-3">
+            <UserAvatar 
+              name={member.display_name} 
+              color={member.color}
+              avatarIcon={member.avatar_url || undefined}
+              size="lg"
+              className="w-14 h-14"
+            />
+            <p className="text-xs font-medium text-center mt-2 text-foreground truncate w-full">
+              {member.display_name}
+            </p>
+          </div>
+
+          {/* Right column - Stats (75% width, colored background) */}
+          <div className="w-3/4 relative">
+            {/* Gradient overlay for depth */}
+            <div 
+              className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity"
+              style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.2), transparent)' }}
+            />
             
-            <div className="text-right">
-              <div className="flex items-center gap-1 justify-end">
+            <CardContent className="p-3 relative">
+              {/* Points display */}
+              <div className="flex items-center gap-1 mb-3">
                 <Trophy className="h-4 w-4 text-white/80" />
                 <span className="text-2xl font-bold text-white">
                   {member.total_points}
                 </span>
               </div>
-              <span className="text-xs text-white/70">points</span>
-            </div>
-          </div>
-          
-          {/* Task progress */}
-          <div className="space-y-2 mb-3">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-1.5 text-white/80">
-                <CheckSquare className="h-3.5 w-3.5" />
-                <span>Today's Tasks</span>
-                {progressPercent === 100 && todayTaskCount > 0 && (
-                  <span className="ml-1">🎉</span>
-                )}
+              
+              {/* Task progress */}
+              <div className="space-y-1.5 mb-2">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-1.5 text-white/80">
+                    <CheckSquare className="h-3.5 w-3.5" />
+                    <span>Tasks</span>
+                    {progressPercent === 100 && todayTaskCount > 0 && (
+                      <span className="ml-1">🎉</span>
+                    )}
+                  </div>
+                  <span className="font-medium text-white">{completedCount}/{todayTaskCount}</span>
+                </div>
+                <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full rounded-full bg-white"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPercent}%` }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  />
+                </div>
               </div>
-              <span className="font-medium text-white">{completedCount}/{todayTaskCount}</span>
-            </div>
-            <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-              <motion.div 
-                className="h-full rounded-full bg-white"
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPercent}%` }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              />
-            </div>
-          </div>
 
-          {/* Events count */}
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-1.5 text-white/80">
-              <Calendar className="h-3.5 w-3.5" />
-              <span>Today's Events</span>
-            </div>
-            <span className="font-medium text-white">{todayEventCount}</span>
+              {/* Events count */}
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-1.5 text-white/80">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>Events</span>
+                </div>
+                <span className="font-medium text-white">{todayEventCount}</span>
+              </div>
+            </CardContent>
           </div>
-        </CardContent>
+        </div>
       </Card>
     </motion.div>
   );
