@@ -2,7 +2,9 @@ import { Check, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { GoalMilestone, GoalLinkedTask } from '@/types/goal';
-import { GoalTaskItem } from './GoalTaskItem';
+import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
+import { useGoalLinkedTasks } from '@/hooks/useGoalLinkedTasks';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface MilestoneListProps {
   milestones: GoalMilestone[];
@@ -25,6 +27,8 @@ export function MilestoneList({
   canEdit = false,
   className 
 }: MilestoneListProps) {
+  const { tasksMap, familyMembers, isLoading } = useGoalLinkedTasks(linkedTasks);
+
   if (!milestones.length) {
     return (
       <div className="text-sm text-muted-foreground text-center py-4">
@@ -108,16 +112,36 @@ export function MilestoneList({
             {/* Tasks under this milestone */}
             {milestoneTasks.length > 0 && (
               <div className="px-3 pb-3 pt-0 space-y-2 ml-11">
-                {milestoneTasks.map((task) => (
-                  <GoalTaskItem
-                    key={task.id}
-                    linkedTask={task}
-                    onComplete={onCompleteTask ? () => onCompleteTask(task) : undefined}
-                    onUnlink={canEdit ? onUnlinkTask : undefined}
-                    canEdit={canEdit}
-                    hideUnlink={false}
-                  />
-                ))}
+                {isLoading ? (
+                  <Skeleton className="h-12 w-full rounded-lg" />
+                ) : (
+                  milestoneTasks.map((linkedTask) => {
+                    const task = tasksMap[linkedTask.id];
+                    
+                    if (!task) {
+                      return (
+                        <div 
+                          key={linkedTask.id}
+                          className="rounded-lg p-3 bg-muted/30 text-muted-foreground text-sm"
+                        >
+                          {linkedTask.task_title || 'Unknown Task'}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <EnhancedTaskItem
+                        key={linkedTask.id}
+                        task={task}
+                        allTasks={Object.values(tasksMap)}
+                        familyMembers={familyMembers}
+                        onToggle={() => onCompleteTask?.(linkedTask)}
+                        showActions={canEdit}
+                        onDelete={canEdit && onUnlinkTask ? () => onUnlinkTask(linkedTask.id) : undefined}
+                      />
+                    );
+                  })
+                )}
               </div>
             )}
           </div>
