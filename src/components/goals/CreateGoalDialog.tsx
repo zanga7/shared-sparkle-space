@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Target, Users, Calendar, Trophy, Plus, X } from 'lucide-react';
+import { Target, Calendar, Trophy, Plus, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -23,14 +23,13 @@ import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 import { useGoals } from '@/hooks/useGoals';
 import type { 
   GoalType, 
-  GoalScope, 
   CreateGoalData,
   ConsistencyCriteria,
   TargetCountCriteria,
   ProjectCriteria
 } from '@/types/goal';
 import type { Reward } from '@/types/rewards';
-import { format, addDays, addMonths } from 'date-fns';
+import { format, addMonths } from 'date-fns';
 
 interface CreateGoalDialogProps {
   open: boolean;
@@ -54,7 +53,6 @@ export function CreateGoalDialog({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [goalType, setGoalType] = useState<GoalType>('consistency');
-  const [goalScope, setGoalScope] = useState<GoalScope>('individual');
   const [assignees, setAssignees] = useState<string[]>([]);
   const [rewardId, setRewardId] = useState<string>('');
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -78,7 +76,6 @@ export function CreateGoalDialog({
     setTitle('');
     setDescription('');
     setGoalType('consistency');
-    setGoalScope('individual');
     setAssignees([]);
     setRewardId('');
     setStartDate(format(new Date(), 'yyyy-MM-dd'));
@@ -121,14 +118,15 @@ export function CreateGoalDialog({
       } as ProjectCriteria;
     }
     
+    // Determine scope based on assignees: family if multiple or none, individual if one
+    const goalScope = assignees.length === 1 ? 'individual' : 'family';
+    
     const data: CreateGoalData = {
       title,
       description: description || undefined,
       goal_type: goalType,
       goal_scope: goalScope,
-      // For individual goals, use single assignee for backward compatibility
-      assigned_to: goalScope === 'individual' && assignees.length === 1 ? assignees[0] : 
-                   goalScope === 'individual' && assignees.length === 0 ? profileId : undefined,
+      assigned_to: assignees.length === 1 ? assignees[0] : undefined,
       assignees: assignees.length > 0 ? assignees : undefined,
       reward_id: rewardId && rewardId !== 'none' ? rewardId : undefined,
       success_criteria: successCriteria,
@@ -228,42 +226,25 @@ export function CreateGoalDialog({
             </div>
             
             <div className="space-y-2">
-              <Label>Who is this goal for?</Label>
-              <RadioGroup value={goalScope} onValueChange={(v) => setGoalScope(v as GoalScope)}>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <RadioGroupItem value="individual" />
-                    <Target className="h-4 w-4" />
-                    <span>Individual</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <RadioGroupItem value="family" />
-                    <Users className="h-4 w-4" />
-                    <span>Family</span>
-                  </label>
-                </div>
-              </RadioGroup>
+              <Label>Assigned to</Label>
+              <MultiSelectAssignees
+                familyMembers={familyMembers.filter(m => m.status !== 'inactive').map(m => ({
+                  id: m.id,
+                  display_name: m.display_name,
+                  role: m.role,
+                  color: m.color,
+                  avatar_url: m.avatar_url || undefined,
+                  total_points: 0,
+                  family_id: ''
+                }))}
+                selectedAssignees={assignees}
+                onAssigneesChange={setAssignees}
+                placeholder="Select member(s)..."
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty for a family goal, or select specific members
+              </p>
             </div>
-            
-            {goalScope === 'individual' && (
-              <div className="space-y-2">
-                <Label>Assigned to</Label>
-                <MultiSelectAssignees
-                  familyMembers={familyMembers.filter(m => m.status !== 'inactive').map(m => ({
-                    id: m.id,
-                    display_name: m.display_name,
-                    role: m.role,
-                    color: m.color,
-                    avatar_url: m.avatar_url || undefined,
-                    total_points: 0,
-                    family_id: ''
-                  }))}
-                  selectedAssignees={assignees}
-                  onAssigneesChange={setAssignees}
-                  placeholder="Select member(s)..."
-                />
-              </div>
-            )}
             
             <div className="flex justify-end">
               <Button onClick={() => setStep(2)} disabled={!title.trim()}>

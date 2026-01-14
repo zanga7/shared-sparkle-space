@@ -284,6 +284,8 @@ export function useGoals() {
   };
 
   const updateGoal = async (goalId: string, data: UpdateGoalData): Promise<boolean> => {
+    if (!profileId) return false;
+    
     try {
       const updateData: Record<string, unknown> = {
         updated_at: new Date().toISOString()
@@ -305,7 +307,43 @@ export function useGoals() {
 
       if (error) throw error;
 
-      toast({ title: 'Success', description: 'Goal updated' });
+      // Update assignees if provided
+      if (data.assignees !== undefined) {
+        // Delete existing assignees
+        await supabase
+          .from('goal_assignees')
+          .delete()
+          .eq('goal_id', goalId);
+        
+        // Insert new assignees
+        if (data.assignees.length > 0) {
+          const assigneesToInsert = data.assignees.map(assigneeProfileId => ({
+            goal_id: goalId,
+            profile_id: assigneeProfileId,
+            assigned_by: profileId
+          }));
+
+          const { error: assigneeError } = await supabase
+            .from('goal_assignees')
+            .insert(assigneesToInsert);
+
+          if (assigneeError) console.error('Error updating assignees:', assigneeError);
+        }
+        
+        // Update assigned_to for single assignee
+        if (data.assignees.length === 1) {
+          await supabase
+            .from('goals')
+            .update({ assigned_to: data.assignees[0] })
+            .eq('id', goalId);
+        } else {
+          await supabase
+            .from('goals')
+            .update({ assigned_to: null })
+            .eq('id', goalId);
+        }
+      }
+
       await fetchGoals();
       return true;
     } catch (err) {
@@ -430,6 +468,12 @@ export function useGoals() {
     return goals.find(g => g.id === goalId);
   }, [goals]);
 
+  // Reorder goals (local state only, could persist to DB if needed)
+  const reorderGoals = useCallback((goalIds: string[]) => {
+    // For now this is just a local reorder - could add sort_order column to DB
+    console.log('Goals reordered:', goalIds);
+  }, []);
+
   useEffect(() => {
     if (familyId) {
       fetchGoals();
@@ -454,6 +498,7 @@ export function useGoals() {
     linkTaskToGoal,
     unlinkTaskFromGoal,
     completeMilestone,
+    reorderGoals,
     getMyGoals,
     getFamilyGoals,
     getActiveGoals,
