@@ -6,6 +6,7 @@ import { UserAvatar } from '@/components/ui/user-avatar';
 import { GoalProgressRing } from './GoalProgressRing';
 import { GoalTaskItem } from './GoalTaskItem';
 import { ConsistencyProgressGrid } from './ConsistencyProgressGrid';
+import { useConsistencyCompletions } from '@/hooks/useConsistencyCompletions';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -16,7 +17,6 @@ import {
 import type { Goal, GoalLinkedTask } from '@/types/goal';
 import { format, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
-
 interface GoalCardProps {
   goal: Goal;
   onSelect?: (goal: Goal) => void;
@@ -30,6 +30,11 @@ interface GoalCardProps {
 export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive, onCompleteTask }: GoalCardProps) {
   const progress = goal.progress;
   const percent = progress?.current_percent ?? 0;
+  
+  // Fetch completion dates for consistency goals
+  const { allCompletedDates } = useConsistencyCompletions(
+    goal.goal_type === 'consistency' ? goal : null
+  );
   
   const getGoalTypeLabel = () => {
     switch (goal.goal_type) {
@@ -209,7 +214,7 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
             <ConsistencyProgressGrid
               startDate={goal.start_date}
               totalDays={(goal.success_criteria as { time_window_days: number }).time_window_days}
-              completedDates={[]} // TODO: Fetch actual completion dates
+              completedDates={allCompletedDates}
               className="text-xs"
             />
             
