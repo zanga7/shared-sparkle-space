@@ -55,29 +55,48 @@ export function TaskLinkingSection({
       
       setLoading(true);
       try {
-        // Fetch tasks separately to avoid type inference issues
-        const tasksRes = await supabase.from('tasks').select('id, title').eq('family_id', familyId).eq('is_completed', false);
-        const seriesRes = await supabase.from('task_series').select('id, title').eq('family_id', familyId).eq('is_active', true);
-        const rotatingRes = await supabase.from('rotating_tasks').select('id, name').eq('family_id', familyId).eq('is_active', true);
-        
+        // Note: Supabase's generated types can sometimes trigger TS2589 (excessively deep type instantiation)
+        // when inferred directly. We cast the table names to `any` and then cast the returned rows to the
+        // small shapes we actually use in this component.
+        type TaskRow = { id: string; title: string };
+        type SeriesRow = { id: string; title: string };
+        type RotatingRow = { id: string; name: string };
+
+        const [tasksRes, seriesRes, rotatingRes] = await Promise.all([
+          supabase
+            .from('tasks' as any)
+            .select('id, title')
+            .eq('family_id', familyId)
+            .is('hidden_at', null),
+          supabase
+            .from('task_series' as any)
+            .select('id, title')
+            .eq('family_id', familyId)
+            .eq('is_active', true),
+          supabase
+            .from('rotating_tasks' as any)
+            .select('id, name')
+            .eq('family_id', familyId)
+            .eq('is_active', true),
+        ]);
+
+        const tasksData = (tasksRes.data as unknown as TaskRow[]) || [];
+        const seriesData = (seriesRes.data as unknown as SeriesRow[]) || [];
+        const rotatingData = (rotatingRes.data as unknown as RotatingRow[]) || [];
+
         const allTasks: AvailableTask[] = [];
-        
-        if (tasksRes.data) {
-          tasksRes.data.forEach((t: { id: string; title: string }) => {
-            allTasks.push({ id: `task:${t.id}`, title: t.title, type: 'one_off' });
-          });
-        }
-        if (seriesRes.data) {
-          seriesRes.data.forEach((s: { id: string; title: string }) => {
-            allTasks.push({ id: `series:${s.id}`, title: s.title, type: 'recurring' });
-          });
-        }
-        if (rotatingRes.data) {
-          rotatingRes.data.forEach((r: { id: string; name: string }) => {
-            allTasks.push({ id: `rotating:${r.id}`, title: r.name, type: 'rotating' });
-          });
-        }
-        
+
+        tasksData.forEach((t) => {
+          allTasks.push({ id: `task:${t.id}`, title: t.title, type: 'one_off' });
+        });
+
+        seriesData.forEach((s) => {
+          allTasks.push({ id: `series:${s.id}`, title: s.title, type: 'recurring' });
+        });
+
+        rotatingData.forEach((r) => {
+          allTasks.push({ id: `rotating:${r.id}`, title: r.name, type: 'rotating' });
+        });
         setAvailableTasks(allTasks);
       } catch (err) {
         console.error('Error fetching tasks:', err);
