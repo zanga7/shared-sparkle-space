@@ -1,21 +1,37 @@
-import { useState, useEffect, useCallback } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
-import type { 
-  Goal, 
-  GoalMilestone, 
-  GoalLinkedTask, 
-  GoalProgress, 
+import type {
+  Goal,
+  GoalMilestone,
+  GoalLinkedTask,
+  GoalProgress,
   GoalAssignee,
-  CreateGoalData, 
+  CreateGoalData,
   UpdateGoalData,
   GoalStatus,
   SuccessCriteria
 } from '@/types/goal';
 import type { Json } from '@/integrations/supabase/types';
 
+const GoalsContext = createContext<ReturnType<typeof useGoalsState> | null>(null);
+
+export function GoalsProvider({ children }: { children: ReactNode }) {
+  const value = useGoalsState();
+  return <GoalsContext.Provider value={value}>{children}</GoalsContext.Provider>;
+}
+
 export function useGoals() {
+  const ctx = useContext(GoalsContext);
+  if (!ctx) {
+    throw new Error('useGoals must be used within a GoalsProvider');
+  }
+  return ctx;
+}
+
+function useGoalsState() {
   const { user } = useAuth();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
