@@ -371,8 +371,10 @@ export function useGoals() {
 
       if (error) throw error;
 
+      // Immediately update local state for instant UI feedback
+      setGoals(prevGoals => prevGoals.filter(g => g.id !== goalId));
+      
       toast({ title: 'Success', description: 'Goal deleted' });
-      await fetchGoals();
       return true;
     } catch (err) {
       console.error('Error deleting goal:', err);

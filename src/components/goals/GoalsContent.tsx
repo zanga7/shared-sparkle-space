@@ -80,8 +80,14 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
 
   const handleDelete = async (goalId: string) => {
     if (confirm('Are you sure you want to delete this goal? This cannot be undone.')) {
-      await deleteGoal(goalId);
-      toast.success('Goal deleted');
+      const success = await deleteGoal(goalId);
+      if (success) {
+        // Close detail dialog if open
+        if (selectedGoal?.id === goalId) {
+          setSelectedGoal(null);
+        }
+        toast.success('Goal deleted');
+      }
     }
   };
 
