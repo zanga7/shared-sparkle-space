@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Trash2, Calendar, User, Users, Repeat, RotateCcw } from 'lucide-react';
+import { Trash2, Calendar, User, Users, Repeat, RotateCcw, Target } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +17,7 @@ import { UnifiedRecurrencePanel } from '@/components/recurrence/UnifiedRecurrenc
 import { cn } from '@/lib/utils';
 import { useTaskSeries } from '@/hooks/useTaskSeries';
 import { EditScopeDialog, EditScope } from '@/components/recurrence/EditScopeDialog';
+import { useTaskGoalConnection } from '@/hooks/useTaskGoalConnection';
 
 interface EditTaskDialogProps {
   task: Task;
@@ -71,6 +72,13 @@ export const EditTaskDialog = ({
   
   const { createTaskException, updateTaskSeries, splitTaskSeries } = useTaskSeries(
     familyMembers.find(m => m.id === task.created_by)?.family_id
+  );
+
+  // Check if task is connected to a goal
+  const { data: goalConnection } = useTaskGoalConnection(
+    task.id,
+    (task as any).series_id,
+    task.rotating_task_id
   );
 
   // Load form state when dialog opens
@@ -693,6 +701,21 @@ export const EditTaskDialog = ({
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <RotateCcw className="h-4 w-4" />
                   <span>Rotation schedule and member order are managed in Admin → Rotating Tasks.</span>
+                </div>
+              </div>
+            )}
+
+            {/* Goal Connection Note */}
+            {goalConnection && (
+              <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                <div className="flex items-center gap-2 text-sm">
+                  <Target className="h-4 w-4 text-primary" />
+                  <span className="text-muted-foreground">
+                    Connected to goal: <span className="font-medium text-foreground">{goalConnection.goalTitle}</span>
+                    {goalConnection.milestoneTitle && (
+                      <span className="text-muted-foreground"> → {goalConnection.milestoneTitle}</span>
+                    )}
+                  </span>
                 </div>
               </div>
             )}
