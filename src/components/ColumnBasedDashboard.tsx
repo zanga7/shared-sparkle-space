@@ -27,6 +27,7 @@ import { FamilyDashboard } from './FamilyDashboard';
 import { RewardsGallery } from '@/components/rewards/RewardsGallery';
 import { ChildAuthProvider } from '@/hooks/useChildAuth';
 import Lists from '@/pages/Lists';
+import { GoalsContent } from '@/components/goals/GoalsContent';
 import { TaskGroupsList } from '@/components/tasks/TaskGroupsList';
 import {
   AlertDialog,
@@ -2275,6 +2276,39 @@ const ColumnBasedDashboard = () => {
                 </div>
               ) : (
                 <Lists />
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="goals" className="mt-4 sm:mt-6">
+            <div className="w-full">
+              {viewMode === 'member' && selectedMemberFilter ? (
+                <div className="max-w-4xl mx-auto">
+                  <div className="text-center py-6 mb-6">
+                    {(() => {
+                      const member = familyMembers.find(m => m.id === selectedMemberFilter);
+                      return member ? (
+                        <>
+                          <UserAvatar 
+                            name={member.display_name} 
+                            color={member.color}
+                            avatarIcon={member.avatar_url || undefined}
+                            size="lg" 
+                            className="mx-auto mb-4" 
+                          />
+                          <h1 className="text-3xl font-bold text-foreground">{member.display_name}'s Goals</h1>
+                        </>
+                      ) : null;
+                    })()}
+                  </div>
+                  <GoalsContent 
+                    familyMembers={familyMembers} 
+                    selectedMemberId={selectedMemberFilter}
+                    viewMode="member"
+                  />
+                </div>
+              ) : (
+                <GoalsContent familyMembers={familyMembers} />
               )}
             </div>
           </TabsContent>
