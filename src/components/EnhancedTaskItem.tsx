@@ -13,13 +13,16 @@ import {
   Repeat,
   UserCheck,
   Users,
-  RotateCw
+  RotateCw,
+  Goal
 } from 'lucide-react';
 import { format, isAfter, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Task, Profile } from '@/types/task';
 import { TaskAssigneesDisplay } from '@/components/ui/task-assignees-display';
 import { useMemberColor } from '@/hooks/useMemberColor';
+import { useTaskGoalConnections } from '@/hooks/useTaskGoalConnection';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface EnhancedTaskItemProps {
   task: Task;
@@ -51,6 +54,13 @@ export const EnhancedTaskItem = ({
   isUnassigned = false
 }: EnhancedTaskItemProps) => {
   const [showDetails, setShowDetails] = useState(false);
+
+  // Check if task is connected to any goals
+  const { data: goalConnections } = useTaskGoalConnections(
+    task.id,
+    (task as any).series_id,
+    task.rotating_task_id
+  );
 
   // Determine the completion status based on the task's completion rule
   const hasAnyCompletion = task.task_completions && task.task_completions.length > 0;
@@ -289,6 +299,32 @@ export const EnhancedTaskItem = ({
                 <Repeat className="h-2 w-2" />
                 Repeat
               </Badge>
+            )}
+
+            {/* Goal Connection Indicator */}
+            {goalConnections && goalConnections.length > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 border-primary/30 text-primary">
+                      <Goal className="h-2 w-2" />
+                      {goalConnections.length === 1 ? 'Goal' : `${goalConnections.length} Goals`}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <div className="space-y-1">
+                      {goalConnections.map((gc, idx) => (
+                        <div key={idx} className="text-xs">
+                          <span className="font-medium">{gc.goalTitle}</span>
+                          {gc.milestoneTitle && (
+                            <span className="text-muted-foreground"> → {gc.milestoneTitle}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
         </div>

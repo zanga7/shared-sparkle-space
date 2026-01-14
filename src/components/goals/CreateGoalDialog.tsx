@@ -452,6 +452,7 @@ export function CreateGoalDialog({
                   streak_count: 0
                 }))}
                 profileId={profileId || undefined}
+                basicTasksOnly={goalType === 'target_count'}
               />
             )}
             

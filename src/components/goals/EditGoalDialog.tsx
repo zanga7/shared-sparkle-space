@@ -536,6 +536,7 @@ export function EditGoalDialog({
                                   streak_count: 0
                                 }))}
                                 profileId={profileId || undefined}
+                                basicTasksOnly={true}
                               />
                             </div>
                           </CollapsibleContent>
@@ -604,6 +605,7 @@ export function EditGoalDialog({
                   streak_count: 0
                 }))}
                 profileId={profileId || undefined}
+                basicTasksOnly={goal.goal_type === 'target_count'}
               />
             </>
           )}
