@@ -7,6 +7,7 @@ import type {
   GoalMilestone, 
   GoalLinkedTask, 
   GoalProgress, 
+  GoalAssignee,
   CreateGoalData, 
   UpdateGoalData,
   GoalStatus,
@@ -67,13 +68,15 @@ export function useGoals() {
 
       if (goalsError) throw goalsError;
 
-      // Fetch milestones for all goals
+      // Fetch milestones, linked tasks, and assignees for all goals
       const goalIds = (goalsData || []).map(g => g.id);
       
       let milestonesMap: Record<string, GoalMilestone[]> = {};
       let linkedTasksMap: Record<string, GoalLinkedTask[]> = {};
+      let assigneesMap: Record<string, GoalAssignee[]> = {};
       
       if (goalIds.length > 0) {
+        // Fetch milestones
         const { data: milestonesData } = await supabase
           .from('goal_milestones')
           .select('*, reward:rewards(id, title, image_url)')
@@ -83,6 +86,20 @@ export function useGoals() {
         milestonesData?.forEach(m => {
           if (!milestonesMap[m.goal_id]) milestonesMap[m.goal_id] = [];
           milestonesMap[m.goal_id].push(m as unknown as GoalMilestone);
+        });
+
+        // Fetch assignees
+        const { data: assigneesData } = await supabase
+          .from('goal_assignees')
+          .select(`
+            *,
+            profile:profiles(id, display_name, role, color, avatar_url)
+          `)
+          .in('goal_id', goalIds);
+        
+        assigneesData?.forEach(a => {
+          if (!assigneesMap[a.goal_id]) assigneesMap[a.goal_id] = [];
+          assigneesMap[a.goal_id].push(a as unknown as GoalAssignee);
         });
 
         // Fetch linked tasks
@@ -151,6 +168,7 @@ export function useGoals() {
             success_criteria: goal.success_criteria as unknown as SuccessCriteria,
             milestones: milestonesMap[goal.id] || [],
             linked_tasks: linkedTasksMap[goal.id] || [],
+            assignees: assigneesMap[goal.id] || [],
             progress: progressData as unknown as GoalProgress
           } as Goal;
         })
@@ -235,6 +253,21 @@ export function useGoals() {
           .insert(taskLinks);
 
         if (linkError) console.error('Error linking tasks:', linkError);
+      }
+
+      // Add assignees if provided
+      if (data.assignees && data.assignees.length > 0) {
+        const assigneesToInsert = data.assignees.map(assigneeProfileId => ({
+          goal_id: goal.id,
+          profile_id: assigneeProfileId,
+          assigned_by: profileId
+        }));
+
+        const { error: assigneeError } = await supabase
+          .from('goal_assignees')
+          .insert(assigneesToInsert);
+
+        if (assigneeError) console.error('Error adding assignees:', assigneeError);
       }
 
       toast({ title: 'Success', description: 'Goal created successfully' });
@@ -378,7 +411,10 @@ export function useGoals() {
   // Filter helpers
   const getMyGoals = useCallback((id: string) => {
     return goals.filter(g => 
-      g.goal_scope === 'individual' && g.assigned_to === id
+      g.goal_scope === 'individual' && (
+        g.assigned_to === id || 
+        g.assignees?.some(a => a.profile_id === id)
+      )
     );
   }, [goals]);
 

@@ -102,6 +102,21 @@ export type GoalProgress = (ConsistencyProgress | TargetCountProgress | ProjectP
   participant_progress?: ParticipantProgress[];
 };
 
+export interface GoalAssignee {
+  id: string;
+  goal_id: string;
+  profile_id: string;
+  assigned_by: string;
+  assigned_at: string;
+  profile?: {
+    id: string;
+    display_name: string;
+    role: 'parent' | 'child';
+    color: string;
+    avatar_url?: string | null;
+  };
+}
+
 export interface Goal {
   id: string;
   family_id: string;
@@ -134,6 +149,7 @@ export interface Goal {
     color: string;
     avatar_url?: string;
   };
+  assignees?: GoalAssignee[];
   creator?: {
     id: string;
     display_name: string;
@@ -146,6 +162,7 @@ export interface CreateGoalData {
   goal_type: GoalType;
   goal_scope: GoalScope;
   assigned_to?: string;
+  assignees?: string[]; // Array of profile IDs for multi-assignment
   reward_id?: string;
   success_criteria: SuccessCriteria;
   start_date: string;
@@ -163,4 +180,5 @@ export interface UpdateGoalData {
   success_criteria?: SuccessCriteria;
   end_date?: string;
   status?: GoalStatus;
+  assignees?: string[]; // Array of profile IDs for multi-assignment
 }
