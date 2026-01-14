@@ -691,6 +691,7 @@ export type Database = {
           id: string
           linked_at: string
           linked_by: string
+          milestone_id: string | null
           rotating_task_id: string | null
           task_id: string | null
           task_series_id: string | null
@@ -700,6 +701,7 @@ export type Database = {
           id?: string
           linked_at?: string
           linked_by: string
+          milestone_id?: string | null
           rotating_task_id?: string | null
           task_id?: string | null
           task_series_id?: string | null
@@ -709,6 +711,7 @@ export type Database = {
           id?: string
           linked_at?: string
           linked_by?: string
+          milestone_id?: string | null
           rotating_task_id?: string | null
           task_id?: string | null
           task_series_id?: string | null
@@ -726,6 +729,13 @@ export type Database = {
             columns: ["linked_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_linked_tasks_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "goal_milestones"
             referencedColumns: ["id"]
           },
           {

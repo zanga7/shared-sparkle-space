@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckSquare, Repeat, RotateCcw, Plus, X, Link } from 'lucide-react';
+import { CheckSquare, Repeat, RotateCcw, Plus, X, Link, FilePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,8 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import type { GoalLinkedTask } from '@/types/goal';
 import { cn } from '@/lib/utils';
+import { AddTaskDialog } from '@/components/AddTaskDialog';
+import { Profile } from '@/types/task';
 
 interface AvailableTask {
   id: string;
@@ -30,7 +32,10 @@ interface TaskLinkingSectionProps {
   onSeriesChange: (seriesIds: string[]) => void;
   onRotatingChange: (rotatingIds: string[]) => void;
   onUnlink?: (linkId: string) => void;
+  milestoneId?: string;
   className?: string;
+  familyMembers?: Profile[];
+  profileId?: string;
 }
 
 export function TaskLinkingSection({
@@ -43,68 +48,69 @@ export function TaskLinkingSection({
   onSeriesChange,
   onRotatingChange,
   onUnlink,
-  className
+  milestoneId,
+  className,
+  familyMembers = [],
+  profileId
 }: TaskLinkingSectionProps) {
   const [availableTasks, setAvailableTasks] = useState<AvailableTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedToAdd, setSelectedToAdd] = useState<string>('');
+  const [showCreateTask, setShowCreateTask] = useState(false);
+
+  const fetchAvailableTasks = async () => {
+    if (!familyId) return;
+    
+    setLoading(true);
+    try {
+      type TaskRow = { id: string; title: string };
+      type SeriesRow = { id: string; title: string };
+      type RotatingRow = { id: string; name: string };
+
+      const [tasksRes, seriesRes, rotatingRes] = await Promise.all([
+        supabase
+          .from('tasks' as any)
+          .select('id, title')
+          .eq('family_id', familyId)
+          .is('hidden_at', null),
+        supabase
+          .from('task_series' as any)
+          .select('id, title')
+          .eq('family_id', familyId)
+          .eq('is_active', true),
+        supabase
+          .from('rotating_tasks' as any)
+          .select('id, name')
+          .eq('family_id', familyId)
+          .eq('is_active', true),
+      ]);
+
+      const tasksData = (tasksRes.data as unknown as TaskRow[]) || [];
+      const seriesData = (seriesRes.data as unknown as SeriesRow[]) || [];
+      const rotatingData = (rotatingRes.data as unknown as RotatingRow[]) || [];
+
+      const allTasks: AvailableTask[] = [];
+
+      tasksData.forEach((t) => {
+        allTasks.push({ id: `task:${t.id}`, title: t.title, type: 'one_off' });
+      });
+
+      seriesData.forEach((s) => {
+        allTasks.push({ id: `series:${s.id}`, title: s.title, type: 'recurring' });
+      });
+
+      rotatingData.forEach((r) => {
+        allTasks.push({ id: `rotating:${r.id}`, title: r.name, type: 'rotating' });
+      });
+      setAvailableTasks(allTasks);
+    } catch (err) {
+      console.error('Error fetching tasks:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchAvailableTasks = async () => {
-      if (!familyId) return;
-      
-      setLoading(true);
-      try {
-        // Note: Supabase's generated types can sometimes trigger TS2589 (excessively deep type instantiation)
-        // when inferred directly. We cast the table names to `any` and then cast the returned rows to the
-        // small shapes we actually use in this component.
-        type TaskRow = { id: string; title: string };
-        type SeriesRow = { id: string; title: string };
-        type RotatingRow = { id: string; name: string };
-
-        const [tasksRes, seriesRes, rotatingRes] = await Promise.all([
-          supabase
-            .from('tasks' as any)
-            .select('id, title')
-            .eq('family_id', familyId)
-            .is('hidden_at', null),
-          supabase
-            .from('task_series' as any)
-            .select('id, title')
-            .eq('family_id', familyId)
-            .eq('is_active', true),
-          supabase
-            .from('rotating_tasks' as any)
-            .select('id, name')
-            .eq('family_id', familyId)
-            .eq('is_active', true),
-        ]);
-
-        const tasksData = (tasksRes.data as unknown as TaskRow[]) || [];
-        const seriesData = (seriesRes.data as unknown as SeriesRow[]) || [];
-        const rotatingData = (rotatingRes.data as unknown as RotatingRow[]) || [];
-
-        const allTasks: AvailableTask[] = [];
-
-        tasksData.forEach((t) => {
-          allTasks.push({ id: `task:${t.id}`, title: t.title, type: 'one_off' });
-        });
-
-        seriesData.forEach((s) => {
-          allTasks.push({ id: `series:${s.id}`, title: s.title, type: 'recurring' });
-        });
-
-        rotatingData.forEach((r) => {
-          allTasks.push({ id: `rotating:${r.id}`, title: r.name, type: 'rotating' });
-        });
-        setAvailableTasks(allTasks);
-      } catch (err) {
-        console.error('Error fetching tasks:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     fetchAvailableTasks();
   }, [familyId]);
 
@@ -132,6 +138,12 @@ export function TaskLinkingSection({
     } else if (type === 'rotating') {
       onRotatingChange(selectedRotatingIds.filter(i => i !== id));
     }
+  };
+
+  const handleTaskCreated = () => {
+    setShowCreateTask(false);
+    // Refresh available tasks to include the new one
+    fetchAvailableTasks();
   };
 
   const getTaskIcon = (type: string) => {
@@ -165,8 +177,13 @@ export function TaskLinkingSection({
     return false;
   });
 
+  // Filter linked tasks for this milestone (or no milestone if not specified)
+  const filteredLinkedTasks = milestoneId 
+    ? linkedTasks.filter(lt => lt.milestone_id === milestoneId)
+    : linkedTasks;
+
   // Filter out already linked or selected tasks
-  const linkedTaskIds = linkedTasks.map(lt => 
+  const linkedTaskIds = filteredLinkedTasks.map(lt => 
     lt.task_id ? `task:${lt.task_id}` : 
     lt.task_series_id ? `series:${lt.task_series_id}` : 
     lt.rotating_task_id ? `rotating:${lt.rotating_task_id}` : ''
@@ -182,12 +199,15 @@ export function TaskLinkingSection({
     !linkedTaskIds.includes(t.id) && !selectedIds.includes(t.id)
   );
 
+  const canCreateTask = familyId && profileId && familyMembers.length > 0;
+
   return (
     <div className={cn('space-y-4', className)}>
       <div className="space-y-2">
         <Label className="flex items-center gap-2">
           <Link className="h-4 w-4" />
           Linked Tasks
+          {milestoneId && <Badge variant="secondary" className="text-xs">For this milestone</Badge>}
         </Label>
         <p className="text-xs text-muted-foreground">
           Link existing tasks to track progress toward this goal
@@ -195,10 +215,10 @@ export function TaskLinkingSection({
       </div>
 
       {/* Existing linked tasks */}
-      {linkedTasks.length > 0 && (
+      {filteredLinkedTasks.length > 0 && (
         <div className="space-y-2">
           <span className="text-xs font-medium text-muted-foreground">Currently linked</span>
-          {linkedTasks.map((link) => (
+          {filteredLinkedTasks.map((link) => (
             <div 
               key={link.id}
               className="flex items-center gap-3 p-3 rounded-lg border bg-card"
@@ -288,10 +308,34 @@ export function TaskLinkingSection({
         </Button>
       </div>
 
-      {linkedTasks.length === 0 && selectedNewTasks.length === 0 && (
+      {/* Create new task button */}
+      {canCreateTask && (
+        <Button 
+          variant="outline" 
+          className="w-full"
+          onClick={() => setShowCreateTask(true)}
+        >
+          <FilePlus className="h-4 w-4 mr-2" />
+          Create New Task
+        </Button>
+      )}
+
+      {filteredLinkedTasks.length === 0 && selectedNewTasks.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-2">
           No tasks linked yet. Task completions will count toward goal progress.
         </p>
+      )}
+
+      {/* Create Task Dialog */}
+      {canCreateTask && (
+        <AddTaskDialog
+          familyMembers={familyMembers}
+          familyId={familyId}
+          profileId={profileId}
+          onTaskCreated={handleTaskCreated}
+          open={showCreateTask}
+          onOpenChange={setShowCreateTask}
+        />
       )}
     </div>
   );

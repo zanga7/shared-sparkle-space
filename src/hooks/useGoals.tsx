@@ -88,12 +88,12 @@ export function useGoals() {
           milestonesMap[m.goal_id].push(m as unknown as GoalMilestone);
         });
 
-        // Fetch assignees
+        // Fetch assignees - use explicit FK to avoid PGRST201 (multiple FK relationships)
         const { data: assigneesData } = await supabase
           .from('goal_assignees')
           .select(`
             *,
-            profile:profiles(id, display_name, role, color, avatar_url)
+            profile:profiles!goal_assignees_profile_id_fkey(id, display_name, role, color, avatar_url)
           `)
           .in('goal_id', goalIds);
         
@@ -446,7 +446,94 @@ export function useGoals() {
     }
   };
 
-  // Filter helpers
+  // Milestone CRUD operations
+  const addMilestone = async (goalId: string, title: string, order: number): Promise<string | null> => {
+    if (!profileId) return null;
+    
+    try {
+      const { data, error } = await supabase
+        .from('goal_milestones')
+        .insert({
+          goal_id: goalId,
+          title,
+          milestone_order: order,
+          completion_criteria: { type: 'manual' } as unknown as Json
+        })
+        .select('id')
+        .single();
+      
+      if (error) throw error;
+      await fetchGoals();
+      return data.id;
+    } catch (err) {
+      console.error('Error adding milestone:', err);
+      toast({ title: 'Error', description: 'Failed to add milestone', variant: 'destructive' });
+      return null;
+    }
+  };
+
+  const updateMilestone = async (milestoneId: string, updates: { title?: string }): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('goal_milestones')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', milestoneId);
+      
+      if (error) throw error;
+      await fetchGoals();
+      return true;
+    } catch (err) {
+      console.error('Error updating milestone:', err);
+      return false;
+    }
+  };
+
+  const deleteMilestone = async (milestoneId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('goal_milestones')
+        .delete()
+        .eq('id', milestoneId);
+      
+      if (error) throw error;
+      await fetchGoals();
+      return true;
+    } catch (err) {
+      console.error('Error deleting milestone:', err);
+      return false;
+    }
+  };
+
+  // Link task to specific milestone
+  const linkTaskToMilestone = async (
+    goalId: string,
+    milestoneId: string,
+    taskRef: { task_id?: string; task_series_id?: string; rotating_task_id?: string }
+  ): Promise<boolean> => {
+    if (!profileId) return false;
+
+    try {
+      const { error } = await supabase
+        .from('goal_linked_tasks')
+        .insert({
+          goal_id: goalId,
+          milestone_id: milestoneId,
+          ...taskRef,
+          linked_by: profileId
+        });
+
+      if (error) throw error;
+      await fetchGoals();
+      return true;
+    } catch (err) {
+      console.error('Error linking task to milestone:', err);
+      toast({ title: 'Error', description: 'Failed to link task to milestone', variant: 'destructive' });
+      return false;
+    }
+  };
   const getMyGoals = useCallback((id: string) => {
     return goals.filter(g => 
       g.goal_scope === 'individual' && (
@@ -498,6 +585,10 @@ export function useGoals() {
     linkTaskToGoal,
     unlinkTaskFromGoal,
     completeMilestone,
+    addMilestone,
+    updateMilestone,
+    deleteMilestone,
+    linkTaskToMilestone,
     reorderGoals,
     getMyGoals,
     getFamilyGoals,
