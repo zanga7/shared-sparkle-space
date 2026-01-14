@@ -17,7 +17,7 @@ import { UnifiedRecurrencePanel } from '@/components/recurrence/UnifiedRecurrenc
 import { cn } from '@/lib/utils';
 import { useTaskSeries } from '@/hooks/useTaskSeries';
 import { EditScopeDialog, EditScope } from '@/components/recurrence/EditScopeDialog';
-import { useTaskGoalConnection } from '@/hooks/useTaskGoalConnection';
+import { useTaskGoalConnections } from '@/hooks/useTaskGoalConnection';
 
 interface EditTaskDialogProps {
   task: Task;
@@ -74,8 +74,8 @@ export const EditTaskDialog = ({
     familyMembers.find(m => m.id === task.created_by)?.family_id
   );
 
-  // Check if task is connected to a goal
-  const { data: goalConnection } = useTaskGoalConnection(
+  // Check if task is connected to goals
+  const { data: goalConnections } = useTaskGoalConnections(
     task.id,
     (task as any).series_id,
     task.rotating_task_id
@@ -706,16 +706,23 @@ export const EditTaskDialog = ({
             )}
 
             {/* Goal Connection Note */}
-            {goalConnection && (
+            {goalConnections && goalConnections.length > 0 && (
               <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
-                <div className="flex items-center gap-2 text-sm">
-                  <Target className="h-4 w-4 text-primary" />
-                  <span className="text-muted-foreground">
-                    Connected to goal: <span className="font-medium text-foreground">{goalConnection.goalTitle}</span>
-                    {goalConnection.milestoneTitle && (
-                      <span className="text-muted-foreground"> → {goalConnection.milestoneTitle}</span>
-                    )}
-                  </span>
+                <div className="flex items-start gap-2 text-sm">
+                  <Target className="h-4 w-4 text-primary mt-0.5" />
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground">
+                      {goalConnections.length === 1 ? 'Connected to goal:' : 'Connected to goals:'}
+                    </span>
+                    {goalConnections.map((gc, idx) => (
+                      <div key={idx} className="text-foreground">
+                        <span className="font-medium">{gc.goalTitle}</span>
+                        {gc.milestoneTitle && (
+                          <span className="text-muted-foreground"> → {gc.milestoneTitle}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
