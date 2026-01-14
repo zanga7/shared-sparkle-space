@@ -72,14 +72,13 @@ const DURATION_PRESETS = [
   { value: 100, label: '100 days', description: 'Ultimate challenge' },
 ];
 
+// Must match database check constraint: morning, midday, afternoon, evening, general
 const TASK_GROUPS = [
-  'Morning Routine',
-  'Evening Routine',
-  'Health & Fitness',
-  'Learning',
-  'Chores',
-  'Self Care',
-  'Other'
+  { value: 'morning', label: 'Morning' },
+  { value: 'midday', label: 'Midday' },
+  { value: 'afternoon', label: 'Afternoon' },
+  { value: 'evening', label: 'Evening' },
+  { value: 'general', label: 'General' },
 ];
 
 export function ConsistencyGoalSetup({
@@ -98,7 +97,7 @@ export function ConsistencyGoalSetup({
   // Task info
   const [taskTitle, setTaskTitle] = useState('');
   const [taskPoints, setTaskPoints] = useState(5);
-  const [taskGroup, setTaskGroup] = useState('Morning Routine');
+  const [taskGroup, setTaskGroup] = useState('morning');
   
   // Simple recurrence rule - just frequency and weekdays
   const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule>({
@@ -212,7 +211,7 @@ export function ConsistencyGoalSetup({
                   </SelectTrigger>
                   <SelectContent>
                     {TASK_GROUPS.map(group => (
-                      <SelectItem key={group} value={group}>{group}</SelectItem>
+                      <SelectItem key={group.value} value={group.value}>{group.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
