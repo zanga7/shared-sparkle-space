@@ -163,7 +163,7 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
         <Droppable droppableId="goals-list">
           {(provided) => (
             <div 
-              className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 grid-gap"
               {...provided.droppableProps}
               ref={provided.innerRef}
             >
@@ -236,7 +236,7 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
         </div>
       
         {loading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 grid-gap">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <Skeleton key={i} className="h-48 rounded-lg" />
             ))}
