@@ -37,6 +37,8 @@ interface TaskLinkingSectionProps {
   familyMembers?: Profile[];
   profileId?: string;
   onNewTaskCreated?: (taskId: string) => void;
+  /** When true, only shows basic (one-off) tasks, not recurring or rotating */
+  basicTasksOnly?: boolean;
 }
 
 export function TaskLinkingSection({
@@ -53,7 +55,8 @@ export function TaskLinkingSection({
   className,
   familyMembers = [],
   profileId,
-  onNewTaskCreated
+  onNewTaskCreated,
+  basicTasksOnly = false
 }: TaskLinkingSectionProps) {
   const [availableTasks, setAvailableTasks] = useState<AvailableTask[]>([]);
   const [loading, setLoading] = useState(false);
@@ -69,18 +72,19 @@ export function TaskLinkingSection({
       type SeriesRow = { id: string; title: string };
       type RotatingRow = { id: string; name: string };
 
+      // Only fetch basic tasks if basicTasksOnly is true
       const [tasksRes, seriesRes, rotatingRes] = await Promise.all([
         supabase
           .from('tasks' as any)
           .select('id, title')
           .eq('family_id', familyId)
           .is('hidden_at', null),
-        supabase
+        basicTasksOnly ? Promise.resolve({ data: [] }) : supabase
           .from('task_series' as any)
           .select('id, title')
           .eq('family_id', familyId)
           .eq('is_active', true),
-        supabase
+        basicTasksOnly ? Promise.resolve({ data: [] }) : supabase
           .from('rotating_tasks' as any)
           .select('id, name')
           .eq('family_id', familyId)
@@ -97,13 +101,15 @@ export function TaskLinkingSection({
         allTasks.push({ id: `task:${t.id}`, title: t.title, type: 'one_off' });
       });
 
-      seriesData.forEach((s) => {
-        allTasks.push({ id: `series:${s.id}`, title: s.title, type: 'recurring' });
-      });
+      if (!basicTasksOnly) {
+        seriesData.forEach((s) => {
+          allTasks.push({ id: `series:${s.id}`, title: s.title, type: 'recurring' });
+        });
 
-      rotatingData.forEach((r) => {
-        allTasks.push({ id: `rotating:${r.id}`, title: r.name, type: 'rotating' });
-      });
+        rotatingData.forEach((r) => {
+          allTasks.push({ id: `rotating:${r.id}`, title: r.name, type: 'rotating' });
+        });
+      }
       setAvailableTasks(allTasks);
     } catch (err) {
       console.error('Error fetching tasks:', err);

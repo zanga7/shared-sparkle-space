@@ -1,17 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-interface GoalConnection {
+export interface GoalConnection {
   goalId: string;
   goalTitle: string;
   milestoneId?: string | null;
   milestoneTitle?: string | null;
 }
 
-export function useTaskGoalConnection(taskId: string | null, seriesId?: string | null, rotatingTaskId?: string | null) {
+export function useTaskGoalConnections(taskId: string | null, seriesId?: string | null, rotatingTaskId?: string | null) {
   return useQuery({
-    queryKey: ['task-goal-connection', taskId, seriesId, rotatingTaskId],
-    queryFn: async (): Promise<GoalConnection | null> => {
+    queryKey: ['task-goal-connections', taskId, seriesId, rotatingTaskId],
+    queryFn: async (): Promise<GoalConnection[]> => {
       // Build the query conditions
       const conditions: string[] = [];
       
@@ -25,9 +25,9 @@ export function useTaskGoalConnection(taskId: string | null, seriesId?: string |
         conditions.push(`rotating_task_id.eq.${rotatingTaskId}`);
       }
       
-      if (conditions.length === 0) return null;
+      if (conditions.length === 0) return [];
       
-      // Query for any linked goal
+      // Query for all linked goals
       const { data, error } = await supabase
         .from('goal_linked_tasks')
         .select(`
@@ -36,20 +36,28 @@ export function useTaskGoalConnection(taskId: string | null, seriesId?: string |
           goal:goals!goal_linked_tasks_goal_id_fkey(id, title),
           milestone:goal_milestones!goal_linked_tasks_milestone_id_fkey(id, title)
         `)
-        .or(conditions.join(','))
-        .limit(1)
-        .maybeSingle();
+        .or(conditions.join(','));
       
-      if (error || !data) return null;
+      if (error || !data) return [];
       
-      return {
-        goalId: data.goal_id,
-        goalTitle: (data.goal as any)?.title || 'Unknown Goal',
-        milestoneId: data.milestone_id,
-        milestoneTitle: (data.milestone as any)?.title || null,
-      };
+      return data.map(item => ({
+        goalId: item.goal_id,
+        goalTitle: (item.goal as any)?.title || 'Unknown Goal',
+        milestoneId: item.milestone_id,
+        milestoneTitle: (item.milestone as any)?.title || null,
+      }));
     },
     enabled: Boolean(taskId || seriesId || rotatingTaskId),
     staleTime: 30000, // Cache for 30 seconds
   });
+}
+
+// Backwards compatible single connection hook
+export function useTaskGoalConnection(taskId: string | null, seriesId?: string | null, rotatingTaskId?: string | null) {
+  const { data: connections, ...rest } = useTaskGoalConnections(taskId, seriesId, rotatingTaskId);
+  
+  return {
+    ...rest,
+    data: connections && connections.length > 0 ? connections[0] : null,
+  };
 }
