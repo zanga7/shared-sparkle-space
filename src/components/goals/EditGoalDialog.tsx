@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Target, Trophy, Plus, Trash2, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
+import { Target, Trophy, Plus, Trash2, GripVertical, ChevronDown, ChevronUp, Flame, Calendar, Users } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -27,11 +27,21 @@ import {
 } from '@/components/ui/collapsible';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 import { TaskLinkingSection } from './TaskLinkingSection';
+import { SimpleFrequencySelector } from './SimpleFrequencySelector';
 import { useGoals } from '@/hooks/useGoals';
 import type { Goal, UpdateGoalData, GoalMilestone } from '@/types/goal';
 import type { Reward } from '@/types/rewards';
+import type { RecurrenceRule } from '@/types/recurrence';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { format, addDays, parseISO, differenceInDays } from 'date-fns';
+
+const DURATION_PRESETS = [
+  { value: 21, label: '21 days', description: 'Form a habit' },
+  { value: 30, label: '30 days', description: '1 month challenge' },
+  { value: 60, label: '60 days', description: '2 month challenge' },
+  { value: 100, label: '100 days', description: 'Ultimate challenge' },
+];
 
 interface EditGoalDialogProps {
   goal: Goal | null;
@@ -70,8 +80,15 @@ export function EditGoalDialog({
   const [rewardId, setRewardId] = useState<string>('');
   const [endDate, setEndDate] = useState('');
   
-  // Consistency criteria (only editable for consistency goals)
+  // Consistency criteria (editable for consistency goals)
   const [thresholdPercent, setThresholdPercent] = useState(80);
+  const [durationDays, setDurationDays] = useState(30);
+  const [customDuration, setCustomDuration] = useState(false);
+  const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule>({
+    frequency: 'daily',
+    interval: 1,
+    endType: 'never'
+  });
 
   // Task linking (goal-level)
   const [linkedTaskIds, setLinkedTaskIds] = useState<string[]>([]);
@@ -110,9 +127,28 @@ export function EditGoalDialog({
       }
       setAssignees(existingAssignees);
       
-      // For consistency goals
+      // For consistency goals - load all settings
       if (goal.goal_type === 'consistency' && 'threshold_percent' in goal.success_criteria) {
-        setThresholdPercent(goal.success_criteria.threshold_percent);
+        const criteria = goal.success_criteria as { threshold_percent: number; time_window_days: number; frequency: 'daily' | 'weekly'; times_per_week?: number };
+        setThresholdPercent(criteria.threshold_percent);
+        setDurationDays(criteria.time_window_days || 30);
+        
+        // Parse frequency from success_criteria
+        if (criteria.frequency === 'weekly') {
+          setRecurrenceRule({
+            frequency: 'weekly',
+            interval: 1,
+            weekdays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+            endType: 'never'
+          });
+        } else {
+          setRecurrenceRule({
+            frequency: 'daily',
+            interval: 1,
+            endType: 'never'
+          });
+        }
+        setCustomDuration(!DURATION_PRESETS.some(p => p.value === criteria.time_window_days));
       }
 
       // Load milestones for project goals
@@ -149,14 +185,22 @@ export function EditGoalDialog({
       assignees: assignees.length > 0 ? assignees : undefined,
     };
     
-    // For consistency goals, update threshold if changed
+    // For consistency goals, update all criteria
     if (goal.goal_type === 'consistency' && 'threshold_percent' in goal.success_criteria) {
-      if (thresholdPercent !== goal.success_criteria.threshold_percent) {
-        data.success_criteria = {
-          ...goal.success_criteria,
-          threshold_percent: thresholdPercent
-        };
-      }
+      const timesPerWeek = recurrenceRule.frequency === 'weekly' 
+        ? (recurrenceRule.weekdays?.length || 5) 
+        : undefined;
+      
+      data.success_criteria = {
+        time_window_days: durationDays,
+        frequency: recurrenceRule.frequency === 'weekly' ? 'weekly' : 'daily',
+        times_per_week: timesPerWeek,
+        threshold_percent: thresholdPercent
+      };
+      
+      // Recalculate end date based on duration
+      const startDate = parseISO(goal.start_date);
+      data.end_date = format(addDays(startDate, durationDays - 1), 'yyyy-MM-dd');
     }
     
     const success = await updateGoal(goal.id, data);
@@ -293,34 +337,84 @@ export function EditGoalDialog({
             />
           </div>
           
-          {/* Consistency Goal Options - read-only summary */}
+          {/* Consistency Goal Options - Full editing like setup */}
           {isConsistencyGoal && 'threshold_percent' in goal.success_criteria && (
             <>
               <Separator />
               <div className="space-y-4">
                 <Label className="text-base font-semibold flex items-center gap-2">
-                  <span className="text-orange-500">🔥</span> Consistency Settings
+                  <Flame className="h-4 w-4 text-orange-500" />
+                  Consistency Settings
                 </Label>
                 
-                {/* Read-only info about the goal setup */}
-                <div className="p-3 rounded-lg bg-muted/30 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Duration</span>
-                    <span className="font-medium">{goal.success_criteria.time_window_days} days</span>
+                {/* Frequency selector */}
+                <SimpleFrequencySelector
+                  rule={recurrenceRule}
+                  onRuleChange={setRecurrenceRule}
+                />
+                
+                {/* Duration */}
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Goal Duration
+                  </Label>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    {DURATION_PRESETS.map(preset => (
+                      <button
+                        key={preset.value}
+                        type="button"
+                        onClick={() => {
+                          setDurationDays(preset.value);
+                          setCustomDuration(false);
+                        }}
+                        className={cn(
+                          'p-3 rounded-lg border text-left transition-all',
+                          !customDuration && durationDays === preset.value 
+                            ? 'border-primary bg-primary/10' 
+                            : 'hover:border-primary/50'
+                        )}
+                      >
+                        <div className="font-medium text-sm">{preset.label}</div>
+                        <div className="text-xs text-muted-foreground">{preset.description}</div>
+                      </button>
+                    ))}
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Frequency</span>
-                    <span className="font-medium capitalize">
-                      {goal.success_criteria.frequency === 'weekly' 
-                        ? `${goal.success_criteria.times_per_week}x per week` 
-                        : 'Daily'}
-                    </span>
-                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setCustomDuration(true)}
+                    className={cn(
+                      'w-full p-3 rounded-lg border text-left transition-all',
+                      customDuration ? 'border-primary bg-primary/10' : 'hover:border-primary/50'
+                    )}
+                  >
+                    <div className="font-medium text-sm">Custom duration</div>
+                    {customDuration && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <Input 
+                          type="number"
+                          min={7}
+                          max={365}
+                          value={durationDays}
+                          onChange={(e) => setDurationDays(parseInt(e.target.value) || 30)}
+                          className="w-24"
+                        />
+                        <span className="text-sm text-muted-foreground">days</span>
+                      </div>
+                    )}
+                  </button>
                 </div>
                 
-                {/* Editable threshold */}
-                <div className="space-y-2">
-                  <Label>Success Threshold: {thresholdPercent}%</Label>
+                {/* Success threshold */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Success Threshold: {thresholdPercent}%</Label>
+                    <span className="text-sm text-muted-foreground">
+                      Can miss up to {Math.floor(durationDays * (1 - thresholdPercent / 100))} days
+                    </span>
+                  </div>
                   <Slider 
                     value={[thresholdPercent]}
                     onValueChange={(v) => setThresholdPercent(v[0])}
@@ -328,9 +422,10 @@ export function EditGoalDialog({
                     max={100}
                     step={5}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    You can miss up to {Math.floor((goal.success_criteria.time_window_days || 30) * (1 - thresholdPercent / 100))} days and still complete the goal
-                  </p>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>50% (flexible)</span>
+                    <span>100% (perfect)</span>
+                  </div>
                 </div>
               </div>
             </>
