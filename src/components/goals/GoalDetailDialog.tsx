@@ -23,7 +23,11 @@ import { MemberConsistencyGrid } from './MemberConsistencyGrid';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useGoals } from '@/hooks/useGoals';
 import { useConsistencyCompletions } from '@/hooks/useConsistencyCompletions';
-import type { Goal } from '@/types/goal';
+import { useTaskCompletion } from '@/hooks/useTaskCompletion';
+import { useGoalLinkedTasks } from '@/hooks/useGoalLinkedTasks';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import type { Goal, GoalLinkedTask } from '@/types/goal';
 import { format, differenceInDays } from 'date-fns';
 import {
   AlertDialog,
@@ -51,7 +55,8 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
     archiveGoal, 
     deleteGoal,
     completeMilestone,
-    unlinkTaskFromGoal
+    unlinkTaskFromGoal,
+    fetchGoals
   } = useGoals();
   
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -59,6 +64,41 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
   
   // Fetch consistency completions for this goal (hook handles null goal)
   const { completionsByMember } = useConsistencyCompletions(goal);
+  
+  // Fetch family members
+  const { data: familyMembers = [] } = useQuery({
+    queryKey: ['family-members-for-goals'],
+    queryFn: async () => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('family_id')
+        .eq('id', profileId!)
+        .single();
+      
+      if (!profile) return [];
+      
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('family_id', profile.family_id)
+        .order('sort_order');
+      
+      return data || [];
+    },
+    enabled: !!profileId
+  });
+  
+  // Get current user profile
+  const currentUserProfile = familyMembers.find(m => m.id === profileId) || null;
+  
+  // Task completion hook
+  const { completeTask, uncompleteTask } = useTaskCompletion({
+    currentUserProfile: currentUserProfile as any,
+    isDashboardMode: false
+  });
+  
+  // Get task map for linked tasks
+  const { tasksMap } = useGoalLinkedTasks(goal?.linked_tasks || []);
 
   // Early return after all hooks
   if (!goal) return null;
@@ -69,6 +109,20 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
   const isParent = true;
   const canEdit = isOwner || isParent;
   const isConsistencyGoal = goal.goal_type === 'consistency';
+  
+  // Handle task completion/uncomplete
+  const handleTaskComplete = async (linkedTask: GoalLinkedTask) => {
+    const task = tasksMap[linkedTask.id];
+    if (!task) return;
+    
+    const hasCompletion = task.task_completions && task.task_completions.length > 0;
+    
+    if (hasCompletion) {
+      await uncompleteTask(task, () => fetchGoals());
+    } else {
+      await completeTask(task, () => fetchGoals());
+    }
+  };
 
   const handlePause = async () => {
     await pauseGoal(goal.id);
@@ -327,12 +381,19 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
               </div>
             )}
             
-            {progress?.goal_type === 'project' && 'completed_milestones' in progress && (
-              <div className="p-4 rounded-lg bg-muted/50 text-center">
-                <div className="text-4xl font-bold">
-                  {progress.completed_milestones} / {progress.total_milestones}
+            {progress?.goal_type === 'project' && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-lg bg-muted/50 text-center">
+                  <div className="text-4xl font-bold">
+                    {(progress as any).completed_tasks ?? 0} / {(progress as any).total_tasks ?? 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">Tasks Complete</div>
                 </div>
-                <div className="text-sm text-muted-foreground mt-1">Milestones Complete</div>
+                {'completed_milestones' in progress && progress.total_milestones > 0 && (
+                  <div className="text-sm text-muted-foreground text-center">
+                    {progress.completed_milestones} / {progress.total_milestones} Milestones
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -348,6 +409,7 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
               </h3>
               <LinkedTasksList 
                 linkedTasks={goal.linked_tasks || []}
+                onComplete={handleTaskComplete}
                 canEdit={false}
                 showEmpty={true}
               />
@@ -364,6 +426,7 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
                   milestones={goal.milestones || []}
                   linkedTasks={goal.linked_tasks || []}
                   onComplete={canEdit ? completeMilestone : undefined}
+                  onCompleteTask={handleTaskComplete}
                   canComplete={canEdit}
                   canEdit={false}
                 />

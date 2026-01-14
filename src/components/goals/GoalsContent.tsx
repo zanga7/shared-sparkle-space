@@ -16,9 +16,11 @@ import { EditGoalDialog } from '@/components/goals/EditGoalDialog';
 import { useGoals } from '@/hooks/useGoals';
 import { useRewards } from '@/hooks/useRewards';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
+import { useTaskCompletion } from '@/hooks/useTaskCompletion';
+import { useGoalLinkedTasks } from '@/hooks/useGoalLinkedTasks';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import type { Goal, GoalStatus } from '@/types/goal';
+import type { Goal, GoalStatus, GoalLinkedTask } from '@/types/goal';
 
 interface FamilyMember {
   id: string;
@@ -45,10 +47,25 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
     deleteGoal,
     profileId, 
     familyId,
-    reorderGoals
+    reorderGoals,
+    fetchGoals
   } = useGoals();
   const { rewards } = useRewards();
   const { hasModule } = useModuleAccess(familyId);
+  
+  // Get current user profile for task completion
+  const currentUserProfile = familyMembers.find(m => m.id === profileId) || null;
+  
+  // Task completion hook
+  const { completeTask, uncompleteTask, isCompleting } = useTaskCompletion({
+    currentUserProfile: currentUserProfile as any,
+    activeMemberId: selectedMemberId,
+    isDashboardMode: false
+  });
+  
+  // Get all linked tasks from all goals for task lookup
+  const allLinkedTasks = goals.flatMap(g => g.linked_tasks || []);
+  const { tasksMap } = useGoalLinkedTasks(allLinkedTasks);
   
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
@@ -65,6 +82,20 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
     setSelectedGoal((prev) => (prev ? goals.find((g) => g.id === prev.id) ?? null : null));
     setEditingGoal((prev) => (prev ? goals.find((g) => g.id === prev.id) ?? null : null));
   }, [goals]);
+  
+  // Handle task completion/uncomplete from goals
+  const handleTaskToggle = async (linkedTask: GoalLinkedTask) => {
+    const task = tasksMap[linkedTask.id];
+    if (!task) return;
+    
+    const hasCompletion = task.task_completions && task.task_completions.length > 0;
+    
+    if (hasCompletion) {
+      await uncompleteTask(task, () => fetchGoals());
+    } else {
+      await completeTask(task, () => fetchGoals());
+    }
+  };
 
   // Goal action handlers with toasts
   const handlePause = async (goalId: string) => {
@@ -205,6 +236,7 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
                           onPause={() => handlePause(goal.id)}
                           onResume={() => handleResume(goal.id)}
                           onArchive={() => handleArchive(goal.id)}
+                          onCompleteTask={handleTaskToggle}
                         />
                       </div>
                     </div>
