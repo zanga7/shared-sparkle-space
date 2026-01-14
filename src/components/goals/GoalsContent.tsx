@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Plus, Target, Users, User, Filter } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Plus, Target, Filter, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -9,9 +8,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { GoalCard } from '@/components/goals/GoalCard';
 import { GoalDetailDialog } from '@/components/goals/GoalDetailDialog';
 import { CreateGoalDialog } from '@/components/goals/CreateGoalDialog';
+import { EditGoalDialog } from '@/components/goals/EditGoalDialog';
 import { useGoals } from '@/hooks/useGoals';
 import { useRewards } from '@/hooks/useRewards';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
@@ -42,18 +43,18 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
     resumeGoal, 
     archiveGoal, 
     deleteGoal,
-    getMyGoals, 
-    getFamilyGoals, 
     profileId, 
-    familyId 
+    familyId,
+    reorderGoals
   } = useGoals();
   const { rewards } = useRewards();
   const { hasModule } = useModuleAccess(familyId);
   
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [statusFilter, setStatusFilter] = useState<GoalStatus | 'all'>('active');
-  const [activeTab, setActiveTab] = useState('my');
+  const [orderedGoals, setOrderedGoals] = useState<Goal[]>([]);
 
   // Goal action handlers with toasts
   const handlePause = async (goalId: string) => {
@@ -78,6 +79,10 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
     }
   };
 
+  const handleEdit = (goal: Goal) => {
+    setEditingGoal(goal);
+  };
+
   // Check module access
   if (!hasModule('goals')) {
     return (
@@ -91,28 +96,59 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
     );
   }
 
-  // When viewing a specific member, only show their goals
-  const effectiveProfileId = viewMode === 'member' && selectedMemberId ? selectedMemberId : profileId;
-  
-  const myGoals = effectiveProfileId ? getMyGoals(effectiveProfileId) : [];
-  const familyGoalsList = getFamilyGoals();
-
-  const filterByStatus = (goalsList: Goal[]) => {
-    if (statusFilter === 'all') return goalsList;
-    return goalsList.filter(g => g.status === statusFilter);
+  // Filter goals by member if in member view
+  const getFilteredGoals = () => {
+    let filtered = goals;
+    
+    // Filter by member if viewing a specific member
+    if (viewMode === 'member' && selectedMemberId) {
+      filtered = goals.filter(g => 
+        g.assigned_to === selectedMemberId || 
+        g.assignees?.some(a => a.profile_id === selectedMemberId)
+      );
+    }
+    
+    // Filter by status
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(g => g.status === statusFilter);
+    }
+    
+    return filtered;
   };
 
-  const filteredMyGoals = filterByStatus(myGoals);
-  const filteredFamilyGoals = filterByStatus(familyGoalsList);
+  const filteredGoals = getFilteredGoals();
 
-  const renderGoalsList = (goalsList: Goal[], emptyIcon: React.ReactNode, emptyTitle: string, emptyDescription: string) => {
+  // Handle drag and drop
+  const handleDragEnd = useCallback((result: DropResult) => {
+    if (!result.destination) return;
+    
+    const items = Array.from(filteredGoals);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    
+    setOrderedGoals(items);
+    
+    // Save new order (could persist to DB if needed)
+    if (reorderGoals) {
+      reorderGoals(items.map(g => g.id));
+    }
+  }, [filteredGoals, reorderGoals]);
+
+  // Use ordered goals if we have them, otherwise use filtered
+  const displayGoals = orderedGoals.length > 0 && orderedGoals.every(og => filteredGoals.some(fg => fg.id === og.id))
+    ? orderedGoals.filter(og => filteredGoals.some(fg => fg.id === og.id))
+    : filteredGoals;
+
+  const renderGoalsList = (goalsList: Goal[]) => {
     if (goalsList.length === 0) {
       return (
         <div className="text-center py-12">
-          {emptyIcon}
-          <h3 className="font-medium text-lg mb-1">{emptyTitle}</h3>
+          <Target className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+          <h3 className="font-medium text-lg mb-1">No goals yet</h3>
           <p className="text-muted-foreground text-sm mb-4">
-            {emptyDescription}
+            {statusFilter === 'all' 
+              ? 'Create a goal to track your progress'
+              : `No ${statusFilter} goals`}
           </p>
           <Button variant="outline" onClick={() => setShowCreateDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -123,18 +159,47 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
     }
 
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 grid-gap">
-        {goalsList.map((goal) => (
-          <GoalCard 
-            key={goal.id}
-            goal={goal}
-            onSelect={setSelectedGoal}
-            onPause={() => handlePause(goal.id)}
-            onResume={() => handleResume(goal.id)}
-            onArchive={() => handleArchive(goal.id)}
-          />
-        ))}
-      </div>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Droppable droppableId="goals-list">
+          {(provided) => (
+            <div 
+              className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+            >
+              {goalsList.map((goal, index) => (
+                <Draggable key={goal.id} draggableId={goal.id} index={index}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      className={snapshot.isDragging ? 'opacity-90' : ''}
+                    >
+                      <div className="relative group">
+                        <div 
+                          {...provided.dragHandleProps}
+                          className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded bg-background/80 shadow-sm"
+                        >
+                          <GripVertical className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <GoalCard 
+                          goal={goal}
+                          onSelect={setSelectedGoal}
+                          onEdit={() => handleEdit(goal)}
+                          onPause={() => handlePause(goal.id)}
+                          onResume={() => handleResume(goal.id)}
+                          onArchive={() => handleArchive(goal.id)}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
     );
   };
 
@@ -153,31 +218,8 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
           </Button>
         </div>
       
-        <div className="flex items-center justify-between section-spacing">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-          <TabsList>
-            <TabsTrigger value="my" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              {viewMode === 'member' && selectedMemberId ? 'Their Goals' : 'My Goals'}
-              {filteredMyGoals.length > 0 && (
-                <span className="ml-1 text-xs bg-primary/20 px-1.5 rounded">
-                  {filteredMyGoals.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="family" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Family Goals
-              {filteredFamilyGoals.length > 0 && (
-                <span className="ml-1 text-xs bg-primary/20 px-1.5 rounded">
-                  {filteredFamilyGoals.length}
-                </span>
-              )}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-        
-        <div className="flex items-center gap-2">
+        {/* Filter */}
+        <div className="flex items-center justify-end gap-2 mb-6">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as GoalStatus | 'all')}>
             <SelectTrigger className="w-32">
@@ -192,38 +234,15 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
             </SelectContent>
           </Select>
         </div>
-      </div>
       
         {loading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 grid-gap">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <Skeleton key={i} className="h-48 rounded-lg" />
             ))}
           </div>
         ) : (
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsContent value="my" className="mt-0">
-              {renderGoalsList(
-                filteredMyGoals,
-                <User className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />,
-                'No personal goals',
-                statusFilter === 'all' 
-                  ? 'Set a personal goal to track your progress'
-                  : `No ${statusFilter} personal goals`
-              )}
-            </TabsContent>
-            
-            <TabsContent value="family" className="mt-0">
-              {renderGoalsList(
-                filteredFamilyGoals,
-                <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />,
-                'No family goals',
-                statusFilter === 'all'
-                  ? 'Create a goal the whole family can work toward together'
-                  : `No ${statusFilter} family goals`
-              )}
-            </TabsContent>
-          </Tabs>
+          renderGoalsList(displayGoals)
         )}
       </div>
       
@@ -231,6 +250,14 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
         goal={selectedGoal}
         open={!!selectedGoal}
         onOpenChange={(open) => !open && setSelectedGoal(null)}
+      />
+      
+      <EditGoalDialog
+        goal={editingGoal}
+        open={!!editingGoal}
+        onOpenChange={(open) => !open && setEditingGoal(null)}
+        familyMembers={familyMembers}
+        rewards={rewards}
       />
       
       <CreateGoalDialog 

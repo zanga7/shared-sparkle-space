@@ -1,4 +1,4 @@
-import { Target, Users, Calendar, Trophy, Pause, Play, Archive, MoreVertical } from 'lucide-react';
+import { Target, Users, Calendar, Trophy, Pause, Play, Archive, MoreVertical, Edit } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,8 @@ import { GoalProgressRing } from './GoalProgressRing';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
-  DropdownMenuItem, 
+  DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import type { Goal } from '@/types/goal';
@@ -16,12 +17,13 @@ import { format, differenceInDays } from 'date-fns';
 interface GoalCardProps {
   goal: Goal;
   onSelect?: (goal: Goal) => void;
+  onEdit?: () => void;
   onPause?: (goalId: string) => void;
   onResume?: (goalId: string) => void;
   onArchive?: (goalId: string) => void;
 }
 
-export function GoalCard({ goal, onSelect, onPause, onResume, onArchive }: GoalCardProps) {
+export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive }: GoalCardProps) {
   const progress = goal.progress;
   const percent = progress?.current_percent ?? 0;
   
@@ -137,6 +139,11 @@ export function GoalCard({ goal, onSelect, onPause, onResume, onArchive }: GoalC
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit?.(); }}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               {goal.status === 'active' && (
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPause?.(goal.id); }}>
                   <Pause className="h-4 w-4 mr-2" />
@@ -185,7 +192,31 @@ export function GoalCard({ goal, onSelect, onPause, onResume, onArchive }: GoalC
           </div>
         </div>
         
-        {goal.goal_scope === 'individual' && goal.assignee && (
+        {/* Show assignees - single or multiple */}
+        {goal.assignees && goal.assignees.length > 0 && (
+          <div className="flex items-center gap-1 mt-3 pt-3 border-t">
+            {goal.assignees.slice(0, 5).map((a) => (
+              <UserAvatar 
+                key={a.profile_id}
+                name={a.profile?.display_name || ''} 
+                color={a.profile?.color || '#888'}
+                avatarIcon={a.profile?.avatar_url || undefined}
+                size="xs"
+              />
+            ))}
+            {goal.assignees.length > 5 && (
+              <span className="text-xs text-muted-foreground ml-1">
+                +{goal.assignees.length - 5}
+              </span>
+            )}
+            {goal.assignees.length === 1 && goal.assignees[0].profile && (
+              <span className="text-sm text-muted-foreground ml-1">{goal.assignees[0].profile.display_name}</span>
+            )}
+          </div>
+        )}
+        
+        {/* Fallback to single assignee if no assignees array */}
+        {(!goal.assignees || goal.assignees.length === 0) && goal.assignee && (
           <div className="flex items-center gap-2 mt-3 pt-3 border-t">
             <UserAvatar 
               name={goal.assignee.display_name} 
@@ -197,7 +228,8 @@ export function GoalCard({ goal, onSelect, onPause, onResume, onArchive }: GoalC
           </div>
         )}
         
-        {goal.goal_scope === 'family' && progress?.participant_progress && (
+        {/* Family goals with participant progress */}
+        {goal.goal_scope === 'family' && !goal.assignees?.length && progress?.participant_progress && (
           <div className="flex items-center gap-1 mt-3 pt-3 border-t">
             {progress.participant_progress.slice(0, 5).map((p) => (
               <UserAvatar 
