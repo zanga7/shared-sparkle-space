@@ -1,9 +1,10 @@
-import { Target, Users, Calendar, Trophy, Pause, Play, Archive, MoreVertical, Edit } from 'lucide-react';
+import { Target, Users, Calendar, Trophy, Pause, Play, Archive, MoreVertical, Edit, Check } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { GoalProgressRing } from './GoalProgressRing';
+import { GoalTaskItem } from './GoalTaskItem';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -11,8 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import type { Goal } from '@/types/goal';
+import type { Goal, GoalLinkedTask } from '@/types/goal';
 import { format, differenceInDays } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface GoalCardProps {
   goal: Goal;
@@ -21,9 +23,10 @@ interface GoalCardProps {
   onPause?: (goalId: string) => void;
   onResume?: (goalId: string) => void;
   onArchive?: (goalId: string) => void;
+  onCompleteTask?: (linkedTask: GoalLinkedTask) => void;
 }
 
-export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive }: GoalCardProps) {
+export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive, onCompleteTask }: GoalCardProps) {
   const progress = goal.progress;
   const percent = progress?.current_percent ?? 0;
   
@@ -105,6 +108,21 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive 
     if (days === 1) return '1 day left';
     return `${days} days left`;
   };
+
+  // Group tasks by milestone for project goals
+  const tasksByMilestone: Record<string, GoalLinkedTask[]> = {};
+  const unassignedTasks: GoalLinkedTask[] = [];
+  
+  (goal.linked_tasks || []).forEach(task => {
+    if (task.milestone_id) {
+      if (!tasksByMilestone[task.milestone_id]) {
+        tasksByMilestone[task.milestone_id] = [];
+      }
+      tasksByMilestone[task.milestone_id].push(task);
+    } else {
+      unassignedTasks.push(task);
+    }
+  });
 
   return (
     <Card 
@@ -242,6 +260,75 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive 
             {progress.participant_progress.length > 5 && (
               <span className="text-xs text-muted-foreground ml-1">
                 +{progress.participant_progress.length - 5}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Project Goals: Show milestones with their tasks */}
+        {goal.goal_type === 'project' && goal.milestones && goal.milestones.length > 0 && (
+          <div className="mt-3 pt-3 border-t space-y-2" onClick={(e) => e.stopPropagation()}>
+            {goal.milestones.slice(0, 3).map((milestone, idx) => {
+              const milestoneTasks = tasksByMilestone[milestone.id] || [];
+              return (
+                <div key={milestone.id} className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className={cn(
+                      'flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs',
+                      milestone.is_completed 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-muted text-muted-foreground'
+                    )}>
+                      {milestone.is_completed ? <Check className="h-3 w-3" /> : idx + 1}
+                    </div>
+                    <span className={cn(
+                      'text-sm',
+                      milestone.is_completed && 'line-through text-muted-foreground'
+                    )}>
+                      {milestone.title}
+                    </span>
+                  </div>
+                  {/* Tasks under this milestone */}
+                  {milestoneTasks.length > 0 && (
+                    <div className="ml-7 space-y-1">
+                      {milestoneTasks.slice(0, 2).map((task) => (
+                        <GoalTaskItem
+                          key={task.id}
+                          linkedTask={task}
+                          onComplete={onCompleteTask ? () => onCompleteTask(task) : undefined}
+                        />
+                      ))}
+                      {milestoneTasks.length > 2 && (
+                        <span className="text-xs text-muted-foreground">
+                          +{milestoneTasks.length - 2} more tasks
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {goal.milestones.length > 3 && (
+              <span className="text-xs text-muted-foreground">
+                +{goal.milestones.length - 3} more milestones
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Non-project goals: Show linked tasks */}
+        {goal.goal_type !== 'project' && unassignedTasks.length > 0 && (
+          <div className="mt-3 pt-3 border-t space-y-2" onClick={(e) => e.stopPropagation()}>
+            {unassignedTasks.slice(0, 2).map((task) => (
+              <GoalTaskItem
+                key={task.id}
+                linkedTask={task}
+                onComplete={onCompleteTask ? () => onCompleteTask(task) : undefined}
+              />
+            ))}
+            {unassignedTasks.length > 2 && (
+              <span className="text-xs text-muted-foreground">
+                +{unassignedTasks.length - 2} more tasks
               </span>
             )}
           </div>
