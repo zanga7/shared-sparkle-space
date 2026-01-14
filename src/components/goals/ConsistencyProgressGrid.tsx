@@ -11,6 +11,7 @@ interface ConsistencyProgressGridProps {
   startDate: string;
   totalDays: number;
   completedDates: string[]; // Array of ISO date strings when task was completed
+  memberColor?: string; // Optional member color key for dynamic coloring
   className?: string;
 }
 
@@ -18,6 +19,7 @@ export function ConsistencyProgressGrid({
   startDate,
   totalDays,
   completedDates,
+  memberColor,
   className
 }: ConsistencyProgressGridProps) {
   const start = startOfDay(parseISO(startDate));
