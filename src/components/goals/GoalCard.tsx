@@ -107,8 +107,26 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
   };
 
   const getDaysRemaining = () => {
+    // For consistency goals, calculate based on time_window_days from start
+    if (goal.goal_type === 'consistency' && 'time_window_days' in goal.success_criteria) {
+      const startDate = new Date(goal.start_date + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const daysElapsed = differenceInDays(today, startDate);
+      const totalDays = (goal.success_criteria as { time_window_days: number }).time_window_days;
+      const remaining = totalDays - daysElapsed;
+      
+      if (remaining < 0) return 'Ended';
+      if (remaining === 0) return 'Last day';
+      if (remaining === 1) return '1 day left';
+      return `${remaining} days left`;
+    }
+    
     if (!goal.end_date) return null;
-    const days = differenceInDays(new Date(goal.end_date), new Date());
+    const endDate = new Date(goal.end_date + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const days = differenceInDays(endDate, today);
     if (days < 0) return 'Ended';
     if (days === 0) return 'Ends today';
     if (days === 1) return '1 day left';
