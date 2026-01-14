@@ -31,8 +31,7 @@ import {
   Smartphone,
   LogOut,
   GraduationCap,
-  Cake,
-  Target
+  Cake
 } from "lucide-react";
 
 const adminMenuItems = [
@@ -40,7 +39,7 @@ const adminMenuItems = [
   { title: "Family Members", url: "/admin/members", icon: Users },
   { title: "Rotating Tasks", url: "/admin/rotating-tasks", icon: RotateCcw },
   { title: "Rotation Debugger", url: "/admin/rotation-debugger", icon: Database },
-  { title: "Goals", url: "/admin/goals", icon: Target },
+  
   { title: "Rewards", url: "/admin/rewards", icon: Gift },
   { title: "Reward Approvals", url: "/admin/reward-approvals", icon: ClipboardCheck },
   { title: "Celebrations", url: "/admin/celebrations", icon: Cake },
