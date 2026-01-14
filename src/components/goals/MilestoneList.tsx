@@ -1,6 +1,8 @@
-import { Check, Trophy } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { Check, Trophy, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import type { GoalMilestone, GoalLinkedTask } from '@/types/goal';
 import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
 import { useGoalLinkedTasks } from '@/hooks/useGoalLinkedTasks';
@@ -28,14 +30,9 @@ export function MilestoneList({
   className 
 }: MilestoneListProps) {
   const { tasksMap, familyMembers, isLoading } = useGoalLinkedTasks(linkedTasks);
-
-  if (!milestones.length) {
-    return (
-      <div className="text-sm text-muted-foreground text-center py-4">
-        No milestones defined
-      </div>
-    );
-  }
+  
+  // Track which milestones we've auto-completed to prevent duplicate calls
+  const autoCompletedRef = useRef<Set<string>>(new Set());
 
   // Group tasks by milestone_id
   const tasksByMilestone: Record<string, GoalLinkedTask[]> = {};
@@ -47,10 +44,65 @@ export function MilestoneList({
     tasksByMilestone[milestoneId].push(task);
   });
 
+  // Check if all tasks in a milestone are completed
+  const areAllTasksCompleted = (milestoneId: string): boolean => {
+    const milestoneTasks = tasksByMilestone[milestoneId] || [];
+    if (milestoneTasks.length === 0) return false; // No tasks = not completable
+    
+    return milestoneTasks.every(linkedTask => {
+      const task = tasksMap[linkedTask.id];
+      if (!task) return false;
+      
+      // Check if task has any completions
+      const hasCompletions = task.task_completions && task.task_completions.length > 0;
+      return hasCompletions;
+    });
+  };
+
+  // Get completion progress for a milestone
+  const getTaskProgress = (milestoneId: string): { completed: number; total: number } => {
+    const milestoneTasks = tasksByMilestone[milestoneId] || [];
+    const total = milestoneTasks.length;
+    const completed = milestoneTasks.filter(linkedTask => {
+      const task = tasksMap[linkedTask.id];
+      return task?.task_completions && task.task_completions.length > 0;
+    }).length;
+    return { completed, total };
+  };
+
+  // Auto-complete milestones when all tasks are done
+  useEffect(() => {
+    if (isLoading || !onComplete) return;
+    
+    milestones.forEach(milestone => {
+      if (milestone.is_completed) return;
+      if (autoCompletedRef.current.has(milestone.id)) return;
+      
+      const milestoneTasks = tasksByMilestone[milestone.id] || [];
+      if (milestoneTasks.length === 0) return;
+      
+      if (areAllTasksCompleted(milestone.id)) {
+        autoCompletedRef.current.add(milestone.id);
+        onComplete(milestone.id);
+      }
+    });
+  }, [milestones, tasksMap, isLoading, onComplete]);
+
+  if (!milestones.length) {
+    return (
+      <div className="text-sm text-muted-foreground text-center py-4">
+        No milestones defined
+      </div>
+    );
+  }
+
   return (
     <div className={cn('space-y-3', className)}>
       {milestones.map((milestone, index) => {
         const milestoneTasks = tasksByMilestone[milestone.id] || [];
+        const allTasksCompleted = areAllTasksCompleted(milestone.id);
+        const { completed, total } = getTaskProgress(milestone.id);
+        const hasTasks = total > 0;
         
         return (
           <div 
@@ -84,20 +136,39 @@ export function MilestoneList({
                 )}>
                   {milestone.title}
                 </div>
-                {milestone.reward && (
-                  <div className="flex items-center gap-1 mt-1 text-xs text-amber-500">
-                    <Trophy className="h-3 w-3" />
-                    <span>{milestone.reward.title}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2 mt-1">
+                  {milestone.reward && (
+                    <div className="flex items-center gap-1 text-xs text-amber-500">
+                      <Trophy className="h-3 w-3" />
+                      <span>{milestone.reward.title}</span>
+                    </div>
+                  )}
+                  {/* Task progress indicator */}
+                  {!milestone.is_completed && hasTasks && (
+                    <Badge variant={allTasksCompleted ? "default" : "secondary"} className="text-xs py-0 h-5">
+                      {completed}/{total} tasks
+                    </Badge>
+                  )}
+                </div>
               </div>
               
-              {!milestone.is_completed && canComplete && (
+              {/* Show locked state if tasks aren't all complete */}
+              {!milestone.is_completed && canComplete && hasTasks && !allTasksCompleted && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Lock className="h-3 w-3" />
+                  <span>Complete all tasks</span>
+                </div>
+              )}
+              
+              {/* Show complete button only when all tasks are done (auto-completes, but show for manual trigger) */}
+              {!milestone.is_completed && canComplete && (!hasTasks || allTasksCompleted) && (
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => onComplete?.(milestone.id)}
+                  className="bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
                 >
+                  <Check className="h-3 w-3 mr-1" />
                   Complete
                 </Button>
               )}
