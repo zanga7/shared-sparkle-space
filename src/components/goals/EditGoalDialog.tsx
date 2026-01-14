@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Target, Trophy, Plus, X } from 'lucide-react';
+import { Target, Trophy } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
+import { TaskLinkingSection } from './TaskLinkingSection';
 import { useGoals } from '@/hooks/useGoals';
 import type { Goal, UpdateGoalData } from '@/types/goal';
 import type { Reward } from '@/types/rewards';
@@ -39,7 +40,7 @@ export function EditGoalDialog({
   familyMembers, 
   rewards 
 }: EditGoalDialogProps) {
-  const { updateGoal, profileId } = useGoals();
+  const { updateGoal, profileId, familyId, linkTaskToGoal, unlinkTaskFromGoal, fetchGoals } = useGoals();
   
   const [loading, setLoading] = useState(false);
   
@@ -52,6 +53,11 @@ export function EditGoalDialog({
   
   // Consistency criteria (only editable for consistency goals)
   const [thresholdPercent, setThresholdPercent] = useState(80);
+
+  // Task linking
+  const [linkedTaskIds, setLinkedTaskIds] = useState<string[]>([]);
+  const [linkedSeriesIds, setLinkedSeriesIds] = useState<string[]>([]);
+  const [linkedRotatingIds, setLinkedRotatingIds] = useState<string[]>([]);
 
   // Reset form when goal changes
   useEffect(() => {
@@ -77,6 +83,11 @@ export function EditGoalDialog({
       if (goal.goal_type === 'consistency' && 'threshold_percent' in goal.success_criteria) {
         setThresholdPercent(goal.success_criteria.threshold_percent);
       }
+
+      // Reset new task links
+      setLinkedTaskIds([]);
+      setLinkedSeriesIds([]);
+      setLinkedRotatingIds([]);
     }
   }, [goal]);
 
@@ -108,12 +119,33 @@ export function EditGoalDialog({
     }
     
     const success = await updateGoal(goal.id, data);
+    
+    // Link new tasks
+    if (success) {
+      for (const taskId of linkedTaskIds) {
+        await linkTaskToGoal(goal.id, { task_id: taskId });
+      }
+      for (const seriesId of linkedSeriesIds) {
+        await linkTaskToGoal(goal.id, { task_series_id: seriesId });
+      }
+      for (const rotatingId of linkedRotatingIds) {
+        await linkTaskToGoal(goal.id, { rotating_task_id: rotatingId });
+      }
+    }
+    
+    // Refresh goals to get updated data
+    await fetchGoals();
+    
     setLoading(false);
     
     if (success) {
       toast.success('Goal updated');
       handleClose();
     }
+  };
+
+  const handleUnlinkTask = async (linkId: string) => {
+    await unlinkTaskFromGoal(linkId);
   };
 
   if (!goal) return null;
@@ -190,6 +222,18 @@ export function EditGoalDialog({
               </p>
             </div>
           )}
+          
+          <TaskLinkingSection
+            familyId={familyId}
+            linkedTasks={goal.linked_tasks}
+            selectedTaskIds={linkedTaskIds}
+            selectedSeriesIds={linkedSeriesIds}
+            selectedRotatingIds={linkedRotatingIds}
+            onTasksChange={setLinkedTaskIds}
+            onSeriesChange={setLinkedSeriesIds}
+            onRotatingChange={setLinkedRotatingIds}
+            onUnlink={handleUnlinkTask}
+          />
           
           <div className="space-y-2">
             <Label>Reward (optional)</Label>
