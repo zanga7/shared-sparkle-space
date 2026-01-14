@@ -5,7 +5,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -15,10 +14,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
-import { UnifiedRecurrencePanel } from '@/components/recurrence/UnifiedRecurrencePanel';
+import { SimpleFrequencySelector } from './SimpleFrequencySelector';
 import { Trophy } from 'lucide-react';
 import type { Reward } from '@/types/rewards';
-import type { TaskRecurrenceOptions, RecurrenceRule } from '@/types/recurrence';
+import type { RecurrenceRule } from '@/types/recurrence';
 import { format, addDays } from 'date-fns';
 
 interface ConsistencyGoalSetupProps {
@@ -101,19 +100,11 @@ export function ConsistencyGoalSetup({
   const [taskPoints, setTaskPoints] = useState(5);
   const [taskGroup, setTaskGroup] = useState('Morning Routine');
   
-  // Recurrence
-  const [recurrenceEnabled, setRecurrenceEnabled] = useState(true);
-  const [taskOptions, setTaskOptions] = useState<TaskRecurrenceOptions>({
-    enabled: true,
-    rule: {
-      frequency: 'daily',
-      interval: 1,
-      endType: 'never'
-    },
-    repeatFrom: 'scheduled',
-    rotateBetweenMembers: false,
-    skipWeekends: false,
-    pauseDuringHolidays: false
+  // Simple recurrence rule - just frequency and weekdays
+  const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule>({
+    frequency: 'daily',
+    interval: 1,
+    endType: 'never' // End type will be calculated from duration
   });
   
   // Duration
@@ -149,7 +140,7 @@ export function ConsistencyGoalSetup({
       taskTitle,
       taskPoints,
       taskGroup,
-      recurrenceRule: taskOptions.rule,
+      recurrenceRule,
       durationDays,
       startDate,
       endDate,
@@ -238,7 +229,7 @@ export function ConsistencyGoalSetup({
         </div>
       )}
       
-      {/* Step 2: Recurrence & Duration */}
+      {/* Step 2: Frequency & Duration */}
       {step === 2 && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -246,14 +237,10 @@ export function ConsistencyGoalSetup({
             <span>Set frequency and duration</span>
           </div>
           
-          {/* Recurrence settings */}
-          <UnifiedRecurrencePanel
-            enabled={recurrenceEnabled}
-            onEnabledChange={setRecurrenceEnabled}
-            startDate={new Date(startDate)}
-            type="task"
-            taskOptions={taskOptions}
-            onTaskOptionsChange={setTaskOptions}
+          {/* Simple frequency selector */}
+          <SimpleFrequencySelector
+            rule={recurrenceRule}
+            onRuleChange={setRecurrenceRule}
           />
           
           <div className="space-y-3 pt-2">
