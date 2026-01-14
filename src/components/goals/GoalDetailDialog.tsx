@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { GoalProgressRing } from './GoalProgressRing';
 import { GraceIndicator } from './GraceIndicator';
@@ -37,9 +36,10 @@ interface GoalDetailDialogProps {
   goal: Goal | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEdit?: (goal: Goal) => void;
 }
 
-export function GoalDetailDialog({ goal, open, onOpenChange }: GoalDetailDialogProps) {
+export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetailDialogProps) {
   const { 
     profileId,
     pauseGoal, 
@@ -57,8 +57,7 @@ export function GoalDetailDialog({ goal, open, onOpenChange }: GoalDetailDialogP
   const progress = goal.progress;
   const percent = progress?.current_percent ?? 0;
   const isOwner = goal.created_by === profileId;
-  // For now, allow creator to edit - in future could check role from profile query
-  const isParent = true; // Simplified - creators can manage their goals
+  const isParent = true;
   const canEdit = isOwner || isParent;
 
   const handlePause = async () => {
@@ -77,6 +76,11 @@ export function GoalDetailDialog({ goal, open, onOpenChange }: GoalDetailDialogP
   const handleDelete = async () => {
     await deleteGoal(goal.id);
     setShowDeleteConfirm(false);
+    onOpenChange(false);
+  };
+
+  const handleEdit = () => {
+    onEdit?.(goal);
     onOpenChange(false);
   };
 
@@ -105,6 +109,13 @@ export function GoalDetailDialog({ goal, open, onOpenChange }: GoalDetailDialogP
 
   const daysRemaining = getDaysRemaining();
 
+  // Get all assignees for display
+  const allAssignees = goal.assignees && goal.assignees.length > 0 
+    ? goal.assignees 
+    : goal.assignee 
+      ? [{ profile_id: goal.assignee.id, profile: goal.assignee }] 
+      : [];
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -132,6 +143,9 @@ export function GoalDetailDialog({ goal, open, onOpenChange }: GoalDetailDialogP
               
               {canEdit && goal.status !== 'archived' && goal.status !== 'completed' && (
                 <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" onClick={handleEdit}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
                   {goal.status === 'active' ? (
                     <Button variant="ghost" size="icon" onClick={handlePause}>
                       <Pause className="h-4 w-4" />
@@ -156,6 +170,26 @@ export function GoalDetailDialog({ goal, open, onOpenChange }: GoalDetailDialogP
               )}
             </div>
           </DialogHeader>
+          
+          {/* Assignees at top */}
+          {allAssignees.length > 0 && (
+            <div className="flex items-center gap-3 py-3 border-b">
+              <span className="text-sm text-muted-foreground">Assigned to:</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                {allAssignees.map((a) => (
+                  <div key={a.profile_id} className="flex items-center gap-2">
+                    <UserAvatar 
+                      name={a.profile?.display_name || ''} 
+                      color={a.profile?.color || '#888'}
+                      avatarIcon={a.profile?.avatar_url || undefined}
+                      size="sm"
+                    />
+                    <span className="text-sm font-medium">{a.profile?.display_name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           
           {/* Progress Section */}
           <div className="flex items-center gap-6 py-4">
@@ -205,114 +239,104 @@ export function GoalDetailDialog({ goal, open, onOpenChange }: GoalDetailDialogP
           
           <Separator />
           
-          <Tabs defaultValue="progress" className="w-full">
-            <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="progress">Progress</TabsTrigger>
-              <TabsTrigger value="tasks">Linked Tasks</TabsTrigger>
-              {goal.goal_type === 'project' && (
-                <TabsTrigger value="milestones">Milestones</TabsTrigger>
-              )}
-              {goal.goal_scope === 'family' && (
-                <TabsTrigger value="team">Team</TabsTrigger>
-              )}
-            </TabsList>
-            
-            <TabsContent value="progress" className="pt-4">
-              {progress?.goal_type === 'consistency' && 'total_completions' in progress && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-lg bg-muted/50 text-center">
-                      <div className="text-3xl font-bold">{progress.total_completions}</div>
-                      <div className="text-sm text-muted-foreground">Completions</div>
-                    </div>
-                    <div className="p-4 rounded-lg bg-muted/50 text-center">
-                      <div className="text-3xl font-bold">{progress.days_elapsed}</div>
-                      <div className="text-sm text-muted-foreground">Days Elapsed</div>
-                    </div>
+          {/* Progress Details */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm">Progress Details</h3>
+            {progress?.goal_type === 'consistency' && 'total_completions' in progress && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-lg bg-muted/50 text-center">
+                    <div className="text-3xl font-bold">{progress.total_completions}</div>
+                    <div className="text-sm text-muted-foreground">Completions</div>
                   </div>
-                  
-                  <div className="p-4 rounded-lg border">
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Progress to threshold</span>
-                      <span className="font-medium">{percent}% / {progress.threshold_percent}%</span>
-                    </div>
-                    <div className="h-3 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary rounded-full transition-all"
-                        style={{ width: `${Math.min(100, (percent / progress.threshold_percent) * 100)}%` }}
-                      />
-                    </div>
+                  <div className="p-4 rounded-lg bg-muted/50 text-center">
+                    <div className="text-3xl font-bold">{progress.days_elapsed}</div>
+                    <div className="text-sm text-muted-foreground">Days Elapsed</div>
                   </div>
                 </div>
-              )}
-              
-              {progress?.goal_type === 'target_count' && 'current_count' in progress && (
-                <div className="space-y-4">
-                  <div className="p-4 rounded-lg bg-muted/50 text-center">
-                    <div className="text-4xl font-bold">
-                      {progress.current_count} / {progress.target_count}
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1">Completions</div>
+                
+                <div className="p-4 rounded-lg border">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span>Progress to threshold</span>
+                    <span className="font-medium">{percent}% / {progress.threshold_percent}%</span>
                   </div>
-                  
-                  <div className="h-4 bg-muted rounded-full overflow-hidden">
+                  <div className="h-3 bg-muted rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-primary rounded-full transition-all"
-                      style={{ width: `${percent}%` }}
+                      style={{ width: `${Math.min(100, (percent / progress.threshold_percent) * 100)}%` }}
                     />
                   </div>
                 </div>
-              )}
-              
-              {progress?.goal_type === 'project' && 'completed_milestones' in progress && (
+              </div>
+            )}
+            
+            {progress?.goal_type === 'target_count' && 'current_count' in progress && (
+              <div className="space-y-4">
                 <div className="p-4 rounded-lg bg-muted/50 text-center">
                   <div className="text-4xl font-bold">
-                    {progress.completed_milestones} / {progress.total_milestones}
+                    {progress.current_count} / {progress.target_count}
                   </div>
-                  <div className="text-sm text-muted-foreground mt-1">Milestones Complete</div>
+                  <div className="text-sm text-muted-foreground mt-1">Completions</div>
                 </div>
-              )}
-            </TabsContent>
+                
+                <div className="h-4 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary rounded-full transition-all"
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+              </div>
+            )}
             
-            <TabsContent value="tasks" className="pt-4">
-              <LinkedTasksList 
-                linkedTasks={goal.linked_tasks || []}
-                onUnlink={canEdit ? unlinkTaskFromGoal : undefined}
-                canEdit={canEdit}
-              />
-            </TabsContent>
-            
-            {goal.goal_type === 'project' && (
-              <TabsContent value="milestones" className="pt-4">
+            {progress?.goal_type === 'project' && 'completed_milestones' in progress && (
+              <div className="p-4 rounded-lg bg-muted/50 text-center">
+                <div className="text-4xl font-bold">
+                  {progress.completed_milestones} / {progress.total_milestones}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">Milestones Complete</div>
+              </div>
+            )}
+          </div>
+          
+          <Separator />
+          
+          {/* Linked Tasks Section */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <Link className="h-4 w-4" />
+              Linked Tasks
+            </h3>
+            <LinkedTasksList 
+              linkedTasks={goal.linked_tasks || []}
+              onUnlink={canEdit ? unlinkTaskFromGoal : undefined}
+              canEdit={canEdit}
+            />
+          </div>
+          
+          {/* Milestones Section for project goals */}
+          {goal.goal_type === 'project' && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm">Milestones</h3>
                 <MilestoneList 
                   milestones={goal.milestones || []}
                   onComplete={canEdit ? completeMilestone : undefined}
                   canComplete={canEdit}
                 />
-              </TabsContent>
-            )}
-            
-            {goal.goal_scope === 'family' && progress?.participant_progress && (
-              <TabsContent value="team" className="pt-4">
-                <ParticipantContributions participants={progress.participant_progress} />
-              </TabsContent>
-            )}
-          </Tabs>
-          
-          {/* Assignee for individual goals */}
-          {goal.goal_scope === 'individual' && goal.assignee && (
-            <div className="flex items-center gap-3 pt-4 border-t">
-              <UserAvatar 
-                name={goal.assignee.display_name}
-                color={goal.assignee.color}
-                avatarIcon={goal.assignee.avatar_url || undefined}
-                size="sm"
-              />
-              <div>
-                <div className="text-sm font-medium">{goal.assignee.display_name}</div>
-                <div className="text-xs text-muted-foreground">Assigned to</div>
               </div>
-            </div>
+            </>
+          )}
+          
+          {/* Team Contributions for family goals */}
+          {goal.goal_scope === 'family' && progress?.participant_progress && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm">Team Contributions</h3>
+                <ParticipantContributions participants={progress.participant_progress} />
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>

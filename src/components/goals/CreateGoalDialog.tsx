@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
+import { TaskLinkingSection } from './TaskLinkingSection';
 import { useGoals } from '@/hooks/useGoals';
 import type { 
   GoalType, 
@@ -44,7 +45,7 @@ export function CreateGoalDialog({
   familyMembers, 
   rewards 
 }: CreateGoalDialogProps) {
-  const { createGoal, profileId } = useGoals();
+  const { createGoal, profileId, familyId } = useGoals();
   
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -71,6 +72,11 @@ export function CreateGoalDialog({
   const [milestones, setMilestones] = useState<Array<{ title: string; reward_id?: string }>>([]);
   const [newMilestone, setNewMilestone] = useState('');
 
+  // Task linking
+  const [linkedTaskIds, setLinkedTaskIds] = useState<string[]>([]);
+  const [linkedSeriesIds, setLinkedSeriesIds] = useState<string[]>([]);
+  const [linkedRotatingIds, setLinkedRotatingIds] = useState<string[]>([]);
+
   const resetForm = () => {
     setStep(1);
     setTitle('');
@@ -87,6 +93,9 @@ export function CreateGoalDialog({
     setTargetCount(30);
     setMilestones([]);
     setNewMilestone('');
+    setLinkedTaskIds([]);
+    setLinkedSeriesIds([]);
+    setLinkedRotatingIds([]);
   };
 
   const handleClose = () => {
@@ -137,7 +146,10 @@ export function CreateGoalDialog({
         milestone_order: i,
         completion_criteria: { type: 'manual' as const },
         reward_id: m.reward_id
-      })) : undefined
+      })) : undefined,
+      linked_task_ids: linkedTaskIds.length > 0 ? linkedTaskIds : undefined,
+      linked_series_ids: linkedSeriesIds.length > 0 ? linkedSeriesIds : undefined,
+      linked_rotating_ids: linkedRotatingIds.length > 0 ? linkedRotatingIds : undefined
     };
     
     const result = await createGoal(data);
@@ -386,6 +398,29 @@ export function CreateGoalDialog({
               </div>
             </div>
             
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => setStep(1)}>
+                Back
+              </Button>
+              <Button onClick={() => setStep(3)}>
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {step === 3 && (
+          <div className="space-y-4">
+            <TaskLinkingSection
+              familyId={familyId}
+              selectedTaskIds={linkedTaskIds}
+              selectedSeriesIds={linkedSeriesIds}
+              selectedRotatingIds={linkedRotatingIds}
+              onTasksChange={setLinkedTaskIds}
+              onSeriesChange={setLinkedSeriesIds}
+              onRotatingChange={setLinkedRotatingIds}
+            />
+            
             <div className="space-y-2">
               <Label>Reward (optional)</Label>
               <Select value={rewardId} onValueChange={setRewardId}>
@@ -407,7 +442,7 @@ export function CreateGoalDialog({
             </div>
             
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(1)}>
+              <Button variant="outline" onClick={() => setStep(2)}>
                 Back
               </Button>
               <Button onClick={handleSubmit} disabled={loading}>
