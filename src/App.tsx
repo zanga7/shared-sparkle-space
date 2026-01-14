@@ -9,6 +9,7 @@ import { VersionBadge } from "@/components/ui/version-badge";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { GoalsProvider } from "@/hooks/useGoals";
 import { ColorPaletteProvider } from "@/contexts/ColorPaletteContext";
 import { OnboardingRedirect } from "@/components/OnboardingRedirect";
 import { RouteMemoryProvider } from "@/components/RouteMemoryProvider";
@@ -58,65 +59,76 @@ const queryClient = new QueryClient({
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <ColorPaletteProvider>
-        <TooltipProvider>
-          <Toaster />
-        <Sonner />
-        <PWAInstallPrompt />
-        <PWAUpdatePrompt />
-        <NetworkStatusIndicator />
-        <VersionBadge />
-        <BrowserRouter>
-          <RouteMemoryProvider>
-            <OnboardingRedirect>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/child-auth" element={<ChildAuth />} />
-                <Route path="/rewards" element={<Rewards />} />
-                <Route path="/lists" element={<Lists />} />
-                <Route path="/goals" element={<Goals />} />
-                <Route path="/screensaver-preview" element={<ScreenSaverPreview />} />
-                
-                {/* Onboarding Routes */}
-                <Route path="/onboarding/welcome" element={<Welcome />} />
-                <Route path="/onboarding/crew" element={<CreateCrew />} />
-                <Route path="/onboarding/celebrations" element={<AddCelebrations />} />
-                <Route path="/onboarding/features" element={<FeatureHighlights />} />
-                <Route path="/onboarding/complete" element={<Complete />} />
-                
-                <Route path="/admin" element={<AdminLayout />}>
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="members" element={<MemberManagement />} />
-                  <Route path="calendar-settings" element={<CalendarSettings />} />
-                  <Route path="rewards" element={<RewardsManagement />} />
-                  <Route path="reward-approvals" element={<RewardApprovals />} />
-                  <Route path="permissions" element={<Permissions />} />
-                  <Route path="screensaver" element={<ScreenSaverManagement />} />
-                  <Route path="rotating-tasks" element={<RotatingTasks />} />
-                  
-                  <Route path="rotation-debugger" element={<RotationDebugger />} />
-                  <Route path="holidays" element={<HolidayManagement />} />
-                  <Route path="celebrations" element={<CelebrationsManagement />} />
-                </Route>
+      <GoalsProvider>
+        <ColorPaletteProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <PWAInstallPrompt />
+            <PWAUpdatePrompt />
+            <NetworkStatusIndicator />
+            <VersionBadge />
 
-                <Route path="/super-admin" element={<SuperAdminGuard><SuperAdminLayout /></SuperAdminGuard>}>
-                  <Route index element={<SuperAdminDashboard />} />
-                  <Route path="families" element={<FamilyManagement />} />
-                  <Route path="plans" element={<PlanManagement />} />
-                  <Route path="integrations" element={<IntegrationsManagement />} />
-                  <Route path="themes" element={<ThemesManagement />} />
-                </Route>
+            <BrowserRouter>
+              <RouteMemoryProvider>
+                <OnboardingRedirect>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/child-auth" element={<ChildAuth />} />
+                    <Route path="/rewards" element={<Rewards />} />
+                    <Route path="/lists" element={<Lists />} />
+                    <Route path="/goals" element={<Goals />} />
+                    <Route path="/screensaver-preview" element={<ScreenSaverPreview />} />
 
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </OnboardingRedirect>
-          </RouteMemoryProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-      </ColorPaletteProvider>
+                    {/* Onboarding Routes */}
+                    <Route path="/onboarding/welcome" element={<Welcome />} />
+                    <Route path="/onboarding/crew" element={<CreateCrew />} />
+                    <Route path="/onboarding/celebrations" element={<AddCelebrations />} />
+                    <Route path="/onboarding/features" element={<FeatureHighlights />} />
+                    <Route path="/onboarding/complete" element={<Complete />} />
+
+                    <Route path="/admin" element={<AdminLayout />}>
+                      <Route index element={<AdminDashboard />} />
+                      <Route path="members" element={<MemberManagement />} />
+                      <Route path="calendar-settings" element={<CalendarSettings />} />
+                      <Route path="rewards" element={<RewardsManagement />} />
+                      <Route path="reward-approvals" element={<RewardApprovals />} />
+                      <Route path="permissions" element={<Permissions />} />
+                      <Route path="screensaver" element={<ScreenSaverManagement />} />
+                      <Route path="rotating-tasks" element={<RotatingTasks />} />
+
+                      <Route path="rotation-debugger" element={<RotationDebugger />} />
+                      <Route path="holidays" element={<HolidayManagement />} />
+                      <Route path="celebrations" element={<CelebrationsManagement />} />
+                    </Route>
+
+                    <Route
+                      path="/super-admin"
+                      element={
+                        <SuperAdminGuard>
+                          <SuperAdminLayout />
+                        </SuperAdminGuard>
+                      }
+                    >
+                      <Route index element={<SuperAdminDashboard />} />
+                      <Route path="families" element={<FamilyManagement />} />
+                      <Route path="plans" element={<PlanManagement />} />
+                      <Route path="integrations" element={<IntegrationsManagement />} />
+                      <Route path="themes" element={<ThemesManagement />} />
+                    </Route>
+
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </OnboardingRedirect>
+              </RouteMemoryProvider>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ColorPaletteProvider>
+      </GoalsProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
 
 export default App;
+

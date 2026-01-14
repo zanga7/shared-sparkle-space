@@ -60,6 +60,10 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
   // This ensures new goals appear immediately without manual refresh
   useEffect(() => {
     setOrderedGoals([]);
+
+    // Keep dialogs in sync with the freshest goal data
+    setSelectedGoal((prev) => (prev ? goals.find((g) => g.id === prev.id) ?? null : null));
+    setEditingGoal((prev) => (prev ? goals.find((g) => g.id === prev.id) ?? null : null));
   }, [goals]);
 
   // Goal action handlers with toasts
