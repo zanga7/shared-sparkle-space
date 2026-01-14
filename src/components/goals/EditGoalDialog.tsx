@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Target, Trophy } from 'lucide-react';
+import { Target, Trophy, Plus, Trash2, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,12 +18,20 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 import { TaskLinkingSection } from './TaskLinkingSection';
 import { useGoals } from '@/hooks/useGoals';
-import type { Goal, UpdateGoalData } from '@/types/goal';
+import type { Goal, UpdateGoalData, GoalMilestone } from '@/types/goal';
 import type { Reward } from '@/types/rewards';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface EditGoalDialogProps {
   goal: Goal | null;
@@ -40,7 +48,17 @@ export function EditGoalDialog({
   familyMembers, 
   rewards 
 }: EditGoalDialogProps) {
-  const { updateGoal, profileId, familyId, linkTaskToGoal, unlinkTaskFromGoal, fetchGoals } = useGoals();
+  const { 
+    updateGoal, 
+    profileId, 
+    familyId, 
+    linkTaskToGoal, 
+    unlinkTaskFromGoal, 
+    fetchGoals,
+    addMilestone,
+    updateMilestone,
+    deleteMilestone
+  } = useGoals();
   
   const [loading, setLoading] = useState(false);
   
@@ -54,10 +72,22 @@ export function EditGoalDialog({
   // Consistency criteria (only editable for consistency goals)
   const [thresholdPercent, setThresholdPercent] = useState(80);
 
-  // Task linking
+  // Task linking (goal-level)
   const [linkedTaskIds, setLinkedTaskIds] = useState<string[]>([]);
   const [linkedSeriesIds, setLinkedSeriesIds] = useState<string[]>([]);
   const [linkedRotatingIds, setLinkedRotatingIds] = useState<string[]>([]);
+
+  // Milestone editing (for project goals)
+  const [editingMilestones, setEditingMilestones] = useState<GoalMilestone[]>([]);
+  const [newMilestoneTitle, setNewMilestoneTitle] = useState('');
+  const [expandedMilestoneId, setExpandedMilestoneId] = useState<string | null>(null);
+
+  // Per-milestone task linking
+  const [milestoneTasks, setMilestoneTasks] = useState<Record<string, {
+    taskIds: string[];
+    seriesIds: string[];
+    rotatingIds: string[];
+  }>>({});
 
   // Reset form when goal changes
   useEffect(() => {
@@ -84,10 +114,20 @@ export function EditGoalDialog({
         setThresholdPercent(goal.success_criteria.threshold_percent);
       }
 
-      // Reset new task links
+      // Load milestones for project goals
+      if (goal.goal_type === 'project' && goal.milestones) {
+        setEditingMilestones([...goal.milestones]);
+      } else {
+        setEditingMilestones([]);
+      }
+
+      // Reset task links
       setLinkedTaskIds([]);
       setLinkedSeriesIds([]);
       setLinkedRotatingIds([]);
+      setMilestoneTasks({});
+      setNewMilestoneTitle('');
+      setExpandedMilestoneId(null);
     }
   }, [goal]);
 
@@ -120,7 +160,7 @@ export function EditGoalDialog({
     
     const success = await updateGoal(goal.id, data);
     
-    // Link new tasks
+    // Link new goal-level tasks
     if (success) {
       for (const taskId of linkedTaskIds) {
         await linkTaskToGoal(goal.id, { task_id: taskId });
@@ -148,7 +188,38 @@ export function EditGoalDialog({
     await unlinkTaskFromGoal(linkId);
   };
 
+  // Milestone handlers
+  const handleAddMilestone = async () => {
+    if (!goal || !newMilestoneTitle.trim()) return;
+    
+    const order = editingMilestones.length;
+    const milestoneId = await addMilestone(goal.id, newMilestoneTitle.trim(), order);
+    
+    if (milestoneId) {
+      setNewMilestoneTitle('');
+      toast.success('Milestone added');
+    }
+  };
+
+  const handleUpdateMilestoneTitle = async (milestoneId: string, newTitle: string) => {
+    if (!newTitle.trim()) return;
+    
+    const success = await updateMilestone(milestoneId, { title: newTitle.trim() });
+    if (success) {
+      toast.success('Milestone updated');
+    }
+  };
+
+  const handleDeleteMilestone = async (milestoneId: string) => {
+    const success = await deleteMilestone(milestoneId);
+    if (success) {
+      toast.success('Milestone deleted');
+    }
+  };
+
   if (!goal) return null;
+
+  const isProjectGoal = goal.goal_type === 'project';
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -222,10 +293,140 @@ export function EditGoalDialog({
               </p>
             </div>
           )}
+
+          {/* Milestone Editing for Project Goals */}
+          {isProjectGoal && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Milestones</Label>
+                <p className="text-xs text-muted-foreground">
+                  Define the steps toward completing this project goal
+                </p>
+
+                {/* Existing milestones */}
+                {editingMilestones.length > 0 && (
+                  <div className="space-y-2">
+                    {editingMilestones.map((milestone, index) => (
+                      <Collapsible 
+                        key={milestone.id}
+                        open={expandedMilestoneId === milestone.id}
+                        onOpenChange={(open) => setExpandedMilestoneId(open ? milestone.id : null)}
+                      >
+                        <div className="border rounded-lg overflow-hidden">
+                          <div className="flex items-center gap-2 p-3 bg-muted/50">
+                            <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                            <Badge variant="outline" className="text-xs">
+                              {index + 1}
+                            </Badge>
+                            <Input
+                              value={milestone.title}
+                              onChange={(e) => {
+                                const updated = [...editingMilestones];
+                                updated[index] = { ...milestone, title: e.target.value };
+                                setEditingMilestones(updated);
+                              }}
+                              onBlur={() => handleUpdateMilestoneTitle(milestone.id, milestone.title)}
+                              className="flex-1 h-8"
+                            />
+                            {milestone.is_completed && (
+                              <Badge className="bg-green-500 text-xs">Done</Badge>
+                            )}
+                            <CollapsibleTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                {expandedMilestoneId === milestone.id ? (
+                                  <ChevronUp className="h-4 w-4" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </CollapsibleTrigger>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDeleteMilestone(milestone.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          
+                          <CollapsibleContent>
+                            <div className="p-3 border-t bg-background">
+                              <TaskLinkingSection
+                                familyId={familyId}
+                                linkedTasks={goal.linked_tasks?.filter(lt => lt.milestone_id === milestone.id)}
+                                selectedTaskIds={milestoneTasks[milestone.id]?.taskIds || []}
+                                selectedSeriesIds={milestoneTasks[milestone.id]?.seriesIds || []}
+                                selectedRotatingIds={milestoneTasks[milestone.id]?.rotatingIds || []}
+                                onTasksChange={(ids) => setMilestoneTasks(prev => ({
+                                  ...prev,
+                                  [milestone.id]: { ...prev[milestone.id], taskIds: ids, seriesIds: prev[milestone.id]?.seriesIds || [], rotatingIds: prev[milestone.id]?.rotatingIds || [] }
+                                }))}
+                                onSeriesChange={(ids) => setMilestoneTasks(prev => ({
+                                  ...prev,
+                                  [milestone.id]: { ...prev[milestone.id], seriesIds: ids, taskIds: prev[milestone.id]?.taskIds || [], rotatingIds: prev[milestone.id]?.rotatingIds || [] }
+                                }))}
+                                onRotatingChange={(ids) => setMilestoneTasks(prev => ({
+                                  ...prev,
+                                  [milestone.id]: { ...prev[milestone.id], rotatingIds: ids, taskIds: prev[milestone.id]?.taskIds || [], seriesIds: prev[milestone.id]?.seriesIds || [] }
+                                }))}
+                                onUnlink={handleUnlinkTask}
+                                milestoneId={milestone.id}
+                                familyMembers={familyMembers.filter(m => m.status !== 'inactive').map(m => ({
+                                  id: m.id,
+                                  display_name: m.display_name,
+                                  role: m.role,
+                                  color: m.color,
+                                  avatar_url: m.avatar_url || null,
+                                  family_id: familyId || '',
+                                  total_points: 0,
+                                  created_at: '',
+                                  updated_at: '',
+                                  status: m.status || 'active',
+                                  streak_count: 0
+                                }))}
+                                profileId={profileId || undefined}
+                              />
+                            </div>
+                          </CollapsibleContent>
+                        </div>
+                      </Collapsible>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add new milestone */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add a new milestone..."
+                    value={newMilestoneTitle}
+                    onChange={(e) => setNewMilestoneTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddMilestone();
+                      }
+                    }}
+                  />
+                  <Button 
+                    variant="outline"
+                    onClick={handleAddMilestone}
+                    disabled={!newMilestoneTitle.trim()}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+
+          <Separator />
           
+          {/* Goal-level task linking */}
           <TaskLinkingSection
             familyId={familyId}
-            linkedTasks={goal.linked_tasks}
+            linkedTasks={goal.linked_tasks?.filter(lt => !lt.milestone_id)}
             selectedTaskIds={linkedTaskIds}
             selectedSeriesIds={linkedSeriesIds}
             selectedRotatingIds={linkedRotatingIds}
@@ -233,6 +434,20 @@ export function EditGoalDialog({
             onSeriesChange={setLinkedSeriesIds}
             onRotatingChange={setLinkedRotatingIds}
             onUnlink={handleUnlinkTask}
+            familyMembers={familyMembers.filter(m => m.status !== 'inactive').map(m => ({
+              id: m.id,
+              display_name: m.display_name,
+              role: m.role,
+              color: m.color,
+              avatar_url: m.avatar_url || null,
+              family_id: familyId || '',
+              total_points: 0,
+              created_at: '',
+              updated_at: '',
+              status: m.status || 'active',
+              streak_count: 0
+            }))}
+            profileId={profileId || undefined}
           />
           
           <div className="space-y-2">

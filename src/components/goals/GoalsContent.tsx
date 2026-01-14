@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Plus, Target, Filter, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -55,6 +55,12 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [statusFilter, setStatusFilter] = useState<GoalStatus | 'all'>('active');
   const [orderedGoals, setOrderedGoals] = useState<Goal[]>([]);
+
+  // Reset ordered goals when goals list changes (new goal added, edited, etc.)
+  // This ensures new goals appear immediately without manual refresh
+  useEffect(() => {
+    setOrderedGoals([]);
+  }, [goals]);
 
   // Goal action handlers with toasts
   const handlePause = async (goalId: string) => {
@@ -250,6 +256,7 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
         goal={selectedGoal}
         open={!!selectedGoal}
         onOpenChange={(open) => !open && setSelectedGoal(null)}
+        onEdit={handleEdit}
       />
       
       <EditGoalDialog

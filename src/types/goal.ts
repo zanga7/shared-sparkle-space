@@ -49,6 +49,7 @@ export interface GoalLinkedTask {
   task_id?: string;
   task_series_id?: string;
   rotating_task_id?: string;
+  milestone_id?: string; // Link to specific milestone (optional)
   linked_at: string;
   linked_by: string;
   // Joined task info
