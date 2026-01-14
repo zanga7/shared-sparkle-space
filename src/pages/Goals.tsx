@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Plus, Target, Users, Filter } from 'lucide-react';
+import { Plus, Target, Users, User, Filter, Pause, Play, Archive } from 'lucide-react';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
@@ -19,6 +20,7 @@ import { useRewards } from '@/hooks/useRewards';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import type { Goal, GoalStatus } from '@/types/goal';
 
 interface FamilyMember {
@@ -32,7 +34,18 @@ interface FamilyMember {
 
 export default function Goals() {
   const { user } = useAuth();
-  const { goals, loading, pauseGoal, resumeGoal, archiveGoal, getMyGoals, getFamilyGoals, profileId, familyId } = useGoals();
+  const { 
+    goals, 
+    loading, 
+    pauseGoal, 
+    resumeGoal, 
+    archiveGoal, 
+    deleteGoal,
+    getMyGoals, 
+    getFamilyGoals, 
+    profileId, 
+    familyId 
+  } = useGoals();
   const { rewards } = useRewards();
   const { hasModule } = useModuleAccess(familyId);
   
@@ -63,6 +76,29 @@ export default function Goals() {
     fetchFamilyMembers();
   }, [familyId]);
 
+  // Goal action handlers with toasts
+  const handlePause = async (goalId: string) => {
+    await pauseGoal(goalId);
+    toast.success('Goal paused');
+  };
+
+  const handleResume = async (goalId: string) => {
+    await resumeGoal(goalId);
+    toast.success('Goal resumed');
+  };
+
+  const handleArchive = async (goalId: string) => {
+    await archiveGoal(goalId);
+    toast.success('Goal archived');
+  };
+
+  const handleDelete = async (goalId: string) => {
+    if (confirm('Are you sure you want to delete this goal? This cannot be undone.')) {
+      await deleteGoal(goalId);
+      toast.success('Goal deleted');
+    }
+  };
+
   // Check module access
   if (!hasModule('goals')) {
     return (
@@ -87,6 +123,14 @@ export default function Goals() {
     );
   }
 
+  // Calculate status counts for all goals
+  const statusCounts = {
+    active: goals.filter(g => g.status === 'active').length,
+    paused: goals.filter(g => g.status === 'paused').length,
+    completed: goals.filter(g => g.status === 'completed').length,
+    archived: goals.filter(g => g.status === 'archived').length,
+  };
+
   const myGoals = profileId ? getMyGoals(profileId) : [];
   const familyGoalsList = getFamilyGoals();
 
@@ -97,6 +141,39 @@ export default function Goals() {
 
   const filteredMyGoals = filterByStatus(myGoals);
   const filteredFamilyGoals = filterByStatus(familyGoalsList);
+
+  const renderGoalsList = (goalsList: Goal[], emptyIcon: React.ReactNode, emptyTitle: string, emptyDescription: string) => {
+    if (goalsList.length === 0) {
+      return (
+        <div className="text-center py-12">
+          {emptyIcon}
+          <h3 className="font-medium text-lg mb-1">{emptyTitle}</h3>
+          <p className="text-muted-foreground text-sm mb-4">
+            {emptyDescription}
+          </p>
+          <Button variant="outline" onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create a goal
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
+        {goalsList.map((goal) => (
+          <GoalCard 
+            key={goal.id}
+            goal={goal}
+            onSelect={setSelectedGoal}
+            onPause={() => handlePause(goal.id)}
+            onResume={() => handleResume(goal.id)}
+            onArchive={() => handleArchive(goal.id)}
+          />
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -121,12 +198,52 @@ export default function Goals() {
             New Goal
           </Button>
         </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <Card 
+            className={`cursor-pointer transition-colors ${statusFilter === 'active' ? 'ring-2 ring-primary' : ''}`}
+            onClick={() => setStatusFilter('active')}
+          >
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold text-primary">{statusCounts.active}</div>
+              <p className="text-sm text-muted-foreground">Active</p>
+            </CardContent>
+          </Card>
+          <Card 
+            className={`cursor-pointer transition-colors ${statusFilter === 'paused' ? 'ring-2 ring-primary' : ''}`}
+            onClick={() => setStatusFilter('paused')}
+          >
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold text-amber-500">{statusCounts.paused}</div>
+              <p className="text-sm text-muted-foreground">Paused</p>
+            </CardContent>
+          </Card>
+          <Card 
+            className={`cursor-pointer transition-colors ${statusFilter === 'completed' ? 'ring-2 ring-primary' : ''}`}
+            onClick={() => setStatusFilter('completed')}
+          >
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold text-green-500">{statusCounts.completed}</div>
+              <p className="text-sm text-muted-foreground">Completed</p>
+            </CardContent>
+          </Card>
+          <Card 
+            className={`cursor-pointer transition-colors ${statusFilter === 'archived' ? 'ring-2 ring-primary' : ''}`}
+            onClick={() => setStatusFilter('archived')}
+          >
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold text-muted-foreground">{statusCounts.archived}</div>
+              <p className="text-sm text-muted-foreground">Archived</p>
+            </CardContent>
+          </Card>
+        </div>
         
         <div className="flex items-center justify-between mb-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
             <TabsList>
               <TabsTrigger value="my" className="flex items-center gap-2">
-                <Target className="h-4 w-4" />
+                <User className="h-4 w-4" />
                 My Goals
                 {filteredMyGoals.length > 0 && (
                   <span className="ml-1 text-xs bg-primary/20 px-1.5 rounded">
@@ -172,60 +289,24 @@ export default function Goals() {
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsContent value="my" className="mt-0">
-              {filteredMyGoals.length === 0 ? (
-                <div className="text-center py-12">
-                  <Target className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                  <h3 className="font-medium text-lg mb-1">No goals yet</h3>
-                  <p className="text-muted-foreground text-sm mb-4">
-                    Set a personal goal to track your progress
-                  </p>
-                  <Button variant="outline" onClick={() => setShowCreateDialog(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create your first goal
-                  </Button>
-                </div>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {filteredMyGoals.map((goal) => (
-                    <GoalCard 
-                      key={goal.id}
-                      goal={goal}
-                      onSelect={setSelectedGoal}
-                      onPause={pauseGoal}
-                      onResume={resumeGoal}
-                      onArchive={archiveGoal}
-                    />
-                  ))}
-                </div>
+              {renderGoalsList(
+                filteredMyGoals,
+                <User className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />,
+                'No personal goals',
+                statusFilter === 'all' 
+                  ? 'Set a personal goal to track your progress'
+                  : `No ${statusFilter} personal goals`
               )}
             </TabsContent>
             
             <TabsContent value="family" className="mt-0">
-              {filteredFamilyGoals.length === 0 ? (
-                <div className="text-center py-12">
-                  <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                  <h3 className="font-medium text-lg mb-1">No family goals yet</h3>
-                  <p className="text-muted-foreground text-sm mb-4">
-                    Create a goal the whole family can work toward together
-                  </p>
-                  <Button variant="outline" onClick={() => setShowCreateDialog(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create a family goal
-                  </Button>
-                </div>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {filteredFamilyGoals.map((goal) => (
-                    <GoalCard 
-                      key={goal.id}
-                      goal={goal}
-                      onSelect={setSelectedGoal}
-                      onPause={pauseGoal}
-                      onResume={resumeGoal}
-                      onArchive={archiveGoal}
-                    />
-                  ))}
-                </div>
+              {renderGoalsList(
+                filteredFamilyGoals,
+                <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />,
+                'No family goals',
+                statusFilter === 'all'
+                  ? 'Create a goal the whole family can work toward together'
+                  : `No ${statusFilter} family goals`
               )}
             </TabsContent>
           </Tabs>
