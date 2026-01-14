@@ -317,8 +317,8 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
               </h3>
               <LinkedTasksList 
                 linkedTasks={goal.linked_tasks || []}
-                onUnlink={canEdit ? unlinkTaskFromGoal : undefined}
-                canEdit={canEdit}
+                canEdit={false}
+                showEmpty={true}
               />
             </div>
           )}
@@ -333,9 +333,8 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
                   milestones={goal.milestones || []}
                   linkedTasks={goal.linked_tasks || []}
                   onComplete={canEdit ? completeMilestone : undefined}
-                  onUnlinkTask={canEdit ? unlinkTaskFromGoal : undefined}
                   canComplete={canEdit}
-                  canEdit={canEdit}
+                  canEdit={false}
                 />
               </div>
             </>

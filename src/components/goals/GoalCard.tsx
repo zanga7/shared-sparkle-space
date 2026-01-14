@@ -296,6 +296,7 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                           key={task.id}
                           linkedTask={task}
                           onComplete={onCompleteTask ? () => onCompleteTask(task) : undefined}
+                          hideUnlink={true}
                         />
                       ))}
                       {milestoneTasks.length > 2 && (
@@ -324,6 +325,7 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                 key={task.id}
                 linkedTask={task}
                 onComplete={onCompleteTask ? () => onCompleteTask(task) : undefined}
+                hideUnlink={true}
               />
             ))}
             {unassignedTasks.length > 2 && (

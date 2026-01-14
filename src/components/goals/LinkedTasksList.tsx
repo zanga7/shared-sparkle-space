@@ -10,6 +10,8 @@ interface LinkedTasksListProps {
   canEdit?: boolean;
   className?: string;
   showEmpty?: boolean;
+  /** Hide unlink buttons (for display-only views like detail dialog) */
+  hideUnlink?: boolean;
 }
 
 export function LinkedTasksList({ 
@@ -18,7 +20,8 @@ export function LinkedTasksList({
   onComplete,
   canEdit = false,
   className,
-  showEmpty = true
+  showEmpty = true,
+  hideUnlink = false
 }: LinkedTasksListProps) {
   if (!linkedTasks.length && showEmpty) {
     return (
@@ -40,9 +43,10 @@ export function LinkedTasksList({
         <GoalTaskItem
           key={link.id}
           linkedTask={link}
-          onUnlink={canEdit ? onUnlink : undefined}
+          onUnlink={canEdit && !hideUnlink ? onUnlink : undefined}
           onComplete={onComplete ? () => onComplete(link) : undefined}
           canEdit={canEdit}
+          hideUnlink={hideUnlink}
         />
       ))}
     </div>
