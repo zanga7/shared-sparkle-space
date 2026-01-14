@@ -57,8 +57,11 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLinkedTasks, setDeleteLinkedTasks] = useState(false);
   
-  // Fetch consistency completions for this goal
+  // Fetch consistency completions for this goal (hook handles null goal)
   const { completionsByMember } = useConsistencyCompletions(goal);
+
+  // Early return after all hooks
+  if (!goal) return null;
 
   const progress = goal.progress;
   const percent = progress?.current_percent ?? 0;
