@@ -115,6 +115,7 @@ export function MilestoneList({
                     onComplete={onCompleteTask ? () => onCompleteTask(task) : undefined}
                     onUnlink={canEdit ? onUnlinkTask : undefined}
                     canEdit={canEdit}
+                    hideUnlink={false}
                   />
                 ))}
               </div>

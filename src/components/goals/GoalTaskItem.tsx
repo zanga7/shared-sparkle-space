@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
@@ -12,6 +11,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { GoalLinkedTask } from '@/types/goal';
+import { useMemberColor } from '@/hooks/useMemberColor';
 
 interface GoalTaskItemProps {
   linkedTask: GoalLinkedTask;
@@ -26,6 +26,9 @@ interface GoalTaskItemProps {
     color: string;
     avatar_url?: string | null;
   }>;
+  points?: number;
+  /** Hide the unlink button even when canEdit is true (for goal card display) */
+  hideUnlink?: boolean;
 }
 
 export function GoalTaskItem({ 
@@ -35,18 +38,13 @@ export function GoalTaskItem({
   canEdit = false,
   isCompleted = false,
   isCompleting = false,
-  assignees = []
+  assignees = [],
+  points,
+  hideUnlink = false
 }: GoalTaskItemProps) {
-  const getTaskTypeIcon = () => {
-    switch (linkedTask.task_type) {
-      case 'recurring':
-        return <Repeat className="h-2 w-2" />;
-      case 'rotating':
-        return <RotateCw className="h-2 w-2" />;
-      default:
-        return null;
-    }
-  };
+  // Get member color for consistent styling with EnhancedTaskItem
+  const primaryAssignee = assignees.length > 0 ? assignees[0] : null;
+  const { styles: colorStyles } = useMemberColor(primaryAssignee?.color);
 
   const getTaskTypeBadge = () => {
     if (linkedTask.task_type === 'recurring') {
@@ -71,12 +69,13 @@ export function GoalTaskItem({
   return (
     <div 
       className={cn(
-        "group/task relative rounded-lg p-3 transition-all hover:shadow-md bg-card border",
+        "group/task relative rounded-lg p-3 transition-all hover:shadow-md",
         isCompleted && "opacity-60"
       )}
+      style={primaryAssignee ? (isCompleted ? colorStyles.bg20 : colorStyles.bg50) : { backgroundColor: 'hsl(var(--muted) / 0.3)' }}
     >
       <div className="flex items-start gap-2">
-        {/* Complete Button */}
+        {/* Complete Button - matches EnhancedTaskItem styling */}
         {onComplete && (
           <Button 
             size="sm" 
@@ -89,11 +88,11 @@ export function GoalTaskItem({
             className={cn(
               "shrink-0 w-7 h-7 p-0 cursor-pointer transition-all",
               isCompleted 
-                ? "bg-green-500 hover:bg-green-600" 
+                ? "bg-green-500 hover:bg-green-600 hover:scale-110 active:scale-95" 
                 : "hover:border-green-500 hover:text-green-500",
               isCompleting && "opacity-50 cursor-wait"
             )}
-            title={isCompleted ? "Completed" : "Click to complete"}
+            title={isCompleted ? "Completed" : "Click to complete and earn points"}
           >
             {isCompleting ? (
               <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -103,7 +102,7 @@ export function GoalTaskItem({
           </Button>
         )}
 
-        {/* Task Content */}
+        {/* Task Content - matches EnhancedTaskItem layout */}
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-start justify-between gap-2">
             <h3 className={cn(
@@ -113,8 +112,8 @@ export function GoalTaskItem({
               {linkedTask.task_title || 'Unknown Task'}
             </h3>
 
-            {/* Unlink Button - visible on hover */}
-            {canEdit && onUnlink && (
+            {/* Unlink Button - visible on hover, only shown in edit contexts */}
+            {canEdit && onUnlink && !hideUnlink && (
               <Button 
                 size="sm" 
                 variant="ghost" 
@@ -129,18 +128,30 @@ export function GoalTaskItem({
             )}
           </div>
 
-          {/* Badges */}
+          {/* Badges - matches EnhancedTaskItem badge row */}
           <div className="flex items-center gap-1 flex-wrap">
+            {/* Points Badge - matches EnhancedTaskItem */}
+            {points !== undefined && (
+              <Badge variant="outline" className="text-[0.72rem] py-0 h-5 flex items-center gap-1">
+                <Target className="h-2.5 w-2.5" />
+                {points} pts
+              </Badge>
+            )}
+
             {/* Task Type Badge */}
             {getTaskTypeBadge()}
 
-            {/* Assignees */}
+            {/* Group Badge for multiple assignees */}
             {assignees.length > 1 && (
+              <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
+                <Users className="h-2 w-2" />
+                Group
+              </Badge>
+            )}
+
+            {/* Assignees display - matches EnhancedTaskItem */}
+            {!isCompleted && assignees.length > 0 && (
               <div className="flex items-center gap-1">
-                <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
-                  <Users className="h-2 w-2" />
-                  Group
-                </Badge>
                 <div className="flex -space-x-1">
                   {assignees.slice(0, 3).map((assignee) => (
                     <UserAvatar
@@ -152,23 +163,15 @@ export function GoalTaskItem({
                       className="ring-1 ring-background"
                     />
                   ))}
-                  {assignees.length > 3 && (
-                    <span className="text-xs text-muted-foreground ml-1">
-                      +{assignees.length - 3}
-                    </span>
-                  )}
                 </div>
-              </div>
-            )}
-            {assignees.length === 1 && (
-              <div className="flex items-center gap-1.5">
-                <UserAvatar
-                  name={assignees[0].display_name}
-                  color={assignees[0].color}
-                  avatarIcon={assignees[0].avatar_url || undefined}
-                  size="xs"
-                />
-                <span className="text-xs text-muted-foreground">{assignees[0].display_name}</span>
+                {assignees.length === 1 && (
+                  <span className="text-xs text-muted-foreground">{assignees[0].display_name}</span>
+                )}
+                {assignees.length > 3 && (
+                  <span className="text-xs text-muted-foreground">
+                    +{assignees.length - 3}
+                  </span>
+                )}
               </div>
             )}
           </div>
