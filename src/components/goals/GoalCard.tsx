@@ -96,13 +96,22 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
       );
     }
     
-    if (progress.goal_type === 'project' && 'completed_milestones' in progress) {
+    if (progress.goal_type === 'project') {
+      const completedTasks = (progress as any).completed_tasks ?? 0;
+      const totalTasks = (progress as any).total_tasks ?? 0;
+      
       return (
-        <div className="text-sm text-muted-foreground">
+        <div className="text-sm text-muted-foreground space-y-1">
           <div className="flex justify-between">
-            <span>Milestones</span>
-            <span className="font-medium">{progress.completed_milestones} / {progress.total_milestones}</span>
+            <span>Tasks</span>
+            <span className="font-medium">{completedTasks} / {totalTasks}</span>
           </div>
+          {'completed_milestones' in progress && progress.total_milestones > 0 && (
+            <div className="flex justify-between text-xs">
+              <span>Milestones</span>
+              <span>{progress.completed_milestones} / {progress.total_milestones}</span>
+            </div>
+          )}
         </div>
       );
     }
