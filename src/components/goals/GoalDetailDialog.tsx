@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { 
   Target, Users, Calendar, Trophy, Pause, Play, 
-  Archive, Trash2, Edit, Link, X 
+  Archive, Trash2, Edit
 } from 'lucide-react';
 import {
   Dialog,
@@ -17,6 +17,7 @@ import { GraceIndicator } from './GraceIndicator';
 import { MilestoneList } from './MilestoneList';
 import { ParticipantContributions } from './ParticipantContributions';
 import { LinkedTasksList } from './LinkedTasksList';
+import { ConsistencyProgressGrid } from './ConsistencyProgressGrid';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useGoals } from '@/hooks/useGoals';
 import type { Goal } from '@/types/goal';
@@ -242,8 +243,15 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
           {/* Progress Details */}
           <div className="space-y-4">
             <h3 className="font-semibold text-sm">Progress Details</h3>
-            {progress?.goal_type === 'consistency' && 'total_completions' in progress && (
+            {progress?.goal_type === 'consistency' && 'total_completions' in progress && 'time_window_days' in goal.success_criteria && (
               <div className="space-y-4">
+                {/* Consistency Progress Grid */}
+                <ConsistencyProgressGrid
+                  startDate={goal.start_date}
+                  totalDays={(goal.success_criteria as { time_window_days: number }).time_window_days}
+                  completedDates={[]} // TODO: Fetch actual completion dates from linked tasks
+                />
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 rounded-lg bg-muted/50 text-center">
                     <div className="text-3xl font-bold">{progress.total_completions}</div>
@@ -300,18 +308,20 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
           
           <Separator />
           
-          {/* Linked Tasks Section */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-sm flex items-center gap-2">
-              <Link className="h-4 w-4" />
-              Linked Tasks
-            </h3>
-            <LinkedTasksList 
-              linkedTasks={goal.linked_tasks || []}
-              onUnlink={canEdit ? unlinkTaskFromGoal : undefined}
-              canEdit={canEdit}
-            />
-          </div>
+          {/* Goal Tasks Section - only for non-project goals */}
+          {goal.goal_type !== 'project' && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                Goal Tasks
+              </h3>
+              <LinkedTasksList 
+                linkedTasks={goal.linked_tasks || []}
+                onUnlink={canEdit ? unlinkTaskFromGoal : undefined}
+                canEdit={canEdit}
+              />
+            </div>
+          )}
           
           {/* Milestones Section for project goals */}
           {goal.goal_type === 'project' && (
@@ -321,8 +331,11 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
                 <h3 className="font-semibold text-sm">Milestones</h3>
                 <MilestoneList 
                   milestones={goal.milestones || []}
+                  linkedTasks={goal.linked_tasks || []}
                   onComplete={canEdit ? completeMilestone : undefined}
+                  onUnlinkTask={canEdit ? unlinkTaskFromGoal : undefined}
                   canComplete={canEdit}
+                  canEdit={canEdit}
                 />
               </div>
             </>
