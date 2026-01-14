@@ -585,6 +585,66 @@ function useGoalsState() {
     }
   }, [familyId, fetchGoals]);
 
+  // Fetch consistency goal completion dates per member
+  const fetchConsistencyCompletions = async (
+    seriesId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<Record<string, string[]>> => {
+    try {
+      // Get materialized task instances for this series
+      const { data: instances, error } = await supabase
+        .from('materialized_task_instances')
+        .select(`
+          occurrence_date,
+          materialized_task_id
+        `)
+        .eq('series_id', seriesId)
+        .gte('occurrence_date', startDate)
+        .lte('occurrence_date', endDate);
+      
+      if (error) throw error;
+      
+      // Get task IDs that have materialized instances
+      const taskIds = (instances || [])
+        .map(i => i.materialized_task_id)
+        .filter(Boolean) as string[];
+      
+      if (taskIds.length === 0) return {};
+      
+      // Get completions for those tasks
+      const { data: completions } = await supabase
+        .from('task_completions')
+        .select('task_id, completed_by, completed_at')
+        .in('task_id', taskIds);
+      
+      // Build completion lookup by task_id
+      const completionsByTask: Record<string, { completed_by: string; completed_at: string }[]> = {};
+      (completions || []).forEach(c => {
+        if (!completionsByTask[c.task_id]) completionsByTask[c.task_id] = [];
+        completionsByTask[c.task_id].push({ completed_by: c.completed_by, completed_at: c.completed_at });
+      });
+      
+      // Map back to member -> dates
+      const result: Record<string, string[]> = {};
+      (instances || []).forEach(instance => {
+        if (!instance.materialized_task_id) return;
+        const taskCompletions = completionsByTask[instance.materialized_task_id] || [];
+        taskCompletions.forEach(c => {
+          if (!result[c.completed_by]) result[c.completed_by] = [];
+          if (!result[c.completed_by].includes(instance.occurrence_date)) {
+            result[c.completed_by].push(instance.occurrence_date);
+          }
+        });
+      });
+      
+      return result;
+    } catch (err) {
+      console.error('Error fetching consistency completions:', err);
+      return {};
+    }
+  };
+
   return {
     goals,
     loading,
@@ -611,6 +671,7 @@ function useGoalsState() {
     getMyGoals,
     getFamilyGoals,
     getActiveGoals,
-    getGoalById
+    getGoalById,
+    fetchConsistencyCompletions
   };
 }

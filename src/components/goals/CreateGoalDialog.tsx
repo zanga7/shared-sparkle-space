@@ -21,7 +21,10 @@ import {
 import { Slider } from '@/components/ui/slider';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 import { TaskLinkingSection } from './TaskLinkingSection';
+import { GoalTypeSelector } from './GoalTypeSelector';
+import { ConsistencyGoalSetup, ConsistencyGoalData } from './ConsistencyGoalSetup';
 import { useGoals } from '@/hooks/useGoals';
+import { useTaskSeries } from '@/hooks/useTaskSeries';
 import type { 
   GoalType, 
   CreateGoalData,
@@ -45,21 +48,23 @@ export function CreateGoalDialog({
   familyMembers, 
   rewards 
 }: CreateGoalDialogProps) {
-  const { createGoal, profileId, familyId } = useGoals();
+  const { createGoal, profileId, familyId, linkTaskToGoal } = useGoals();
+  const { createTaskSeries } = useTaskSeries(familyId || undefined);
   
-  const [step, setStep] = useState(1);
+  // Step 0 = goal type selection
+  const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [goalType, setGoalType] = useState<GoalType>('consistency');
+  const [goalType, setGoalType] = useState<GoalType | null>(null);
   const [assignees, setAssignees] = useState<string[]>([]);
   const [rewardId, setRewardId] = useState<string>('');
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(addMonths(new Date(), 3), 'yyyy-MM-dd'));
   
-  // Consistency criteria
+  // Consistency criteria (for non-wizard flow - legacy)
   const [timeWindowDays, setTimeWindowDays] = useState(100);
   const [frequency, setFrequency] = useState<'daily' | 'weekly'>('daily');
   const [timesPerWeek, setTimesPerWeek] = useState(4);
@@ -78,10 +83,10 @@ export function CreateGoalDialog({
   const [linkedRotatingIds, setLinkedRotatingIds] = useState<string[]>([]);
 
   const resetForm = () => {
-    setStep(1);
+    setStep(0);
     setTitle('');
     setDescription('');
-    setGoalType('consistency');
+    setGoalType(null);
     setAssignees([]);
     setRewardId('');
     setStartDate(format(new Date(), 'yyyy-MM-dd'));
@@ -103,8 +108,86 @@ export function CreateGoalDialog({
     onOpenChange(false);
   };
 
+  // Handle goal type selection
+  const handleGoalTypeSelect = (type: GoalType) => {
+    setGoalType(type);
+    // For consistency goals, we'll show the dedicated wizard
+    // For other types, proceed to step 1 (existing flow)
+    if (type === 'consistency') {
+      setStep(-1); // Special step for consistency wizard
+    } else {
+      setStep(1);
+    }
+  };
+
+  // Handle consistency goal creation (new wizard flow)
+  const handleConsistencyGoalSubmit = async (data: ConsistencyGoalData) => {
+    if (!familyId || !profileId) return;
+    
+    setLoading(true);
+    
+    try {
+      // 1. Create the recurring task series
+      const seriesData = {
+        family_id: familyId,
+        created_by: profileId,
+        title: data.taskTitle,
+        description: undefined,
+        points: data.taskPoints,
+        task_group: data.taskGroup,
+        completion_rule: 'everyone', // Each member completes their own
+        recurrence_rule: {
+          ...data.recurrenceRule,
+          endType: 'on_date' as const,
+          endDate: data.endDate
+        },
+        series_start: data.startDate,
+        series_end: data.endDate,
+        assigned_profiles: data.assignees,
+        is_active: true
+      };
+      
+      const series = await createTaskSeries(seriesData);
+      
+      if (!series) {
+        throw new Error('Failed to create recurring task');
+      }
+      
+      // 2. Create the goal
+      const successCriteria: ConsistencyCriteria = {
+        time_window_days: data.durationDays,
+        frequency: 'daily',
+        threshold_percent: data.thresholdPercent
+      };
+      
+      const goalData: CreateGoalData = {
+        title: data.title,
+        description: data.description,
+        goal_type: 'consistency',
+        goal_scope: data.assignees.length === 1 ? 'individual' : 'family',
+        assigned_to: data.assignees.length === 1 ? data.assignees[0] : undefined,
+        assignees: data.assignees,
+        reward_id: data.rewardId,
+        success_criteria: successCriteria,
+        start_date: data.startDate,
+        end_date: data.endDate,
+        linked_series_ids: [series.id]
+      };
+      
+      const goal = await createGoal(goalData);
+      
+      if (goal) {
+        handleClose();
+      }
+    } catch (error) {
+      console.error('Error creating consistency goal:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!title.trim()) return;
+    if (!title.trim() || !goalType) return;
     
     setLoading(true);
     
@@ -181,12 +264,35 @@ export function CreateGoalDialog({
           </DialogTitle>
         </DialogHeader>
         
-        {step === 1 && (
+        {/* Step 0: Goal Type Selection */}
+        {step === 0 && (
+          <GoalTypeSelector
+            selectedType={goalType}
+            onSelect={handleGoalTypeSelect}
+          />
+        )}
+        
+        {/* Consistency Goal Wizard (dedicated flow) */}
+        {step === -1 && goalType === 'consistency' && (
+          <ConsistencyGoalSetup
+            familyMembers={familyMembers}
+            rewards={rewards}
+            onSubmit={handleConsistencyGoalSubmit}
+            onBack={() => {
+              setGoalType(null);
+              setStep(0);
+            }}
+            loading={loading}
+          />
+        )}
+        
+        {/* Step 1: Basic Info (for target_count and project goals) */}
+        {step === 1 && goalType && goalType !== 'consistency' && (
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Goal Title</Label>
               <Input 
-                placeholder="e.g., 100 Days of Reading" 
+                placeholder={goalType === 'target_count' ? 'e.g., 50 Walks Challenge' : 'e.g., Build a Treehouse'} 
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
@@ -200,41 +306,6 @@ export function CreateGoalDialog({
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
               />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Goal Type</Label>
-              <RadioGroup value={goalType} onValueChange={(v) => setGoalType(v as GoalType)}>
-                <div className="grid gap-2">
-                  <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50">
-                    <RadioGroupItem value="consistency" className="mt-1" />
-                    <div>
-                      <div className="font-medium">Consistency</div>
-                      <div className="text-sm text-muted-foreground">
-                        Build habits with flexibility (e.g., 80% of 100 days)
-                      </div>
-                    </div>
-                  </label>
-                  <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50">
-                    <RadioGroupItem value="target_count" className="mt-1" />
-                    <div>
-                      <div className="font-medium">Target Count</div>
-                      <div className="text-sm text-muted-foreground">
-                        Reach a total number (e.g., 30 walks)
-                      </div>
-                    </div>
-                  </label>
-                  <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50">
-                    <RadioGroupItem value="project" className="mt-1" />
-                    <div>
-                      <div className="font-medium">Project</div>
-                      <div className="text-sm text-muted-foreground">
-                        Complete milestones (e.g., build a garden)
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              </RadioGroup>
             </div>
             
             <div className="space-y-2">
@@ -258,7 +329,10 @@ export function CreateGoalDialog({
               </p>
             </div>
             
-            <div className="flex justify-end">
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => { setGoalType(null); setStep(0); }}>
+                Back
+              </Button>
               <Button onClick={() => setStep(2)} disabled={!title.trim()}>
                 Next
               </Button>
@@ -266,72 +340,9 @@ export function CreateGoalDialog({
           </div>
         )}
         
-        {step === 2 && (
+        {/* Step 2: Goal-specific criteria */}
+        {step === 2 && goalType && (
           <div className="space-y-4">
-            {goalType === 'consistency' && (
-              <>
-                <div className="space-y-2">
-                  <Label>Time Window</Label>
-                  <div className="flex items-center gap-2">
-                    <Input 
-                      type="number" 
-                      value={timeWindowDays}
-                      onChange={(e) => setTimeWindowDays(parseInt(e.target.value) || 100)}
-                      className="w-24"
-                    />
-                    <span className="text-muted-foreground">days</span>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Frequency</Label>
-                  <RadioGroup value={frequency} onValueChange={(v) => setFrequency(v as 'daily' | 'weekly')}>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <RadioGroupItem value="daily" />
-                        <span>Daily</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <RadioGroupItem value="weekly" />
-                        <span>Weekly</span>
-                      </label>
-                    </div>
-                  </RadioGroup>
-                </div>
-                
-                {frequency === 'weekly' && (
-                  <div className="space-y-2">
-                    <Label>Times per week</Label>
-                    <div className="flex items-center gap-2">
-                      <Input 
-                        type="number" 
-                        value={timesPerWeek}
-                        onChange={(e) => setTimesPerWeek(parseInt(e.target.value) || 4)}
-                        min={1}
-                        max={7}
-                        className="w-24"
-                      />
-                      <span className="text-muted-foreground">times</span>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="space-y-2">
-                  <Label>Success Threshold: {thresholdPercent}%</Label>
-                  <Slider 
-                    value={[thresholdPercent]}
-                    onValueChange={(v) => setThresholdPercent(v[0])}
-                    min={50}
-                    max={100}
-                    step={5}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    You can miss up to {Math.floor(timeWindowDays * (1 - thresholdPercent / 100))} days
-                  </p>
-                </div>
-              </>
-            )}
-            
             {goalType === 'target_count' && (
               <div className="space-y-2">
                 <Label>Target Count</Label>
@@ -409,7 +420,8 @@ export function CreateGoalDialog({
           </div>
         )}
         
-        {step === 3 && (
+        {/* Step 3: Task linking and reward */}
+        {step === 3 && goalType && (
           <div className="space-y-4">
             {/* Only show task linking for non-project goals */}
             {/* Project goals link tasks at the milestone level after creation */}
@@ -461,7 +473,7 @@ export function CreateGoalDialog({
                     <SelectItem key={reward.id} value={reward.id}>
                       <div className="flex items-center gap-2">
                         <Trophy className="h-4 w-4 text-amber-500" />
-                        {reward.title}
+                        <span>{reward.title}</span>
                       </div>
                     </SelectItem>
                   ))}
