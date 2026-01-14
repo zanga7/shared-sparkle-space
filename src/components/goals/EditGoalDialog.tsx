@@ -293,20 +293,47 @@ export function EditGoalDialog({
             />
           </div>
           
-          {goal.goal_type === 'consistency' && 'threshold_percent' in goal.success_criteria && (
-            <div className="space-y-2">
-              <Label>Success Threshold: {thresholdPercent}%</Label>
-              <Slider 
-                value={[thresholdPercent]}
-                onValueChange={(v) => setThresholdPercent(v[0])}
-                min={50}
-                max={100}
-                step={5}
-              />
-              <p className="text-xs text-muted-foreground">
-                Percentage of days you need to complete the goal
-              </p>
-            </div>
+          {/* Consistency Goal Options - read-only summary */}
+          {isConsistencyGoal && 'threshold_percent' in goal.success_criteria && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  <span className="text-orange-500">🔥</span> Consistency Settings
+                </Label>
+                
+                {/* Read-only info about the goal setup */}
+                <div className="p-3 rounded-lg bg-muted/30 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Duration</span>
+                    <span className="font-medium">{goal.success_criteria.time_window_days} days</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Frequency</span>
+                    <span className="font-medium capitalize">
+                      {goal.success_criteria.frequency === 'weekly' 
+                        ? `${goal.success_criteria.times_per_week}x per week` 
+                        : 'Daily'}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Editable threshold */}
+                <div className="space-y-2">
+                  <Label>Success Threshold: {thresholdPercent}%</Label>
+                  <Slider 
+                    value={[thresholdPercent]}
+                    onValueChange={(v) => setThresholdPercent(v[0])}
+                    min={50}
+                    max={100}
+                    step={5}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    You can miss up to {Math.floor((goal.success_criteria.time_window_days || 30) * (1 - thresholdPercent / 100))} days and still complete the goal
+                  </p>
+                </div>
+              </div>
+            </>
           )}
 
           {/* Milestone Editing for Project Goals */}

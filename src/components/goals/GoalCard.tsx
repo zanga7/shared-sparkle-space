@@ -1,10 +1,11 @@
-import { Target, Users, Calendar, Trophy, Pause, Play, Archive, MoreVertical, Edit, Check } from 'lucide-react';
+import { Target, Users, Calendar, Trophy, Pause, Play, Archive, MoreVertical, Edit, Check, Flame } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { GoalProgressRing } from './GoalProgressRing';
 import { GoalTaskItem } from './GoalTaskItem';
+import { ConsistencyProgressGrid } from './ConsistencyProgressGrid';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -186,29 +187,64 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
       </CardHeader>
       
       <CardContent className="pt-2">
-        <div className="flex items-center gap-4">
-          <GoalProgressRing percent={percent} size="md" />
-          
-          <div className="flex-1 min-w-0 space-y-2">
-            {getProgressDetails()}
-            
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
+        {/* Consistency goals show streak grid instead of progress ring */}
+        {goal.goal_type === 'consistency' && 'time_window_days' in goal.success_criteria ? (
+          <div className="space-y-3">
+            {/* Streak info header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Flame className="h-4 w-4 text-orange-500" />
+                <span className="font-medium text-sm">
+                  {progress && 'total_completions' in progress ? progress.total_completions : 0} / {(goal.success_criteria as { time_window_days: number }).time_window_days} days
+                </span>
+              </div>
               {goal.end_date && (
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span>{getDaysRemaining()}</span>
-                </div>
-              )}
-              
-              {goal.reward && (
-                <div className="flex items-center gap-1 text-amber-500">
-                  <Trophy className="h-3.5 w-3.5" />
-                  <span className="truncate max-w-[100px]">{goal.reward.title}</span>
-                </div>
+                <Badge variant="outline" className="text-xs">
+                  {getDaysRemaining()}
+                </Badge>
               )}
             </div>
+            
+            {/* Compact streak grid */}
+            <ConsistencyProgressGrid
+              startDate={goal.start_date}
+              totalDays={(goal.success_criteria as { time_window_days: number }).time_window_days}
+              completedDates={[]} // TODO: Fetch actual completion dates
+              className="text-xs"
+            />
+            
+            {goal.reward && (
+              <div className="flex items-center gap-1 text-amber-500 text-sm">
+                <Trophy className="h-3.5 w-3.5" />
+                <span className="truncate">{goal.reward.title}</span>
+              </div>
+            )}
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center gap-4">
+            <GoalProgressRing percent={percent} size="md" />
+            
+            <div className="flex-1 min-w-0 space-y-2">
+              {getProgressDetails()}
+              
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                {goal.end_date && (
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>{getDaysRemaining()}</span>
+                  </div>
+                )}
+                
+                {goal.reward && (
+                  <div className="flex items-center gap-1 text-amber-500">
+                    <Trophy className="h-3.5 w-3.5" />
+                    <span className="truncate max-w-[100px]">{goal.reward.title}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Show assignees - single or multiple */}
         {goal.assignees && goal.assignees.length > 0 && (
@@ -264,6 +300,8 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
             )}
           </div>
         )}
+
+        {/* Close the ternary for non-consistency goals */}
 
         {/* Project Goals: Show milestones with their tasks */}
         {goal.goal_type === 'project' && goal.milestones && goal.milestones.length > 0 && (
