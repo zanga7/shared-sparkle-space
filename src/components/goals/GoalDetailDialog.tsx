@@ -22,6 +22,7 @@ import { LinkedTasksList } from './LinkedTasksList';
 import { MemberConsistencyGrid } from './MemberConsistencyGrid';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useGoals } from '@/hooks/useGoals';
+import { useConsistencyCompletions } from '@/hooks/useConsistencyCompletions';
 import type { Goal } from '@/types/goal';
 import { format, differenceInDays } from 'date-fns';
 import {
@@ -55,8 +56,9 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
   
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLinkedTasks, setDeleteLinkedTasks] = useState(false);
-
-  if (!goal) return null;
+  
+  // Fetch consistency completions for this goal
+  const { completionsByMember } = useConsistencyCompletions(goal);
 
   const progress = goal.progress;
   const percent = progress?.current_percent ?? 0;
@@ -276,7 +278,7 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
                         }}
                         startDate={goal.start_date}
                         totalDays={(goal.success_criteria as { time_window_days: number }).time_window_days}
-                        completedDates={[]} // TODO: Fetch actual completion dates per member
+                        completedDates={completionsByMember[assignee.profile_id] || []}
                       />
                     ))}
                   </div>
