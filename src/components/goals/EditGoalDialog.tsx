@@ -234,6 +234,7 @@ export function EditGoalDialog({
   if (!goal) return null;
 
   const isProjectGoal = goal.goal_type === 'project';
+  const isConsistencyGoal = goal.goal_type === 'consistency';
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -447,9 +448,10 @@ export function EditGoalDialog({
             </>
           )}
 
-          {/* Goal-level task linking - only show for non-project goals */}
+          {/* Goal-level task linking - only show for target_count goals */}
           {/* Project goals link tasks at the milestone level instead */}
-          {!isProjectGoal && (
+          {/* Consistency goals have a fixed linked task created during setup */}
+          {!isProjectGoal && !isConsistencyGoal && (
             <>
               <Separator />
               <TaskLinkingSection
@@ -481,6 +483,29 @@ export function EditGoalDialog({
                 }))}
                 profileId={profileId || undefined}
               />
+            </>
+          )}
+
+          {/* Show linked task info for consistency goals (read-only) */}
+          {isConsistencyGoal && goal.linked_tasks && goal.linked_tasks.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Linked Recurring Task</Label>
+                <p className="text-xs text-muted-foreground">
+                  This consistency goal tracks completions of the task created during setup
+                </p>
+                <div className="p-3 rounded-lg border bg-muted/30">
+                  {goal.linked_tasks.filter(lt => lt.task_series_id).map(lt => (
+                    <div key={lt.id} className="flex items-center gap-2 text-sm">
+                      <Badge variant="outline" className="text-xs">Recurring</Badge>
+                      <span className="text-muted-foreground">
+                        Task series linked
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </>
           )}
           
