@@ -4,9 +4,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { GoalProgressRing } from './GoalProgressRing';
-import { GoalTaskItem } from './GoalTaskItem';
 import { ConsistencyProgressGrid } from './ConsistencyProgressGrid';
 import { useConsistencyCompletions } from '@/hooks/useConsistencyCompletions';
+import { useGoalLinkedTasks } from '@/hooks/useGoalLinkedTasks';
+import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -35,6 +36,9 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
   const { allCompletedDates } = useConsistencyCompletions(
     goal.goal_type === 'consistency' ? goal : null
   );
+  
+  // Fetch full task data for linked tasks
+  const { tasksMap, familyMembers } = useGoalLinkedTasks(goal.linked_tasks || []);
   
   const getGoalTypeLabel = () => {
     switch (goal.goal_type) {
@@ -352,14 +356,26 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                   {/* Tasks under this milestone */}
                   {milestoneTasks.length > 0 && (
                     <div className="ml-7 space-y-1">
-                      {milestoneTasks.slice(0, 2).map((task) => (
-                        <GoalTaskItem
-                          key={task.id}
-                          linkedTask={task}
-                          onComplete={onCompleteTask ? () => onCompleteTask(task) : undefined}
-                          hideUnlink={true}
-                        />
-                      ))}
+                      {milestoneTasks.slice(0, 2).map((linkedTask) => {
+                        const task = tasksMap[linkedTask.id];
+                        if (!task) {
+                          return (
+                            <div key={linkedTask.id} className="rounded-lg p-2 bg-muted/30 text-muted-foreground text-xs">
+                              {linkedTask.task_title || 'Unknown Task'}
+                            </div>
+                          );
+                        }
+                        return (
+                          <EnhancedTaskItem
+                            key={linkedTask.id}
+                            task={task}
+                            allTasks={Object.values(tasksMap)}
+                            familyMembers={familyMembers}
+                            onToggle={() => onCompleteTask?.(linkedTask)}
+                            showActions={false}
+                          />
+                        );
+                      })}
                       {milestoneTasks.length > 2 && (
                         <span className="text-xs text-muted-foreground">
                           +{milestoneTasks.length - 2} more tasks
@@ -381,14 +397,26 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
         {/* Non-project goals: Show linked tasks */}
         {goal.goal_type !== 'project' && unassignedTasks.length > 0 && (
           <div className="mt-3 pt-3 border-t space-y-2" onClick={(e) => e.stopPropagation()}>
-            {unassignedTasks.slice(0, 2).map((task) => (
-              <GoalTaskItem
-                key={task.id}
-                linkedTask={task}
-                onComplete={onCompleteTask ? () => onCompleteTask(task) : undefined}
-                hideUnlink={true}
-              />
-            ))}
+            {unassignedTasks.slice(0, 2).map((linkedTask) => {
+              const task = tasksMap[linkedTask.id];
+              if (!task) {
+                return (
+                  <div key={linkedTask.id} className="rounded-lg p-2 bg-muted/30 text-muted-foreground text-xs">
+                    {linkedTask.task_title || 'Unknown Task'}
+                  </div>
+                );
+              }
+              return (
+                <EnhancedTaskItem
+                  key={linkedTask.id}
+                  task={task}
+                  allTasks={Object.values(tasksMap)}
+                  familyMembers={familyMembers}
+                  onToggle={() => onCompleteTask?.(linkedTask)}
+                  showActions={false}
+                />
+              );
+            })}
             {unassignedTasks.length > 2 && (
               <span className="text-xs text-muted-foreground">
                 +{unassignedTasks.length - 2} more tasks

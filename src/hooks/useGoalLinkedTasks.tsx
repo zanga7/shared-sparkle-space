@@ -1,0 +1,236 @@
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import type { GoalLinkedTask } from '@/types/goal';
+import type { Task, Profile } from '@/types/task';
+
+interface GoalLinkedTasksResult {
+  tasksMap: Record<string, Task>;
+  familyMembers: Profile[];
+  isLoading: boolean;
+}
+
+/**
+ * Hook to fetch full task data for goal linked tasks.
+ * This allows us to use EnhancedTaskItem instead of GoalTaskItem.
+ */
+export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTasksResult {
+  // Extract all task IDs, series IDs, and rotating task IDs
+  const taskIds = useMemo(() => 
+    linkedTasks.filter(lt => lt.task_id).map(lt => lt.task_id!),
+    [linkedTasks]
+  );
+  
+  const seriesIds = useMemo(() => 
+    linkedTasks.filter(lt => lt.task_series_id).map(lt => lt.task_series_id!),
+    [linkedTasks]
+  );
+  
+  const rotatingIds = useMemo(() => 
+    linkedTasks.filter(lt => lt.rotating_task_id).map(lt => lt.rotating_task_id!),
+    [linkedTasks]
+  );
+
+  // Fetch regular tasks
+  const { data: regularTasks, isLoading: loadingTasks } = useQuery({
+    queryKey: ['goal-linked-tasks', taskIds],
+    queryFn: async () => {
+      if (taskIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('tasks')
+        .select(`
+          *,
+          assignees:task_assignees(
+            id,
+            profile_id,
+            assigned_at,
+            assigned_by,
+            profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color, avatar_url)
+          ),
+          task_completions(id, completed_at, completed_by)
+        `)
+        .in('id', taskIds);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: taskIds.length > 0,
+  });
+
+  // Fetch task series and create virtual tasks for today
+  const { data: seriesTasks, isLoading: loadingSeries } = useQuery({
+    queryKey: ['goal-linked-series', seriesIds],
+    queryFn: async () => {
+      if (seriesIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('task_series')
+        .select(`
+          *,
+          assignees:task_series_assignees(
+            id,
+            profile_id,
+            assigned_at,
+            assigned_by,
+            profile:profiles!task_series_assignees_profile_id_fkey(id, display_name, role, color, avatar_url)
+          )
+        `)
+        .in('id', seriesIds);
+      
+      if (error) throw error;
+      
+      // Convert series to virtual tasks
+      return (data || []).map(series => ({
+        id: `series-${series.id}`,
+        title: series.title,
+        description: series.description,
+        points: series.points,
+        due_date: null,
+        assigned_to: null,
+        created_by: series.created_by,
+        completion_rule: series.completion_rule || 'any_one',
+        task_group: series.task_group,
+        recurrence_options: { enabled: true },
+        assignees: series.assignees,
+        task_completions: [],
+        isVirtual: true,
+        series_id: series.id,
+        series_assignee_count: series.assignees?.length || 0,
+      } as unknown as Task));
+    },
+    enabled: seriesIds.length > 0,
+  });
+
+  // Fetch rotating tasks and find today's generated task
+  const { data: rotatingTasks, isLoading: loadingRotating } = useQuery({
+    queryKey: ['goal-linked-rotating', rotatingIds],
+    queryFn: async () => {
+      if (rotatingIds.length === 0) return [];
+      
+      // Get today's tasks that were generated from these rotating tasks
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { data, error } = await supabase
+        .from('tasks')
+        .select(`
+          *,
+          assignees:task_assignees(
+            id,
+            profile_id,
+            assigned_at,
+            assigned_by,
+            profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color, avatar_url)
+          ),
+          task_completions(id, completed_at, completed_by)
+        `)
+        .in('rotating_task_id', rotatingIds)
+        .gte('due_date', today)
+        .order('due_date', { ascending: true });
+      
+      if (error) throw error;
+      
+      // Group by rotating_task_id and take the first (most relevant) task
+      const tasksByRotating: Record<string, Task> = {};
+      (data || []).forEach(task => {
+        if (task.rotating_task_id && !tasksByRotating[task.rotating_task_id]) {
+          tasksByRotating[task.rotating_task_id] = task as unknown as Task;
+        }
+      });
+      
+      // For any rotating tasks without a generated task, fetch the rotating task info
+      const missingRotatingIds = rotatingIds.filter(id => !tasksByRotating[id]);
+      
+      if (missingRotatingIds.length > 0) {
+        const { data: rotatingData } = await supabase
+          .from('rotating_tasks')
+          .select('*')
+          .in('id', missingRotatingIds);
+        
+        (rotatingData || []).forEach(rt => {
+          // Create a placeholder task
+          tasksByRotating[rt.id] = {
+            id: `rotating-${rt.id}`,
+            title: rt.name,
+            description: rt.description,
+            points: rt.points,
+            due_date: null,
+            assigned_to: null,
+            created_by: rt.created_by,
+            completion_rule: 'any_one',
+            task_group: rt.task_group,
+            assignees: [],
+            task_completions: [],
+            rotating_task_id: rt.id,
+          } as unknown as Task;
+        });
+      }
+      
+      return Object.values(tasksByRotating);
+    },
+    enabled: rotatingIds.length > 0,
+  });
+
+  // Fetch family members for display
+  const { data: familyMembers, isLoading: loadingMembers } = useQuery({
+    queryKey: ['goal-family-members'],
+    queryFn: async () => {
+      // Get family_id from the first available source
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('family_id')
+        .limit(1)
+        .single();
+      
+      if (!profile?.family_id) return [];
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('family_id', profile.family_id)
+        .order('sort_order', { ascending: true });
+      
+      if (error) throw error;
+      return (data || []) as Profile[];
+    },
+  });
+
+  // Build tasks map keyed by linked task ID
+  const tasksMap = useMemo(() => {
+    const map: Record<string, Task> = {};
+    
+    // Map regular tasks
+    (regularTasks || []).forEach(task => {
+      const linkedTask = linkedTasks.find(lt => lt.task_id === task.id);
+      if (linkedTask) {
+        map[linkedTask.id] = task as unknown as Task;
+      }
+    });
+    
+    // Map series tasks
+    (seriesTasks || []).forEach(task => {
+      const seriesId = task.series_id;
+      const linkedTask = linkedTasks.find(lt => lt.task_series_id === seriesId);
+      if (linkedTask) {
+        map[linkedTask.id] = task;
+      }
+    });
+    
+    // Map rotating tasks
+    (rotatingTasks || []).forEach(task => {
+      const rotatingId = task.rotating_task_id || (task.id.startsWith('rotating-') ? task.id.replace('rotating-', '') : null);
+      const linkedTask = linkedTasks.find(lt => lt.rotating_task_id === rotatingId);
+      if (linkedTask) {
+        map[linkedTask.id] = task;
+      }
+    });
+    
+    return map;
+  }, [linkedTasks, regularTasks, seriesTasks, rotatingTasks]);
+
+  return {
+    tasksMap,
+    familyMembers: familyMembers || [],
+    isLoading: loadingTasks || loadingSeries || loadingRotating || loadingMembers,
+  };
+}
