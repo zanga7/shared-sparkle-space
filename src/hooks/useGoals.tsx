@@ -378,8 +378,33 @@ function useGoalsState() {
   const archiveGoal = (goalId: string) => updateGoalStatus(goalId, 'archived');
   const completeGoal = (goalId: string) => updateGoalStatus(goalId, 'completed');
 
-  const deleteGoal = async (goalId: string): Promise<boolean> => {
+  const deleteGoal = async (goalId: string, deleteLinkedTasks: boolean = false): Promise<boolean> => {
     try {
+      // If deleteLinkedTasks is true, delete linked tasks first
+      if (deleteLinkedTasks) {
+        // Get linked tasks for this goal
+        const { data: linkedTasks } = await supabase
+          .from('goal_linked_tasks')
+          .select('task_id, task_series_id, rotating_task_id')
+          .eq('goal_id', goalId);
+        
+        if (linkedTasks) {
+          // Delete regular tasks
+          const taskIds = linkedTasks.filter(lt => lt.task_id).map(lt => lt.task_id!);
+          if (taskIds.length > 0) {
+            await supabase.from('tasks').delete().in('id', taskIds);
+          }
+          
+          // Delete task series
+          const seriesIds = linkedTasks.filter(lt => lt.task_series_id).map(lt => lt.task_series_id!);
+          if (seriesIds.length > 0) {
+            await supabase.from('task_series').delete().in('id', seriesIds);
+          }
+          
+          // Note: We don't delete rotating tasks as they may be shared
+        }
+      }
+      
       const { error } = await supabase
         .from('goals')
         .delete()

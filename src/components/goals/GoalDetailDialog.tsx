@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { 
   Target, Users, Calendar, Trophy, Pause, Play, 
-  Archive, Trash2, Edit
+  Archive, Trash2, Edit, Flame
 } from 'lucide-react';
 import {
   Dialog,
@@ -12,12 +12,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { GoalProgressRing } from './GoalProgressRing';
 import { GraceIndicator } from './GraceIndicator';
 import { MilestoneList } from './MilestoneList';
 import { ParticipantContributions } from './ParticipantContributions';
 import { LinkedTasksList } from './LinkedTasksList';
-import { ConsistencyProgressGrid } from './ConsistencyProgressGrid';
+import { MemberConsistencyGrid } from './MemberConsistencyGrid';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useGoals } from '@/hooks/useGoals';
 import type { Goal } from '@/types/goal';
@@ -52,6 +54,7 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
   } = useGoals();
   
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLinkedTasks, setDeleteLinkedTasks] = useState(false);
 
   if (!goal) return null;
 
@@ -60,6 +63,7 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
   const isOwner = goal.created_by === profileId;
   const isParent = true;
   const canEdit = isOwner || isParent;
+  const isConsistencyGoal = goal.goal_type === 'consistency';
 
   const handlePause = async () => {
     await pauseGoal(goal.id);
@@ -75,8 +79,9 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
   };
 
   const handleDelete = async () => {
-    await deleteGoal(goal.id);
+    await deleteGoal(goal.id, deleteLinkedTasks);
     setShowDeleteConfirm(false);
+    setDeleteLinkedTasks(false);
     onOpenChange(false);
   };
 
@@ -117,6 +122,9 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
       ? [{ profile_id: goal.assignee.id, profile: goal.assignee }] 
       : [];
 
+  // Check if goal has linked tasks
+  const hasLinkedTasks = goal.linked_tasks && goal.linked_tasks.length > 0;
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,7 +133,9 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-full bg-primary/10">
-                  {goal.goal_scope === 'family' ? (
+                  {isConsistencyGoal ? (
+                    <Flame className="h-5 w-5 text-orange-500" />
+                  ) : goal.goal_scope === 'family' ? (
                     <Users className="h-5 w-5 text-primary" />
                   ) : (
                     <Target className="h-5 w-5 text-primary" />
@@ -141,34 +151,6 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
                   </div>
                 </div>
               </div>
-              
-              {canEdit && goal.status !== 'archived' && goal.status !== 'completed' && (
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" onClick={handleEdit}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  {goal.status === 'active' ? (
-                    <Button variant="ghost" size="icon" onClick={handlePause}>
-                      <Pause className="h-4 w-4" />
-                    </Button>
-                  ) : (
-                    <Button variant="ghost" size="icon" onClick={handleResume}>
-                      <Play className="h-4 w-4" />
-                    </Button>
-                  )}
-                  <Button variant="ghost" size="icon" onClick={handleArchive}>
-                    <Archive className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="text-destructive"
-                    onClick={() => setShowDeleteConfirm(true)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
             </div>
           </DialogHeader>
           
@@ -192,13 +174,10 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
             </div>
           )}
           
-          {/* Progress Section */}
-          <div className="flex items-center gap-6 py-4">
-            <GoalProgressRing percent={percent} size="lg" />
-            
-            <div className="flex-1 space-y-2">
-              <p className="text-sm text-muted-foreground">{getGoalTypeDescription()}</p>
-              
+          {/* Progress Section - Different layout for consistency vs other goals */}
+          {isConsistencyGoal && 'time_window_days' in goal.success_criteria ? (
+            <div className="space-y-4 py-4">
+              {/* Consistency Goal Header */}
               <div className="flex flex-wrap gap-4 text-sm">
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -213,29 +192,66 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
                     {daysRemaining <= 0 ? 'Ended' : `${daysRemaining} days left`}
                   </Badge>
                 )}
+                
+                {goal.reward && (
+                  <div className="flex items-center gap-2 text-amber-500">
+                    <Trophy className="h-4 w-4" />
+                    <span className="font-medium">{goal.reward.title}</span>
+                  </div>
+                )}
               </div>
               
-              {goal.reward && (
-                <div className="flex items-center gap-2 text-amber-500">
-                  <Trophy className="h-4 w-4" />
-                  <span className="font-medium">{goal.reward.title}</span>
-                </div>
+              <p className="text-sm text-muted-foreground">{getGoalTypeDescription()}</p>
+              
+              {goal.description && (
+                <p className="text-muted-foreground">{goal.description}</p>
+              )}
+              
+              {/* Grace Indicator */}
+              {progress?.goal_type === 'consistency' && 'grace_remaining' in progress && (
+                <GraceIndicator
+                  graceRemaining={progress.grace_remaining}
+                  graceUsed={progress.grace_used}
+                  totalDays={progress.total_days}
+                  thresholdPercent={progress.threshold_percent}
+                />
               )}
             </div>
-          </div>
-          
-          {goal.description && (
-            <p className="text-muted-foreground">{goal.description}</p>
+          ) : (
+            <div className="flex items-center gap-6 py-4">
+              <GoalProgressRing percent={percent} size="lg" />
+              
+              <div className="flex-1 space-y-2">
+                <p className="text-sm text-muted-foreground">{getGoalTypeDescription()}</p>
+                
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>{format(new Date(goal.start_date), 'MMM d, yyyy')}</span>
+                    {goal.end_date && (
+                      <span>→ {format(new Date(goal.end_date), 'MMM d, yyyy')}</span>
+                    )}
+                  </div>
+                  
+                  {daysRemaining !== null && (
+                    <Badge variant={daysRemaining <= 7 ? 'destructive' : 'secondary'}>
+                      {daysRemaining <= 0 ? 'Ended' : `${daysRemaining} days left`}
+                    </Badge>
+                  )}
+                </div>
+                
+                {goal.reward && (
+                  <div className="flex items-center gap-2 text-amber-500">
+                    <Trophy className="h-4 w-4" />
+                    <span className="font-medium">{goal.reward.title}</span>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
           
-          {/* Consistency Goal: Grace Indicator */}
-          {progress?.goal_type === 'consistency' && 'grace_remaining' in progress && (
-            <GraceIndicator
-              graceRemaining={progress.grace_remaining}
-              graceUsed={progress.grace_used}
-              totalDays={progress.total_days}
-              thresholdPercent={progress.threshold_percent}
-            />
+          {!isConsistencyGoal && goal.description && (
+            <p className="text-muted-foreground">{goal.description}</p>
           )}
           
           <Separator />
@@ -243,38 +259,48 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
           {/* Progress Details */}
           <div className="space-y-4">
             <h3 className="font-semibold text-sm">Progress Details</h3>
-            {progress?.goal_type === 'consistency' && 'total_completions' in progress && 'time_window_days' in goal.success_criteria && (
+            
+            {/* Consistency Goal: Show per-member grids */}
+            {isConsistencyGoal && 'time_window_days' in goal.success_criteria && (
               <div className="space-y-4">
-                {/* Consistency Progress Grid */}
-                <ConsistencyProgressGrid
-                  startDate={goal.start_date}
-                  totalDays={(goal.success_criteria as { time_window_days: number }).time_window_days}
-                  completedDates={[]} // TODO: Fetch actual completion dates from linked tasks
-                />
+                {allAssignees.length > 0 ? (
+                  <div className="space-y-3">
+                    {allAssignees.map((assignee) => (
+                      <MemberConsistencyGrid
+                        key={assignee.profile_id}
+                        member={{
+                          id: assignee.profile_id,
+                          display_name: assignee.profile?.display_name || 'Unknown',
+                          color: assignee.profile?.color || '#888',
+                          avatar_url: assignee.profile?.avatar_url
+                        }}
+                        startDate={goal.start_date}
+                        totalDays={(goal.success_criteria as { time_window_days: number }).time_window_days}
+                        completedDates={[]} // TODO: Fetch actual completion dates per member
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  // Fallback if no assignees
+                  <div className="p-4 rounded-lg bg-muted/30 text-center text-muted-foreground">
+                    No participants assigned
+                  </div>
+                )}
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-lg bg-muted/50 text-center">
-                    <div className="text-3xl font-bold">{progress.total_completions}</div>
-                    <div className="text-sm text-muted-foreground">Completions</div>
+                {progress?.goal_type === 'consistency' && 'total_completions' in progress && (
+                  <div className="p-4 rounded-lg border">
+                    <div className="flex justify-between text-sm mb-2">
+                      <span>Overall progress to threshold</span>
+                      <span className="font-medium">{percent}% / {progress.threshold_percent}%</span>
+                    </div>
+                    <div className="h-3 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary rounded-full transition-all"
+                        style={{ width: `${Math.min(100, (percent / progress.threshold_percent) * 100)}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="p-4 rounded-lg bg-muted/50 text-center">
-                    <div className="text-3xl font-bold">{progress.days_elapsed}</div>
-                    <div className="text-sm text-muted-foreground">Days Elapsed</div>
-                  </div>
-                </div>
-                
-                <div className="p-4 rounded-lg border">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>Progress to threshold</span>
-                    <span className="font-medium">{percent}% / {progress.threshold_percent}%</span>
-                  </div>
-                  <div className="h-3 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary rounded-full transition-all"
-                      style={{ width: `${Math.min(100, (percent / progress.threshold_percent) * 100)}%` }}
-                    />
-                  </div>
-                </div>
+                )}
               </div>
             )}
             
@@ -350,10 +376,49 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
               </div>
             </>
           )}
+          
+          {/* Action Buttons - moved to bottom */}
+          {canEdit && goal.status !== 'archived' && goal.status !== 'completed' && (
+            <>
+              <Separator />
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <Button variant="outline" size="sm" onClick={handleEdit}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+                {goal.status === 'active' ? (
+                  <Button variant="outline" size="sm" onClick={handlePause}>
+                    <Pause className="h-4 w-4 mr-2" />
+                    Pause
+                  </Button>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={handleResume}>
+                    <Play className="h-4 w-4 mr-2" />
+                    Resume
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={handleArchive}>
+                  <Archive className="h-4 w-4 mr-2" />
+                  Archive
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
       
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <AlertDialog open={showDeleteConfirm} onOpenChange={(open) => {
+        setShowDeleteConfirm(open);
+        if (!open) setDeleteLinkedTasks(false);
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Goal</AlertDialogTitle>
@@ -361,6 +426,23 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
               Are you sure you want to delete "{goal.title}"? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          
+          {hasLinkedTasks && (
+            <div className="flex items-center space-x-2 py-4 px-1">
+              <Checkbox 
+                id="delete-tasks" 
+                checked={deleteLinkedTasks}
+                onCheckedChange={(checked) => setDeleteLinkedTasks(checked === true)}
+              />
+              <Label 
+                htmlFor="delete-tasks" 
+                className="text-sm font-normal cursor-pointer"
+              >
+                Also delete {goal.linked_tasks?.length} linked task{(goal.linked_tasks?.length || 0) > 1 ? 's' : ''}
+              </Label>
+            </div>
+          )}
+          
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
