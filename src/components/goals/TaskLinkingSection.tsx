@@ -36,6 +36,7 @@ interface TaskLinkingSectionProps {
   className?: string;
   familyMembers?: Profile[];
   profileId?: string;
+  onNewTaskCreated?: (taskId: string) => void;
 }
 
 export function TaskLinkingSection({
@@ -51,7 +52,8 @@ export function TaskLinkingSection({
   milestoneId,
   className,
   familyMembers = [],
-  profileId
+  profileId,
+  onNewTaskCreated
 }: TaskLinkingSectionProps) {
   const [availableTasks, setAvailableTasks] = useState<AvailableTask[]>([]);
   const [loading, setLoading] = useState(false);
@@ -140,10 +142,18 @@ export function TaskLinkingSection({
     }
   };
 
-  const handleTaskCreated = () => {
+  const handleTaskCreated = (taskId?: string) => {
     setShowCreateTask(false);
     // Refresh available tasks to include the new one
     fetchAvailableTasks();
+    
+    // Auto-attach the new task to the goal if callback provided
+    if (taskId && onNewTaskCreated) {
+      onNewTaskCreated(taskId);
+    } else if (taskId) {
+      // If no callback, add to selected tasks
+      onTasksChange([...selectedTaskIds, taskId]);
+    }
   };
 
   const getTaskIcon = (type: string) => {

@@ -411,15 +411,43 @@ export function CreateGoalDialog({
         
         {step === 3 && (
           <div className="space-y-4">
-            <TaskLinkingSection
-              familyId={familyId}
-              selectedTaskIds={linkedTaskIds}
-              selectedSeriesIds={linkedSeriesIds}
-              selectedRotatingIds={linkedRotatingIds}
-              onTasksChange={setLinkedTaskIds}
-              onSeriesChange={setLinkedSeriesIds}
-              onRotatingChange={setLinkedRotatingIds}
-            />
+            {/* Only show task linking for non-project goals */}
+            {/* Project goals link tasks at the milestone level after creation */}
+            {goalType !== 'project' && (
+              <TaskLinkingSection
+                familyId={familyId}
+                selectedTaskIds={linkedTaskIds}
+                selectedSeriesIds={linkedSeriesIds}
+                selectedRotatingIds={linkedRotatingIds}
+                onTasksChange={setLinkedTaskIds}
+                onSeriesChange={setLinkedSeriesIds}
+                onRotatingChange={setLinkedRotatingIds}
+                onNewTaskCreated={(taskId) => {
+                  // Auto-attach new task to goal
+                  setLinkedTaskIds(prev => [...prev, taskId]);
+                }}
+                familyMembers={familyMembers.filter(m => m.status !== 'inactive').map(m => ({
+                  id: m.id,
+                  display_name: m.display_name,
+                  role: m.role,
+                  color: m.color,
+                  avatar_url: m.avatar_url || null,
+                  family_id: familyId || '',
+                  total_points: 0,
+                  created_at: '',
+                  updated_at: '',
+                  status: m.status || 'active',
+                  streak_count: 0
+                }))}
+                profileId={profileId || undefined}
+              />
+            )}
+            
+            {goalType === 'project' && (
+              <p className="text-sm text-muted-foreground text-center py-4 border rounded-lg bg-muted/30">
+                You can link tasks to milestones after creating the goal.
+              </p>
+            )}
             
             <div className="space-y-2">
               <Label>Reward (optional)</Label>

@@ -53,6 +53,7 @@ export function EditGoalDialog({
     profileId, 
     familyId, 
     linkTaskToGoal, 
+    linkTaskToMilestone,
     unlinkTaskFromGoal, 
     fetchGoals,
     addMilestone,
@@ -160,7 +161,7 @@ export function EditGoalDialog({
     
     const success = await updateGoal(goal.id, data);
     
-    // Link new goal-level tasks
+    // Link new goal-level tasks (non-project goals)
     if (success) {
       for (const taskId of linkedTaskIds) {
         await linkTaskToGoal(goal.id, { task_id: taskId });
@@ -170,6 +171,19 @@ export function EditGoalDialog({
       }
       for (const rotatingId of linkedRotatingIds) {
         await linkTaskToGoal(goal.id, { rotating_task_id: rotatingId });
+      }
+      
+      // Link milestone tasks (for project goals)
+      for (const [milestoneId, tasks] of Object.entries(milestoneTasks)) {
+        for (const taskId of tasks.taskIds) {
+          await linkTaskToMilestone(goal.id, milestoneId, { task_id: taskId });
+        }
+        for (const seriesId of tasks.seriesIds) {
+          await linkTaskToMilestone(goal.id, milestoneId, { task_series_id: seriesId });
+        }
+        for (const rotatingId of tasks.rotatingIds) {
+          await linkTaskToMilestone(goal.id, milestoneId, { rotating_task_id: rotatingId });
+        }
       }
     }
     
@@ -372,6 +386,18 @@ export function EditGoalDialog({
                                   [milestone.id]: { ...prev[milestone.id], rotatingIds: ids, taskIds: prev[milestone.id]?.taskIds || [], seriesIds: prev[milestone.id]?.seriesIds || [] }
                                 }))}
                                 onUnlink={handleUnlinkTask}
+                                onNewTaskCreated={(taskId) => {
+                                  // Auto-attach new task to this milestone
+                                  setMilestoneTasks(prev => ({
+                                    ...prev,
+                                    [milestone.id]: { 
+                                      ...prev[milestone.id], 
+                                      taskIds: [...(prev[milestone.id]?.taskIds || []), taskId], 
+                                      seriesIds: prev[milestone.id]?.seriesIds || [], 
+                                      rotatingIds: prev[milestone.id]?.rotatingIds || [] 
+                                    }
+                                  }));
+                                }}
                                 milestoneId={milestone.id}
                                 familyMembers={familyMembers.filter(m => m.status !== 'inactive').map(m => ({
                                   id: m.id,
@@ -421,34 +447,42 @@ export function EditGoalDialog({
             </>
           )}
 
-          <Separator />
-          
-          {/* Goal-level task linking */}
-          <TaskLinkingSection
-            familyId={familyId}
-            linkedTasks={goal.linked_tasks?.filter(lt => !lt.milestone_id)}
-            selectedTaskIds={linkedTaskIds}
-            selectedSeriesIds={linkedSeriesIds}
-            selectedRotatingIds={linkedRotatingIds}
-            onTasksChange={setLinkedTaskIds}
-            onSeriesChange={setLinkedSeriesIds}
-            onRotatingChange={setLinkedRotatingIds}
-            onUnlink={handleUnlinkTask}
-            familyMembers={familyMembers.filter(m => m.status !== 'inactive').map(m => ({
-              id: m.id,
-              display_name: m.display_name,
-              role: m.role,
-              color: m.color,
-              avatar_url: m.avatar_url || null,
-              family_id: familyId || '',
-              total_points: 0,
-              created_at: '',
-              updated_at: '',
-              status: m.status || 'active',
-              streak_count: 0
-            }))}
-            profileId={profileId || undefined}
-          />
+          {/* Goal-level task linking - only show for non-project goals */}
+          {/* Project goals link tasks at the milestone level instead */}
+          {!isProjectGoal && (
+            <>
+              <Separator />
+              <TaskLinkingSection
+                familyId={familyId}
+                linkedTasks={goal.linked_tasks?.filter(lt => !lt.milestone_id)}
+                selectedTaskIds={linkedTaskIds}
+                selectedSeriesIds={linkedSeriesIds}
+                selectedRotatingIds={linkedRotatingIds}
+                onTasksChange={setLinkedTaskIds}
+                onSeriesChange={setLinkedSeriesIds}
+                onRotatingChange={setLinkedRotatingIds}
+                onUnlink={handleUnlinkTask}
+                onNewTaskCreated={(taskId) => {
+                  // Auto-attach new task to goal
+                  setLinkedTaskIds(prev => [...prev, taskId]);
+                }}
+                familyMembers={familyMembers.filter(m => m.status !== 'inactive').map(m => ({
+                  id: m.id,
+                  display_name: m.display_name,
+                  role: m.role,
+                  color: m.color,
+                  avatar_url: m.avatar_url || null,
+                  family_id: familyId || '',
+                  total_points: 0,
+                  created_at: '',
+                  updated_at: '',
+                  status: m.status || 'active',
+                  streak_count: 0
+                }))}
+                profileId={profileId || undefined}
+              />
+            </>
+          )}
           
           <div className="space-y-2">
             <Label>Reward (optional)</Label>

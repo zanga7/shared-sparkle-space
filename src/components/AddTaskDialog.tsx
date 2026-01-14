@@ -23,7 +23,7 @@ interface AddTaskDialogProps {
   familyMembers: Profile[];
   familyId: string;
   profileId: string;
-  onTaskCreated: () => void;
+  onTaskCreated: (taskId?: string) => void;
   selectedDate?: Date | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -158,6 +158,8 @@ export const AddTaskDialog = ({
 
     setLoading(true);
     
+    let createdTaskId: string | undefined = undefined;
+    
     try {
       console.log('💾 Creating task with:', { 
         task_group: formData.task_group,
@@ -235,6 +237,7 @@ export const AddTaskDialog = ({
         }
         
         console.log('✅ Task created successfully:', taskResult);
+        createdTaskId = taskResult.id;
 
         // Handle task assignment - ALWAYS create one task with multiple assignees
         // Both "everyone" and "any_one" rules use the same data model:
@@ -287,7 +290,7 @@ export const AddTaskDialog = ({
       });
 
       setOpen(false);
-      onTaskCreated();
+      onTaskCreated(createdTaskId);
     } catch (error: any) {
       console.error('Error creating task:', error);
       toast({
