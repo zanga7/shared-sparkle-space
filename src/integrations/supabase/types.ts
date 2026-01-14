@@ -639,6 +639,52 @@ export type Database = {
           },
         ]
       }
+      goal_assignees: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          goal_id: string
+          id: string
+          profile_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          goal_id: string
+          id?: string
+          profile_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          goal_id?: string
+          id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_assignees_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_assignees_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_assignees_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goal_linked_tasks: {
         Row: {
           goal_id: string

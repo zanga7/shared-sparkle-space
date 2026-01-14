@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Target, Users, User, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
@@ -92,14 +91,6 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
     );
   }
 
-  // Calculate status counts for all goals
-  const statusCounts = {
-    active: goals.filter(g => g.status === 'active').length,
-    paused: goals.filter(g => g.status === 'paused').length,
-    completed: goals.filter(g => g.status === 'completed').length,
-    archived: goals.filter(g => g.status === 'archived').length,
-  };
-
   // When viewing a specific member, only show their goals
   const effectiveProfileId = viewMode === 'member' && selectedMemberId ? selectedMemberId : profileId;
   
@@ -132,7 +123,7 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
     }
 
     return (
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 grid-gap">
         {goalsList.map((goal) => (
           <GoalCard 
             key={goal.id}
@@ -148,59 +139,21 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Goals</h1>
-          <p className="text-muted-foreground">Track progress toward meaningful outcomes</p>
+    <div className="min-h-screen bg-background page-padding">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between section-spacing">
+          <div>
+            <h1 className="text-3xl font-bold">Goals</h1>
+            <p className="text-muted-foreground">Track progress toward meaningful outcomes</p>
+          </div>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Goal
+          </Button>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Goal
-        </Button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card 
-          className={`cursor-pointer transition-colors ${statusFilter === 'active' ? 'ring-2 ring-primary' : ''}`}
-          onClick={() => setStatusFilter('active')}
-        >
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-primary">{statusCounts.active}</div>
-            <p className="text-sm text-muted-foreground">Active</p>
-          </CardContent>
-        </Card>
-        <Card 
-          className={`cursor-pointer transition-colors ${statusFilter === 'paused' ? 'ring-2 ring-primary' : ''}`}
-          onClick={() => setStatusFilter('paused')}
-        >
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-amber-500">{statusCounts.paused}</div>
-            <p className="text-sm text-muted-foreground">Paused</p>
-          </CardContent>
-        </Card>
-        <Card 
-          className={`cursor-pointer transition-colors ${statusFilter === 'completed' ? 'ring-2 ring-primary' : ''}`}
-          onClick={() => setStatusFilter('completed')}
-        >
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-green-500">{statusCounts.completed}</div>
-            <p className="text-sm text-muted-foreground">Completed</p>
-          </CardContent>
-        </Card>
-        <Card 
-          className={`cursor-pointer transition-colors ${statusFilter === 'archived' ? 'ring-2 ring-primary' : ''}`}
-          onClick={() => setStatusFilter('archived')}
-        >
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-muted-foreground">{statusCounts.archived}</div>
-            <p className="text-sm text-muted-foreground">Archived</p>
-          </CardContent>
-        </Card>
-      </div>
       
-      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between section-spacing">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
           <TabsList>
             <TabsTrigger value="my" className="flex items-center gap-2">
@@ -241,37 +194,38 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
         </div>
       </div>
       
-      {loading ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-48 rounded-lg" />
-          ))}
-        </div>
-      ) : (
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsContent value="my" className="mt-0">
-            {renderGoalsList(
-              filteredMyGoals,
-              <User className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />,
-              'No personal goals',
-              statusFilter === 'all' 
-                ? 'Set a personal goal to track your progress'
-                : `No ${statusFilter} personal goals`
-            )}
-          </TabsContent>
-          
-          <TabsContent value="family" className="mt-0">
-            {renderGoalsList(
-              filteredFamilyGoals,
-              <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />,
-              'No family goals',
-              statusFilter === 'all'
-                ? 'Create a goal the whole family can work toward together'
-                : `No ${statusFilter} family goals`
-            )}
-          </TabsContent>
-        </Tabs>
-      )}
+        {loading ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 grid-gap">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className="h-48 rounded-lg" />
+            ))}
+          </div>
+        ) : (
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsContent value="my" className="mt-0">
+              {renderGoalsList(
+                filteredMyGoals,
+                <User className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />,
+                'No personal goals',
+                statusFilter === 'all' 
+                  ? 'Set a personal goal to track your progress'
+                  : `No ${statusFilter} personal goals`
+              )}
+            </TabsContent>
+            
+            <TabsContent value="family" className="mt-0">
+              {renderGoalsList(
+                filteredFamilyGoals,
+                <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />,
+                'No family goals',
+                statusFilter === 'all'
+                  ? 'Create a goal the whole family can work toward together'
+                  : `No ${statusFilter} family goals`
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
+      </div>
       
       <GoalDetailDialog 
         goal={selectedGoal}

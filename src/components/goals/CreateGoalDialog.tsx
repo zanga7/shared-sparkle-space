@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 import { useGoals } from '@/hooks/useGoals';
 import type { 
   GoalType, 
@@ -34,7 +35,7 @@ import { format, addDays, addMonths } from 'date-fns';
 interface CreateGoalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  familyMembers: Array<{ id: string; display_name: string; color: string }>;
+  familyMembers: Array<{ id: string; display_name: string; color: string; role: 'parent' | 'child'; avatar_url?: string | null; status?: string }>;
   rewards: Reward[];
 }
 
@@ -54,7 +55,7 @@ export function CreateGoalDialog({
   const [description, setDescription] = useState('');
   const [goalType, setGoalType] = useState<GoalType>('consistency');
   const [goalScope, setGoalScope] = useState<GoalScope>('individual');
-  const [assignedTo, setAssignedTo] = useState<string>('');
+  const [assignees, setAssignees] = useState<string[]>([]);
   const [rewardId, setRewardId] = useState<string>('');
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(addMonths(new Date(), 3), 'yyyy-MM-dd'));
@@ -78,7 +79,7 @@ export function CreateGoalDialog({
     setDescription('');
     setGoalType('consistency');
     setGoalScope('individual');
-    setAssignedTo('');
+    setAssignees([]);
     setRewardId('');
     setStartDate(format(new Date(), 'yyyy-MM-dd'));
     setEndDate(format(addMonths(new Date(), 3), 'yyyy-MM-dd'));
@@ -125,7 +126,10 @@ export function CreateGoalDialog({
       description: description || undefined,
       goal_type: goalType,
       goal_scope: goalScope,
-      assigned_to: goalScope === 'individual' ? (assignedTo || profileId) : undefined,
+      // For individual goals, use single assignee for backward compatibility
+      assigned_to: goalScope === 'individual' && assignees.length === 1 ? assignees[0] : 
+                   goalScope === 'individual' && assignees.length === 0 ? profileId : undefined,
+      assignees: assignees.length > 0 ? assignees : undefined,
       reward_id: rewardId && rewardId !== 'none' ? rewardId : undefined,
       success_criteria: successCriteria,
       start_date: startDate,
@@ -244,18 +248,20 @@ export function CreateGoalDialog({
             {goalScope === 'individual' && (
               <div className="space-y-2">
                 <Label>Assigned to</Label>
-                <Select value={assignedTo || profileId || ''} onValueChange={setAssignedTo}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select member" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {familyMembers.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.display_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiSelectAssignees
+                  familyMembers={familyMembers.filter(m => m.status !== 'inactive').map(m => ({
+                    id: m.id,
+                    display_name: m.display_name,
+                    role: m.role,
+                    color: m.color,
+                    avatar_url: m.avatar_url || undefined,
+                    total_points: 0,
+                    family_id: ''
+                  }))}
+                  selectedAssignees={assignees}
+                  onAssigneesChange={setAssignees}
+                  placeholder="Select member(s)..."
+                />
               </div>
             )}
             
