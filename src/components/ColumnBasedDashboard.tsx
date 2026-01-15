@@ -1971,6 +1971,7 @@ const ColumnBasedDashboard = () => {
                 familyId={profile.family_id}
                 onNavigateToTasks={() => setActiveTab('columns')}
                 onNavigateToCalendar={() => setActiveTab('calendar')}
+                onNavigateToGoals={() => setActiveTab('goals')}
                 onMemberSelect={(memberId) => {
                   setSelectedMemberFilter(memberId);
                   setViewMode('member');
