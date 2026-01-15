@@ -9,6 +9,7 @@ interface AvatarIcon {
   name: string;
   svg_content: string;
   is_system: boolean;
+  icon_type?: string;
 }
 
 interface AvatarIconSelectorProps {
@@ -28,13 +29,14 @@ export function AvatarIconSelector({
   onIconSelect,
   className
 }: AvatarIconSelectorProps) {
-  // Fetch avatar icons from database
+  // Fetch avatar icons from database - only avatar type icons, not celebration icons
   const { data: avatarIcons = [] } = useQuery({
-    queryKey: ['avatar-icons'],
+    queryKey: ['avatar-icons-for-members'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('avatar_icons')
         .select('*')
+        .or('icon_type.eq.avatar,icon_type.is.null')
         .order('name');
       
       if (error) throw error;
@@ -67,7 +69,7 @@ export function AvatarIconSelector({
   }
 
   return (
-    <div className={cn("grid grid-cols-3 gap-3", className)}>
+    <div className={cn("grid grid-cols-3 gap-2 md:gap-3 max-h-64 overflow-y-auto p-1", className)}>
       {avatarIcons.map((icon) => {
         const isUsed = usedIcons.includes(icon.name);
         const isSelected = selectedIcon === icon.name;
@@ -79,29 +81,31 @@ export function AvatarIconSelector({
             onClick={() => !isUsed && onIconSelect(icon.name)}
             disabled={isUsed}
             className={cn(
-              "relative p-3 rounded-lg border-2 transition-all",
+              "relative p-2 md:p-3 rounded-lg border-2 transition-all",
               isSelected && "border-primary ring-2 ring-primary ring-offset-2",
               !isSelected && !isUsed && "border-border hover:border-primary/50",
-              isUsed && "opacity-40 cursor-not-allowed bg-muted"
+              isUsed && "opacity-30 cursor-not-allowed bg-muted/50"
             )}
           >
             <div 
-              className="w-12 h-12 mx-auto [&_svg]:w-full [&_svg]:h-full [&_path]:transition-colors"
+              className="w-10 h-10 md:w-12 md:h-12 mx-auto [&_svg]:w-full [&_svg]:h-full [&_path]:transition-colors"
               dangerouslySetInnerHTML={{ __html: sanitizeSVG(icon.svg_content) }}
               style={{
-                ['--icon-color' as any]: activeColorHex,
+                ['--icon-color' as any]: isUsed ? '#9ca3af' : activeColorHex,
               }}
             />
             <style>
               {`
                 button[data-icon="${icon.name}"] .cls-1 {
-                  fill: ${activeColorHex} !important;
+                  fill: ${isUsed ? '#9ca3af' : activeColorHex} !important;
                 }
               `}
             </style>
             {isUsed && (
-              <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-destructive">
-                Used
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-[10px] md:text-xs font-semibold text-destructive bg-background/80 px-1 rounded">
+                  Taken
+                </span>
               </div>
             )}
           </button>

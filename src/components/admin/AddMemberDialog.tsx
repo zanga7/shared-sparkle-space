@@ -161,7 +161,7 @@ export const AddMemberDialog = ({ isOpen, onOpenChange, familyId, onMemberAdded,
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Member</DialogTitle>
           <DialogDescription>
@@ -218,14 +218,19 @@ export const AddMemberDialog = ({ isOpen, onOpenChange, familyId, onMemberAdded,
                         key={color.id} 
                         value={color.color_key}
                         disabled={isUsed}
+                        className={isUsed ? 'opacity-50' : ''}
                       >
                         <div className="flex items-center gap-2">
                           <div 
-                            className="w-3 h-3 rounded-full border border-border" 
+                            className={`w-4 h-4 rounded-full border-2 ${isUsed ? 'border-muted-foreground' : 'border-border'}`}
                             style={{ backgroundColor: color.hex_value }}
                           />
-                          {color.name}
-                          {isUsed && <span className="text-xs text-muted-foreground">(in use)</span>}
+                          <span className={isUsed ? 'line-through text-muted-foreground' : ''}>
+                            {color.name}
+                          </span>
+                          {isUsed && (
+                            <span className="text-xs text-destructive ml-1">(taken)</span>
+                          )}
                         </div>
                       </SelectItem>
                     );
