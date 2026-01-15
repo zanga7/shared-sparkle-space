@@ -6,14 +6,17 @@ import { Badge } from '@/components/ui/badge';
 import { useMemberColor } from '@/hooks/useMemberColor';
 import { useEvents } from '@/hooks/useEvents';
 import { useRewards } from '@/hooks/useRewards';
+import { useGoals } from '@/hooks/useGoals';
 import { Profile, Task } from '@/types/task';
+import { GoalProgressRing } from '@/components/goals/GoalProgressRing';
 import { 
   CheckSquare, 
   Calendar, 
   Trophy,
   Sparkles,
   Clock,
-  Gift
+  Gift,
+  Target
 } from 'lucide-react';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { motion } from 'framer-motion';
@@ -24,6 +27,7 @@ interface FamilyDashboardProps {
   familyId: string;
   onNavigateToTasks: () => void;
   onNavigateToCalendar?: () => void;
+  onNavigateToGoals?: () => void;
   onMemberSelect: (memberId: string) => void;
 }
 
@@ -215,62 +219,147 @@ const TodayEventsWidget = ({ events, onViewCalendar }: { events: any[]; onViewCa
   );
 };
 
-// Rewards widget
+// Rewards widget - compact version for sidebar
 const RewardsWidget = ({ rewards }: { rewards: any[] }) => {
   const activeRewards = rewards.filter(r => r.is_active);
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-3 pt-0">
-        <h2 className="flex items-center gap-2 text-xl font-semibold">
+    <Card>
+      <CardHeader className="pb-3 pt-4">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
           <Gift className="h-5 w-5 text-primary" />
           Available Rewards
         </h2>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         {activeRewards.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            <Gift className="h-10 w-10 mx-auto mb-2 opacity-30" />
+          <div className="text-center py-4 text-muted-foreground">
+            <Gift className="h-8 w-8 mx-auto mb-2 opacity-30" />
             <p className="text-sm">No rewards available</p>
           </div>
         ) : (
-          <div className="space-y-3 max-h-[400px] overflow-y-auto">
-            {activeRewards.slice(0, 6).map((reward, index) => (
+          <div className="space-y-2 max-h-[200px] overflow-y-auto">
+            {activeRewards.slice(0, 4).map((reward, index) => (
               <motion.div
                 key={reward.id}
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
               >
                 <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center">
                     {reward.image_url ? (
                       <img 
                         src={reward.image_url} 
                         alt={reward.title}
-                        className="w-8 h-8 rounded-full object-cover"
+                        className="w-6 h-6 rounded-full object-cover"
                       />
                     ) : (
-                      <Gift className="h-5 w-5 text-amber-500" />
+                      <Gift className="h-4 w-4 text-amber-500" />
                     )}
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{reward.title}</p>
-                  <p className="text-sm text-muted-foreground capitalize">
-                    {reward.reward_type.replace('_', ' ')}
-                  </p>
+                  <p className="text-sm font-medium truncate">{reward.title}</p>
                 </div>
-                <Badge variant="secondary" className="flex items-center gap-1">
+                <Badge variant="secondary" className="flex items-center gap-1 text-xs">
                   <Trophy className="h-3 w-3 text-amber-500" />
                   {reward.cost_points}
                 </Badge>
               </motion.div>
             ))}
-            {activeRewards.length > 6 && (
+            {activeRewards.length > 4 && (
+              <p className="text-xs text-center text-muted-foreground pt-1">
+                +{activeRewards.length - 4} more rewards
+              </p>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// Goals widget
+const GoalsWidget = ({ goals, onNavigateToGoals }: { goals: any[]; onNavigateToGoals?: () => void }) => {
+  const activeGoals = goals.filter(g => g.status === 'active');
+
+  return (
+    <Card className="h-full">
+      <CardHeader className="pb-3 pt-0">
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-xl font-semibold">
+            <Target className="h-5 w-5 text-primary" />
+            Family Goals
+          </h2>
+          {onNavigateToGoals && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={onNavigateToGoals}
+              className="gap-2"
+            >
+              <Target className="h-4 w-4" />
+              View All
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {activeGoals.length === 0 ? (
+          <div className="text-center py-6 text-muted-foreground">
+            <Target className="h-10 w-10 mx-auto mb-2 opacity-30" />
+            <p className="text-sm">No active goals</p>
+            <p className="text-xs mt-1">Create a goal to track family progress</p>
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            {activeGoals.slice(0, 5).map((goal, index) => {
+              const progressPercent = goal.progress?.percentage || 0;
+              return (
+                <motion.div
+                  key={goal.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                >
+                  <div className="flex-shrink-0">
+                    <GoalProgressRing percent={progressPercent} size="sm" showLabel={false} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{goal.title}</p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span className="capitalize">{goal.goal_type.replace('_', ' ')}</span>
+                      {goal.assignees && goal.assignees.length > 0 && (
+                        <>
+                          <span>•</span>
+                          <div className="flex -space-x-1">
+                            {goal.assignees.slice(0, 3).map((assignee: any) => (
+                              <UserAvatar
+                                key={assignee.profile_id}
+                                name={assignee.profile?.display_name || 'Unknown'}
+                                color={assignee.profile?.color}
+                                avatarIcon={assignee.profile?.avatar_url || undefined}
+                                size="xs"
+                                className="border border-background"
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {Math.round(progressPercent)}%
+                  </Badge>
+                </motion.div>
+              );
+            })}
+            {activeGoals.length > 5 && (
               <p className="text-xs text-center text-muted-foreground pt-2">
-                +{activeRewards.length - 6} more rewards
+                +{activeGoals.length - 5} more goals
               </p>
             )}
           </div>
@@ -286,10 +375,12 @@ export const FamilyDashboard = ({
   familyId,
   onNavigateToTasks,
   onNavigateToCalendar,
+  onNavigateToGoals,
   onMemberSelect
 }: FamilyDashboardProps) => {
   const { events = [] } = useEvents(familyId);
   const { rewards = [] } = useRewards();
+  const { goals = [] } = useGoals();
   
   // Calculate today's events for each member
   const todayMemberEvents = useMemo(() => {
@@ -376,14 +467,14 @@ export const FamilyDashboard = ({
 
       {/* Main content grid - 3 columns with aligned headers */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Left column - Family Members (sorted by points) */}
+        {/* Left column - Leaderboard + Rewards */}
         <div className="space-y-4">
           <Card className="border-0 shadow-none bg-transparent">
             <CardHeader className="pb-3 pt-0 px-0">
               <div className="flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-xl font-semibold">
                   <Trophy className="h-5 w-5 text-primary" />
-                  Family Members
+                  Leaderboard
                 </h2>
                 <Button 
                   variant="outline" 
@@ -392,7 +483,7 @@ export const FamilyDashboard = ({
                   className="gap-2"
                 >
                   <CheckSquare className="h-4 w-4" />
-                  Tasks Dashboard
+                  Tasks
                 </Button>
               </div>
             </CardHeader>
@@ -410,16 +501,19 @@ export const FamilyDashboard = ({
               />
             ))}
           </div>
+          
+          {/* Rewards under leaderboard */}
+          <RewardsWidget rewards={rewards} />
         </div>
 
-        {/* Center column - Today's Schedule */}
+        {/* Center column - Goals */}
+        <div>
+          <GoalsWidget goals={goals} onNavigateToGoals={onNavigateToGoals} />
+        </div>
+
+        {/* Right column - Today's Schedule */}
         <div>
           <TodayEventsWidget events={events} onViewCalendar={onNavigateToCalendar} />
-        </div>
-
-        {/* Right column - Rewards */}
-        <div>
-          <RewardsWidget rewards={rewards} />
         </div>
       </div>
     </div>
