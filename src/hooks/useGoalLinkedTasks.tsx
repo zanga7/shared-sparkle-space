@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { GoalLinkedTask } from '@/types/goal';
 import type { Task, Profile } from '@/types/task';
@@ -8,6 +8,7 @@ interface GoalLinkedTasksResult {
   tasksMap: Record<string, Task>;
   familyMembers: Profile[];
   isLoading: boolean;
+  refetch: () => void;
 }
 
 /**
@@ -15,6 +16,8 @@ interface GoalLinkedTasksResult {
  * This allows us to use EnhancedTaskItem instead of GoalTaskItem.
  */
 export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTasksResult {
+  const queryClient = useQueryClient();
+  
   // Extract all task IDs, series IDs, and rotating task IDs
   const taskIds = useMemo(() => 
     linkedTasks.filter(lt => lt.task_id).map(lt => lt.task_id!),
@@ -30,6 +33,13 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
     linkedTasks.filter(lt => lt.rotating_task_id).map(lt => lt.rotating_task_id!),
     [linkedTasks]
   );
+  
+  // Refetch function to invalidate all related queries
+  const refetch = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['goal-linked-tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['goal-linked-series'] });
+    queryClient.invalidateQueries({ queryKey: ['goal-linked-rotating'] });
+  }, [queryClient]);
 
   // Fetch regular tasks
   const { data: regularTasks, isLoading: loadingTasks } = useQuery({
@@ -232,5 +242,6 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
     tasksMap,
     familyMembers: familyMembers || [],
     isLoading: loadingTasks || loadingSeries || loadingRotating || loadingMembers,
+    refetch,
   };
 }

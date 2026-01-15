@@ -280,39 +280,36 @@ const RewardsWidget = ({ rewards }: { rewards: any[] }) => {
   );
 };
 
-// Compact consistency grid for dashboard
+// Compact consistency grid for dashboard - uses the ConsistencyProgressGrid logic
 const CompactConsistencyGrid = ({ goal }: { goal: any }) => {
-  const completedDates = goal.progress?.completed_dates || [];
+  // For consistency goals, we need to fetch completion data
+  // The progress object has total_completions but not the specific dates
+  // So we show a simple progress indicator based on the data we have
+  const progress = goal.progress;
+  const totalCompletions = progress?.total_completions || 0;
+  const expectedCompletions = progress?.expected_completions || 1;
   
-  
-  // Show only last 7 days for compact view
-  const today = startOfDay(new Date());
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(today);
-    date.setDate(date.getDate() - (6 - i));
-    return format(date, 'yyyy-MM-dd');
+  // Show 7 boxes representing the last 7 expected completions
+  const boxes = Array.from({ length: 7 }, (_, i) => {
+    // Fill boxes based on completion ratio
+    const filledBoxes = Math.min(7, Math.round((totalCompletions / Math.max(expectedCompletions, 1)) * 7));
+    return i < filledBoxes;
   });
-  
-  const completedSet = new Set(completedDates.map((d: string) => format(startOfDay(new Date(d)), 'yyyy-MM-dd')));
   
   return (
     <div className="flex gap-0.5">
-      {last7Days.map((dateKey) => {
-        const isCompleted = completedSet.has(dateKey);
-        const isToday = dateKey === format(today, 'yyyy-MM-dd');
-        return (
-          <div
-            key={dateKey}
-            className={`w-3 h-3 rounded-sm ${
-              isCompleted 
-                ? 'bg-green-500' 
-                : isToday 
-                  ? 'bg-muted ring-1 ring-primary/50' 
-                  : 'bg-muted/50'
-            }`}
-          />
-        );
-      })}
+      {boxes.map((isCompleted, i) => (
+        <div
+          key={i}
+          className={`w-3 h-3 rounded-sm ${
+            isCompleted 
+              ? 'bg-green-500' 
+              : i === boxes.length - 1 
+                ? 'bg-muted ring-1 ring-primary/50' 
+                : 'bg-muted/50'
+          }`}
+        />
+      ))}
     </div>
   );
 };

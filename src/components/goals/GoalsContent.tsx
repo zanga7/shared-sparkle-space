@@ -65,7 +65,7 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
   
   // Get all linked tasks from all goals for task lookup
   const allLinkedTasks = goals.flatMap(g => g.linked_tasks || []);
-  const { tasksMap } = useGoalLinkedTasks(allLinkedTasks);
+  const { tasksMap, refetch: refetchLinkedTasks } = useGoalLinkedTasks(allLinkedTasks);
   
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
@@ -86,14 +86,32 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
   // Handle task completion/uncomplete from goals
   const handleTaskToggle = async (linkedTask: GoalLinkedTask) => {
     const task = tasksMap[linkedTask.id];
-    if (!task) return;
+    if (!task) {
+      console.log('Task not found in tasksMap for linkedTask:', linkedTask.id);
+      return;
+    }
     
+    // Check if the task has any completions in the current data
     const hasCompletion = task.task_completions && task.task_completions.length > 0;
     
+    console.log('Task toggle:', { 
+      linkedTaskId: linkedTask.id, 
+      taskId: task.id, 
+      hasCompletion, 
+      completions: task.task_completions 
+    });
+    
+    // Callback to refresh both goals and linked tasks cache
+    const onComplete = () => {
+      refetchLinkedTasks(); // Invalidate linked tasks cache first
+      fetchGoals(); // Then refresh goals
+    };
+    
     if (hasCompletion) {
-      await uncompleteTask(task, () => fetchGoals());
+      // For uncompleting, we need to pass the task with its completions
+      await uncompleteTask(task, onComplete);
     } else {
-      await completeTask(task, () => fetchGoals());
+      await completeTask(task, onComplete);
     }
   };
 
