@@ -352,7 +352,7 @@ const GoalsWidget = ({ goals, onNavigateToGoals }: { goals: any[]; onNavigateToG
         ) : (
           <div className="space-y-3 max-h-[400px] overflow-y-auto">
             {activeGoals.slice(0, 5).map((goal, index) => {
-              const progressPercent = goal.progress?.percentage || 0;
+              const progressPercent = goal.progress?.current_percent ?? 0;
               const isConsistency = goal.goal_type === 'consistency';
               
               return (

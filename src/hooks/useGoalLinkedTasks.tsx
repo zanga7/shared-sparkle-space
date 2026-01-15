@@ -199,30 +199,30 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
   const tasksMap = useMemo(() => {
     const map: Record<string, Task> = {};
     
-    // Map regular tasks
+    // Map regular tasks - use filter to find ALL linked tasks for each task (handles multi-goal)
     (regularTasks || []).forEach(task => {
-      const linkedTask = linkedTasks.find(lt => lt.task_id === task.id);
-      if (linkedTask) {
+      const matchingLinkedTasks = linkedTasks.filter(lt => lt.task_id === task.id);
+      matchingLinkedTasks.forEach(linkedTask => {
         map[linkedTask.id] = task as unknown as Task;
-      }
+      });
     });
     
-    // Map series tasks
+    // Map series tasks - use filter for all matching linked tasks
     (seriesTasks || []).forEach(task => {
       const seriesId = task.series_id;
-      const linkedTask = linkedTasks.find(lt => lt.task_series_id === seriesId);
-      if (linkedTask) {
+      const matchingLinkedTasks = linkedTasks.filter(lt => lt.task_series_id === seriesId);
+      matchingLinkedTasks.forEach(linkedTask => {
         map[linkedTask.id] = task;
-      }
+      });
     });
     
-    // Map rotating tasks
+    // Map rotating tasks - use filter for all matching linked tasks
     (rotatingTasks || []).forEach(task => {
       const rotatingId = task.rotating_task_id || (task.id.startsWith('rotating-') ? task.id.replace('rotating-', '') : null);
-      const linkedTask = linkedTasks.find(lt => lt.rotating_task_id === rotatingId);
-      if (linkedTask) {
+      const matchingLinkedTasks = linkedTasks.filter(lt => lt.rotating_task_id === rotatingId);
+      matchingLinkedTasks.forEach(linkedTask => {
         map[linkedTask.id] = task;
-      }
+      });
     });
     
     return map;
