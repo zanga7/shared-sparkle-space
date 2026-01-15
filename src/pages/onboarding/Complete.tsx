@@ -4,55 +4,48 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CheckCircle, Sparkles, Rocket } from 'lucide-react';
 import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 
-interface ColorPalette {
-  id: string;
-  name: string;
-  color_key: string;
-  hex_value: string;
-}
+// Import avatar images
+import av1 from '@/assets/avatars/av1.svg';
+import av2 from '@/assets/avatars/av2.svg';
+import av3 from '@/assets/avatars/av3.svg';
+import av4 from '@/assets/avatars/av4.svg';
+import av5 from '@/assets/avatars/av5.svg';
+import av6 from '@/assets/avatars/av6.svg';
+
+const avatars = [av1, av2, av3, av4, av5, av6];
 
 export default function Complete() {
   const navigate = useNavigate();
   const { completeOnboarding } = useOnboardingStatus();
 
-  // Fetch colors for decoration
-  const { data: colors = [] } = useQuery({
-    queryKey: ['color-palettes'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('color_palettes')
-        .select('*')
-        .order('name')
-        .limit(8);
-      
-      if (error) throw error;
-      return data as ColorPalette[];
-    }
-  });
-
   useEffect(() => {
+    // Complete onboarding when this page loads
     completeOnboarding();
-  }, []);
+  }, [completeOnboarding]);
+
+  const handleGoToDashboard = async () => {
+    await completeOnboarding();
+    navigate('/', { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4 overflow-y-auto">
       <Card className="max-w-2xl w-full p-6 md:p-12 text-center space-y-6 md:space-y-8 shadow-xl my-4">
         <div className="space-y-6">
-          {/* Colorful celebration dots */}
+          {/* Avatar celebration circles */}
           <div className="flex justify-center items-center gap-2">
-            {colors.slice(0, 6).map((color, idx) => (
+            {avatars.map((avatar, idx) => (
               <div
-                key={color.id}
-                className="w-6 h-6 md:w-8 md:h-8 rounded-full animate-bounce shadow-lg"
+                key={idx}
+                className="w-8 h-8 md:w-10 md:h-10 rounded-full animate-bounce shadow-lg bg-background overflow-hidden"
                 style={{ 
-                  backgroundColor: color.hex_value,
                   animationDelay: `${idx * 0.15}s`,
                   animationDuration: '1.2s'
                 }}
-              />
+              >
+                <img src={avatar} alt="" className="w-full h-full object-cover" />
+              </div>
             ))}
           </div>
 
@@ -81,7 +74,7 @@ export default function Complete() {
 
         <Button 
           size="lg" 
-          onClick={() => navigate('/')}
+          onClick={handleGoToDashboard}
           className="text-base md:text-lg px-6 md:px-8"
         >
           Go to Dashboard
