@@ -78,7 +78,7 @@ export default function CreateCrew() {
               {members.slice(0, 6).map((member, idx) => (
                 <div 
                   key={member.id} 
-                  className="ring-4 ring-background rounded-full transform hover:scale-110 transition-transform"
+                  className="rounded-full transform hover:scale-110 transition-transform"
                   style={{ zIndex: 10 - idx }}
                 >
                   <UserAvatar
