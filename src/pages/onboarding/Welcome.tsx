@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Sparkles, Users, Rocket } from 'lucide-react';
+import { Sparkles, Rocket } from 'lucide-react';
 import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
 
 // Import avatar images
@@ -20,25 +20,28 @@ export default function Welcome() {
 
   const handleSkip = async () => {
     await completeOnboarding();
-    navigate('/', { replace: true });
+    // Small delay to ensure state propagates before navigation
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 100);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4 overflow-y-auto">
       <Card className="max-w-2xl w-full p-6 md:p-12 text-center space-y-6 md:space-y-8 shadow-xl my-4">
         <div className="space-y-4">
-          {/* Avatar circles decoration */}
+          {/* Avatar decoration - no circle mask, no shadow */}
           <div className="flex justify-center items-center gap-2 mb-4">
             {avatars.map((avatar, idx) => (
               <div
                 key={idx}
-                className="w-10 h-10 md:w-12 md:h-12 rounded-full animate-bounce shadow-lg bg-background overflow-hidden"
+                className="w-10 h-10 md:w-12 md:h-12 animate-bounce"
                 style={{ 
                   animationDelay: `${idx * 0.1}s`,
                   animationDuration: '1.5s'
                 }}
               >
-                <img src={avatar} alt="" className="w-full h-full object-cover" />
+                <img src={avatar} alt="" className="w-full h-full text-primary" />
               </div>
             ))}
           </div>
@@ -57,17 +60,17 @@ export default function Welcome() {
           </div>
         </div>
 
+        {/* Bottom avatars - no Users icon, no circle mask, no shadow */}
         <div className="flex items-center justify-center gap-3 md:gap-4 pt-4">
-          <Users className="w-6 h-6 md:w-8 md:h-8 text-primary animate-pulse" />
-          {avatars.slice(0, 3).map((avatar, idx) => (
+          {avatars.slice(0, 4).map((avatar, idx) => (
             <div 
               key={idx}
-              className="h-6 w-6 md:h-8 md:w-8 rounded-full animate-bounce overflow-hidden bg-background shadow-sm" 
+              className="h-6 w-6 md:h-8 md:w-8 animate-bounce" 
               style={{ 
                 animationDelay: `${0.2 + idx * 0.2}s` 
               }}
             >
-              <img src={avatar} alt="" className="w-full h-full object-cover" />
+              <img src={avatar} alt="" className="w-full h-full text-primary" />
             </div>
           ))}
         </div>
