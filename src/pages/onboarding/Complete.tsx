@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CheckCircle, Sparkles, Rocket } from 'lucide-react';
@@ -16,35 +15,41 @@ import av6 from '@/assets/avatars/av6.svg';
 const avatars = [av1, av2, av3, av4, av5, av6];
 
 export default function Complete() {
-  const navigate = useNavigate();
   const { completeOnboarding } = useOnboardingStatus();
+  const hasCompleted = useRef(false);
 
   useEffect(() => {
-    // Complete onboarding when this page loads
-    completeOnboarding();
+    // Complete onboarding when this page loads (only once)
+    if (!hasCompleted.current) {
+      hasCompleted.current = true;
+      completeOnboarding();
+    }
   }, [completeOnboarding]);
 
   const handleGoToDashboard = async () => {
     await completeOnboarding();
-    navigate('/', { replace: true });
+    // Use window.location to force a full page reload and bypass cached onboarding state
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 100);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4 overflow-y-auto">
       <Card className="max-w-2xl w-full p-6 md:p-12 text-center space-y-6 md:space-y-8 shadow-xl my-4">
         <div className="space-y-6">
-          {/* Avatar celebration circles */}
+          {/* Avatar celebration - no circle mask, no shadow */}
           <div className="flex justify-center items-center gap-2">
             {avatars.map((avatar, idx) => (
               <div
                 key={idx}
-                className="w-8 h-8 md:w-10 md:h-10 rounded-full animate-bounce shadow-lg bg-background overflow-hidden"
+                className="w-8 h-8 md:w-10 md:h-10 animate-bounce"
                 style={{ 
                   animationDelay: `${idx * 0.15}s`,
                   animationDuration: '1.2s'
                 }}
               >
-                <img src={avatar} alt="" className="w-full h-full object-cover" />
+                <img src={avatar} alt="" className="w-full h-full text-primary" />
               </div>
             ))}
           </div>
