@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { useRewards } from '@/hooks/useRewards';
 import { useGoals } from '@/hooks/useGoals';
 import { Profile, Task } from '@/types/task';
 import { GoalProgressRing } from '@/components/goals/GoalProgressRing';
-import { 
+import {
   CheckSquare, 
   Calendar, 
   Trophy,
@@ -144,7 +144,7 @@ const TodayEventsWidget = ({ events, onViewCalendar }: { events: any[]; onViewCa
 
   return (
     <Card className="h-full">
-      <CardHeader className="pb-3 pt-0">
+      <CardHeader className="pb-4 pt-0">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-semibold">
             <Calendar className="h-5 w-5 text-primary" />
@@ -163,7 +163,7 @@ const TodayEventsWidget = ({ events, onViewCalendar }: { events: any[]; onViewCa
           )}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         {todayEvents.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
             <Calendar className="h-10 w-10 mx-auto mb-2 opacity-30" />
@@ -200,11 +200,10 @@ const TodayEventsWidget = ({ events, onViewCalendar }: { events: any[]; onViewCa
                         color={attendee.profile?.color}
                         avatarIcon={attendee.profile?.avatar_url || undefined}
                         size="sm"
-                        className="border-2 border-background"
                       />
                     ))}
                     {event.attendees.length > 3 && (
-                      <div className="w-6 h-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-xs">
+                      <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs">
                         +{event.attendees.length - 3}
                       </div>
                     )}
@@ -281,13 +280,50 @@ const RewardsWidget = ({ rewards }: { rewards: any[] }) => {
   );
 };
 
+// Compact consistency grid for dashboard
+const CompactConsistencyGrid = ({ goal }: { goal: any }) => {
+  const completedDates = goal.progress?.completed_dates || [];
+  
+  
+  // Show only last 7 days for compact view
+  const today = startOfDay(new Date());
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(today);
+    date.setDate(date.getDate() - (6 - i));
+    return format(date, 'yyyy-MM-dd');
+  });
+  
+  const completedSet = new Set(completedDates.map((d: string) => format(startOfDay(new Date(d)), 'yyyy-MM-dd')));
+  
+  return (
+    <div className="flex gap-0.5">
+      {last7Days.map((dateKey) => {
+        const isCompleted = completedSet.has(dateKey);
+        const isToday = dateKey === format(today, 'yyyy-MM-dd');
+        return (
+          <div
+            key={dateKey}
+            className={`w-3 h-3 rounded-sm ${
+              isCompleted 
+                ? 'bg-green-500' 
+                : isToday 
+                  ? 'bg-muted ring-1 ring-primary/50' 
+                  : 'bg-muted/50'
+            }`}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
 // Goals widget
 const GoalsWidget = ({ goals, onNavigateToGoals }: { goals: any[]; onNavigateToGoals?: () => void }) => {
   const activeGoals = goals.filter(g => g.status === 'active');
 
   return (
     <Card className="h-full">
-      <CardHeader className="pb-3 pt-0">
+      <CardHeader className="pb-4 pt-0">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-semibold">
             <Target className="h-5 w-5 text-primary" />
@@ -306,7 +342,7 @@ const GoalsWidget = ({ goals, onNavigateToGoals }: { goals: any[]; onNavigateToG
           )}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         {activeGoals.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
             <Target className="h-10 w-10 mx-auto mb-2 opacity-30" />
@@ -317,6 +353,8 @@ const GoalsWidget = ({ goals, onNavigateToGoals }: { goals: any[]; onNavigateToG
           <div className="space-y-3 max-h-[400px] overflow-y-auto">
             {activeGoals.slice(0, 5).map((goal, index) => {
               const progressPercent = goal.progress?.percentage || 0;
+              const isConsistency = goal.goal_type === 'consistency';
+              
               return (
                 <motion.div
                   key={goal.id}
@@ -326,7 +364,11 @@ const GoalsWidget = ({ goals, onNavigateToGoals }: { goals: any[]; onNavigateToG
                   className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                 >
                   <div className="flex-shrink-0">
-                    <GoalProgressRing percent={progressPercent} size="sm" showLabel={false} />
+                    {isConsistency ? (
+                      <CompactConsistencyGrid goal={goal} />
+                    ) : (
+                      <GoalProgressRing percent={progressPercent} size="sm" showLabel={false} />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{goal.title}</p>
@@ -343,7 +385,6 @@ const GoalsWidget = ({ goals, onNavigateToGoals }: { goals: any[]; onNavigateToG
                                 color={assignee.profile?.color}
                                 avatarIcon={assignee.profile?.avatar_url || undefined}
                                 size="xs"
-                                className="border border-background"
                               />
                             ))}
                           </div>
@@ -468,9 +509,9 @@ export const FamilyDashboard = ({
       {/* Main content grid - 3 columns with aligned headers */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Left column - Leaderboard + Rewards */}
-        <div className="space-y-4">
-          <Card className="border-0 shadow-none bg-transparent">
-            <CardHeader className="pb-3 pt-0 px-0">
+        <div className="space-y-6">
+          <Card className="h-full">
+            <CardHeader className="pb-4 pt-0">
               <div className="flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-xl font-semibold">
                   <Trophy className="h-5 w-5 text-primary" />
@@ -487,20 +528,19 @@ export const FamilyDashboard = ({
                 </Button>
               </div>
             </CardHeader>
+            <CardContent className="pt-0 space-y-3">
+              {sortedMemberStats.map((stat) => (
+                <MemberStatCard
+                  key={stat.member.id}
+                  member={stat.member}
+                  todayTaskCount={stat.todayTaskCount}
+                  completedCount={stat.completedCount}
+                  todayEventCount={stat.todayEventCount}
+                  onViewDashboard={() => onMemberSelect(stat.member.id)}
+                />
+              ))}
+            </CardContent>
           </Card>
-          
-          <div className="space-y-4">
-            {sortedMemberStats.map((stat, index) => (
-              <MemberStatCard
-                key={stat.member.id}
-                member={stat.member}
-                todayTaskCount={stat.todayTaskCount}
-                completedCount={stat.completedCount}
-                todayEventCount={stat.todayEventCount}
-                onViewDashboard={() => onMemberSelect(stat.member.id)}
-              />
-            ))}
-          </div>
           
           {/* Rewards under leaderboard */}
           <RewardsWidget rewards={rewards} />

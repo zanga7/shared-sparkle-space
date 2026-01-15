@@ -160,7 +160,6 @@ export function GoalTaskItem({
                       color={assignee.color}
                       avatarIcon={assignee.avatar_url || undefined}
                       size="xs"
-                      className="ring-1 ring-background"
                     />
                   ))}
                 </div>
