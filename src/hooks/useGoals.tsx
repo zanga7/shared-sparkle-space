@@ -489,6 +489,27 @@ function useGoalsState() {
     }
   };
 
+  const uncompleteMilestone = async (milestoneId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('goal_milestones')
+        .update({
+          is_completed: false,
+          completed_at: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', milestoneId);
+
+      if (error) throw error;
+
+      await fetchGoals();
+      return true;
+    } catch (err) {
+      console.error('Error uncompleting milestone:', err);
+      return false;
+    }
+  };
+
   // Milestone CRUD operations
   const addMilestone = async (goalId: string, title: string, order: number): Promise<string | null> => {
     if (!profileId) return null;
@@ -688,6 +709,7 @@ function useGoalsState() {
     linkTaskToGoal,
     unlinkTaskFromGoal,
     completeMilestone,
+    uncompleteMilestone,
     addMilestone,
     updateMilestone,
     deleteMilestone,

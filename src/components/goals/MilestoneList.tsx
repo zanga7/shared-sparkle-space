@@ -12,6 +12,7 @@ interface MilestoneListProps {
   milestones: GoalMilestone[];
   linkedTasks?: GoalLinkedTask[];
   onComplete?: (milestoneId: string) => void;
+  onUncomplete?: (milestoneId: string) => void;
   onCompleteTask?: (linkedTask: GoalLinkedTask) => void;
   onUnlinkTask?: (linkId: string) => void;
   canComplete?: boolean;
@@ -23,6 +24,7 @@ export function MilestoneList({
   milestones, 
   linkedTasks = [],
   onComplete,
+  onUncomplete,
   onCompleteTask,
   onUnlinkTask,
   canComplete = false,
@@ -33,6 +35,8 @@ export function MilestoneList({
   
   // Track which milestones we've auto-completed to prevent duplicate calls
   const autoCompletedRef = useRef<Set<string>>(new Set());
+  // Track which milestones we've auto-uncompleted to prevent duplicate calls
+  const autoUncompletedRef = useRef<Set<string>>(new Set());
 
   // Group tasks by milestone_id
   const tasksByMilestone: Record<string, GoalLinkedTask[]> = {};
@@ -83,10 +87,35 @@ export function MilestoneList({
       
       if (areAllTasksCompleted(milestone.id)) {
         autoCompletedRef.current.add(milestone.id);
+        // Remove from uncomplete tracking since we're completing it
+        autoUncompletedRef.current.delete(milestone.id);
         onComplete(milestone.id);
       }
     });
   }, [milestones, tasksMap, isLoading, onComplete]);
+
+  // Auto-uncomplete milestones when any task is uncompleted
+  useEffect(() => {
+    if (isLoading || !onUncomplete) return;
+    
+    milestones.forEach(milestone => {
+      // Only uncomplete if milestone is currently marked as completed
+      if (!milestone.is_completed) return;
+      if (autoUncompletedRef.current.has(milestone.id)) return;
+      
+      const milestoneTasks = tasksByMilestone[milestone.id] || [];
+      // If no tasks, don't auto-uncomplete
+      if (milestoneTasks.length === 0) return;
+      
+      // If not all tasks are completed but milestone is marked complete, uncomplete it
+      if (!areAllTasksCompleted(milestone.id)) {
+        autoUncompletedRef.current.add(milestone.id);
+        // Remove from complete tracking so it can be re-completed later
+        autoCompletedRef.current.delete(milestone.id);
+        onUncomplete(milestone.id);
+      }
+    });
+  }, [milestones, tasksMap, isLoading, onUncomplete]);
 
   if (!milestones.length) {
     return (

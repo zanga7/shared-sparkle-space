@@ -55,6 +55,7 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
     archiveGoal, 
     deleteGoal,
     completeMilestone,
+    uncompleteMilestone,
     unlinkTaskFromGoal,
     fetchGoals
   } = useGoals();
@@ -426,6 +427,7 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
                   milestones={goal.milestones || []}
                   linkedTasks={goal.linked_tasks || []}
                   onComplete={canEdit ? completeMilestone : undefined}
+                  onUncomplete={canEdit ? uncompleteMilestone : undefined}
                   onCompleteTask={handleTaskComplete}
                   canComplete={canEdit}
                   canEdit={false}
