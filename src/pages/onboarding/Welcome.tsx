@@ -1,59 +1,45 @@
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Sparkles, Users, Rocket } from 'lucide-react';
 import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 
-interface ColorPalette {
-  id: string;
-  name: string;
-  color_key: string;
-  hex_value: string;
-}
+// Import avatar images
+import av1 from '@/assets/avatars/av1.svg';
+import av2 from '@/assets/avatars/av2.svg';
+import av3 from '@/assets/avatars/av3.svg';
+import av4 from '@/assets/avatars/av4.svg';
+import av5 from '@/assets/avatars/av5.svg';
+import av6 from '@/assets/avatars/av6.svg';
+
+const avatars = [av1, av2, av3, av4, av5, av6];
 
 export default function Welcome() {
   const navigate = useNavigate();
   const { completeOnboarding } = useOnboardingStatus();
 
-  // Fetch colors to display decorative elements
-  const { data: colors = [] } = useQuery({
-    queryKey: ['color-palettes'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('color_palettes')
-        .select('*')
-        .order('name')
-        .limit(8);
-      
-      if (error) throw error;
-      return data as ColorPalette[];
-    }
-  });
-
   const handleSkip = async () => {
     await completeOnboarding();
-    navigate('/');
+    navigate('/', { replace: true });
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4 overflow-y-auto">
       <Card className="max-w-2xl w-full p-6 md:p-12 text-center space-y-6 md:space-y-8 shadow-xl my-4">
         <div className="space-y-4">
-          {/* Colorful avatar circles decoration */}
+          {/* Avatar circles decoration */}
           <div className="flex justify-center items-center gap-2 mb-4">
-            {colors.slice(0, 6).map((color, idx) => (
+            {avatars.map((avatar, idx) => (
               <div
-                key={color.id}
-                className="w-8 h-8 md:w-10 md:h-10 rounded-full animate-bounce shadow-lg"
+                key={idx}
+                className="w-10 h-10 md:w-12 md:h-12 rounded-full animate-bounce shadow-lg bg-background overflow-hidden"
                 style={{ 
-                  backgroundColor: color.hex_value,
                   animationDelay: `${idx * 0.1}s`,
                   animationDuration: '1.5s'
                 }}
-              />
+              >
+                <img src={avatar} alt="" className="w-full h-full object-cover" />
+              </div>
             ))}
           </div>
           
@@ -73,15 +59,16 @@ export default function Welcome() {
 
         <div className="flex items-center justify-center gap-3 md:gap-4 pt-4">
           <Users className="w-6 h-6 md:w-8 md:h-8 text-primary animate-pulse" />
-          {colors.slice(0, 3).map((color, idx) => (
+          {avatars.slice(0, 3).map((avatar, idx) => (
             <div 
-              key={color.id}
-              className="h-2 w-2 md:h-3 md:w-3 rounded-full animate-bounce" 
+              key={idx}
+              className="h-6 w-6 md:h-8 md:w-8 rounded-full animate-bounce overflow-hidden bg-background shadow-sm" 
               style={{ 
-                backgroundColor: color.hex_value,
                 animationDelay: `${0.2 + idx * 0.2}s` 
-              }} 
-            />
+              }}
+            >
+              <img src={avatar} alt="" className="w-full h-full object-cover" />
+            </div>
           ))}
         </div>
 
