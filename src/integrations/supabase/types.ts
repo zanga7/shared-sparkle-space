@@ -672,6 +672,96 @@ export type Database = {
           },
         ]
       }
+      global_style_settings: {
+        Row: {
+          body_text_color: string
+          body_text_size: string
+          body_text_weight: string
+          border_radius: string
+          button_text_size: string
+          button_text_weight: string
+          card_title_color: string
+          card_title_size: string
+          card_title_weight: string
+          dialog_title_color: string
+          dialog_title_size: string
+          dialog_title_weight: string
+          id: number
+          label_text_color: string
+          label_text_size: string
+          label_text_weight: string
+          page_heading_color: string
+          page_heading_size: string
+          page_heading_weight: string
+          section_heading_color: string
+          section_heading_size: string
+          section_heading_weight: string
+          small_text_color: string
+          small_text_size: string
+          small_text_weight: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body_text_color?: string
+          body_text_size?: string
+          body_text_weight?: string
+          border_radius?: string
+          button_text_size?: string
+          button_text_weight?: string
+          card_title_color?: string
+          card_title_size?: string
+          card_title_weight?: string
+          dialog_title_color?: string
+          dialog_title_size?: string
+          dialog_title_weight?: string
+          id?: number
+          label_text_color?: string
+          label_text_size?: string
+          label_text_weight?: string
+          page_heading_color?: string
+          page_heading_size?: string
+          page_heading_weight?: string
+          section_heading_color?: string
+          section_heading_size?: string
+          section_heading_weight?: string
+          small_text_color?: string
+          small_text_size?: string
+          small_text_weight?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body_text_color?: string
+          body_text_size?: string
+          body_text_weight?: string
+          border_radius?: string
+          button_text_size?: string
+          button_text_weight?: string
+          card_title_color?: string
+          card_title_size?: string
+          card_title_weight?: string
+          dialog_title_color?: string
+          dialog_title_size?: string
+          dialog_title_weight?: string
+          id?: number
+          label_text_color?: string
+          label_text_size?: string
+          label_text_weight?: string
+          page_heading_color?: string
+          page_heading_size?: string
+          page_heading_weight?: string
+          section_heading_color?: string
+          section_heading_size?: string
+          section_heading_weight?: string
+          small_text_color?: string
+          small_text_size?: string
+          small_text_weight?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       goal_assignees: {
         Row: {
           assigned_at: string
