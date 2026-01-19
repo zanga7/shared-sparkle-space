@@ -16,6 +16,9 @@ export function PWAInstallSettings() {
   const [canInstall, setCanInstall] = useState(false);
 
   useEffect(() => {
+    // Auto-reset the dismissed prompt when accessing this page
+    localStorage.removeItem('pwa-install-dismissed');
+
     // Check if already installed
     const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches;
     setIsStandalone(isInStandaloneMode);
@@ -51,13 +54,6 @@ export function PWAInstallSettings() {
     }
   };
 
-  const handleResetDismissed = () => {
-    localStorage.removeItem('pwa-install-dismissed');
-    toast({
-      title: 'Install Prompt Reset',
-      description: 'The install prompt will now appear again for users who dismissed it.',
-    });
-  };
 
   return (
     <Card>
@@ -121,15 +117,6 @@ export function PWAInstallSettings() {
           </div>
         )}
 
-        <div className="pt-4 border-t">
-          <h4 className="text-sm font-medium mb-2">Reset Install Prompt</h4>
-          <p className="text-sm text-muted-foreground mb-3">
-            If you or family members dismissed the install prompt, you can reset it so it appears again.
-          </p>
-          <Button variant="outline" size="sm" onClick={handleResetDismissed}>
-            Reset Dismissed Prompt
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );
