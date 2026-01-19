@@ -40,8 +40,15 @@ export default function FeatureHighlights() {
   const { completeOnboarding } = useOnboardingStatus();
 
   const handleFinish = async () => {
-    await completeOnboarding();
-    navigate('/');
+    const ok = await completeOnboarding();
+    if (!ok) {
+      // If signup requires email verification, the user won't be able to proceed yet.
+      alert(
+        "Can't continue yet. If you just signed up, please verify your email, then try again."
+      );
+      return;
+    }
+    window.location.href = '/';
   };
 
   return (
