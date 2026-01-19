@@ -1,39 +1,10 @@
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  Users,
-  Shield,
-  Database,
-  Palette,
-  BarChart3,
-  Home,
-  RotateCcw,
-  Calendar,
-  Gift,
-  ClipboardCheck,
-  Monitor,
-  LogOut,
-  GraduationCap,
-  Cake
-} from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-
-const adminMenuItems = [
-  { title: "Dashboard", url: "/admin", icon: Home, exact: true },
-  { title: "Family Members", url: "/admin/members", icon: Users },
-  { title: "Rotating Tasks", url: "/admin/rotating-tasks", icon: RotateCcw },
-  { title: "Rotation Debugger", url: "/admin/rotation-debugger", icon: Database },
-  { title: "Rewards", url: "/admin/rewards", icon: Gift },
-  { title: "Reward Approvals", url: "/admin/reward-approvals", icon: ClipboardCheck },
-  { title: "Celebrations", url: "/admin/celebrations", icon: Cake },
-  { title: "Calendar Settings", url: "/admin/calendar-settings", icon: Calendar },
-  { title: "Holiday Management", url: "/admin/holidays", icon: GraduationCap },
-  { title: "Screen Saver", url: "/admin/screensaver", icon: Monitor },
-  { title: "Permissions", url: "/admin/permissions", icon: Shield },
-  { title: "Theme Management", url: "/admin/themes", icon: Palette },
-];
+import { adminMenuItems, backToDashboardItem } from "./adminMenuConfig";
 
 interface AdminMobileMenuProps {
   onItemClick?: () => void;
@@ -51,7 +22,8 @@ export function AdminMobileMenu({ onItemClick }: AdminMobileMenuProps) {
     onItemClick?.();
   };
 
-  const handleNavClick = () => {
+  const handleNavClick = (url: string) => {
+    navigate(url);
     onItemClick?.();
   };
 
@@ -66,24 +38,21 @@ export function AdminMobileMenu({ onItemClick }: AdminMobileMenuProps) {
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
-          <NavLink
-            to="/"
-            onClick={handleNavClick}
-            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
+          <button
+            onClick={() => handleNavClick(backToDashboardItem.url)}
+            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors w-full text-left"
           >
-            <BarChart3 className="h-4 w-4" />
-            <span>Back to Dashboard</span>
-          </NavLink>
+            <backToDashboardItem.icon className="h-4 w-4" />
+            <span>{backToDashboardItem.title}</span>
+          </button>
 
           <Separator className="my-2" />
 
           {adminMenuItems.map((item) => (
-            <NavLink
+            <button
               key={item.title}
-              to={item.url}
-              end={item.exact}
-              onClick={handleNavClick}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+              onClick={() => handleNavClick(item.url)}
+              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors w-full text-left ${
                 isActive(item.url, item.exact)
                   ? "bg-primary text-primary-foreground font-medium"
                   : "hover:bg-muted"
@@ -91,7 +60,7 @@ export function AdminMobileMenu({ onItemClick }: AdminMobileMenuProps) {
             >
               <item.icon className="h-4 w-4" />
               <span>{item.title}</span>
-            </NavLink>
+            </button>
           ))}
         </div>
       </ScrollArea>
