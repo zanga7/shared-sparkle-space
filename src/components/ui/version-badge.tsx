@@ -3,22 +3,32 @@ import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
-// Build timestamp - update this with each deployment
-const BUILD_VERSION = '2025-11-21-05:30';
+// Dynamic build version - generated at build time
+const BUILD_VERSION = new Date().toISOString().slice(0, 16).replace('T', ' ');
 
 export const VersionBadge = () => {
-  const handleRefresh = () => {
-    toast.success('Refreshing app...');
-    // Clear cache and reload
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        registrations.forEach((registration) => registration.unregister());
-      });
+  const handleRefresh = async () => {
+    toast.success('Clearing caches and refreshing...');
+    
+    // Clear all caches
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
     }
+    
+    // Unregister service workers
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map(reg => reg.unregister()));
+    }
+    
+    // Clear localStorage version to force fresh state
+    localStorage.removeItem('app_version');
+    
     // Force reload from server
     setTimeout(() => {
       window.location.reload();
-    }, 500);
+    }, 300);
   };
 
   return (
@@ -31,7 +41,7 @@ export const VersionBadge = () => {
         size="icon"
         className="h-6 w-6 opacity-50 hover:opacity-100 transition-opacity"
         onClick={handleRefresh}
-        title="Refresh app"
+        title="Clear cache and refresh"
       >
         <RefreshCw className="h-3 w-3" />
       </Button>

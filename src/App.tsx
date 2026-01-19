@@ -52,7 +52,9 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
+      staleTime: 1000 * 60, // 1 minute
+      gcTime: 1000 * 60 * 5, // 5 minutes
     },
   },
 });
@@ -98,7 +100,6 @@ const App = () => (
                       <Route path="permissions" element={<Permissions />} />
                       <Route path="screensaver" element={<ScreenSaverManagement />} />
                       <Route path="rotating-tasks" element={<RotatingTasks />} />
-                      <Route path="holidays" element={<HolidayManagement />} />
                       <Route path="holidays" element={<HolidayManagement />} />
                       <Route path="celebrations" element={<CelebrationsManagement />} />
                     </Route>

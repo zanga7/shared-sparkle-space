@@ -19,6 +19,8 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json,vue,txt,woff2}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB limit
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/timefstlnqojqidllokb\.supabase\.co\/rest\/v1\/.*/i,
@@ -27,8 +29,9 @@ export default defineConfig(({ mode }) => ({
               cacheName: 'supabase-api-cache',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24, // 24 hours
+                maxAgeSeconds: 60 * 5, // 5 minutes (reduced from 24 hours)
               },
+              networkTimeoutSeconds: 10,
             },
           },
           {
@@ -38,7 +41,7 @@ export default defineConfig(({ mode }) => ({
               cacheName: 'supabase-storage-cache',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+                maxAgeSeconds: 60 * 60 * 24, // 24 hours for storage (images don't change often)
               },
             },
           },
@@ -60,13 +63,25 @@ export default defineConfig(({ mode }) => ({
             src: 'icons/icon-192x192.png',
             sizes: '192x192',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          {
+            src: 'icons/icon-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable'
           },
           {
             src: 'icons/icon-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          {
+            src: 'icons/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       },
