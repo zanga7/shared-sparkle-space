@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { CheckSquare, Calendar, List, Gift, RotateCw, Monitor } from 'lucide-react';
+import { CheckSquare, Calendar, List, Gift, RotateCw, Monitor, Target } from 'lucide-react';
 
 const AVAILABLE_MODULES = [
   { name: 'tasks', label: 'Tasks', icon: CheckSquare },
@@ -16,7 +16,8 @@ const AVAILABLE_MODULES = [
   { name: 'lists', label: 'Lists', icon: List },
   { name: 'rewards', label: 'Rewards', icon: Gift },
   { name: 'rotating_tasks', label: 'Rotating Tasks', icon: RotateCw },
-  { name: 'screensaver', label: 'Screensaver', icon: Monitor }
+  { name: 'screensaver', label: 'Screensaver', icon: Monitor },
+  { name: 'goals', label: 'Goals', icon: Target }
 ];
 
 interface Plan {
