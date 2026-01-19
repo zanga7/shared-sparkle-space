@@ -143,10 +143,6 @@ const ColumnBasedDashboard = () => {
 
   // Handle tab changes - clear member selection when switching to tab view
   const handleTabChange = (tab: string) => {
-    // If Dashboard Mode is disabled, block tab navigation
-    if (!dashboardMode) {
-      return;
-    }
     setActiveTab(tab);
     setSelectedMemberFilter(null); // Clear member selection
     setViewMode('everyone');
@@ -156,11 +152,8 @@ const ColumnBasedDashboard = () => {
   const handleMemberSelect = (memberId: string | null) => {
     setSelectedMemberFilter(memberId);
     if (memberId === null) {
-      // Only allow "everyone" view if Dashboard Mode is enabled
-      if (dashboardMode) {
-        setViewMode('everyone');
-        setActiveTab('columns'); // Reset to default tab
-      }
+      setViewMode('everyone');
+      setActiveTab('columns'); // Reset to default tab
     } else {
       setViewMode('member');
       setActiveTab(''); // Clear active tab when viewing member dashboard
