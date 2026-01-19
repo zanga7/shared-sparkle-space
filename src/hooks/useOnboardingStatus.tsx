@@ -1,77 +1,108 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
 export function useOnboardingStatus() {
   const { user } = useAuth();
+
   const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [familyId, setFamilyId] = useState<string | null>(null);
 
-  useEffect(() => {
-    checkOnboardingStatus();
+  const fetchFamilyId = useCallback(async (): Promise<string | null> => {
+    if (!user) return null;
+
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('family_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching profile family_id:', error);
+      return null;
+    }
+
+    return profile?.family_id ?? null;
   }, [user]);
 
-  const checkOnboardingStatus = async () => {
+  const checkOnboardingStatus = useCallback(async () => {
     if (!user) {
+      setFamilyId(null);
+      setNeedsOnboarding(null);
       setLoading(false);
       return;
     }
 
-    try {
-      // Get user's family_id
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('family_id')
-        .eq('user_id', user.id)
-        .single();
+    setLoading(true);
 
-      if (!profile?.family_id) {
+    try {
+      const resolvedFamilyId = familyId ?? (await fetchFamilyId());
+
+      if (!resolvedFamilyId) {
+        // Profile not ready yet (often happens right after signup/verification)
+        setFamilyId(null);
         setNeedsOnboarding(true);
-        setLoading(false);
         return;
       }
 
-      setFamilyId(profile.family_id);
+      setFamilyId(resolvedFamilyId);
 
-      // Check household settings for onboarding status
-      const { data: settings } = await supabase
+      const { data: settings, error: settingsError } = await supabase
         .from('household_settings')
         .select('onboarding_completed')
-        .eq('family_id', profile.family_id)
-        .single();
+        .eq('family_id', resolvedFamilyId)
+        .maybeSingle();
 
-      setNeedsOnboarding(!(settings as any)?.onboarding_completed);
-    } catch (error) {
-      console.error('Error checking onboarding status:', error);
-      setNeedsOnboarding(false);
+      if (settingsError) {
+        console.error('Error fetching household onboarding status:', settingsError);
+        setNeedsOnboarding(true);
+        return;
+      }
+
+      setNeedsOnboarding(!(settings?.onboarding_completed ?? false));
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, familyId, fetchFamilyId]);
 
-  const completeOnboarding = async () => {
-    if (!familyId) return;
+  useEffect(() => {
+    checkOnboardingStatus();
+  }, [checkOnboardingStatus]);
 
-    try {
-      await supabase
-        .from('household_settings')
-        .update({
+  const completeOnboarding = useCallback(async (): Promise<boolean> => {
+    if (!user) return false;
+
+    const resolvedFamilyId = familyId ?? (await fetchFamilyId());
+    if (!resolvedFamilyId) return false;
+
+    setFamilyId(resolvedFamilyId);
+
+    const { error } = await supabase
+      .from('household_settings')
+      .upsert(
+        {
+          family_id: resolvedFamilyId,
           onboarding_completed: true,
-          onboarding_completed_at: new Date().toISOString()
-        } as any)
-        .eq('family_id', familyId);
+          onboarding_completed_at: new Date().toISOString(),
+        } as any,
+        { onConflict: 'family_id' }
+      );
 
-      setNeedsOnboarding(false);
-    } catch (error) {
+    if (error) {
       console.error('Error completing onboarding:', error);
+      return false;
     }
-  };
+
+    setNeedsOnboarding(false);
+    return true;
+  }, [user, familyId, fetchFamilyId]);
 
   return {
     needsOnboarding,
     loading,
     completeOnboarding,
-    refreshStatus: checkOnboardingStatus
+    refreshStatus: checkOnboardingStatus,
   };
 }
+

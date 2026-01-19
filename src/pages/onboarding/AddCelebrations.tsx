@@ -40,8 +40,15 @@ export default function AddCelebrations() {
   };
 
   const handleSkip = async () => {
-    await completeOnboarding();
-    navigate('/');
+    const ok = await completeOnboarding();
+    if (!ok) {
+      // Keep feedback simple & actionable
+      alert(
+        "Can't continue yet. If you just signed up, please verify your email, then try again."
+      );
+      return;
+    }
+    window.location.href = '/';
   };
 
   const handleContinue = () => {
