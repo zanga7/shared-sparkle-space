@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          app_name: string
+          apple_touch_icon_path: string | null
+          favicon_path: string | null
+          icon_192_path: string | null
+          icon_512_path: string | null
+          id: number
+          short_name: string
+          updated_at: string
+        }
+        Insert: {
+          app_name?: string
+          apple_touch_icon_path?: string | null
+          favicon_path?: string | null
+          icon_192_path?: string | null
+          icon_512_path?: string | null
+          id?: number
+          short_name?: string
+          updated_at?: string
+        }
+        Update: {
+          app_name?: string
+          apple_touch_icon_path?: string | null
+          favicon_path?: string | null
+          icon_192_path?: string | null
+          icon_512_path?: string | null
+          id?: number
+          short_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
