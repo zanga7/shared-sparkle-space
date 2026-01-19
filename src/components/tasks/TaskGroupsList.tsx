@@ -2,7 +2,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { AddButton } from '@/components/ui/add-button';
 import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
 import { Progress } from '@/components/ui/progress';
-import { Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { Droppable, DropResult } from '@hello-pangea/dnd';
+import { DraggableWithPortal } from '@/components/ui/draggable-portal';
 import { Task, Profile } from '@/types/task';
 import { TaskGroup, TASK_GROUPS_ORDER } from '@/types/taskGroup';
 import { 
@@ -118,22 +119,15 @@ export const TaskGroupsList = ({
                     // Virtual tasks CAN be dragged within their member's column (to change task group)
                     // but cross-member drags for virtual tasks are blocked in handleDragEnd
                     return (
-                      <Draggable 
+                      <DraggableWithPortal 
                         key={task.id} 
                         draggableId={task.id} 
                         index={index}
                         isDragDisabled={isTaskCompleted}
+                        className="transition-all duration-200"
+                        draggingClassName="shadow-xl scale-105 z-[9999] ring-2 ring-primary/30 bg-background rounded-lg"
                       >
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className={cn(
-                            "transition-all duration-200",
-                            snapshot.isDragging && "shadow-xl rotate-2 scale-105 z-50 ring-2 ring-primary/30"
-                          )}
-                        >
+                        {(provided, snapshot) => (
                           <EnhancedTaskItem
                             task={task}
                             allTasks={allTasks}
@@ -147,10 +141,9 @@ export const TaskGroupsList = ({
                             memberColor={memberColor}
                             isCompleting={isCompleting?.(task.id)}
                           />
-                        </div>
-                      )}
-                    </Draggable>
-                  );
+                        )}
+                      </DraggableWithPortal>
+                    );
                   })
                 )}
                 {provided.placeholder}

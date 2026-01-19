@@ -43,6 +43,7 @@ import { cn, sanitizeSVG } from '@/lib/utils';
 import { useMemberColor } from '@/hooks/useMemberColor';
 import { Task, Profile } from '@/types/task';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { createPortal } from 'react-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEvents } from '@/hooks/useEvents';
@@ -649,48 +650,62 @@ export const CalendarView = ({
     const isDragDisabled = task.isVirtual || false;
     
     return <Draggable key={task.id} draggableId={task.id} index={index} isDragDisabled={isDragDisabled}>
-        {(provided, snapshot) => <div 
-          ref={provided.innerRef} 
-          {...provided.draggableProps} 
-          {...provided.dragHandleProps} 
-          className={cn(
-            "p-2 mb-1 rounded-md text-xs transition-all hover:shadow-md group relative", 
-            onEditTask ? "cursor-pointer hover:ring-2 hover:ring-primary/20" : !isDragDisabled && "cursor-move", 
-            isCompleted && "opacity-60 line-through", 
-            isOverdue && "ring-1 ring-destructive/50", 
-            snapshot.isDragging && "shadow-lg rotate-2", 
-            isDragDisabled && "cursor-pointer"
-          )}
-          style={isCompleted ? colorStyles.bg20 : colorStyles.bg50}
-        >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1 min-w-0" onClick={e => handleTaskClick(task, e)}>
-                <button onClick={e => handleTaskToggle(task, e)} className={cn("h-3 w-3 flex-shrink-0 rounded-full border transition-colors hover:scale-110", isCompleted ? "bg-green-500 border-green-500 text-white" : "border-gray-300 hover:border-green-400")}>
-                  {isCompleted && <CheckCircle2 className="h-3 w-3" />}
-                </button>
-                {isOverdue && <Clock className="h-3 w-3 text-red-500 flex-shrink-0" />}
-                {task.isVirtual && <Repeat className="h-3 w-3 text-blue-500 flex-shrink-0" />}
-                <span className="truncate">{task.title}</span>
-                {onEditTask && <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity" />}
+        {(provided, snapshot) => {
+          const content = (
+            <div 
+              ref={provided.innerRef} 
+              {...provided.draggableProps} 
+              {...provided.dragHandleProps} 
+              className={cn(
+                "p-2 mb-1 rounded-md text-xs transition-all hover:shadow-md group relative touch-none", 
+                onEditTask ? "cursor-pointer hover:ring-2 hover:ring-primary/20" : !isDragDisabled && "cursor-move", 
+                isCompleted && "opacity-60 line-through", 
+                isOverdue && "ring-1 ring-destructive/50", 
+                snapshot.isDragging && "shadow-xl scale-105 z-[9999] bg-card", 
+                isDragDisabled && "cursor-pointer"
+              )}
+              style={{
+                ...(isCompleted ? colorStyles.bg20 : colorStyles.bg50),
+                ...provided.draggableProps.style
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1 min-w-0" onClick={e => handleTaskClick(task, e)}>
+                  <button onClick={e => handleTaskToggle(task, e)} className={cn("h-3 w-3 flex-shrink-0 rounded-full border transition-colors hover:scale-110", isCompleted ? "bg-green-500 border-green-500 text-white" : "border-gray-300 hover:border-green-400")}>
+                    {isCompleted && <CheckCircle2 className="h-3 w-3" />}
+                  </button>
+                  {isOverdue && <Clock className="h-3 w-3 text-red-500 flex-shrink-0" />}
+                  {task.isVirtual && <Repeat className="h-3 w-3 text-blue-500 flex-shrink-0" />}
+                  <span className="truncate">{task.title}</span>
+                  {onEditTask && <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity" />}
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {task.due_date && <span className="text-xs opacity-60">
+                      {format(new Date(task.due_date), 'HH:mm')}
+                    </span>}
+                  {streak > 0 && <Badge variant="secondary" className="text-xs h-4 px-1">
+                      <Flame className="h-2 w-2 mr-1" />
+                      {streak}
+                    </Badge>}
+                  <Badge variant="outline" className="text-xs h-4 px-1">
+                    {task.points}pt
+                  </Badge>
+                </div>
               </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                {task.due_date && <span className="text-xs opacity-60">
-                    {format(new Date(task.due_date), 'HH:mm')}
-                  </span>}
-                {streak > 0 && <Badge variant="secondary" className="text-xs h-4 px-1">
-                    <Flame className="h-2 w-2 mr-1" />
-                    {streak}
-                  </Badge>}
-                <Badge variant="outline" className="text-xs h-4 px-1">
-                  {task.points}pt
-                </Badge>
-              </div>
+              {assignedMember && <div className="flex items-center gap-1 mt-1">
+                  <UserAvatar name={assignedMember.display_name} color={assignedMember.color} avatarIcon={assignedMember.avatar_url || undefined} size="sm" />
+                  <span className="text-xs opacity-75">{assignedMember.display_name}</span>
+                </div>}
             </div>
-            {assignedMember && <div className="flex items-center gap-1 mt-1">
-                <UserAvatar name={assignedMember.display_name} color={assignedMember.color} avatarIcon={assignedMember.avatar_url || undefined} size="sm" />
-                <span className="text-xs opacity-75">{assignedMember.display_name}</span>
-              </div>}
-          </div>}
+          );
+          
+          // Portal the dragged element to body to escape overflow containers on mobile
+          if (snapshot.isDragging) {
+            return createPortal(content, document.body);
+          }
+          
+          return content;
+        }}
       </Draggable>;
   };
   return <Card className="w-full">

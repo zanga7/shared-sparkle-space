@@ -35,6 +35,7 @@ import {
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { createPortal } from 'react-dom';
 
 interface Profile {
   id: string;
@@ -483,111 +484,121 @@ export function ListDetailDialog({
                       >
                         {activeItems.map((item, index) => (
                           <Draggable key={item.id} draggableId={item.id} index={index}>
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                className={cn(
-                                  "flex items-center gap-3 p-3 border rounded-lg bg-card",
-                                  snapshot.isDragging && "shadow-lg"
-                                )}
-                              >
+                            {(provided, snapshot) => {
+                              const content = (
                                 <div
-                                  {...provided.dragHandleProps}
-                                  className="cursor-grab text-muted-foreground hover:text-foreground"
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  className={cn(
+                                    "flex items-center gap-3 p-3 border rounded-lg bg-card touch-none",
+                                    snapshot.isDragging && "shadow-xl z-[9999]"
+                                  )}
+                                  style={provided.draggableProps.style}
                                 >
-                                  ⋮⋮
-                                </div>
-                                
-                                <Checkbox
-                                  checked={item.is_completed}
-                                  onCheckedChange={() => toggleItemComplete(item)}
-                                />
-                                
-                                <div className="flex-1 min-w-0">
-                                  {editingItem === item.id ? (
-                                    <Input
-                                      value={editText}
-                                      onChange={(e) => setEditText(e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
+                                  <div
+                                    {...provided.dragHandleProps}
+                                    className="cursor-grab text-muted-foreground hover:text-foreground"
+                                  >
+                                    ⋮⋮
+                                  </div>
+                                  
+                                  <Checkbox
+                                    checked={item.is_completed}
+                                    onCheckedChange={() => toggleItemComplete(item)}
+                                  />
+                                  
+                                  <div className="flex-1 min-w-0">
+                                    {editingItem === item.id ? (
+                                      <Input
+                                        value={editText}
+                                        onChange={(e) => setEditText(e.target.value)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            updateItem(item.id, { name: editText });
+                                            setEditingItem(null);
+                                          }
+                                          if (e.key === 'Escape') {
+                                            setEditingItem(null);
+                                          }
+                                        }}
+                                        onBlur={() => {
                                           updateItem(item.id, { name: editText });
                                           setEditingItem(null);
-                                        }
-                                        if (e.key === 'Escape') {
-                                          setEditingItem(null);
-                                        }
-                                      }}
-                                      onBlur={() => {
-                                        updateItem(item.id, { name: editText });
-                                        setEditingItem(null);
-                                      }}
-                                      autoFocus
-                                      className="h-8"
-                                    />
-                                  ) : (
-                                    <div
-                                      className="cursor-pointer"
-                                      onClick={() => {
-                                        setEditingItem(item.id);
-                                        setEditText(item.name);
-                                      }}
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium">{item.name}</span>
-                                        {item.quantity > 1 && (
-                                          <Badge variant="outline" className="text-xs">
-                                            x{item.quantity}
-                                          </Badge>
-                                        )}
-                                        {item.category && (
-                                          <Badge variant="secondary" className="text-xs">
-                                            {item.category}
-                                          </Badge>
+                                        }}
+                                        autoFocus
+                                        className="h-8"
+                                      />
+                                    ) : (
+                                      <div
+                                        className="cursor-pointer"
+                                        onClick={() => {
+                                          setEditingItem(item.id);
+                                          setEditText(item.name);
+                                        }}
+                                      >
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="font-medium">{item.name}</span>
+                                          {item.quantity > 1 && (
+                                            <Badge variant="outline" className="text-xs">
+                                              x{item.quantity}
+                                            </Badge>
+                                          )}
+                                          {item.category && (
+                                            <Badge variant="secondary" className="text-xs">
+                                              {item.category}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        {item.notes && (
+                                          <div className="text-sm text-muted-foreground mt-1">
+                                            {item.notes}
+                                          </div>
                                         )}
                                       </div>
-                                      {item.notes && (
-                                        <div className="text-sm text-muted-foreground mt-1">
-                                          {item.notes}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
+                                    )}
+                                  </div>
 
-                                {/* Assignees */}
-                                {item.assignees && item.assignees.length > 0 && (
-                                  <TaskAssigneesDisplay
-                                    task={{ assignees: item.assignees } as any}
-                                    onClick={() => setAssigningItem(item.id)}
-                                    className="mr-2"
-                                  />
-                                )}
-
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                      <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
+                                  {/* Assignees */}
+                                  {item.assignees && item.assignees.length > 0 && (
+                                    <TaskAssigneesDisplay
+                                      task={{ assignees: item.assignees } as any}
                                       onClick={() => setAssigningItem(item.id)}
-                                    >
-                                      <User className="h-4 w-4 mr-2" />
-                                      Assign
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => deleteItem(item.id)}
-                                      className="text-destructive"
-                                    >
-                                      <Trash2 className="h-4 w-4 mr-2" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                            )}
+                                      className="mr-2"
+                                    />
+                                  )}
+
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={() => setAssigningItem(item.id)}
+                                      >
+                                        <User className="h-4 w-4 mr-2" />
+                                        Assign
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => deleteItem(item.id)}
+                                        className="text-destructive"
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              );
+                              
+                              // Portal the dragged element to body to escape overflow containers
+                              if (snapshot.isDragging) {
+                                return createPortal(content, document.body);
+                              }
+                              
+                              return content;
+                            }}
                           </Draggable>
                         ))}
                         {provided.placeholder}
