@@ -89,7 +89,7 @@ export default function Welcome() {
         <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center pt-4">
           <Button
             size="lg"
-            onClick={() => navigate('/onboarding/crew')}
+            onClick={() => navigate('/onboarding/plan')}
             className="text-base md:text-lg px-6 md:px-8"
           >
             <Sparkles className="w-4 h-4 md:w-5 md:h-5 mr-2" />

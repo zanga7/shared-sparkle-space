@@ -43,6 +43,7 @@ import IntegrationsManagement from "./pages/super-admin/IntegrationsManagement";
 import AppSettings from "./pages/super-admin/AppSettings";
 import CelebrationsManagement from "./pages/admin/CelebrationsManagement";
 import Welcome from "./pages/onboarding/Welcome";
+import SelectPlan from "./pages/onboarding/SelectPlan";
 import CreateCrew from "./pages/onboarding/CreateCrew";
 import AddCelebrations from "./pages/onboarding/AddCelebrations";
 import FeatureHighlights from "./pages/onboarding/FeatureHighlights";
@@ -86,6 +87,7 @@ const App = () => (
 
                     {/* Onboarding Routes */}
                     <Route path="/onboarding/welcome" element={<Welcome />} />
+                    <Route path="/onboarding/plan" element={<SelectPlan />} />
                     <Route path="/onboarding/crew" element={<CreateCrew />} />
                     <Route path="/onboarding/celebrations" element={<AddCelebrations />} />
                     <Route path="/onboarding/features" element={<FeatureHighlights />} />

@@ -156,7 +156,7 @@ export default function CreateCrew() {
           <div className="flex gap-3 md:gap-4">
             <Button 
               variant="outline" 
-              onClick={() => navigate('/onboarding/welcome')}
+              onClick={() => navigate('/onboarding/plan')}
             >
               Back
             </Button>
