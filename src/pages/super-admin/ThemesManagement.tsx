@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Palette, Image as ImageIcon, Plus, Edit, Trash2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Palette, Image as ImageIcon, Plus, Edit, Trash2, Users, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -26,6 +27,7 @@ interface AvatarIcon {
   name: string;
   svg_content: string;
   is_system: boolean;
+  icon_type: string | null;
 }
 
 interface ColorPalette {
@@ -44,6 +46,7 @@ export default function ThemesManagement() {
   const [deleteColorId, setDeleteColorId] = useState<string | null>(null);
   const [editingIcon, setEditingIcon] = useState<AvatarIcon | null>(null);
   const [editingColor, setEditingColor] = useState<ColorPalette | null>(null);
+  const [newIconType, setNewIconType] = useState<string>('avatar');
 
   // Fetch avatar icons
   const { data: icons, isLoading: iconsLoading } = useQuery({
@@ -75,19 +78,23 @@ export default function ThemesManagement() {
     }
   });
 
+  // Separate icons by type
+  const avatarIcons = icons?.filter(icon => icon.icon_type === 'avatar' || icon.icon_type === null) || [];
+  const celebrationIcons = icons?.filter(icon => icon.icon_type === 'celebration') || [];
+
   // Icon mutations
   const saveIconMutation = useMutation({
-    mutationFn: async (formData: { name: string; svg_content: string; id?: string }) => {
+    mutationFn: async (formData: { name: string; svg_content: string; icon_type: string; id?: string }) => {
       if (formData.id) {
         const { error } = await supabase
           .from('avatar_icons')
-          .update({ name: formData.name, svg_content: formData.svg_content })
+          .update({ name: formData.name, svg_content: formData.svg_content, icon_type: formData.icon_type })
           .eq('id', formData.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('avatar_icons')
-          .insert({ name: formData.name, svg_content: formData.svg_content });
+          .insert({ name: formData.name, svg_content: formData.svg_content, icon_type: formData.icon_type });
         if (error) throw error;
       }
     },
@@ -172,6 +179,7 @@ export default function ThemesManagement() {
       id: editingIcon?.id,
       name: formData.get('name') as string,
       svg_content: formData.get('svg_content') as string,
+      icon_type: newIconType,
     });
   };
 
@@ -194,30 +202,133 @@ export default function ThemesManagement() {
     reader.onload = async (event) => {
       const svgContent = event.target?.result as string;
       if (iconId) {
-        // Update existing icon
+        const icon = icons?.find(i => i.id === iconId);
         saveIconMutation.mutate({
           id: iconId,
-          name: icons?.find(i => i.id === iconId)?.name || '',
+          name: icon?.name || '',
           svg_content: svgContent,
+          icon_type: icon?.icon_type || 'avatar',
         });
       }
     };
     reader.readAsText(file);
   };
 
+  const openAddIconDialog = (type: 'avatar' | 'celebration') => {
+    setEditingIcon(null);
+    setNewIconType(type);
+    setIconDialogOpen(true);
+  };
+
+  const openEditIconDialog = (icon: AvatarIcon) => {
+    setEditingIcon(icon);
+    setNewIconType(icon.icon_type || 'avatar');
+    setIconDialogOpen(true);
+  };
+
+  const renderIconGrid = (iconList: AvatarIcon[], type: 'avatar' | 'celebration') => (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          {type === 'avatar' ? (
+            <Users className="w-5 h-5 text-muted-foreground" />
+          ) : (
+            <Calendar className="w-5 h-5 text-muted-foreground" />
+          )}
+          <h3 className="font-medium">
+            {type === 'avatar' ? 'Avatar Icons' : 'Celebration Icons'}
+          </h3>
+          <span className="text-sm text-muted-foreground">({iconList.length})</span>
+        </div>
+        <Button size="sm" onClick={() => openAddIconDialog(type)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Add {type === 'avatar' ? 'Avatar' : 'Celebration'} Icon
+        </Button>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+        {iconsLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-16 bg-muted rounded mb-2" />
+                <div className="h-4 bg-muted rounded" />
+              </CardContent>
+            </Card>
+          ))
+        ) : iconList.length === 0 ? (
+          <div className="col-span-full text-center py-8 text-muted-foreground">
+            No {type === 'avatar' ? 'avatar' : 'celebration'} icons found
+          </div>
+        ) : (
+          iconList.map((icon) => (
+            <Card key={icon.id}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center justify-between">
+                  {icon.name}
+                  {icon.is_system && (
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">System</span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="h-16 flex items-center justify-center bg-muted rounded">
+                  <div dangerouslySetInnerHTML={{ __html: sanitizeSVG(icon.svg_content) }} className="w-12 h-12" />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => openEditIconDialog(icon)}
+                  >
+                    <Edit className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => document.getElementById(`upload-${icon.id}`)?.click()}
+                  >
+                    Upload
+                  </Button>
+                  <input
+                    id={`upload-${icon.id}`}
+                    type="file"
+                    accept=".svg"
+                    className="hidden"
+                    onChange={(e) => handleFileUpload(e, icon.id)}
+                  />
+                  {!icon.is_system && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeleteIconId(icon.id)}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <div className="space-y-6">
         <div>
           <h2 className="text-3xl font-bold text-foreground">Themes & Visuals</h2>
-          <p className="text-muted-foreground">Manage avatar icons and color palettes</p>
+          <p className="text-muted-foreground">Manage icons and color palettes</p>
         </div>
 
         <Tabs defaultValue="icons" className="w-full">
           <TabsList>
             <TabsTrigger value="icons">
               <ImageIcon className="w-4 h-4 mr-2" />
-              Avatar Icons
+              Icons
             </TabsTrigger>
             <TabsTrigger value="colors">
               <Palette className="w-4 h-4 mr-2" />
@@ -225,76 +336,10 @@ export default function ThemesManagement() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="icons" className="space-y-4">
-            <div className="flex justify-end">
-              <Button onClick={() => { setEditingIcon(null); setIconDialogOpen(true); }}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Icon
-              </Button>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
-              {iconsLoading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <Card key={i} className="animate-pulse">
-                    <CardContent className="p-6">
-                      <div className="h-16 bg-muted rounded mb-2" />
-                      <div className="h-4 bg-muted rounded" />
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                icons?.map((icon) => (
-                  <Card key={icon.id}>
-                    <CardHeader>
-                      <CardTitle className="text-sm flex items-center justify-between">
-                        {icon.name}
-                        {icon.is_system && (
-                          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">System</span>
-                        )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="h-16 flex items-center justify-center bg-muted rounded">
-                        <div dangerouslySetInnerHTML={{ __html: sanitizeSVG(icon.svg_content) }} className="w-12 h-12" />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => { setEditingIcon(icon); setIconDialogOpen(true); }}
-                        >
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => document.getElementById(`upload-${icon.id}`)?.click()}
-                        >
-                          Upload
-                        </Button>
-                        <input
-                          id={`upload-${icon.id}`}
-                          type="file"
-                          accept=".svg"
-                          className="hidden"
-                          onChange={(e) => handleFileUpload(e, icon.id)}
-                        />
-                        {!icon.is_system && (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => setDeleteIconId(icon.id)}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
+          <TabsContent value="icons" className="space-y-8">
+            {renderIconGrid(avatarIcons, 'avatar')}
+            <div className="border-t border-border pt-8">
+              {renderIconGrid(celebrationIcons, 'celebration')}
             </div>
           </TabsContent>
 
@@ -369,17 +414,29 @@ export default function ThemesManagement() {
             <DialogHeader>
               <DialogTitle>{editingIcon ? 'Edit Icon' : 'Add New Icon'}</DialogTitle>
               <DialogDescription>
-                Upload an SVG icon for member avatars
+                {newIconType === 'avatar' ? 'Upload an SVG icon for member avatars' : 'Upload an SVG icon for celebrations and events'}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="icon_type">Icon Type</Label>
+                <Select value={newIconType} onValueChange={setNewIconType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="avatar">Avatar Icon</SelectItem>
+                    <SelectItem value="celebration">Celebration Icon</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="name">Icon Name</Label>
                 <Input 
                   id="name" 
                   name="name" 
                   defaultValue={editingIcon?.name}
-                  placeholder="e.g., av7"
+                  placeholder={newIconType === 'avatar' ? 'e.g., av7' : 'e.g., birthday-cake'}
                   required 
                 />
               </div>

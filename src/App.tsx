@@ -30,7 +30,7 @@ import { ScreenSaverManagement } from "./pages/admin/ScreenSaverManagement";
 import { ScreenSaverPreview } from "./pages/ScreenSaverPreview";
 import Permissions from "./pages/admin/Permissions";
 import RotatingTasks from "./pages/admin/RotatingTasks";
-import RotationDebugger from "./pages/admin/RotationDebugger";
+
 
 import HolidayManagement from "./pages/admin/HolidayManagement";
 import { SuperAdminGuard } from "./components/super-admin/SuperAdminGuard";
@@ -40,6 +40,7 @@ import FamilyManagement from "./pages/super-admin/FamilyManagement";
 import PlanManagement from "./pages/super-admin/PlanManagement";
 import ThemesManagement from "./pages/super-admin/ThemesManagement";
 import IntegrationsManagement from "./pages/super-admin/IntegrationsManagement";
+import AppSettings from "./pages/super-admin/AppSettings";
 import CelebrationsManagement from "./pages/admin/CelebrationsManagement";
 import Welcome from "./pages/onboarding/Welcome";
 import CreateCrew from "./pages/onboarding/CreateCrew";
@@ -97,8 +98,7 @@ const App = () => (
                       <Route path="permissions" element={<Permissions />} />
                       <Route path="screensaver" element={<ScreenSaverManagement />} />
                       <Route path="rotating-tasks" element={<RotatingTasks />} />
-
-                      <Route path="rotation-debugger" element={<RotationDebugger />} />
+                      <Route path="holidays" element={<HolidayManagement />} />
                       <Route path="holidays" element={<HolidayManagement />} />
                       <Route path="celebrations" element={<CelebrationsManagement />} />
                     </Route>
@@ -115,6 +115,7 @@ const App = () => (
                       <Route path="families" element={<FamilyManagement />} />
                       <Route path="plans" element={<PlanManagement />} />
                       <Route path="integrations" element={<IntegrationsManagement />} />
+                      <Route path="app-settings" element={<AppSettings />} />
                       <Route path="themes" element={<ThemesManagement />} />
                     </Route>
 
