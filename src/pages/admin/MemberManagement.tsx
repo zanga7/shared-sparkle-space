@@ -308,19 +308,19 @@ const MemberManagement = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
+    <div className="container mx-auto px-4 py-6 space-y-6 max-w-full overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <UserCog className="h-8 w-8" />
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+            <UserCog className="h-6 w-6 sm:h-8 sm:w-8" />
             Member Management
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Manage family members, roles, and permissions
           </p>
         </div>
-        <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
+        <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2 w-full sm:w-auto">
           <Plus className="h-4 w-4" />
           Add Member
         </Button>
@@ -380,70 +380,85 @@ const MemberManagement = () => {
                         <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}
-                          className={`flex items-center gap-4 p-4 border rounded-lg transition-all ${
+                          className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg transition-all ${
                             snapshot.isDragging ? 'shadow-lg rotate-1 scale-105' : ''
                           }`}
                         >
-                          <div
-                            {...provided.dragHandleProps}
-                            className="flex items-center justify-center p-2 cursor-grab active:cursor-grabbing hover:bg-gray-100 rounded"
-                          >
-                            <GripVertical className="h-4 w-4 text-gray-400" />
+                          {/* Mobile: Top row with drag handle and avatar */}
+                          <div className="flex items-center gap-3">
+                            <div
+                              {...provided.dragHandleProps}
+                              className="flex items-center justify-center p-2 cursor-grab active:cursor-grabbing hover:bg-muted rounded shrink-0"
+                            >
+                              <GripVertical className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            
+                            <UserAvatar 
+                              name={member.display_name}
+                              color={member.color}
+                              avatarIcon={member.avatar_url || undefined}
+                              size="lg"
+                            />
+                            
+                            {/* Mobile: Name and role inline */}
+                            <div className="sm:hidden flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-semibold truncate">{member.display_name}</h3>
+                                <Badge variant={member.role === 'parent' ? 'default' : 'secondary'} className="text-xs">
+                                  {member.role}
+                                </Badge>
+                              </div>
+                            </div>
                           </div>
-                          
-                          <UserAvatar 
-                            name={member.display_name}
-                            color={member.color}
-                            avatarIcon={member.avatar_url || undefined}
-                            size="lg"
-                          />
                 
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold">{member.display_name}</h3>
-                    <Badge variant={member.role === 'parent' ? 'default' : 'secondary'}>
-                      {member.role}
-                    </Badge>
-                    <Badge 
-                      variant="outline" 
-                      style={{ 
-                        backgroundColor: `${getColorHex(member.color)}20`,
-                        borderColor: getColorHex(member.color),
-                        color: getColorHex(member.color)
-                      }}
-                    >
-                      {member.color}
-                    </Badge>
-                  </div>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <div>Points: {member.total_points} | Streak: {member.streak_count}</div>
-                    <div>
-                      Permissions: 
-                      {member.can_add_for_self && ' Self'}
-                      {member.can_add_for_siblings && ' Siblings'}
-                      {member.can_add_for_parents && ' Parents'}
-                      {!member.can_add_for_self && !member.can_add_for_siblings && !member.can_add_for_parents && ' None'}
-                    </div>
-                    <div>Created: {format(new Date(member.created_at), 'MMM d, yyyy')}</div>
-                  </div>
-                </div>
+                          {/* Desktop: Full info section */}
+                          <div className="flex-1 min-w-0">
+                            <div className="hidden sm:flex items-center gap-2 mb-1 flex-wrap">
+                              <h3 className="font-semibold">{member.display_name}</h3>
+                              <Badge variant={member.role === 'parent' ? 'default' : 'secondary'}>
+                                {member.role}
+                              </Badge>
+                              <Badge 
+                                variant="outline" 
+                                style={{ 
+                                  backgroundColor: `${getColorHex(member.color)}20`,
+                                  borderColor: getColorHex(member.color),
+                                  color: getColorHex(member.color)
+                                }}
+                              >
+                                {member.color}
+                              </Badge>
+                            </div>
+                            <div className="text-xs sm:text-sm text-muted-foreground space-y-0.5 sm:space-y-1">
+                              <div>Points: {member.total_points} | Streak: {member.streak_count}</div>
+                              <div className="hidden sm:block">
+                                Permissions: 
+                                {member.can_add_for_self && ' Self'}
+                                {member.can_add_for_siblings && ' Siblings'}
+                                {member.can_add_for_parents && ' Parents'}
+                                {!member.can_add_for_self && !member.can_add_for_siblings && !member.can_add_for_parents && ' None'}
+                              </div>
+                              <div className="hidden sm:block">Created: {format(new Date(member.created_at), 'MMM d, yyyy')}</div>
+                            </div>
+                          </div>
 
-                          <div className="flex items-center gap-2">
+                          {/* Action buttons - stack on mobile */}
+                          <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => setPinMember(member)}
-                              className="gap-1"
+                              className="gap-1 flex-1 sm:flex-none text-xs sm:text-sm"
                             >
                               <Key className="h-3 w-3" />
-                              {member.pin_hash ? 'Update PIN' : 'Set PIN'}
+                              <span className="hidden xs:inline">{member.pin_hash ? 'Update' : 'Set'}</span> PIN
                             </Button>
                             
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => handleEditMember(member)}
-                              className="gap-1"
+                              className="gap-1 flex-1 sm:flex-none text-xs sm:text-sm"
                             >
                               <Edit className="h-3 w-3" />
                               Edit
@@ -454,7 +469,7 @@ const MemberManagement = () => {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setArchivingMember(member)}
-                                className="gap-1"
+                                className="gap-1 flex-1 sm:flex-none text-xs sm:text-sm"
                               >
                                 <Archive className="h-3 w-3" />
                                 Archive
@@ -488,23 +503,33 @@ const MemberManagement = () => {
           <CardContent>
             <div className="space-y-4">
               {archivedMembers.map((member) => (
-                <div key={member.id} className="flex items-center gap-4 p-4 border rounded-lg opacity-60">
-                  <UserAvatar 
-                    name={member.display_name}
-                    color={member.color}
-                    avatarIcon={member.avatar_url || undefined}
-                    size="lg"
-                  />
+                <div key={member.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg opacity-60">
+                  <div className="flex items-center gap-3">
+                    <UserAvatar 
+                      name={member.display_name}
+                      color={member.color}
+                      avatarIcon={member.avatar_url || undefined}
+                      size="lg"
+                    />
+                    
+                    {/* Mobile: Name inline */}
+                    <div className="sm:hidden flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold truncate">{member.display_name}</h3>
+                        <Badge variant="outline" className="text-xs">Archived</Badge>
+                      </div>
+                    </div>
+                  </div>
                   
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="flex-1 min-w-0">
+                    <div className="hidden sm:flex items-center gap-2 mb-1 flex-wrap">
                       <h3 className="font-semibold">{member.display_name}</h3>
                       <Badge variant="outline">Archived</Badge>
                       <Badge variant={member.role === 'parent' ? 'default' : 'secondary'}>
                         {member.role}
                       </Badge>
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-xs sm:text-sm text-muted-foreground">
                       Final Points: {member.total_points}
                     </div>
                   </div>
@@ -514,7 +539,7 @@ const MemberManagement = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => setArchivingMember(member)}
-                      className="gap-1"
+                      className="gap-1 w-full sm:w-auto text-xs sm:text-sm"
                     >
                       <ArchiveRestore className="h-3 w-3" />
                       Restore
@@ -548,7 +573,7 @@ const MemberManagement = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>Role</Label>
                 <Select value={formData.role} onValueChange={(value: 'parent' | 'child') => 
