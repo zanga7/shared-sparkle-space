@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -7,7 +7,9 @@ export function useOnboardingStatus() {
 
   const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
-  const [familyId, setFamilyId] = useState<string | null>(null);
+
+  // Use ref for familyId to avoid dependency cycles in useCallback
+  const familyIdRef = useRef<string | null>(null);
 
   const fetchFamilyId = useCallback(async (): Promise<string | null> => {
     if (!user) return null;
@@ -28,7 +30,7 @@ export function useOnboardingStatus() {
 
   const checkOnboardingStatus = useCallback(async () => {
     if (!user) {
-      setFamilyId(null);
+      familyIdRef.current = null;
       setNeedsOnboarding(null);
       setLoading(false);
       return;
@@ -37,16 +39,15 @@ export function useOnboardingStatus() {
     setLoading(true);
 
     try {
-      const resolvedFamilyId = familyId ?? (await fetchFamilyId());
+      const resolvedFamilyId = familyIdRef.current ?? (await fetchFamilyId());
 
       if (!resolvedFamilyId) {
-        // Profile not ready yet (often happens right after signup/verification)
-        setFamilyId(null);
+        familyIdRef.current = null;
         setNeedsOnboarding(true);
         return;
       }
 
-      setFamilyId(resolvedFamilyId);
+      familyIdRef.current = resolvedFamilyId;
 
       const { data: settings, error: settingsError } = await supabase
         .from('household_settings')
@@ -64,7 +65,7 @@ export function useOnboardingStatus() {
     } finally {
       setLoading(false);
     }
-  }, [user, familyId, fetchFamilyId]);
+  }, [user, fetchFamilyId]);
 
   useEffect(() => {
     checkOnboardingStatus();
@@ -73,10 +74,10 @@ export function useOnboardingStatus() {
   const completeOnboarding = useCallback(async (): Promise<boolean> => {
     if (!user) return false;
 
-    const resolvedFamilyId = familyId ?? (await fetchFamilyId());
+    const resolvedFamilyId = familyIdRef.current ?? (await fetchFamilyId());
     if (!resolvedFamilyId) return false;
 
-    setFamilyId(resolvedFamilyId);
+    familyIdRef.current = resolvedFamilyId;
 
     const { error } = await supabase
       .from('household_settings')
@@ -96,7 +97,7 @@ export function useOnboardingStatus() {
 
     setNeedsOnboarding(false);
     return true;
-  }, [user, familyId, fetchFamilyId]);
+  }, [user, fetchFamilyId]);
 
   return {
     needsOnboarding,
@@ -105,4 +106,3 @@ export function useOnboardingStatus() {
     refreshStatus: checkOnboardingStatus,
   };
 }
-
