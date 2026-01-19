@@ -38,8 +38,6 @@ const adminMenuItems = [
   { title: "Dashboard", url: "/admin", icon: Home, exact: true },
   { title: "Family Members", url: "/admin/members", icon: Users },
   { title: "Rotating Tasks", url: "/admin/rotating-tasks", icon: RotateCcw },
-  { title: "Rotation Debugger", url: "/admin/rotation-debugger", icon: Database },
-  
   { title: "Rewards", url: "/admin/rewards", icon: Gift },
   { title: "Reward Approvals", url: "/admin/reward-approvals", icon: ClipboardCheck },
   { title: "Celebrations", url: "/admin/celebrations", icon: Cake },
@@ -47,7 +45,6 @@ const adminMenuItems = [
   { title: "Holiday Management", url: "/admin/holidays", icon: GraduationCap },
   { title: "Screen Saver", url: "/admin/screensaver", icon: Monitor },
   { title: "Permissions", url: "/admin/permissions", icon: Shield },
-  { title: "Theme Management", url: "/admin/themes", icon: Palette },
 ];
 
 interface AdminSidebarProps {
