@@ -52,13 +52,13 @@ export function ConsistencyProgressGrid({
                     className={cn(
                       'w-4 h-4 rounded-sm cursor-default transition-colors flex items-center justify-center',
                       isCompleted && 'bg-green-500',
-                      isMissed && 'bg-transparent ring-1 ring-orange-500',
+                      isMissed && 'bg-orange-500/20',
                       isToday && !isCompleted && 'bg-muted/50 ring-1 ring-primary/50',
                       isFuture && 'bg-muted/30'
                     )}
                   >
                     {isMissed && (
-                      <X className="h-2.5 w-2.5 text-orange-500" strokeWidth={3} />
+                      <X className="h-2.5 w-2.5 text-orange-500" strokeWidth={2.5} />
                     )}
                   </div>
                 </TooltipTrigger>

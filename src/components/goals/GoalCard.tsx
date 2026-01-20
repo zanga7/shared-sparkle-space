@@ -234,11 +234,10 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                   {progress && 'total_completions' in progress ? progress.total_completions : 0} / {(goal.success_criteria as { time_window_days: number }).time_window_days} days
                 </span>
               </div>
-              {goal.end_date && (
-                <Badge variant="outline" className="text-xs">
-                  {getDaysRemaining()}
-                </Badge>
-              )}
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Calendar className="h-3.5 w-3.5" />
+                <span className="text-xs">{getDaysRemaining()}</span>
+              </div>
             </div>
             
             {/* Compact streak grid */}
@@ -257,28 +256,30 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
             )}
           </div>
         ) : (
-          <div className="flex items-center gap-4">
-            <GoalProgressRing percent={percent} size="md" />
-            
-            <div className="flex-1 min-w-0 space-y-2">
-              {getProgressDetails()}
+          <div className="space-y-3">
+            <div className="flex items-center gap-4">
+              <GoalProgressRing percent={percent} size="md" />
               
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                {goal.end_date && (
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span>{getDaysRemaining()}</span>
-                  </div>
-                )}
+              <div className="flex-1 min-w-0 space-y-2">
+                {getProgressDetails()}
                 
-                {goal.reward && (
-                  <div className="flex items-center gap-1 text-amber-500">
-                    <Trophy className="h-3.5 w-3.5" />
-                    <span className="truncate max-w-[100px]">{goal.reward.title}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  {goal.end_date && (
+                    <>
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span>{getDaysRemaining()}</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
+            
+            {goal.reward && (
+              <div className="flex items-center gap-1 text-amber-500 text-sm">
+                <Trophy className="h-3.5 w-3.5" />
+                <span className="truncate">{goal.reward.title}</span>
+              </div>
+            )}
           </div>
         )}
         
