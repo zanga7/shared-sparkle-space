@@ -1,11 +1,7 @@
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { X } from 'lucide-react';
 import { format, eachDayOfInterval, isSameDay, startOfDay, addDays, parseISO, isAfter } from 'date-fns';
-
-interface CompletionDate {
-  date: string;
-  completed: boolean;
-}
 
 interface ConsistencyProgressGridProps {
   startDate: string;
@@ -34,52 +30,37 @@ export function ConsistencyProgressGrid({
     completedDates.map(d => format(startOfDay(parseISO(d)), 'yyyy-MM-dd'))
   );
 
+  // Orange color matching the flame icon
+  const missedOrange = 'rgb(249, 115, 22)'; // orange-500
+
   return (
     <TooltipProvider>
-      <div className={cn('space-y-2', className)}>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-sm bg-green-500" />
-            <span>Completed</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-sm bg-muted" />
-            <span>Missed</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-sm bg-muted/50 ring-1 ring-primary/30" />
-            <span>Today</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-sm bg-muted/30" />
-            <span>Upcoming</span>
-          </div>
-        </div>
-        
+      <div className={cn('space-y-1', className)}>
         <div className="flex flex-wrap gap-1">
-          {allDays.map((day, index) => {
+          {allDays.map((day) => {
             const dateKey = format(day, 'yyyy-MM-dd');
             const isCompleted = completedSet.has(dateKey);
             const isToday = isSameDay(day, today);
             const isFuture = isAfter(day, today);
             const isPast = !isFuture && !isToday;
-            
-            let bgClass = 'bg-muted/30'; // Future - light grey
-            if (isPast) {
-              bgClass = isCompleted ? 'bg-green-500' : 'bg-muted'; // Past: green if completed, grey if missed
-            } else if (isToday) {
-              bgClass = isCompleted ? 'bg-green-500' : 'bg-muted/50 ring-1 ring-primary/50';
-            }
+            const isMissed = isPast && !isCompleted;
             
             return (
               <Tooltip key={dateKey}>
                 <TooltipTrigger asChild>
                   <div
                     className={cn(
-                      'w-4 h-4 rounded-sm cursor-default transition-colors',
-                      bgClass
+                      'w-4 h-4 rounded-sm cursor-default transition-colors flex items-center justify-center',
+                      isCompleted && 'bg-green-500',
+                      isMissed && 'bg-transparent ring-1 ring-orange-500',
+                      isToday && !isCompleted && 'bg-muted/50 ring-1 ring-primary/50',
+                      isFuture && 'bg-muted/30'
                     )}
-                  />
+                  >
+                    {isMissed && (
+                      <X className="h-2.5 w-2.5 text-orange-500" strokeWidth={3} />
+                    )}
+                  </div>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs">
                   <p>{format(day, 'EEE, MMM d')}</p>
@@ -94,12 +75,6 @@ export function ConsistencyProgressGrid({
               </Tooltip>
             );
           })}
-        </div>
-        
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>{format(start, 'MMM d')}</span>
-          <span>{completedDates.length} / {Math.min(totalDays, allDays.filter(d => !isAfter(d, today)).length)} completed</span>
-          <span>{format(end, 'MMM d')}</span>
         </div>
       </div>
     </TooltipProvider>

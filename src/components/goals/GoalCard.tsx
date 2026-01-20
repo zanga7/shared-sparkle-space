@@ -1,4 +1,4 @@
-import { Target, Users, Calendar, Trophy, Pause, Play, Archive, MoreVertical, Edit, Check, Flame } from 'lucide-react';
+import { Target, Users, Calendar, Trophy, Pause, Play, Archive, MoreVertical, Edit, Check, Flame, CheckSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -406,6 +406,13 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
         {/* Non-project goals: Show linked tasks */}
         {goal.goal_type !== 'project' && unassignedTasks.length > 0 && (
           <div className="mt-3 pt-3 border-t space-y-2" onClick={(e) => e.stopPropagation()}>
+            {/* Show "Complete today's challenge" header for consistency goals */}
+            {goal.goal_type === 'consistency' && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                <CheckSquare className="h-3.5 w-3.5" />
+                <span>Complete today's challenge</span>
+              </div>
+            )}
             {unassignedTasks.slice(0, 2).map((linkedTask) => {
               const task = tasksMap[linkedTask.id];
               if (!task) {
