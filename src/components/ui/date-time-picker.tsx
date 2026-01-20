@@ -197,7 +197,13 @@ export function DateTimePicker({
             {startDate ? formatChipLabel() : "Click to select date and time"}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent 
+          className="w-auto max-w-[calc(100vw-2rem)] max-h-[calc(100vh-8rem)] overflow-y-auto p-0" 
+          align="start"
+          side="bottom"
+          sideOffset={4}
+          collisionPadding={16}
+        >
           <div className="p-4 space-y-4">
             {/* Quick Presets */}
             <div>

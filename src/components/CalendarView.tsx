@@ -1008,9 +1008,6 @@ export const CalendarView = ({
                                                    {event.source_type && getSourceIcon(event.source_type)}
                                                  </div>
                                                  <div className="flex items-center gap-1 flex-shrink-0">
-                                                   <Badge variant="outline" className="text-xs h-4 px-1">
-                                                     {event.isMultiDay ? 'Multi' : 'Event'}
-                                                   </Badge>
                                                    <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-muted-foreground" />
                                                  </div>
                                                </div>
@@ -1176,9 +1173,6 @@ export const CalendarView = ({
                                      {event.source_type && getSourceIcon(event.source_type)}
                                    </div>
                                    <div className="flex items-center gap-1 flex-shrink-0">
-                                    <Badge variant="outline" className="text-xs h-4 px-1">
-                                      {event.isMultiDay ? 'Multi' : 'Event'}
-                                    </Badge>
                                      <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-muted-foreground" />
                                    </div>
                                  </div>
@@ -1362,9 +1356,6 @@ export const CalendarView = ({
                                            {event.source_type && getSourceIcon(event.source_type)}
                                          </div>
                                          <div className="flex items-center gap-1 shrink-0">
-                                           <Badge variant="outline" className="text-xs h-4 px-1">
-                                             {event.isMultiDay ? 'Multi' : event.recurrence_options?.enabled || event.isVirtual ? 'Series' : 'Single'}
-                                           </Badge>
                                            <Edit className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity text-muted-foreground" />
                                          </div>
                                        </div>
@@ -1381,11 +1372,6 @@ export const CalendarView = ({
                                             {event.is_all_day ? 'All day' : format(new Date(event.start_date), 'HH:mm')}
                                             {event.isMultiDay && ` - ${format(new Date(event.originalEnd), 'MMM d')}`}
                                           </span>
-                                          {/* Recurrence Indicator */}
-                                          {event.recurrence_options?.enabled && <Badge variant="outline" className="text-xs h-4 px-1 border-purple-300 text-purple-600 ml-1">
-                                              <Repeat className="h-2.5 w-2.5 mr-0.5" />
-                                              Series
-                                            </Badge>}
                                         </div>}
                                     </div>}
                                   </Draggable>
