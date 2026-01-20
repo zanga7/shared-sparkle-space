@@ -13,8 +13,6 @@ import {
   CheckSquare, 
   Calendar, 
   Trophy,
-  Sparkles,
-  Clock,
   Gift,
   Target
 } from 'lucide-react';
@@ -180,11 +178,6 @@ const TodayEventsWidget = memo(({ events, onViewCalendar }: { events: any[]; onV
                 transition={{ delay: index * 0.1 }}
                 className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
               >
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Clock className="h-5 w-5 text-primary" />
-                  </div>
-                </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{event.title}</p>
                   <p className="text-sm text-muted-foreground">
