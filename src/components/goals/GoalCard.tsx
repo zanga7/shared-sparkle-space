@@ -25,7 +25,7 @@ interface GoalCardProps {
   onPause?: (goalId: string) => void;
   onResume?: (goalId: string) => void;
   onArchive?: (goalId: string) => void;
-  onCompleteTask?: (linkedTask: GoalLinkedTask) => void;
+  onCompleteTask?: (linkedTask: GoalLinkedTask, task?: any) => void;
 }
 
 export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive, onCompleteTask }: GoalCardProps) {
@@ -250,12 +250,13 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                 assigneeProfiles.map((profile) => {
                   const memberCompletions = completionsByMember[profile!.id] || [];
                   return (
-                    <div key={profile!.id} className="flex items-center gap-2">
+                    <div key={profile!.id} className="flex items-start gap-2">
                       <UserAvatar 
                         name={profile!.display_name} 
                         color={profile!.color}
                         avatarIcon={profile!.avatar_url || undefined}
                         size="xs"
+                        className="mt-0.5 shrink-0"
                       />
                       <ConsistencyProgressGrid
                         startDate={goal.start_date}
@@ -411,7 +412,7 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                             task={task}
                             allTasks={Object.values(tasksMap)}
                             familyMembers={familyMembers}
-                            onToggle={() => onCompleteTask?.(linkedTask)}
+                            onToggle={() => onCompleteTask?.(linkedTask, task)}
                             showActions={false}
                           />
                         );
@@ -444,28 +445,83 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                 <span>Complete today's challenge</span>
               </div>
             )}
-            {unassignedTasks.slice(0, goal.goal_type === 'consistency' ? 5 : 2).map((linkedTask) => {
-              const task = tasksMap[linkedTask.id];
-              if (!task) {
-                // Show loading state instead of grey box when we're still fetching
+            {/* For consistency goals, render per-member tasks */}
+            {goal.goal_type === 'consistency' ? (
+              <>
+                {unassignedTasks.slice(0, 1).map((linkedTask) => {
+                  // Get all tasks for this series (one per member)
+                  const seriesTasks = Object.entries(tasksMap)
+                    .filter(([key]) => key.startsWith(`${linkedTask.id}-`) || key === linkedTask.id)
+                    .map(([key, task]) => ({ key, task }));
+                  
+                  if (seriesTasks.length === 0) {
+                    // Fallback: try direct lookup
+                    const task = tasksMap[linkedTask.id];
+                    if (!task) {
+                      return (
+                        <div key={linkedTask.id} className="rounded-lg p-3 bg-muted/20 border text-sm flex items-center gap-2">
+                          <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30" />
+                          <span className="text-muted-foreground">{linkedTask.task_title || 'Loading task...'}</span>
+                        </div>
+                      );
+                    }
+                    return (
+                      <EnhancedTaskItem
+                        key={linkedTask.id}
+                        task={task}
+                        allTasks={Object.values(tasksMap)}
+                        familyMembers={familyMembers}
+                        onToggle={() => onCompleteTask?.(linkedTask, task)}
+                        showActions={false}
+                        currentMemberId={task.assignees?.[0]?.profile_id}
+                        memberColor={task.assignees?.[0]?.profile?.color}
+                      />
+                    );
+                  }
+                  
+                  // Render each member's task
+                  return seriesTasks.map(({ key, task }) => {
+                    const memberId = (task as any)._member_id || task.assignees?.[0]?.profile_id;
+                    const memberProfile = task.assignees?.[0]?.profile;
+                    return (
+                      <EnhancedTaskItem
+                        key={key}
+                        task={task}
+                        allTasks={Object.values(tasksMap)}
+                        familyMembers={familyMembers}
+                        onToggle={() => onCompleteTask?.(linkedTask, task)}
+                        showActions={false}
+                        currentMemberId={memberId}
+                        memberColor={memberProfile?.color}
+                      />
+                    );
+                  });
+                })}
+              </>
+            ) : (
+              /* Regular task display for non-consistency goals */
+              unassignedTasks.slice(0, 2).map((linkedTask) => {
+                const task = tasksMap[linkedTask.id];
+                if (!task) {
+                  return (
+                    <div key={linkedTask.id} className="rounded-lg p-3 bg-muted/20 border text-sm flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30" />
+                      <span className="text-muted-foreground">{linkedTask.task_title || 'Loading task...'}</span>
+                    </div>
+                  );
+                }
                 return (
-                  <div key={linkedTask.id} className="rounded-lg p-3 bg-muted/20 border text-sm flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30" />
-                    <span className="text-muted-foreground">{linkedTask.task_title || 'Loading task...'}</span>
-                  </div>
+                  <EnhancedTaskItem
+                    key={linkedTask.id}
+                    task={task}
+                    allTasks={Object.values(tasksMap)}
+                    familyMembers={familyMembers}
+                    onToggle={() => onCompleteTask?.(linkedTask, task)}
+                    showActions={false}
+                  />
                 );
-              }
-              return (
-                <EnhancedTaskItem
-                  key={linkedTask.id}
-                  task={task}
-                  allTasks={Object.values(tasksMap)}
-                  familyMembers={familyMembers}
-                  onToggle={() => onCompleteTask?.(linkedTask)}
-                  showActions={false}
-                />
-              );
-            })}
+              })
+            )}
             {unassignedTasks.length > (goal.goal_type === 'consistency' ? 5 : 2) && (
               <span className="text-xs text-muted-foreground">
                 +{unassignedTasks.length - (goal.goal_type === 'consistency' ? 5 : 2)} more tasks

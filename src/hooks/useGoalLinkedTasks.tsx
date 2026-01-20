@@ -69,6 +69,7 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
   });
 
   // Fetch task series - get today's materialized instance if available
+  // For multi-member consistency goals, we need one task per member
   const { data: seriesTasks, isLoading: loadingSeries } = useQuery({
     queryKey: ['goal-linked-series', seriesIds],
     queryFn: async () => {
@@ -142,13 +143,16 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
         });
       }
       
-      // Return either today's actual task or a virtual task
-      return (seriesData || []).map(series => {
+      // Build tasks - for multi-assignee tasks, create one task per member
+      const result: Task[] = [];
+      
+      for (const series of (seriesData || [])) {
         const todayTaskId = todayTaskIds[series.id];
         const todayTask = todayTaskId ? todayTasksMap[todayTaskId] : null;
+        const assignedProfiles = series.assigned_profiles || [];
         
-        // Build assignees array from assigned_profiles
-        const assignees = (series.assigned_profiles || []).map((pid: string) => ({
+        // Build full assignees array for the series
+        const fullAssignees = assignedProfiles.map((pid: string) => ({
           id: `series-assignee-${series.id}-${pid}`,
           profile_id: pid,
           assigned_at: series.created_at,
@@ -156,35 +160,92 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
           profile: profilesMap[pid] || { id: pid, display_name: 'Unknown', color: '#888' },
         }));
         
-        if (todayTask) {
-          // Return today's actual task with completion status
-          return {
-            ...todayTask,
-            series_id: series.id,
-            // If today's task doesn't have assignees, use series assignees
-            assignees: todayTask.assignees?.length > 0 ? todayTask.assignees : assignees,
-          } as unknown as Task;
-        }
+        // For "everyone" completion rule or multi-assignee, create one task per member
+        const isEveryoneRule = series.completion_rule === 'everyone';
+        const hasMultipleAssignees = assignedProfiles.length > 1;
         
-        // Fallback to virtual task
-        return {
-          id: `series-${series.id}`,
-          title: series.title,
-          description: series.description,
-          points: series.points,
-          due_date: today,
-          assigned_to: null,
-          created_by: series.created_by,
-          completion_rule: series.completion_rule || 'any_one',
-          task_group: series.task_group,
-          recurrence_options: { enabled: true },
-          assignees: assignees,
-          task_completions: [],
-          isVirtual: true,
-          series_id: series.id,
-          series_assignee_count: series.assigned_profiles?.length || 0,
-        } as unknown as Task;
-      });
+        if (hasMultipleAssignees && isEveryoneRule) {
+          // Create a separate task for each assignee
+          for (const profileId of assignedProfiles) {
+            const profile = profilesMap[profileId];
+            const singleAssignee = [{
+              id: `series-assignee-${series.id}-${profileId}`,
+              profile_id: profileId,
+              assigned_at: series.created_at,
+              assigned_by: series.created_by,
+              profile: profile || { id: profileId, display_name: 'Unknown', color: '#888' },
+            }];
+            
+            if (todayTask) {
+              // Filter completions for this specific member
+              const memberCompletions = (todayTask.task_completions || []).filter(
+                (c: any) => c.completed_by === profileId
+              );
+              
+              result.push({
+                ...todayTask,
+                id: `${todayTask.id}-${profileId}`, // Unique ID per member
+                series_id: series.id,
+                occurrence_date: today,
+                assignees: singleAssignee,
+                task_completions: memberCompletions,
+                _member_id: profileId, // Track which member this is for
+              } as unknown as Task);
+            } else {
+              // Virtual task for this member
+              result.push({
+                id: `series-${series.id}-${profileId}`,
+                title: series.title,
+                description: series.description,
+                points: series.points,
+                due_date: today,
+                assigned_to: profileId,
+                created_by: series.created_by,
+                completion_rule: 'everyone',
+                task_group: series.task_group,
+                recurrence_options: { enabled: true },
+                assignees: singleAssignee,
+                task_completions: [],
+                isVirtual: true,
+                series_id: series.id,
+                occurrence_date: today,
+                _member_id: profileId,
+              } as unknown as Task);
+            }
+          }
+        } else {
+          // Single task for single assignee or "anyone" rule
+          if (todayTask) {
+            result.push({
+              ...todayTask,
+              series_id: series.id,
+              occurrence_date: today,
+              assignees: todayTask.assignees?.length > 0 ? todayTask.assignees : fullAssignees,
+            } as unknown as Task);
+          } else {
+            result.push({
+              id: `series-${series.id}`,
+              title: series.title,
+              description: series.description,
+              points: series.points,
+              due_date: today,
+              assigned_to: null,
+              created_by: series.created_by,
+              completion_rule: series.completion_rule || 'any_one',
+              task_group: series.task_group,
+              recurrence_options: { enabled: true },
+              assignees: fullAssignees,
+              task_completions: [],
+              isVirtual: true,
+              series_id: series.id,
+              occurrence_date: today,
+              series_assignee_count: assignedProfiles.length,
+            } as unknown as Task);
+          }
+        }
+      }
+      
+      return result;
     },
     enabled: seriesIds.length > 0,
   });
@@ -283,6 +344,7 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
   });
 
   // Build tasks map keyed by linked task ID
+  // For multi-member consistency goals, we use a unique key per member
   const tasksMap = useMemo(() => {
     const map: Record<string, Task> = {};
     
@@ -294,12 +356,20 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
       });
     });
     
-    // Map series tasks - use filter for all matching linked tasks
+    // Map series tasks - for multi-member tasks, create entry for each member
     (seriesTasks || []).forEach(task => {
       const seriesId = task.series_id;
+      const memberId = (task as any)._member_id;
       const matchingLinkedTasks = linkedTasks.filter(lt => lt.task_series_id === seriesId);
+      
       matchingLinkedTasks.forEach(linkedTask => {
-        map[linkedTask.id] = task;
+        if (memberId) {
+          // Multi-member task: key by linkedTask.id + memberId
+          map[`${linkedTask.id}-${memberId}`] = task;
+        } else {
+          // Single task for series
+          map[linkedTask.id] = task;
+        }
       });
     });
     
