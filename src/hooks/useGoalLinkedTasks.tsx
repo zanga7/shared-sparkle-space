@@ -68,13 +68,14 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
     enabled: taskIds.length > 0,
   });
 
-  // Fetch task series and create virtual tasks for today
+  // Fetch task series - get today's materialized instance if available
   const { data: seriesTasks, isLoading: loadingSeries } = useQuery({
     queryKey: ['goal-linked-series', seriesIds],
     queryFn: async () => {
       if (seriesIds.length === 0) return [];
       
-      const { data, error } = await supabase
+      // First get the series data
+      const { data: seriesData, error: seriesError } = await supabase
         .from('task_series')
         .select(`
           *,
@@ -88,26 +89,81 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
         `)
         .in('id', seriesIds);
       
-      if (error) throw error;
+      if (seriesError) throw seriesError;
       
-      // Convert series to virtual tasks
-      return (data || []).map(series => ({
-        id: `series-${series.id}`,
-        title: series.title,
-        description: series.description,
-        points: series.points,
-        due_date: null,
-        assigned_to: null,
-        created_by: series.created_by,
-        completion_rule: series.completion_rule || 'any_one',
-        task_group: series.task_group,
-        recurrence_options: { enabled: true },
-        assignees: series.assignees,
-        task_completions: [],
-        isVirtual: true,
-        series_id: series.id,
-        series_assignee_count: series.assignees?.length || 0,
-      } as unknown as Task));
+      // Try to find today's materialized instances for these series
+      const today = new Date().toISOString().split('T')[0];
+      const { data: todayInstances } = await supabase
+        .from('materialized_task_instances')
+        .select('series_id, materialized_task_id')
+        .in('series_id', seriesIds)
+        .eq('occurrence_date', today);
+      
+      // Create map of series_id -> today's task_id
+      const todayTaskIds: Record<string, string> = {};
+      todayInstances?.forEach(inst => {
+        if (inst.materialized_task_id) {
+          todayTaskIds[inst.series_id] = inst.materialized_task_id;
+        }
+      });
+      
+      // Fetch today's actual tasks with completions if they exist
+      const taskIdsToFetch = Object.values(todayTaskIds);
+      let todayTasksMap: Record<string, any> = {};
+      
+      if (taskIdsToFetch.length > 0) {
+        const { data: todayTasks } = await supabase
+          .from('tasks')
+          .select(`
+            *,
+            assignees:task_assignees(
+              id,
+              profile_id,
+              assigned_at,
+              assigned_by,
+              profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color, avatar_url)
+            ),
+            task_completions(id, completed_at, completed_by)
+          `)
+          .in('id', taskIdsToFetch);
+        
+        todayTasks?.forEach(task => {
+          todayTasksMap[task.id] = task;
+        });
+      }
+      
+      // Return either today's actual task or a virtual task
+      return (seriesData || []).map(series => {
+        const todayTaskId = todayTaskIds[series.id];
+        const todayTask = todayTaskId ? todayTasksMap[todayTaskId] : null;
+        
+        if (todayTask) {
+          // Return today's actual task with completion status
+          return {
+            ...todayTask,
+            series_id: series.id,
+          } as unknown as Task;
+        }
+        
+        // Fallback to virtual task
+        return {
+          id: `series-${series.id}`,
+          title: series.title,
+          description: series.description,
+          points: series.points,
+          due_date: today,
+          assigned_to: null,
+          created_by: series.created_by,
+          completion_rule: series.completion_rule || 'any_one',
+          task_group: series.task_group,
+          recurrence_options: { enabled: true },
+          assignees: series.assignees,
+          task_completions: [],
+          isVirtual: true,
+          series_id: series.id,
+          series_assignee_count: series.assignees?.length || 0,
+        } as unknown as Task;
+      });
     },
     enabled: seriesIds.length > 0,
   });
