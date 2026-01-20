@@ -74,22 +74,32 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
     queryFn: async () => {
       if (seriesIds.length === 0) return [];
       
-      // First get the series data
+      // First get the series data - note: assigned_profiles is an array column, not a relation
       const { data: seriesData, error: seriesError } = await supabase
         .from('task_series')
-        .select(`
-          *,
-          assignees:task_series_assignees(
-            id,
-            profile_id,
-            assigned_at,
-            assigned_by,
-            profile:profiles!task_series_assignees_profile_id_fkey(id, display_name, role, color, avatar_url)
-          )
-        `)
+        .select('*')
         .in('id', seriesIds);
       
       if (seriesError) throw seriesError;
+      
+      // Collect all profile IDs from assigned_profiles arrays
+      const allProfileIds = new Set<string>();
+      (seriesData || []).forEach(series => {
+        (series.assigned_profiles || []).forEach((pid: string) => allProfileIds.add(pid));
+      });
+      
+      // Fetch profile data for all assignees
+      const profilesMap: Record<string, any> = {};
+      if (allProfileIds.size > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, display_name, role, color, avatar_url')
+          .in('id', Array.from(allProfileIds));
+        
+        (profiles || []).forEach(p => {
+          profilesMap[p.id] = p;
+        });
+      }
       
       // Try to find today's materialized instances for these series
       const today = new Date().toISOString().split('T')[0];
@@ -137,11 +147,22 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
         const todayTaskId = todayTaskIds[series.id];
         const todayTask = todayTaskId ? todayTasksMap[todayTaskId] : null;
         
+        // Build assignees array from assigned_profiles
+        const assignees = (series.assigned_profiles || []).map((pid: string) => ({
+          id: `series-assignee-${series.id}-${pid}`,
+          profile_id: pid,
+          assigned_at: series.created_at,
+          assigned_by: series.created_by,
+          profile: profilesMap[pid] || { id: pid, display_name: 'Unknown', color: '#888' },
+        }));
+        
         if (todayTask) {
           // Return today's actual task with completion status
           return {
             ...todayTask,
             series_id: series.id,
+            // If today's task doesn't have assignees, use series assignees
+            assignees: todayTask.assignees?.length > 0 ? todayTask.assignees : assignees,
           } as unknown as Task;
         }
         
@@ -157,11 +178,11 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
           completion_rule: series.completion_rule || 'any_one',
           task_group: series.task_group,
           recurrence_options: { enabled: true },
-          assignees: series.assignees,
+          assignees: assignees,
           task_completions: [],
           isVirtual: true,
           series_id: series.id,
-          series_assignee_count: series.assignees?.length || 0,
+          series_assignee_count: series.assigned_profiles?.length || 0,
         } as unknown as Task;
       });
     },
