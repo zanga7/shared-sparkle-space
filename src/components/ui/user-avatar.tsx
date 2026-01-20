@@ -30,7 +30,7 @@ const UserAvatar = React.forwardRef<
   const { hex: colorHex, styles: colorStyles } = useMemberColor(isWhite ? 'sky' : color);
   const finalColorHex = isWhite ? '#ffffff' : colorHex;
   
-  // Fetch avatar icons from database
+  // Fetch avatar icons from database with extended cache
   const { data: avatarIcons = [] } = useQuery({
     queryKey: ['avatar-icons'],
     queryFn: async () => {
@@ -40,7 +40,9 @@ const UserAvatar = React.forwardRef<
       
       if (error) throw error;
       return data as Array<{ id: string; name: string; svg_content: string }>;
-    }
+    },
+    staleTime: 1000 * 60 * 10, // 10 minutes - icons rarely change
+    gcTime: 1000 * 60 * 30, // 30 minutes cache
   });
 
   const getInitials = (name: string) => {
@@ -48,20 +50,6 @@ const UserAvatar = React.forwardRef<
   };
 
   const iconData = avatarIcons.find(icon => icon.name === avatarIcon);
-
-  // Debug logging
-  React.useEffect(() => {
-    if (avatarIcon) {
-      console.log('UserAvatar debug:', {
-        avatarIcon,
-        avatarIconsCount: avatarIcons.length,
-        iconData: iconData ? 'found' : 'not found',
-        color,
-        isWhite,
-        finalColorHex
-      });
-    }
-  }, [avatarIcon, avatarIcons, iconData, color, isWhite, finalColorHex]);
 
   return (
     <AvatarPrimitive.Root

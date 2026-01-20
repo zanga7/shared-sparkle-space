@@ -157,14 +157,6 @@ export const useRecurringSeries = (familyId?: string) => {
     );
 
     try {
-      console.debug('Generating instances:', {
-        seriesId: series.id,
-        seriesStart: series.series_start,
-        isAllDay: (series as any).is_all_day,
-        frequency: rule.frequency,
-        weekdays: rule.weekdays
-      });
-      
       // Use RRULE-based instance generation for accuracy and RFC 5545 compliance
       const rruleInstances = generateRRuleInstances({
         startDate,
@@ -184,7 +176,7 @@ export const useRecurringSeries = (familyId?: string) => {
       );
 
       // Map to SeriesInstance format and filter out any instances before series start date
-      const instances = rruleInstances
+      return rruleInstances
         .filter(instance => instance.date >= seriesStartDateOnly)
         .map(instance => ({
           date: instance.date,
@@ -193,14 +185,6 @@ export const useRecurringSeries = (familyId?: string) => {
           overrideData: instance.overrideData,
           originalData: series
         }));
-      
-      console.debug('Generated instances:', {
-        seriesStart,
-        seriesStartDateOnly,
-        firstInstance: instances[0]?.date,
-        totalCount: instances.length
-      });
-      return instances;
     } catch (error) {
       console.error('Error generating series instances with RRULE, falling back to legacy method:', error);
       

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, memo, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
@@ -32,7 +32,7 @@ interface FamilyDashboardProps {
 }
 
 // Member card component with split layout - avatar left, stats right
-const MemberStatCard = ({ 
+const MemberStatCard = memo(({ 
   member, 
   todayTaskCount, 
   completedCount,
@@ -128,10 +128,11 @@ const MemberStatCard = ({
       </Card>
     </motion.div>
   );
-};
+});
+MemberStatCard.displayName = 'MemberStatCard';
 
 // Today's events widget
-const TodayEventsWidget = ({ events, onViewCalendar }: { events: any[]; onViewCalendar?: () => void }) => {
+const TodayEventsWidget = memo(({ events, onViewCalendar }: { events: any[]; onViewCalendar?: () => void }) => {
   const today = startOfDay(new Date());
   const todayEnd = endOfDay(today);
   
@@ -216,10 +217,11 @@ const TodayEventsWidget = ({ events, onViewCalendar }: { events: any[]; onViewCa
       </CardContent>
     </Card>
   );
-};
+});
+TodayEventsWidget.displayName = 'TodayEventsWidget';
 
 // Rewards widget - compact version for sidebar
-const RewardsWidget = ({ rewards }: { rewards: any[] }) => {
+const RewardsWidget = memo(({ rewards }: { rewards: any[] }) => {
   const activeRewards = rewards.filter(r => r.is_active);
 
   return (
@@ -278,10 +280,11 @@ const RewardsWidget = ({ rewards }: { rewards: any[] }) => {
       </CardContent>
     </Card>
   );
-};
+});
+RewardsWidget.displayName = 'RewardsWidget';
 
 // Compact consistency grid for dashboard - uses the ConsistencyProgressGrid logic
-const CompactConsistencyGrid = ({ goal }: { goal: any }) => {
+const CompactConsistencyGrid = memo(({ goal }: { goal: any }) => {
   // For consistency goals, we need to fetch completion data
   // The progress object has total_completions but not the specific dates
   // So we show a simple progress indicator based on the data we have
@@ -312,10 +315,11 @@ const CompactConsistencyGrid = ({ goal }: { goal: any }) => {
       ))}
     </div>
   );
-};
+});
+CompactConsistencyGrid.displayName = 'CompactConsistencyGrid';
 
 // Goals widget
-const GoalsWidget = ({ goals, onNavigateToGoals }: { goals: any[]; onNavigateToGoals?: () => void }) => {
+const GoalsWidget = memo(({ goals, onNavigateToGoals }: { goals: any[]; onNavigateToGoals?: () => void }) => {
   const activeGoals = goals.filter(g => g.status === 'active');
 
   return (
@@ -405,9 +409,10 @@ const GoalsWidget = ({ goals, onNavigateToGoals }: { goals: any[]; onNavigateToG
       </CardContent>
     </Card>
   );
-};
+});
+GoalsWidget.displayName = 'GoalsWidget';
 
-export const FamilyDashboard = ({
+export const FamilyDashboard = memo(({
   familyMembers,
   tasks,
   familyId,
@@ -555,6 +560,7 @@ export const FamilyDashboard = ({
       </div>
     </div>
   );
-};
+});
+FamilyDashboard.displayName = 'FamilyDashboard';
 
 export default FamilyDashboard;
