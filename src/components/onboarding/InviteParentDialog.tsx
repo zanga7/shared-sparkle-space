@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, UserPlus } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { AvatarIconSelector, AvatarIconType } from '@/components/ui/avatar-icon-selector';
 
 interface ColorPalette {
@@ -36,7 +36,6 @@ export function InviteParentDialog({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     display_name: '',
-    email: '',
     color: 'sky' as string,
     avatar_icon: '' as string,
   });
@@ -62,15 +61,6 @@ export function InviteParentDialog({
       toast({
         title: 'Error',
         description: 'Display name is required',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    if (!formData.email.trim() || !formData.email.includes('@')) {
-      toast({
-        title: 'Error',
-        description: 'Valid email is required',
         variant: 'destructive'
       });
       return;
@@ -104,8 +94,7 @@ export function InviteParentDialog({
 
     setLoading(true);
     try {
-      // Create a pending parent profile (user_id will be set when they sign up)
-      // Store the invite email in a pending state
+      // Create a parent profile without user_id - they can link later
       const { error } = await supabase
         .from('profiles')
         .insert({
@@ -114,21 +103,19 @@ export function InviteParentDialog({
           role: 'parent',
           color: formData.color,
           avatar_url: formData.avatar_icon || null,
-          status: 'pending', // Mark as pending until they accept the invite
-          // Note: user_id is null - they'll link when signing up
+          status: 'active', // Active so they appear in the family
         });
 
       if (error) throw error;
 
       toast({
-        title: 'Parent profile created',
-        description: `${formData.display_name} can now sign up and join your family using the email ${formData.email}.`,
+        title: 'Parent added!',
+        description: `${formData.display_name} has been added to your family.`,
       });
 
       // Reset form
       setFormData({
         display_name: '',
-        email: '',
         color: colors[0]?.color_key || 'sky',
         avatar_icon: '',
       });
@@ -156,7 +143,7 @@ export function InviteParentDialog({
             Add Another Parent
           </DialogTitle>
           <DialogDescription>
-            Create a profile for another parent or guardian. They can sign up later to access the family.
+            Add a parent or guardian to help manage the family. They can set up their own login later.
           </DialogDescription>
         </DialogHeader>
         
@@ -170,25 +157,6 @@ export function InviteParentDialog({
               placeholder="e.g., Mom, Dad, Sarah"
               required
             />
-          </div>
-
-          <div>
-            <Label htmlFor="parent_email">Email Address</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="parent_email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="parent@example.com"
-                className="pl-10"
-                required
-              />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              They'll use this email to sign up and join your family.
-            </p>
           </div>
 
           <div>
@@ -254,7 +222,7 @@ export function InviteParentDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Add Parent'}
+              {loading ? 'Adding...' : 'Add Parent'}
             </Button>
           </div>
         </form>

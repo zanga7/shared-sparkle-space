@@ -16,11 +16,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { ModuleToggleList } from './ModuleToggleList';
 import { Skeleton } from '@/components/ui/skeleton';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { 
   Archive, Trash2, Mail, Calendar, Clock, Smartphone, 
   AlertTriangle, User, Shield
@@ -491,14 +491,11 @@ export function FamilyDetailModal({ familyId, open, onOpenChange }: FamilyDetail
                       key={member.id}
                       className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card"
                     >
-                      <Avatar className="w-12 h-12">
-                        <AvatarFallback
-                          className="text-white font-semibold"
-                          style={{ backgroundColor: member.color }}
-                        >
-                          {member.display_name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <UserAvatar
+                        name={member.display_name}
+                        color={member.color}
+                        size="md"
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-foreground">{member.display_name}</div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -556,14 +553,11 @@ export function FamilyDetailModal({ familyId, open, onOpenChange }: FamilyDetail
                       key={member.id}
                       className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card"
                     >
-                      <Avatar className="w-10 h-10">
-                        <AvatarFallback
-                          className="text-white font-semibold text-sm"
-                          style={{ backgroundColor: member.color }}
-                        >
-                          {member.display_name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <UserAvatar
+                        name={member.display_name}
+                        color={member.color}
+                        size="sm"
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-foreground text-sm">{member.display_name}</div>
                         <div className="text-xs text-muted-foreground">

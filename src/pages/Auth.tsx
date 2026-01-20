@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-
+import { PasswordInput } from '@/components/ui/password-input';
 const Auth = () => {
   const navigate = useNavigate();
   const { signIn, signUp, user, resetPassword } = useAuth();
@@ -145,10 +145,9 @@ const Auth = () => {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="signin-password">Password</Label>
-                      <Input
+                      <PasswordInput
                         id="signin-password"
                         name="signin-password"
-                        type="password"
                         required
                       />
                     </div>
@@ -225,20 +224,18 @@ const Auth = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Create a password</Label>
-                    <Input
+                    <PasswordInput
                       id="signup-password"
                       name="signup-password"
-                      type="password"
                       required
                       minLength={6}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-confirm-password">Confirm password</Label>
-                    <Input
+                    <PasswordInput
                       id="signup-confirm-password"
                       name="signup-confirm-password"
-                      type="password"
                       required
                       minLength={6}
                     />
