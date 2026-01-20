@@ -99,7 +99,7 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
   });
   
   // Get task map for linked tasks
-  const { tasksMap } = useGoalLinkedTasks(goal?.linked_tasks || []);
+  const { tasksMap, familyMembers: goalFamilyMembers, refetch: refetchTasks } = useGoalLinkedTasks(goal?.linked_tasks || []);
 
   // Early return after all hooks
   if (!goal) return null;
@@ -111,6 +111,32 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
   const canEdit = isOwner || isParent;
   const isConsistencyGoal = goal.goal_type === 'consistency';
   
+  // Get all tasks as array for EnhancedTaskItem
+  const allTasks = Object.values(tasksMap);
+  
+  // Get member's task from the tasksMap (for consistency goals with per-member tasks)
+  const getMemberTask = (memberId: string): any | null => {
+    // Try finding by member-specific key first
+    for (const linkedTask of (goal.linked_tasks || [])) {
+      const memberKey = `${linkedTask.id}-${memberId}`;
+      if (tasksMap[memberKey]) {
+        return tasksMap[memberKey];
+      }
+    }
+    // Fallback: find task in tasksMap that has this member as assignee
+    for (const task of Object.values(tasksMap)) {
+      const memberMatch = (task as any)._member_id === memberId;
+      if (memberMatch) return task;
+    }
+    // Last fallback: if only one assignee, return any series task
+    for (const task of Object.values(tasksMap)) {
+      if ((task as any).series_id) {
+        return task;
+      }
+    }
+    return null;
+  };
+  
   // Handle task completion/uncomplete
   const handleTaskComplete = async (linkedTask: GoalLinkedTask) => {
     const task = tasksMap[linkedTask.id];
@@ -119,9 +145,20 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
     const hasCompletion = task.task_completions && task.task_completions.length > 0;
     
     if (hasCompletion) {
-      await uncompleteTask(task, () => fetchGoals());
+      await uncompleteTask(task, () => { fetchGoals(); refetchTasks(); });
     } else {
-      await completeTask(task, () => fetchGoals());
+      await completeTask(task, () => { fetchGoals(); refetchTasks(); });
+    }
+  };
+  
+  // Handle direct task toggle from the grid
+  const handleMemberTaskToggle = async (task: any) => {
+    const hasCompletion = task.task_completions && task.task_completions.length > 0;
+    
+    if (hasCompletion) {
+      await uncompleteTask(task, () => { fetchGoals(); refetchTasks(); });
+    } else {
+      await completeTask(task, () => { fetchGoals(); refetchTasks(); });
     }
   };
 
@@ -320,25 +357,32 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
           <div className="space-y-4">
             <h3 className="font-semibold text-sm">Progress Details</h3>
             
-            {/* Consistency Goal: Show per-member grids */}
+            {/* Consistency Goal: Show per-member grids with their tasks */}
             {isConsistencyGoal && 'time_window_days' in goal.success_criteria && (
               <div className="space-y-4">
                 {allAssignees.length > 0 ? (
                   <div className="space-y-3">
-                    {allAssignees.map((assignee) => (
-                      <MemberConsistencyGrid
-                        key={assignee.profile_id}
-                        member={{
-                          id: assignee.profile_id,
-                          display_name: assignee.profile?.display_name || 'Unknown',
-                          color: assignee.profile?.color || '#888',
-                          avatar_url: assignee.profile?.avatar_url
-                        }}
-                        startDate={goal.start_date}
-                        totalDays={(goal.success_criteria as { time_window_days: number }).time_window_days}
-                        completedDates={completionsByMember[assignee.profile_id] || []}
-                      />
-                    ))}
+                    {allAssignees.map((assignee) => {
+                      const memberTask = getMemberTask(assignee.profile_id);
+                      return (
+                        <MemberConsistencyGrid
+                          key={assignee.profile_id}
+                          member={{
+                            id: assignee.profile_id,
+                            display_name: assignee.profile?.display_name || 'Unknown',
+                            color: assignee.profile?.color || '#888',
+                            avatar_url: assignee.profile?.avatar_url
+                          }}
+                          startDate={goal.start_date}
+                          totalDays={(goal.success_criteria as { time_window_days: number }).time_window_days}
+                          completedDates={completionsByMember[assignee.profile_id] || []}
+                          memberTask={memberTask}
+                          allTasks={allTasks}
+                          familyMembers={goalFamilyMembers}
+                          onTaskToggle={handleMemberTaskToggle}
+                        />
+                      );
+                    })}
                   </div>
                 ) : (
                   // Fallback if no assignees
@@ -401,8 +445,8 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
           
           <Separator />
           
-          {/* Goal Tasks Section - only for non-project goals */}
-          {goal.goal_type !== 'project' && (
+          {/* Goal Tasks Section - only for target_count goals (not consistency or project) */}
+          {goal.goal_type === 'target_count' && (
             <div className="space-y-4">
               <h3 className="font-semibold text-sm flex items-center gap-2">
                 <Target className="h-4 w-4" />
@@ -416,7 +460,6 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
               />
             </div>
           )}
-          
           {/* Milestones Section for project goals */}
           {goal.goal_type === 'project' && (
             <>

@@ -1,11 +1,12 @@
-import { useState } from 'react';
 import { Check, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useMemberColor } from '@/hooks/useMemberColor';
+import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
 import { format, eachDayOfInterval, isSameDay, startOfDay, addDays, parseISO, isAfter, isBefore, differenceInDays } from 'date-fns';
+import type { Task, Profile } from '@/types/task';
 
 interface MemberConsistencyGridProps {
   member: {
@@ -20,6 +21,12 @@ interface MemberConsistencyGridProps {
   onMarkComplete?: () => Promise<void>;
   isCompletingToday?: boolean;
   className?: string;
+  // New props for showing task inline
+  memberTask?: Task | null;
+  allTasks?: Task[];
+  familyMembers?: Profile[];
+  onTaskToggle?: (task: Task) => void;
+  isCompletingTask?: boolean;
 }
 
 export function MemberConsistencyGrid({
@@ -29,9 +36,14 @@ export function MemberConsistencyGrid({
   completedDates,
   onMarkComplete,
   isCompletingToday = false,
-  className
+  className,
+  memberTask,
+  allTasks = [],
+  familyMembers = [],
+  onTaskToggle,
+  isCompletingTask = false,
 }: MemberConsistencyGridProps) {
-  const { hex: memberHex, styles: memberStyles } = useMemberColor(member.color);
+  const { hex: memberHex } = useMemberColor(member.color);
   
   const start = startOfDay(parseISO(startDate));
   const end = addDays(start, totalDays - 1);
@@ -148,14 +160,28 @@ export function MemberConsistencyGrid({
           })}
         </div>
         
-        {/* Footer with dates and action */}
+        {/* Footer with dates */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>{format(start, 'MMM d')}</span>
           <span>{format(end, 'MMM d')}</span>
         </div>
         
-        {/* Mark Complete Button */}
-        {onMarkComplete && isTodayInRange && !isTodayCompleted && (
+        {/* Member's Task - rendered inline using EnhancedTaskItem */}
+        {memberTask && onTaskToggle && (
+          <div className="pt-2 border-t">
+            <EnhancedTaskItem
+              task={memberTask}
+              allTasks={allTasks}
+              familyMembers={familyMembers}
+              onToggle={() => onTaskToggle(memberTask)}
+              showActions={false}
+              isCompleting={isCompletingTask}
+            />
+          </div>
+        )}
+        
+        {/* Fallback: Mark Complete Button (only if no task is provided) */}
+        {!memberTask && onMarkComplete && isTodayInRange && !isTodayCompleted && (
           <Button
             onClick={onMarkComplete}
             disabled={isCompletingToday}
@@ -173,7 +199,7 @@ export function MemberConsistencyGrid({
           </Button>
         )}
         
-        {isTodayInRange && isTodayCompleted && (
+        {!memberTask && isTodayInRange && isTodayCompleted && (
           <div className="flex items-center justify-center gap-2 py-2 text-sm text-green-600">
             <Check className="h-4 w-4" />
             <span>Today completed!</span>
