@@ -2494,6 +2494,19 @@ export type Database = {
             Returns: Json
           }
       calculate_goal_progress: { Args: { p_goal_id: string }; Returns: Json }
+      calculate_goals_progress_batch: {
+        Args: { p_goal_ids: string[] }
+        Returns: {
+          completed_tasks: number
+          current_value: number
+          expected_completions: number
+          goal_id: string
+          percentage: number
+          target_value: number
+          total_completions: number
+          total_tasks: number
+        }[]
+      }
       can_access_calendar_integration: {
         Args: { integration_profile_id: string }
         Returns: boolean

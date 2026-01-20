@@ -12,6 +12,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { GoalsProvider } from "@/hooks/useGoals";
 import { ColorPaletteProvider } from "@/contexts/ColorPaletteContext";
 import { GlobalStyleProvider } from "@/contexts/GlobalStyleContext";
+import { FamilyDataProvider } from "@/contexts/FamilyDataContext";
 import { OnboardingRedirect } from "@/components/OnboardingRedirect";
 import { RouteMemoryProvider } from "@/components/RouteMemoryProvider";
 
@@ -83,10 +84,11 @@ const queryClient = new QueryClient({
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <GlobalStyleProvider>
-        <GoalsProvider>
-          <ColorPaletteProvider>
-            <TooltipProvider>
+      <FamilyDataProvider>
+        <GlobalStyleProvider>
+          <GoalsProvider>
+            <ColorPaletteProvider>
+              <TooltipProvider>
               <Toaster />
               <Sonner />
               <PWAInstallPrompt />
@@ -155,6 +157,7 @@ const App = () => (
           </ColorPaletteProvider>
         </GoalsProvider>
       </GlobalStyleProvider>
+    </FamilyDataProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
