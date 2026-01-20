@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Trash2, Calendar, User, Users, Repeat, RotateCcw, Target } from 'lucide-react';
+import { Trash2, User, Users, Repeat, RotateCcw, Target } from 'lucide-react';
+import { InlineDatePicker } from '@/components/ui/inline-date-picker';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -586,34 +587,13 @@ export const EditTaskDialog = ({
 
             {/* Due date - optional for all task types except rotating tasks */}
             {!task.rotating_task_id && (
-              <div>
-                <Label htmlFor="due_date">Due Date (Optional)</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="due_date"
-                    type="date"
-                    value={formData.due_date ? format(formData.due_date, 'yyyy-MM-dd') : ''}
-                    onChange={(e) =>
-                      setFormData(prev => ({
-                        ...prev,
-                        due_date: e.target.value ? new Date(e.target.value) : null
-                      }))
-                    }
-                    className="flex-1"
-                  />
-                  {formData.due_date && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setFormData(prev => ({ ...prev, due_date: null }))}
-                      title="Clear due date"
-                    >
-                      ×
-                    </Button>
-                  )}
-                </div>
-              </div>
+              <InlineDatePicker
+                date={formData.due_date}
+                onDateChange={(date) => setFormData(prev => ({ ...prev, due_date: date }))}
+                label="Due Date (Optional)"
+                placeholder="No due date"
+                showClear={true}
+              />
             )}
 
             <div>

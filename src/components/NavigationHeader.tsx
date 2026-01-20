@@ -70,14 +70,40 @@ export function NavigationHeader({
   return <header className="w-full border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="w-full px-2 sm:px-4 lg:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4 relative">
         {/* Main Navigation - Always visible */}
-        <nav className="flex items-center space-x-1 flex-shrink-0">
+        <nav className="flex items-center space-x-0.5 sm:space-x-1 flex-shrink-0">
           {navigationItems.map(item => {
-          const IconComponent = item.icon;
-          return <Button key={item.value} variant={activeTab === item.value ? "default" : "ghost"} size="sm" onClick={() => onTabChange(item.value)} className={cn("h-8 sm:h-9 px-2 sm:px-3 font-medium transition-colors", activeTab === item.value ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-accent")}>
-                <IconComponent className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                <span className="hidden sm:inline">{item.label}</span>
-              </Button>;
-        })}
+            const IconComponent = item.icon;
+            const isActive = activeTab === item.value;
+            return (
+              <Button 
+                key={item.value} 
+                variant={isActive ? "default" : "ghost"} 
+                size="sm" 
+                onClick={() => onTabChange(item.value)} 
+                className={cn(
+                  "h-8 sm:h-9 font-medium transition-colors",
+                  // On mobile/tablet: icon only for inactive, icon + label for active
+                  isActive ? "px-2 sm:px-3" : "px-2 sm:px-3",
+                  isActive 
+                    ? "bg-primary text-primary-foreground shadow-sm" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                )}
+              >
+                <IconComponent className={cn(
+                  "h-3.5 w-3.5 sm:h-4 sm:w-4",
+                  // Add margin only when label is shown
+                  isActive ? "mr-1.5 sm:mr-2" : "sm:mr-2"
+                )} />
+                {/* On mobile: show label only for active item. On desktop (sm+): show all labels */}
+                <span className={cn(
+                  "text-xs sm:text-sm",
+                  isActive ? "inline" : "hidden sm:inline"
+                )}>
+                  {item.label}
+                </span>
+              </Button>
+            );
+          })}
         </nav>
 
         {/* Member Management & Settings */}
