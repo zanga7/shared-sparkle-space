@@ -173,22 +173,38 @@ function useGoalsState() {
         }
       }
 
-      // Calculate progress for each goal
-      const goalsWithProgress = await Promise.all(
-        (goalsData || []).map(async (goal) => {
-          const { data: progressData } = await supabase
-            .rpc('calculate_goal_progress', { p_goal_id: goal.id });
-          
-          return {
-            ...goal,
-            success_criteria: goal.success_criteria as unknown as SuccessCriteria,
-            milestones: milestonesMap[goal.id] || [],
-            linked_tasks: linkedTasksMap[goal.id] || [],
-            assignees: assigneesMap[goal.id] || [],
-            progress: progressData as unknown as GoalProgress
-          } as Goal;
-        })
-      );
+      // Calculate progress for all goals in a single batch call (eliminates N+1 pattern)
+      let progressMap: Record<string, Partial<GoalProgress>> = {};
+      if (goalIds.length > 0) {
+        const { data: batchProgressData } = await supabase
+          .rpc('calculate_goals_progress_batch', { p_goal_ids: goalIds });
+        
+        if (batchProgressData) {
+          batchProgressData.forEach((p: any) => {
+            progressMap[p.goal_id] = {
+              goal_id: p.goal_id,
+              current_percent: Number(p.percentage) || 0,
+              is_complete: Number(p.percentage) >= 100,
+              total_completions: p.total_completions,
+              expected_completions: p.expected_completions,
+              completed_milestones: p.completed_tasks,
+              total_milestones: p.total_tasks,
+              current_count: Number(p.current_value) || 0,
+              target_count: Number(p.target_value) || 1,
+            };
+          });
+        }
+      }
+
+      // Build goals with progress data
+      const goalsWithProgress = (goalsData || []).map((goal) => ({
+        ...goal,
+        success_criteria: goal.success_criteria as unknown as SuccessCriteria,
+        milestones: milestonesMap[goal.id] || [],
+        linked_tasks: linkedTasksMap[goal.id] || [],
+        assignees: assigneesMap[goal.id] || [],
+        progress: progressMap[goal.id] as GoalProgress | undefined
+      } as Goal));
 
       setGoals(goalsWithProgress);
     } catch (err) {

@@ -81,11 +81,10 @@ export const useRecurringSeries = (familyId?: string) => {
     
     setLoading(true);
     try {
-      // Parallelize all database queries for faster loading
+      // First fetch task and event series in parallel
       const [
         { data: taskSeriesData, error: taskError },
-        { data: eventSeriesData, error: eventError },
-        { data: exceptionsData, error: exceptionsError }
+        { data: eventSeriesData, error: eventError }
       ] = await Promise.all([
         supabase
           .from('task_series')
@@ -96,17 +95,30 @@ export const useRecurringSeries = (familyId?: string) => {
           .from('event_series')
           .select('*')
           .eq('family_id', familyId)
-          .eq('is_active', true),
-        supabase
-          .from('recurrence_exceptions')
-          .select('*')
+          .eq('is_active', true)
       ]);
 
       if (taskError) throw taskError;
       if (eventError) throw eventError;
-      if (exceptionsError) throw exceptionsError;
 
-      // Update state normally (React batches these automatically)
+      // Collect all series IDs to filter exceptions
+      const taskSeriesIds = (taskSeriesData || []).map(s => s.id);
+      const eventSeriesIds = (eventSeriesData || []).map(s => s.id);
+      const allSeriesIds = [...taskSeriesIds, ...eventSeriesIds];
+
+      // Only fetch exceptions for series we actually have (prevents fetching ALL exceptions)
+      let exceptionsData: any[] = [];
+      if (allSeriesIds.length > 0) {
+        const { data, error: exceptionsError } = await supabase
+          .from('recurrence_exceptions')
+          .select('*')
+          .in('series_id', allSeriesIds);
+        
+        if (exceptionsError) throw exceptionsError;
+        exceptionsData = data || [];
+      }
+
+      // Update state (React batches these automatically)
       setTaskSeries((taskSeriesData || []).map(item => ({
         ...item,
         recurrence_rule: item.recurrence_rule as unknown as RecurrenceRule
@@ -115,7 +127,7 @@ export const useRecurringSeries = (familyId?: string) => {
         ...item,
         recurrence_rule: item.recurrence_rule as unknown as RecurrenceRule
       })));
-      setExceptions((exceptionsData || []).map(item => ({
+      setExceptions(exceptionsData.map(item => ({
         ...item,
         series_type: item.series_type as 'task' | 'event',
         exception_type: item.exception_type as 'skip' | 'override'
