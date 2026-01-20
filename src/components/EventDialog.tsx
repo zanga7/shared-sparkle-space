@@ -18,7 +18,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { CalendarEvent } from '@/types/event';
 import { EventRecurrenceOptions } from '@/types/recurrence';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
-import { DateTimePicker } from '@/components/ui/date-time-picker';
+import { DateTimePickerInline } from '@/components/ui/inline-date-picker';
 import { UnifiedRecurrencePanel } from '@/components/recurrence/UnifiedRecurrencePanel';
 import { EditScopeDialog, EditScope } from '@/components/recurrence/EditScopeDialog';
 import { Badge } from '@/components/ui/badge';
@@ -915,22 +915,18 @@ export const EventDialog = ({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <DateTimePicker
-                  startDate={startDate}
-                  endDate={endDate}
-                  startTime={startTime}
-                  endTime={endTime}
-                  isAllDay={isAllDay}
-                  onStartDateChange={handleStartDateChange}
-                  onEndDateChange={handleEndDateChange}
-                  onStartTimeChange={handleStartTimeChange}
-                  onEndTimeChange={handleEndTimeChange}
-                  onAllDayChange={handleAllDayChange}
-                />
-              </div>
-            </div>
+            <DateTimePickerInline
+              startDate={startDate}
+              endDate={endDate}
+              startTime={startTime}
+              endTime={endTime}
+              isAllDay={isAllDay}
+              onStartDateChange={handleStartDateChange}
+              onEndDateChange={handleEndDateChange}
+              onStartTimeChange={handleStartTimeChange}
+              onEndTimeChange={handleEndTimeChange}
+              onAllDayChange={handleAllDayChange}
+            />
 
             <div className="space-y-2">
               <Label className="flex items-center gap-2">

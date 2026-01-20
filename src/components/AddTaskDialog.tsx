@@ -4,11 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { InlineDatePicker } from '@/components/ui/inline-date-picker';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, Plus, Users, User, Sun, Clock3, Moon, FileText } from 'lucide-react';
+import { Plus, Users, User, Sun, Clock3, Moon, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -487,48 +486,16 @@ export const AddTaskDialog = ({
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label>Due Date (Optional)</Label>
-            <div className="flex gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "flex-1 justify-start text-left font-normal",
-                      !formData.due_date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.due_date ? format(formData.due_date, "PPP") : "No due date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.due_date}
-                    onSelect={(date) => {
-                      const validDate = date && !isNaN(date.getTime()) ? date : null;
-                      setFormData({ ...formData, due_date: validDate });
-                    }}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-              {formData.due_date && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setFormData({ ...formData, due_date: null })}
-                  title="Clear due date"
-                >
-                  ×
-                </Button>
-              )}
-            </div>
-          </div>
+          <InlineDatePicker
+            date={formData.due_date}
+            onDateChange={(date) => {
+              const validDate = date && !isNaN(date.getTime()) ? date : null;
+              setFormData({ ...formData, due_date: validDate });
+            }}
+            label="Due Date (Optional)"
+            placeholder="No due date"
+            showClear={true}
+          />
 
           {/* Recurrence Panel */}
           <UnifiedRecurrencePanel
