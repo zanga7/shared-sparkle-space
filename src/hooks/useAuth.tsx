@@ -51,8 +51,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string, metadata?: { display_name?: string; family_name?: string }) => {
     // Always use the published production URL for email redirects
-    // This prevents localhost or preview URLs from appearing in confirmation emails
-    const redirectUrl = 'https://wildones.lovable.app/';
+    // This redirects to the confirmation page after email verification
+    const redirectUrl = 'https://wildones.lovable.app/auth/confirmed';
     
     const { error } = await supabase.auth.signUp({
       email,

@@ -135,7 +135,7 @@ export function EditMyProfileCard({
 
   if (!isEditing) {
     return (
-      <Card className="border-2 border-primary/20 bg-primary/5">
+      <Card className="border-2 border-dashed border-primary/40 bg-primary/5 hover:border-primary/60 transition-colors cursor-pointer" onClick={() => setIsEditing(true)}>
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -145,19 +145,15 @@ export function EditMyProfileCard({
                 avatarIcon={avatarUrl || undefined}
                 size="md"
               />
-              <div>
+              <div className="flex-1">
                 <p className="font-semibold">{displayName}</p>
                 <p className="text-sm text-muted-foreground">Your Profile (Parent)</p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setIsEditing(true)}
-            >
-              <Edit className="h-4 w-4 mr-1" />
-              Edit
-            </Button>
+            <div className="flex items-center gap-2 text-primary">
+              <Edit className="h-4 w-4" />
+              <span className="text-sm font-medium">Click to customize</span>
+            </div>
           </div>
         </CardContent>
       </Card>
