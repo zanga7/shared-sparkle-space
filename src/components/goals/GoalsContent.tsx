@@ -84,11 +84,26 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
   }, [goals]);
   
   // Handle task completion/uncomplete from goals
-  const handleTaskToggle = async (linkedTask: GoalLinkedTask) => {
-    const task = tasksMap[linkedTask.id];
+  const handleTaskToggle = async (linkedTask: GoalLinkedTask, passedTask?: any) => {
+    // If task was passed directly, use it (more reliable for series tasks)
+    let task = passedTask;
+    
     if (!task) {
-      console.log('Task not found in tasksMap for linkedTask:', linkedTask.id);
-      return;
+      // Fall back to looking up in tasksMap
+      const matchingEntries = Object.entries(tasksMap).filter(([key]) => 
+        key === linkedTask.id || key.startsWith(`${linkedTask.id}-`)
+      );
+      
+      const taskEntries = matchingEntries.length > 0 
+        ? matchingEntries 
+        : tasksMap[linkedTask.id] ? [[linkedTask.id, tasksMap[linkedTask.id]] as const] : [];
+      
+      if (taskEntries.length === 0) {
+        console.log('Task not found in tasksMap for linkedTask:', linkedTask.id);
+        return;
+      }
+      
+      task = taskEntries[0][1];
     }
     
     // Check if the task has any completions in the current data
@@ -98,7 +113,9 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
       linkedTaskId: linkedTask.id, 
       taskId: task.id, 
       hasCompletion, 
-      completions: task.task_completions 
+      completions: task.task_completions,
+      series_id: task.series_id,
+      occurrence_date: task.occurrence_date
     });
     
     // Callback to refresh both goals and linked tasks cache
@@ -107,11 +124,14 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
       fetchGoals(); // Then refresh goals
     };
     
+    // Get the member ID for completion (for multi-member tasks)
+    const memberId = (task as any)._member_id || task.assignees?.[0]?.profile_id;
+    
     if (hasCompletion) {
       // For uncompleting, we need to pass the task with its completions
-      await uncompleteTask(task, onComplete);
+      await uncompleteTask(task, onComplete, memberId);
     } else {
-      await completeTask(task, onComplete);
+      await completeTask(task, onComplete, memberId);
     }
   };
 
