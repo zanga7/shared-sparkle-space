@@ -194,11 +194,13 @@ export function FamilyDetailModal({ familyId, open, onOpenChange }: FamilyDetail
         .eq('family_id', familyId);
       const rewardIds = rewardData?.map(r => r.id) || [];
       
+      // Get profiles with their user_ids for auth deletion
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, user_id')
         .eq('family_id', familyId);
       const profileIds = profileData?.map(p => p.id) || [];
+      const userIds = profileData?.filter(p => p.user_id).map(p => p.user_id) || [];
       
       // Delete related data in order (respecting foreign keys)
       
@@ -294,6 +296,25 @@ export function FamilyDetailModal({ familyId, open, onOpenChange }: FamilyDetail
         .eq('id', familyId);
       
       if (error) throw error;
+      
+      // 18. Delete auth users via edge function
+      if (userIds.length > 0) {
+        console.log(`Deleting ${userIds.length} auth users for family ${familyId}`);
+        const { data: authDeleteResult, error: authDeleteError } = await supabase.functions.invoke(
+          'admin-delete-users',
+          {
+            body: { user_ids: userIds }
+          }
+        );
+        
+        if (authDeleteError) {
+          console.error('Error deleting auth users:', authDeleteError);
+          // Don't throw - family data is already deleted, log the warning
+          toast.warning('Family deleted but some auth accounts may remain. Check logs.');
+        } else {
+          console.log('Auth deletion result:', authDeleteResult);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['super-admin-families'] });
@@ -628,6 +649,7 @@ export function FamilyDetailModal({ familyId, open, onOpenChange }: FamilyDetail
                   <li>All goals and rewards</li>
                   <li>Points history and streaks</li>
                   <li>All settings and configurations</li>
+                  <li className="font-semibold text-destructive">All linked authentication accounts</li>
                 </ul>
               </div>
             </AlertDialogDescription>
