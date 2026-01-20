@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.calendar-webhooks]
 verify_jwt = false
+
+[functions.admin-delete-users]
+verify_jwt = false

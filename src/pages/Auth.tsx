@@ -14,6 +14,7 @@ const Auth = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -44,13 +45,28 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setPasswordError(null);
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
     const email = formData.get('signup-email') as string;
     const password = formData.get('signup-password') as string;
+    const confirmPassword = formData.get('signup-confirm-password') as string;
     const displayName = formData.get('display-name') as string;
     const familyName = formData.get('family-name') as string;
+
+    // Password validation
+    if (password !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      setLoading(false);
+      return;
+    }
 
     const { error } = await signUp(email, password, {
       display_name: displayName,
@@ -193,7 +209,7 @@ const Auth = () => {
                     <Input
                       id="family-name"
                       name="family-name"
-                      placeholder="The Smith Family"
+                      placeholder="This can be your Family Name, Surname or a Team Name"
                       required
                     />
                   </div>
@@ -208,13 +224,27 @@ const Auth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="signup-password">Create a password</Label>
                     <Input
                       id="signup-password"
                       name="signup-password"
                       type="password"
                       required
+                      minLength={6}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-confirm-password">Confirm password</Label>
+                    <Input
+                      id="signup-confirm-password"
+                      name="signup-confirm-password"
+                      type="password"
+                      required
+                      minLength={6}
+                    />
+                    {passwordError && (
+                      <p className="text-sm text-destructive">{passwordError}</p>
+                    )}
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? 'Creating Account...' : 'Create Family Account'}
@@ -224,19 +254,6 @@ const Auth = () => {
             </Tabs>
           </CardContent>
         </Card>
-        
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground mb-2">
-            Are you a child?
-          </p>
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/child-auth')}
-            className="w-full max-w-md"
-          >
-            Child Login
-          </Button>
-        </div>
       </div>
     </div>
   );
