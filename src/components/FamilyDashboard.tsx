@@ -496,16 +496,11 @@ export const FamilyDashboard = memo(({
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8"
+        className="mb-8"
       >
-        <h1 className="text-3xl sm:text-4xl font-bold mb-2 flex items-center justify-center gap-2">
-          <Sparkles className="h-8 w-8 text-amber-500" />
-          Family Dashboard
-          <Sparkles className="h-8 w-8 text-amber-500" />
-        </h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-3xl sm:text-4xl font-bold text-left">
           {format(new Date(), 'EEEE, MMMM do, yyyy')}
-        </p>
+        </h1>
       </motion.div>
 
       {/* Main content grid - 3 columns with aligned headers */}
