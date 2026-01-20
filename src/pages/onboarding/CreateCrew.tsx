@@ -122,9 +122,14 @@ export default function CreateCrew() {
           {/* Current User Profile Section */}
           {currentUserProfile && (
             <div className="space-y-3">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                Your Profile
-              </h3>
+              <div className="space-y-1">
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                  Your Profile
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Personalize your profile with a unique color and avatar icon
+                </p>
+              </div>
               <EditMyProfileCard
                 profileId={currentUserProfile.id}
                 displayName={currentUserProfile.display_name}

@@ -19,6 +19,7 @@ import { RouteMemoryProvider } from "@/components/RouteMemoryProvider";
 // Eagerly loaded critical routes
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import EmailConfirmed from "./pages/EmailConfirmed";
 import NotFound from "./pages/NotFound";
 
 // Lazy loaded routes for code splitting
@@ -103,6 +104,7 @@ const App = () => (
                       <Routes>
                         <Route path="/" element={<Index />} />
                         <Route path="/auth" element={<Auth />} />
+                        <Route path="/auth/confirmed" element={<EmailConfirmed />} />
                         <Route path="/child-auth" element={<ChildAuth />} />
                         <Route path="/rewards" element={<Rewards />} />
                         <Route path="/lists" element={<Lists />} />

@@ -136,6 +136,28 @@ export default function SelectPlan() {
     );
   }
 
+  // If no plans available, show message
+  if (!plans || plans.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full p-8 text-center space-y-6">
+          <div className="mx-auto w-20 h-20 rounded-full bg-muted flex items-center justify-center">
+            <Sparkles className="w-10 h-10 text-muted-foreground" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold">No Plans Available</h1>
+            <p className="text-muted-foreground">
+              Subscription plans haven't been configured yet. Please contact support.
+            </p>
+          </div>
+          <Button onClick={() => navigate('/onboarding/crew')}>
+            Continue Setup
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4 overflow-y-auto">
       <Card className="max-w-5xl w-full p-6 md:p-12 space-y-6 md:space-y-8 shadow-xl my-4">
