@@ -32,13 +32,17 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
   const progress = goal.progress;
   const percent = progress?.current_percent ?? 0;
   
-  // Fetch completion dates for consistency goals
-  const { allCompletedDates } = useConsistencyCompletions(
+  // Fetch completion dates for consistency goals - now by member
+  const { completionsByMember, allCompletedDates } = useConsistencyCompletions(
     goal.goal_type === 'consistency' ? goal : null
   );
   
   // Fetch full task data for linked tasks
   const { tasksMap, familyMembers } = useGoalLinkedTasks(goal.linked_tasks || []);
+  
+  // Get goal assignees with their profile data
+  const goalAssignees = goal.assignees || [];
+  const assigneeProfiles = goalAssignees.map(a => a.profile).filter(Boolean);
   
   const getGoalTypeLabel = () => {
     switch (goal.goal_type) {
@@ -223,7 +227,7 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
       </CardHeader>
       
       <CardContent className="pt-2">
-        {/* Consistency goals show streak grid instead of progress ring */}
+        {/* Consistency goals show per-member streak grids */}
         {goal.goal_type === 'consistency' && 'time_window_days' in goal.success_criteria ? (
           <div className="space-y-3">
             {/* Streak info header */}
@@ -240,13 +244,39 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
               </div>
             </div>
             
-            {/* Compact streak grid */}
-            <ConsistencyProgressGrid
-              startDate={goal.start_date}
-              totalDays={(goal.success_criteria as { time_window_days: number }).time_window_days}
-              completedDates={allCompletedDates}
-              className="text-xs"
-            />
+            {/* Per-member compact streak grids */}
+            <div className="space-y-2">
+              {assigneeProfiles.length > 0 ? (
+                assigneeProfiles.map((profile) => {
+                  const memberCompletions = completionsByMember[profile!.id] || [];
+                  return (
+                    <div key={profile!.id} className="flex items-center gap-2">
+                      <UserAvatar 
+                        name={profile!.display_name} 
+                        color={profile!.color}
+                        avatarIcon={profile!.avatar_url || undefined}
+                        size="xs"
+                      />
+                      <ConsistencyProgressGrid
+                        startDate={goal.start_date}
+                        totalDays={(goal.success_criteria as { time_window_days: number }).time_window_days}
+                        completedDates={memberCompletions}
+                        memberColor={profile!.color}
+                        className="text-xs flex-1"
+                      />
+                    </div>
+                  );
+                })
+              ) : (
+                /* Fallback: single grid if no assignees */
+                <ConsistencyProgressGrid
+                  startDate={goal.start_date}
+                  totalDays={(goal.success_criteria as { time_window_days: number }).time_window_days}
+                  completedDates={allCompletedDates}
+                  className="text-xs"
+                />
+              )}
+            </div>
             
             {goal.reward && (
               <div className="flex items-center gap-1 text-amber-500 text-sm">
@@ -283,8 +313,8 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
           </div>
         )}
         
-        {/* Show assignees - single or multiple */}
-        {goal.assignees && goal.assignees.length > 0 && (
+        {/* Show assignees - single or multiple (skip for consistency goals - avatars are in grids) */}
+        {goal.goal_type !== 'consistency' && goal.assignees && goal.assignees.length > 0 && (
           <div className="flex items-center gap-1 mt-3 pt-3 border-t">
             {goal.assignees.slice(0, 5).map((a) => (
               <UserAvatar 
@@ -306,8 +336,8 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
           </div>
         )}
         
-        {/* Fallback to single assignee if no assignees array */}
-        {(!goal.assignees || goal.assignees.length === 0) && goal.assignee && (
+        {/* Fallback to single assignee if no assignees array (skip for consistency) */}
+        {goal.goal_type !== 'consistency' && (!goal.assignees || goal.assignees.length === 0) && goal.assignee && (
           <div className="flex items-center gap-2 mt-3 pt-3 border-t">
             <UserAvatar 
               name={goal.assignee.display_name} 
@@ -319,8 +349,8 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
           </div>
         )}
         
-        {/* Family goals with participant progress */}
-        {goal.goal_scope === 'family' && !goal.assignees?.length && progress?.participant_progress && (
+        {/* Family goals with participant progress (skip for consistency) */}
+        {goal.goal_type !== 'consistency' && goal.goal_scope === 'family' && !goal.assignees?.length && progress?.participant_progress && (
           <div className="flex items-center gap-1 mt-3 pt-3 border-t">
             {progress.participant_progress.slice(0, 5).map((p) => (
               <UserAvatar 
@@ -414,12 +444,14 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                 <span>Complete today's challenge</span>
               </div>
             )}
-            {unassignedTasks.slice(0, 2).map((linkedTask) => {
+            {unassignedTasks.slice(0, goal.goal_type === 'consistency' ? 5 : 2).map((linkedTask) => {
               const task = tasksMap[linkedTask.id];
               if (!task) {
+                // Show loading state instead of grey box when we're still fetching
                 return (
-                  <div key={linkedTask.id} className="rounded-lg p-2 bg-muted/30 text-muted-foreground text-xs">
-                    {linkedTask.task_title || 'Unknown Task'}
+                  <div key={linkedTask.id} className="rounded-lg p-3 bg-muted/20 border text-sm flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30" />
+                    <span className="text-muted-foreground">{linkedTask.task_title || 'Loading task...'}</span>
                   </div>
                 );
               }
@@ -434,9 +466,9 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                 />
               );
             })}
-            {unassignedTasks.length > 2 && (
+            {unassignedTasks.length > (goal.goal_type === 'consistency' ? 5 : 2) && (
               <span className="text-xs text-muted-foreground">
-                +{unassignedTasks.length - 2} more tasks
+                +{unassignedTasks.length - (goal.goal_type === 'consistency' ? 5 : 2)} more tasks
               </span>
             )}
           </div>
