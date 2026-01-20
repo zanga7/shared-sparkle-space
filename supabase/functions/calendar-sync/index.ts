@@ -122,12 +122,30 @@ Deno.serve(async (req) => {
 
       if (integration.integration_type === 'google') {
         tokenUrl = 'https://oauth2.googleapis.com/token';
-        clientId = Deno.env.get('GOOGLE_CALENDAR_CLIENT_ID') || '';
-        clientSecret = Deno.env.get('GOOGLE_CALENDAR_CLIENT_SECRET') || '';
+        // Fetch OAuth credentials from database
+        const { data: googleClientId } = await supabaseClient
+          .rpc('get_oauth_credential', { credential_key: 'google_client_id' });
+        const { data: googleClientSecret } = await supabaseClient
+          .rpc('get_oauth_credential', { credential_key: 'google_client_secret' });
+        
+        if (!googleClientId || !googleClientSecret) {
+          throw new Error('Google OAuth credentials not configured. Please set them in Super Admin > Integrations.');
+        }
+        clientId = googleClientId;
+        clientSecret = googleClientSecret;
       } else if (integration.integration_type === 'microsoft') {
         tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
-        clientId = Deno.env.get('MICROSOFT_CALENDAR_CLIENT_ID') || '';
-        clientSecret = Deno.env.get('MICROSOFT_CALENDAR_CLIENT_SECRET') || '';
+        // Fetch OAuth credentials from database
+        const { data: msClientId } = await supabaseClient
+          .rpc('get_oauth_credential', { credential_key: 'microsoft_client_id' });
+        const { data: msClientSecret } = await supabaseClient
+          .rpc('get_oauth_credential', { credential_key: 'microsoft_client_secret' });
+        
+        if (!msClientId || !msClientSecret) {
+          throw new Error('Microsoft OAuth credentials not configured. Please set them in Super Admin > Integrations.');
+        }
+        clientId = msClientId;
+        clientSecret = msClientSecret;
       } else {
         throw new Error('Unsupported integration type');
       }
