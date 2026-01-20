@@ -115,15 +115,6 @@ export const useEvents = (familyId?: string) => {
             exceptionType: instance.exceptionType
           };
         
-        // Debug: verify local vs stored values for recurring instances
-        console.debug('[VirtualEvent]', {
-          title: virtualEvent.title,
-          instanceUTC: instance.date.toISOString(),
-          occurrenceLocalDay: format(instance.date, "EEE yyyy-MM-dd"),
-          seriesLocalTime: `${String(sh).padStart(2,'0')}:${String(sm).padStart(2,'0')}`,
-          startISO,
-          endISO
-        });
         
         virtualEvents.push(virtualEvent);
       });

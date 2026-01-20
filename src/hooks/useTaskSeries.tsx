@@ -79,35 +79,36 @@ export const useTaskSeries = (familyId?: string) => {
     });
   };
 
-  // Fetch all task series, exceptions, and holiday dates
+  // Fetch all task series, exceptions, and holiday dates in parallel
   const fetchTaskSeries = async () => {
     if (!familyId) return;
     
     setLoading(true);
     try {
-      // Fetch task series
-      const { data: seriesData, error: seriesError } = await supabase
-        .from('task_series')
-        .select('*')
-        .eq('family_id', familyId)
-        .eq('is_active', true);
+      // Parallelize all database queries for faster loading
+      const [seriesResult, exceptionsResult, holidaysResult] = await Promise.all([
+        supabase
+          .from('task_series')
+          .select('*')
+          .eq('family_id', familyId)
+          .eq('is_active', true),
+        supabase
+          .from('recurrence_exceptions')
+          .select('*')
+          .eq('series_type', 'task'),
+        supabase
+          .from('holiday_dates')
+          .select('id, start_date, end_date, name')
+          .eq('family_id', familyId)
+      ]);
+
+      const { data: seriesData, error: seriesError } = seriesResult;
+      const { data: exceptionsData, error: exceptionsError } = exceptionsResult;
+      const { data: holidaysData, error: holidaysError } = holidaysResult;
 
       if (seriesError) throw seriesError;
-
-      // Fetch exceptions
-      const { data: exceptionsData, error: exceptionsError } = await supabase
-        .from('recurrence_exceptions')
-        .select('*')
-        .eq('series_type', 'task');
-
       if (exceptionsError) throw exceptionsError;
-
-      // Fetch holiday dates for pause during holidays feature
-      const { data: holidaysData, error: holidaysError } = await supabase
-        .from('holiday_dates')
-        .select('id, start_date, end_date, name')
-        .eq('family_id', familyId);
-
+      
       if (holidaysError) {
         console.warn('Could not fetch holiday dates:', holidaysError);
       } else {
