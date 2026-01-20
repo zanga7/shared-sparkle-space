@@ -193,7 +193,7 @@ const TodayEventsWidget = memo(({ events, onViewCalendar }: { events: any[]; onV
                   </p>
                 </div>
                 {event.attendees && event.attendees.length > 0 && (
-                  <div className="flex -space-x-2">
+                  <div className="flex gap-1">
                     {event.attendees.slice(0, 3).map((attendee: any) => (
                       <UserAvatar
                         key={attendee.profile_id}
@@ -378,7 +378,7 @@ const GoalsWidget = memo(({ goals, onNavigateToGoals }: { goals: any[]; onNaviga
                       {goal.assignees && goal.assignees.length > 0 && (
                         <>
                           <span>•</span>
-                          <div className="flex -space-x-1">
+                          <div className="flex gap-1">
                             {goal.assignees.slice(0, 3).map((assignee: any) => (
                               <UserAvatar
                                 key={assignee.profile_id}
