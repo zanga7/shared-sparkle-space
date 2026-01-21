@@ -1,7 +1,7 @@
 {
-  "name": "Family Dashboard",
-  "short_name": "Family Dashboard",
-  "description": "Modern family task and event management platform",
+  "name": "Wild Ones Family App",
+  "short_name": "Wild Ones",
+  "description": "Fun family task and event management platform",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -10,25 +10,25 @@
   "scope": "/",
   "icons": [
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "https://timefstlnqojqidllokb.supabase.co/storage/v1/object/public/app-icons/icon_192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "https://timefstlnqojqidllokb.supabase.co/storage/v1/object/public/app-icons/icon_192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "https://timefstlnqojqidllokb.supabase.co/storage/v1/object/public/app-icons/icon_512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "https://timefstlnqojqidllokb.supabase.co/storage/v1/object/public/app-icons/icon_512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -55,21 +55,21 @@
       "short_name": "Dashboard",
       "description": "Open family dashboard",
       "url": "/",
-      "icons": [{"src": "/icons/icon-192x192.png", "sizes": "192x192"}]
+      "icons": [{"src": "https://timefstlnqojqidllokb.supabase.co/storage/v1/object/public/app-icons/icon_192.png", "sizes": "192x192"}]
     },
     {
       "name": "Tasks",
       "short_name": "Tasks", 
       "description": "Manage family tasks",
       "url": "/lists",
-      "icons": [{"src": "/icons/icon-192x192.png", "sizes": "192x192"}]
+      "icons": [{"src": "https://timefstlnqojqidllokb.supabase.co/storage/v1/object/public/app-icons/icon_192.png", "sizes": "192x192"}]
     },
     {
       "name": "Rewards",
       "short_name": "Rewards",
       "description": "View family rewards",
       "url": "/rewards", 
-      "icons": [{"src": "/icons/icon-192x192.png", "sizes": "192x192"}]
+      "icons": [{"src": "https://timefstlnqojqidllokb.supabase.co/storage/v1/object/public/app-icons/icon_192.png", "sizes": "192x192"}]
     }
   ]
 }
