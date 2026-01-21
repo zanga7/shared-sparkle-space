@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -8,6 +8,21 @@ interface ColorPalette {
   color_key: string;
   hex_value: string;
 }
+
+// Hardcoded fallback colors to ensure colors are always available
+const FALLBACK_COLORS: Record<string, string> = {
+  sky: '#0ea5e9',
+  blue: '#005DE5',
+  rose: '#f43f5e',
+  emerald: '#10b981',
+  amber: '#f59e0b',
+  violet: '#9568E7',
+  pink: '#FA8FE6',
+  green: '#4DBC4E',
+  lime: '#B6F202',
+  mustard: '#E6D726',
+  melon: '#FF7865',
+};
 
 interface ColorPaletteContextType {
   colors: ColorPalette[];
@@ -43,9 +58,17 @@ export function ColorPaletteProvider({ children }: { children: ReactNode }) {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
+  // Build a lookup map that includes both DB colors and fallbacks
+  const colorLookup = useMemo(() => {
+    const lookup: Record<string, string> = { ...FALLBACK_COLORS };
+    colors.forEach(c => {
+      lookup[c.color_key] = c.hex_value;
+    });
+    return lookup;
+  }, [colors]);
+
   const getColorHex = (colorKey: string): string => {
-    const color = colors.find(c => c.color_key === colorKey);
-    return color?.hex_value || '#0ea5e9'; // Default to sky blue
+    return colorLookup[colorKey] || colorLookup['sky'] || '#0ea5e9';
   };
 
   const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
