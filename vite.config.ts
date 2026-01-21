@@ -49,9 +49,9 @@ export default defineConfig(({ mode }) => ({
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Family Dashboard',
-        short_name: 'Family Dashboard',
-        description: 'Modern family task and event management platform',
+        name: 'Wild Ones Family App',
+        short_name: 'Wild Ones',
+        description: 'Fun family task and event management platform',
         theme_color: '#2563eb',
         background_color: '#ffffff',
         display: 'standalone',
@@ -60,25 +60,25 @@ export default defineConfig(({ mode }) => ({
         start_url: '/',
         icons: [
           {
-            src: 'icons/icon-192x192.png',
+            src: 'https://timefstlnqojqidllokb.supabase.co/storage/v1/object/public/app-icons/icon_192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: 'icons/icon-192x192.png',
+            src: 'https://timefstlnqojqidllokb.supabase.co/storage/v1/object/public/app-icons/icon_192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'maskable'
           },
           {
-            src: 'icons/icon-512x512.png',
+            src: 'https://timefstlnqojqidllokb.supabase.co/storage/v1/object/public/app-icons/icon_512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: 'icons/icon-512x512.png',
+            src: 'https://timefstlnqojqidllokb.supabase.co/storage/v1/object/public/app-icons/icon_512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable'
