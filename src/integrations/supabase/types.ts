@@ -2613,6 +2613,10 @@ export type Database = {
             }
             Returns: string
           }
+      decrypt_oauth_token_v2: {
+        Args: { encrypted_data: string; token_type?: string }
+        Returns: string
+      }
       delete_calendar_integration: {
         Args: { integration_id_param: string }
         Returns: Json
@@ -2636,6 +2640,10 @@ export type Database = {
       encrypt_calendar_token: { Args: { token_value: string }; Returns: string }
       encrypt_google_photos_tokens: { Args: never; Returns: Json }
       encrypt_oauth_token: {
+        Args: { token_type?: string; token_value: string }
+        Returns: string
+      }
+      encrypt_oauth_token_v2: {
         Args: { token_type?: string; token_value: string }
         Returns: string
       }
@@ -3144,6 +3152,14 @@ export type Database = {
           is_active_param?: boolean
         }
         Returns: Json
+      }
+      update_calendar_integration_tokens: {
+        Args: {
+          integration_id_param: string
+          new_access_token: string
+          new_expires_at?: string
+        }
+        Returns: boolean
       }
       update_google_photos_tokens: {
         Args: {
