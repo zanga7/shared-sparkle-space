@@ -36,21 +36,16 @@ Deno.serve(async (req) => {
     const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
     
     if (claimsError || !claimsData?.claims) {
-      console.error('JWT verification failed:', claimsError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized - invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = claimsData.claims.sub;
-    console.log('Authenticated user for cleanup:', userId);
-
     // Check if user is a super admin
     const { data: isSuperAdmin, error: roleError } = await supabaseAuth.rpc('is_super_admin');
     
     if (roleError || !isSuperAdmin) {
-      console.error('User is not super admin:', userId);
       return new Response(
         JSON.stringify({ error: 'Forbidden - requires super admin privileges' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -63,8 +58,6 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log('Starting cleanup of old completed tasks...');
-
     // Get housekeeping settings - we're using this to hide completed tasks
     // NOT to delete task_completions (which are needed for points history)
     
@@ -75,7 +68,7 @@ Deno.serve(async (req) => {
       .select('id');
 
     if (familiesError) {
-      console.error('Error fetching families:', familiesError);
+      console.error('Cleanup failed: database error');
       throw familiesError;
     }
 
@@ -86,7 +79,6 @@ Deno.serve(async (req) => {
       });
 
       if (error) {
-        console.error(`Error hiding tasks for family ${family.id}:`, error);
         continue;
       }
 
@@ -94,8 +86,6 @@ Deno.serve(async (req) => {
         hiddenCount += data.hidden_count;
       }
     }
-
-    console.log(`Successfully hid ${hiddenCount} completed tasks`);
 
     return new Response(
       JSON.stringify({
@@ -110,11 +100,11 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error in cleanup-completed-tasks function:', error);
+    console.error('Cleanup function error');
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        error: 'Internal server error',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
