@@ -113,10 +113,9 @@ export const EnhancedTaskItem = ({
     <div 
       className={cn(
         "group/task relative rounded-lg p-3 transition-all hover:shadow-md",
-        isOverdue && "ring-1 ring-destructive/50",
         !isCompleted && !isCompletedBySomeoneElse && !(task as any).isVirtual && "cursor-grab active:cursor-grabbing",
         isUnassigned && "bg-muted/30",
-        isCompletedBySomeoneElse && "opacity-60" // Grey out for "anyone" tasks completed by someone else
+        (isCompleted || isCompletedBySomeoneElse) && "opacity-60" // Grey out all completed tasks consistently
       )}
       style={!isUnassigned ? (isCompleted || isCompletedBySomeoneElse ? colorStyles.bg20 : colorStyles.bg50) : undefined}
     >
@@ -137,7 +136,7 @@ export const EnhancedTaskItem = ({
           onTouchStart={(e) => e.stopPropagation()}
           disabled={isCompleting || (task.completion_rule === 'any_one' && isCompleted && !isCompletedByMe)}
           className={cn(
-            "shrink-0 w-8 h-8 p-0 cursor-pointer transition-all rounded-md",
+            "shrink-0 w-10 h-10 p-0 cursor-pointer transition-all rounded-md",
             isCompletedByMe 
               ? "bg-green-500 hover:bg-green-600 hover:scale-110 active:scale-95" 
               : "hover:border-green-500 hover:text-green-500",
@@ -166,7 +165,7 @@ export const EnhancedTaskItem = ({
           {/* Title and Basic Info */}
           <div className="flex items-start justify-between gap-2">
             <div className="space-y-0.5">
-              <h3 className={cn("font-medium text-sm", isCompleted && "line-through text-muted-foreground")}>
+              <h3 className={cn("font-medium text-sm", (isCompleted || isCompletedBySomeoneElse) && "line-through text-muted-foreground")}>
                 {task.title}
               </h3>
               {task.description && (

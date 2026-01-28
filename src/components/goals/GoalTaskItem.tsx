@@ -86,7 +86,7 @@ export function GoalTaskItem({
             }}
             disabled={isCompleting || isCompleted}
             className={cn(
-              "shrink-0 w-8 h-8 p-0 cursor-pointer transition-all rounded-md",
+              "shrink-0 w-10 h-10 p-0 cursor-pointer transition-all rounded-md",
               isCompleted 
                 ? "bg-green-500 hover:bg-green-600 hover:scale-110 active:scale-95" 
                 : "hover:border-green-500 hover:text-green-500",
