@@ -6,12 +6,17 @@ import { supabase } from "@/integrations/supabase/client"
 import { cn, sanitizeSVG } from "@/lib/utils"
 import { AvatarIconType } from "./avatar-icon-selector"
 import { useMemberColor } from "@/hooks/useMemberColor"
+import { KawaiiAvatar } from "./kawaii-avatar"
+import { useKawaiiSettings } from "@/contexts/KawaiiContext"
+import { KawaiiFaceStyle } from "./kawaii-face-overlay"
 
 interface UserAvatarProps extends React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root> {
   name: string
   color?: string
   size?: 'xs' | 'sm' | 'md' | 'lg'
   avatarIcon?: string
+  kawaiiFace?: boolean
+  faceStyle?: KawaiiFaceStyle
 }
 
 const sizeClasses = {
@@ -24,11 +29,12 @@ const sizeClasses = {
 const UserAvatar = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Root>,
   UserAvatarProps
->(({ className, name, color = 'sky', size = 'md', avatarIcon, ...props }, ref) => {
+>(({ className, name, color = 'sky', size = 'md', avatarIcon, kawaiiFace, faceStyle, ...props }, ref) => {
   const isWhite = color === 'white';
   // For white color, use a default color for the hook but override the hex
   const { hex: colorHex, styles: colorStyles } = useMemberColor(isWhite ? 'sky' : color);
   const finalColorHex = isWhite ? '#ffffff' : colorHex;
+  const kawaiiSettings = useKawaiiSettings();
   
   // Fetch avatar icons from database with extended cache
   const { data: avatarIcons = [] } = useQuery({
@@ -50,8 +56,11 @@ const UserAvatar = React.forwardRef<
   };
 
   const iconData = avatarIcons.find(icon => icon.name === avatarIcon);
+  
+  // Determine if kawaii face should be shown
+  const showKawaii = kawaiiFace ?? kawaiiSettings.enabled;
 
-  return (
+  const avatarContent = (
     <AvatarPrimitive.Root
       ref={ref}
       className={cn(
@@ -97,7 +106,22 @@ const UserAvatar = React.forwardRef<
         )}
       </AvatarPrimitive.Fallback>
     </AvatarPrimitive.Root>
-  )
+  );
+
+  // Wrap with KawaiiAvatar if enabled
+  if (showKawaii) {
+    return (
+      <KawaiiAvatar
+        size={size}
+        seed={name}
+        faceStyle={faceStyle}
+      >
+        {avatarContent}
+      </KawaiiAvatar>
+    );
+  }
+
+  return avatarContent;
 })
 UserAvatar.displayName = "UserAvatar"
 

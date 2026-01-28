@@ -687,6 +687,11 @@ export type Database = {
           dialog_title_size: string
           dialog_title_weight: string
           id: number
+          kawaii_animation_frequency: string | null
+          kawaii_animations_enabled: boolean | null
+          kawaii_face_style: string | null
+          kawaii_faces_enabled: boolean | null
+          kawaii_min_animate_size: number | null
           label_text_color: string
           label_text_size: string
           label_text_weight: string
@@ -716,6 +721,11 @@ export type Database = {
           dialog_title_size?: string
           dialog_title_weight?: string
           id?: number
+          kawaii_animation_frequency?: string | null
+          kawaii_animations_enabled?: boolean | null
+          kawaii_face_style?: string | null
+          kawaii_faces_enabled?: boolean | null
+          kawaii_min_animate_size?: number | null
           label_text_color?: string
           label_text_size?: string
           label_text_weight?: string
@@ -745,6 +755,11 @@ export type Database = {
           dialog_title_size?: string
           dialog_title_weight?: string
           id?: number
+          kawaii_animation_frequency?: string | null
+          kawaii_animations_enabled?: boolean | null
+          kawaii_face_style?: string | null
+          kawaii_faces_enabled?: boolean | null
+          kawaii_min_animate_size?: number | null
           label_text_color?: string
           label_text_size?: string
           label_text_weight?: string
