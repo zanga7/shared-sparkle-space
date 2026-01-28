@@ -54,38 +54,32 @@ const MemberStatCard = memo(({
       transition={{ duration: 0.2 }}
     >
       <Card 
-        className="relative overflow-hidden cursor-pointer group transition-all duration-300 hover:shadow-xl border-0"
-        style={{ backgroundColor: hex }}
+        className="relative overflow-hidden cursor-pointer group transition-all duration-300 hover:shadow-xl bg-background"
+        style={{ borderWidth: '3px', borderStyle: 'solid', borderColor: hex }}
         onClick={onViewDashboard}
       >
         <div className="flex">
-          {/* Left column - Avatar and Name (25% width, colored background) */}
-          <div className="w-1/4 flex flex-col items-center justify-center p-3" style={{ backgroundColor: hex }}>
+          {/* Left column - Avatar and Name (25% width) */}
+          <div className="w-1/4 flex flex-col items-center justify-center p-3 bg-background">
             <UserAvatar 
               name={member.display_name} 
-              color="white"
+              color={member.color}
               avatarIcon={member.avatar_url || undefined}
               size="lg"
               className="w-14 h-14"
             />
-            <p className="text-xs font-medium text-center mt-2 text-white truncate w-full">
+            <p className="text-xs font-medium text-center mt-2 text-foreground truncate w-full">
               {member.display_name}
             </p>
           </div>
 
-          {/* Right column - Stats (75% width, colored background) */}
-          <div className="w-3/4 relative">
-            {/* Gradient overlay for depth */}
-            <div 
-              className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity"
-              style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.2), transparent)' }}
-            />
-            
+          {/* Right column - Stats (75% width) */}
+          <div className="w-3/4 relative bg-background">
             <CardContent className="p-3 relative">
               {/* Points display */}
               <div className="flex items-center gap-1 mb-3">
-                <Trophy className="h-4 w-4 text-white/80" />
-                <span className="text-2xl font-bold text-white">
+                <Trophy className="h-4 w-4" style={{ color: hex }} />
+                <span className="text-2xl font-bold text-foreground">
                   {member.total_points}
                 </span>
               </div>
@@ -93,18 +87,19 @@ const MemberStatCard = memo(({
               {/* Task progress */}
               <div className="space-y-1.5 mb-2">
                 <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-1.5 text-white/80">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
                     <CheckSquare className="h-3.5 w-3.5" />
                     <span>Tasks</span>
                     {progressPercent === 100 && todayTaskCount > 0 && (
                       <span className="ml-1">🎉</span>
                     )}
                   </div>
-                  <span className="font-medium text-white">{completedCount}/{todayTaskCount}</span>
+                  <span className="font-medium text-foreground">{completedCount}/{todayTaskCount}</span>
                 </div>
-                <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                   <motion.div 
-                    className="h-full rounded-full bg-white"
+                    className="h-full rounded-full"
+                    style={{ backgroundColor: hex }}
                     initial={{ width: 0 }}
                     animate={{ width: `${progressPercent}%` }}
                     transition={{ duration: 0.5, delay: 0.2 }}
@@ -114,11 +109,11 @@ const MemberStatCard = memo(({
 
               {/* Events count */}
               <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-1.5 text-white/80">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
                   <Calendar className="h-3.5 w-3.5" />
                   <span>Events</span>
                 </div>
-                <span className="font-medium text-white">{todayEventCount}</span>
+                <span className="font-medium text-foreground">{todayEventCount}</span>
               </div>
             </CardContent>
           </div>
