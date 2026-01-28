@@ -4,12 +4,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageHeading, SmallText, SectionHeading, BodyText, LabelText, CardTitleStyled } from '@/components/ui/typography';
-import { Type, Heading1, Heading2, LetterText, Square, FileText, Tag, MousePointer, Eye } from 'lucide-react';
+import { Type, Heading1, Heading2, LetterText, Square, FileText, Tag, MousePointer, Eye, Smile } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { UserAvatar } from '@/components/ui/user-avatar';
 
 const TEXT_SIZES = [
   { value: 'text-xs', label: 'Extra Small (12px)' },
@@ -45,6 +48,18 @@ const BORDER_RADII = [
   { value: '1.5rem', label: '2XL (24px)' },
 ];
 
+const KAWAII_FACE_STYLES = [
+  { value: 'line', label: 'Line (^_^)' },
+  { value: 'round', label: 'Round (●_●)' },
+  { value: 'happy', label: 'Happy (◠‿◠)' },
+];
+
+const KAWAII_FREQUENCIES = [
+  { value: 'slow', label: 'Slow' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'fast', label: 'Fast' },
+];
+
 interface StyleSettings {
   page_heading_size: string;
   page_heading_weight: string;
@@ -70,6 +85,12 @@ interface StyleSettings {
   button_text_size: string;
   button_text_weight: string;
   border_radius: string;
+  // Kawaii face settings
+  kawaii_faces_enabled: boolean;
+  kawaii_animations_enabled: boolean;
+  kawaii_face_style: string;
+  kawaii_animation_frequency: string;
+  kawaii_min_animate_size: number;
 }
 
 export default function StyleSettings() {
@@ -114,7 +135,7 @@ export default function StyleSettings() {
     }
   });
 
-  const handleChange = (field: keyof StyleSettings, value: string) => {
+  const handleChange = (field: keyof StyleSettings, value: string | number | boolean) => {
     if (!formData) return;
     setFormData(prev => prev ? { ...prev, [field]: value } : prev);
   };
@@ -150,6 +171,11 @@ export default function StyleSettings() {
       button_text_size: 'text-sm',
       button_text_weight: 'font-medium',
       border_radius: '0.75rem',
+      kawaii_faces_enabled: true,
+      kawaii_animations_enabled: true,
+      kawaii_face_style: 'line',
+      kawaii_animation_frequency: 'normal',
+      kawaii_min_animate_size: 30,
     });
   };
 
@@ -178,13 +204,16 @@ export default function StyleSettings() {
     );
   }
 
+  // Helper type for string-only fields (typography)
+  type StringField = Exclude<keyof StyleSettings, 'kawaii_faces_enabled' | 'kawaii_animations_enabled' | 'kawaii_min_animate_size'>;
+  
   const renderStyleCard = (
     title: string,
     description: string,
     icon: React.ReactNode,
-    sizeField: keyof StyleSettings,
-    weightField: keyof StyleSettings,
-    colorField: keyof StyleSettings,
+    sizeField: StringField,
+    weightField: StringField,
+    colorField: StringField,
     previewClass: string
   ) => (
     <Card>
@@ -198,7 +227,7 @@ export default function StyleSettings() {
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label className="text-xs">Size</Label>
-          <Select value={formData[sizeField]} onValueChange={(v) => handleChange(sizeField, v)}>
+          <Select value={formData[sizeField] as string} onValueChange={(v) => handleChange(sizeField, v)}>
             <SelectTrigger className="h-9">
               <SelectValue />
             </SelectTrigger>
@@ -211,7 +240,7 @@ export default function StyleSettings() {
         </div>
         <div className="space-y-2">
           <Label className="text-xs">Weight</Label>
-          <Select value={formData[weightField]} onValueChange={(v) => handleChange(weightField, v)}>
+          <Select value={formData[weightField] as string} onValueChange={(v) => handleChange(weightField, v)}>
             <SelectTrigger className="h-9">
               <SelectValue />
             </SelectTrigger>
@@ -224,7 +253,7 @@ export default function StyleSettings() {
         </div>
         <div className="space-y-2">
           <Label className="text-xs">Color</Label>
-          <Select value={formData[colorField]} onValueChange={(v) => handleChange(colorField, v)}>
+          <Select value={formData[colorField] as string} onValueChange={(v) => handleChange(colorField, v)}>
             <SelectTrigger className="h-9">
               <SelectValue />
             </SelectTrigger>
@@ -263,11 +292,12 @@ export default function StyleSettings() {
       </div>
 
       <Tabs defaultValue="headings" className="w-full">
-        <TabsList className="w-full max-w-lg grid grid-cols-4">
+        <TabsList className="w-full max-w-2xl grid grid-cols-5">
           <TabsTrigger value="headings">Headings</TabsTrigger>
           <TabsTrigger value="text">Text</TabsTrigger>
           <TabsTrigger value="components">Components</TabsTrigger>
           <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="avatars">Avatars</TabsTrigger>
         </TabsList>
 
         <TabsContent value="headings" className="space-y-4 mt-4">
@@ -432,6 +462,153 @@ export default function StyleSettings() {
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="avatars" className="space-y-4 mt-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Kawaii Face Settings */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Smile className="w-4 h-4" />
+                  Kawaii Faces
+                </CardTitle>
+                <CardDescription>Add cute animated faces to avatars</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Enable Kawaii Faces</Label>
+                    <p className="text-xs text-muted-foreground">Show face overlays on avatars</p>
+                  </div>
+                  <Switch 
+                    checked={formData.kawaii_faces_enabled}
+                    onCheckedChange={(checked) => handleChange('kawaii_faces_enabled', checked)}
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Enable Animations</Label>
+                    <p className="text-xs text-muted-foreground">Occasional blink, wink, smile</p>
+                  </div>
+                  <Switch 
+                    checked={formData.kawaii_animations_enabled}
+                    onCheckedChange={(checked) => handleChange('kawaii_animations_enabled', checked)}
+                    disabled={!formData.kawaii_faces_enabled}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs">Default Face Style</Label>
+                  <Select 
+                    value={formData.kawaii_face_style} 
+                    onValueChange={(v) => handleChange('kawaii_face_style', v)}
+                    disabled={!formData.kawaii_faces_enabled}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {KAWAII_FACE_STYLES.map(style => (
+                        <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs">Animation Frequency</Label>
+                  <Select 
+                    value={formData.kawaii_animation_frequency} 
+                    onValueChange={(v) => handleChange('kawaii_animation_frequency', v)}
+                    disabled={!formData.kawaii_faces_enabled || !formData.kawaii_animations_enabled}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {KAWAII_FREQUENCIES.map(freq => (
+                        <SelectItem key={freq.value} value={freq.value}>{freq.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs">Min Size for Animation (px)</Label>
+                  <Input 
+                    type="number"
+                    min={20}
+                    max={100}
+                    value={formData.kawaii_min_animate_size}
+                    onChange={(e) => handleChange('kawaii_min_animate_size', parseInt(e.target.value) || 30)}
+                    disabled={!formData.kawaii_faces_enabled || !formData.kawaii_animations_enabled}
+                    className="h-9"
+                  />
+                  <p className="text-xs text-muted-foreground">Avatars smaller than this won't animate</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Preview Card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Eye className="w-4 h-4" />
+                  Preview
+                </CardTitle>
+                <CardDescription>See how kawaii faces look on different avatar sizes</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap items-end gap-4">
+                  <div className="text-center">
+                    <UserAvatar 
+                      name="Extra Small" 
+                      size="xs" 
+                      color="sky"
+                      kawaiiFace={formData.kawaii_faces_enabled}
+                      faceStyle={formData.kawaii_face_style as 'line' | 'round' | 'happy'}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">xs (20px)</p>
+                  </div>
+                  <div className="text-center">
+                    <UserAvatar 
+                      name="Small" 
+                      size="sm" 
+                      color="rose"
+                      kawaiiFace={formData.kawaii_faces_enabled}
+                      faceStyle={formData.kawaii_face_style as 'line' | 'round' | 'happy'}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">sm (24px)</p>
+                  </div>
+                  <div className="text-center">
+                    <UserAvatar 
+                      name="Medium" 
+                      size="md" 
+                      color="emerald"
+                      kawaiiFace={formData.kawaii_faces_enabled}
+                      faceStyle={formData.kawaii_face_style as 'line' | 'round' | 'happy'}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">md (32px)</p>
+                  </div>
+                  <div className="text-center">
+                    <UserAvatar 
+                      name="Large" 
+                      size="lg" 
+                      color="amber"
+                      kawaiiFace={formData.kawaii_faces_enabled}
+                      faceStyle={formData.kawaii_face_style as 'line' | 'round' | 'happy'}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">lg (40px)</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-4">
+                  Animations only run on md and lg sizes when enabled. Small avatars show static faces.
+                </p>
               </CardContent>
             </Card>
           </div>

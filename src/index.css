@@ -305,3 +305,54 @@
 .animate-scale {
   animation: scale-up 2s ease-in-out infinite;
 }
+
+/* ========================================
+   KAWAII FACE ANIMATIONS
+   Lightweight micro-animations for avatar faces
+   Uses transforms/opacity only for GPU acceleration
+   ======================================== */
+
+@keyframes kawaii-blink {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.1); }
+}
+
+@keyframes kawaii-tongue-out {
+  0%, 100% { opacity: 0; transform: translateY(-2px); }
+  30%, 70% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes kawaii-smile-grow {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15, 1.2); }
+}
+
+/* Blink animation - both eyes */
+.kawaii-do-blink .kawaii-eye-left,
+.kawaii-do-blink .kawaii-eye-right {
+  transform-origin: center;
+  animation: kawaii-blink 140ms ease-in-out;
+}
+
+/* Wink left - only left eye blinks */
+.kawaii-do-wink-left .kawaii-eye-left {
+  transform-origin: center;
+  animation: kawaii-blink 140ms ease-in-out;
+}
+
+/* Wink right - only right eye blinks */
+.kawaii-do-wink-right .kawaii-eye-right {
+  transform-origin: center;
+  animation: kawaii-blink 140ms ease-in-out;
+}
+
+/* Smile animation */
+.kawaii-do-smile .kawaii-mouth {
+  transform-origin: center;
+  animation: kawaii-smile-grow 200ms ease-in-out;
+}
+
+/* Tongue animation */
+.kawaii-do-tongue .kawaii-tongue ellipse {
+  animation: kawaii-tongue-out 220ms ease-in-out forwards;
+}
