@@ -1,13 +1,14 @@
 import { ApprovalQueue } from '@/components/rewards/ApprovalQueue';
+import { PageHeading, SmallText } from '@/components/ui/typography';
 
 export default function RewardApprovals() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Reward Approvals</h1>
-        <p className="text-muted-foreground">
+    <div className="page-padding component-spacing">
+      <div className="section-spacing">
+        <PageHeading>Reward Approvals</PageHeading>
+        <SmallText>
           Review and manage pending reward requests from family members.
-        </p>
+        </SmallText>
       </div>
       
       <ApprovalQueue />

@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PageHeading, SmallText } from '@/components/ui/typography';
 import { 
   Plus, 
   Search, 
@@ -409,8 +410,8 @@ const Lists = () => {
           {/* Header */}
           <div className="flex items-center justify-between section-spacing">
             <div>
-              <h1 className="text-3xl font-bold">Lists</h1>
-              <p className="text-muted-foreground">Manage your family shopping, camping, and to-do lists</p>
+              <PageHeading>Lists</PageHeading>
+              <SmallText>Manage your family shopping, camping, and to-do lists</SmallText>
             </div>
             <div className="flex gap-2">
               <Button 

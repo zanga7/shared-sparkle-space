@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ImageUpload } from '@/components/ui/image-upload';
 import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 import { MultiAssigneeAvatarGroup } from '@/components/ui/multi-assignee-avatar-group';
+import { PageHeading, SectionHeading, SmallText } from '@/components/ui/typography';
 import { useRewards } from '@/hooks/useRewards';
 
 import { EditRewardDialog } from '@/components/rewards/EditRewardDialog';
@@ -145,14 +146,14 @@ export default function RewardsManagement() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="page-padding component-spacing">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between section-spacing">
         <div>
-          <h1 className="text-3xl font-bold">Rewards Management</h1>
-          <p className="text-muted-foreground">
+          <PageHeading>Rewards Management</PageHeading>
+          <SmallText>
             Create and manage family rewards that members can request with their points.
-          </p>
+          </SmallText>
         </div>
         
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -277,10 +278,10 @@ export default function RewardsManagement() {
 
       {/* Existing Rewards */}
       <div className="space-y-4">
-        <h2 className="text-2xl font-semibold flex items-center gap-2">
+        <SectionHeading className="flex items-center gap-2">
           <Settings className="w-6 h-6" />
           Manage Rewards
-        </h2>
+        </SectionHeading>
         
         {/* Show active and inactive rewards */}
         <div className="space-y-6">

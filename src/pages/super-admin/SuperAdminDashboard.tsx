@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeading, SmallText, SectionHeading } from '@/components/ui/typography';
 import { Users, Calendar, CheckSquare, List, Gift, TrendingUp } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -25,10 +26,10 @@ export default function SuperAdminDashboard() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
-          <p className="text-muted-foreground">System-wide statistics and insights</p>
+      <div className="page-padding component-spacing">
+        <div className="section-spacing">
+          <PageHeading>Dashboard</PageHeading>
+          <SmallText>System-wide statistics and insights</SmallText>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
@@ -86,10 +87,10 @@ export default function SuperAdminDashboard() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
-        <p className="text-muted-foreground">System-wide statistics and insights</p>
+    <div className="page-padding component-spacing">
+      <div className="section-spacing">
+        <PageHeading>Dashboard</PageHeading>
+        <SmallText>System-wide statistics and insights</SmallText>
       </div>
 
       {/* Main Stats */}

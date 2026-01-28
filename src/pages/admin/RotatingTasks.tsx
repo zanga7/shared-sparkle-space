@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PageHeading, SmallText } from "@/components/ui/typography";
 import { Plus, Play, Pause, Settings, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -114,11 +115,11 @@ export default function RotatingTasks() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="page-padding component-spacing">
+        <div className="flex justify-between items-center section-spacing">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Rotating Tasks</h1>
-            <p className="text-muted-foreground">Manage tasks that rotate between family members</p>
+            <PageHeading>Rotating Tasks</PageHeading>
+            <SmallText>Manage tasks that rotate between family members</SmallText>
           </div>
         </div>
         <div className="grid gap-4">
@@ -139,11 +140,11 @@ export default function RotatingTasks() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="page-padding component-spacing">
+      <div className="flex justify-between items-center section-spacing">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Rotating Tasks</h1>
-          <p className="text-muted-foreground">Manage tasks that rotate between family members</p>
+          <PageHeading>Rotating Tasks</PageHeading>
+          <SmallText>Manage tasks that rotate between family members</SmallText>
         </div>
         <Button onClick={() => setIsAddDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />

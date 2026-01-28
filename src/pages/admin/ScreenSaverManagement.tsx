@@ -1,13 +1,14 @@
 import ScreenSaverSettings from '@/components/admin/ScreenSaverSettings';
+import { PageHeading, SmallText } from '@/components/ui/typography';
 
 export const ScreenSaverManagement = () => {
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Screen Saver Management</h1>
-        <p className="text-muted-foreground mt-2">
+    <div className="page-padding component-spacing">
+      <div className="section-spacing">
+        <PageHeading>Screen Saver Management</PageHeading>
+        <SmallText>
           Configure your family screen saver with photos from Google Photos or upload your own images.
-        </p>
+        </SmallText>
       </div>
       
       <ScreenSaverSettings />

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PageHeading, SmallText } from '@/components/ui/typography';
 import { AddCelebrationDialog } from '@/components/celebrations/AddCelebrationDialog';
 import { EditCelebrationDialog } from '@/components/celebrations/EditCelebrationDialog';
 import { CelebrationCard } from '@/components/celebrations/CelebrationCard';
@@ -91,12 +92,12 @@ export default function CelebrationsManagement() {
 
   return (
     <div className="page-padding component-spacing">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between section-spacing">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Celebrations & Holidays</h1>
-          <p className="text-muted-foreground">
+          <PageHeading>Celebrations & Holidays</PageHeading>
+          <SmallText>
             Manage birthdays, anniversaries, and public holidays
-          </p>
+          </SmallText>
         </div>
       </div>
 
