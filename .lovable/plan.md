@@ -1,372 +1,257 @@
 
-# Comprehensive Style Audit and Global Style Integration Plan
+# Kawaii Face Overlay System Implementation Plan
 
-## Executive Summary
+## Overview
 
-This plan addresses two major objectives:
-1. **Connect all typography styles to the Global Style Settings** managed in Super Admin
-2. **Ensure consistent spacing, padding, margins, cards, and dialogs** throughout the app with proper responsiveness
+This plan adds an optional kawaii-style face overlay system to existing avatars, featuring simple eyes and mouths with occasional micro-animations (blink, wink, smile, tongue). The system is designed to be extremely lightweight since many avatars can appear on a page simultaneously.
 
----
-
-## Current State Analysis
-
-### Global Style System Architecture
-
-The app has a well-designed global style system already in place:
-
-**Database**: `global_style_settings` table stores typography settings:
-- Page headings (size, weight, color)
-- Section headings (size, weight, color)
-- Card titles (size, weight, color)
-- Dialog titles (size, weight, color)
-- Body text (size, weight, color)
-- Small/helper text (size, weight, color)
-- Label text (size, weight, color)
-- Button text (size, weight)
-- Border radius
-
-**Context Provider**: `GlobalStyleContext.tsx` fetches and provides compound class helpers
-
-**Typography Components**: `src/components/ui/typography.tsx` provides ready-to-use components:
-- `PageHeading`
-- `SectionHeading`
-- `CardTitleStyled`
-- `DialogTitleStyled`
-- `BodyText`
-- `SmallText`
-- `LabelText`
-
-### Critical Finding: Typography Components Are Unused
-
-The typography components exist but are **not imported or used anywhere** in the application. All pages and components use hardcoded Tailwind classes instead.
-
-**Files with hardcoded `text-3xl font-bold` (page headings)**: 18 files
-**Files with hardcoded `text-2xl font-semibold` (section headings)**: 6 files
-**Files with hardcoded `text-lg font-semibold` (card/dialog titles)**: 19 files
-
-### Spacing Patterns Analysis
-
-The app has established CSS utility classes in `index.css`:
-- `page-padding` - Responsive page container padding
-- `column-card-header`, `column-card-content` - Card spacing
-- `grid-card-header`, `grid-card-content` - Grid card spacing
-- `component-spacing`, `section-spacing` - Vertical spacing
-- `column-gap`, `widget-gap`, `grid-gap` - Grid/flex gaps
-
-However, usage is inconsistent:
-- Some pages use `page-padding`, others use inline `px-4 py-6`
-- Card padding varies between `p-3`, `p-4`, `p-6`, `px-4 py-4`
-- Section spacing varies between `space-y-4`, `space-y-6`, `mb-4`, `mb-6`
-
----
-
-## Implementation Plan
-
-### Phase 1: Core UI Component Updates
-
-**1.1 Update Card Component** (`src/components/ui/card.tsx`)
-
-Connect `CardTitle` to global styles by using `useGlobalStyles`:
+## Architecture Summary
 
 ```text
-Changes:
-- Import useGlobalStyles hook
-- Replace hardcoded "text-2xl font-semibold" with dynamic cardTitle classes
-- Ensure CardDescription uses smallText styling
+┌─────────────────────────────────────────────────────────────────┐
+│                    KAWAII AVATAR SYSTEM                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  UserAvatar (existing)                                          │
+│       │                                                         │
+│       ▼                                                         │
+│  KawaiiAvatarWrapper (new)                                      │
+│       │                                                         │
+│       ├── Base Avatar (children, unchanged)                     │
+│       │                                                         │
+│       └── KawaiiFaceOverlay (absolute positioned SVG)           │
+│               │                                                 │
+│               ├── Left Eye Group                                │
+│               ├── Right Eye Group                               │
+│               ├── Mouth Group                                   │
+│               └── Tongue Group (hidden by default)              │
+│                                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│  Animation Scheduler (singleton)                                │
+│       │                                                         │
+│       ├── IntersectionObserver (visibility tracking)            │
+│       ├── Registered avatars map                                │
+│       ├── Global animation timer (single setInterval)           │
+│       └── Animation state (max 1-3 concurrent)                  │
+│                                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│  Super Admin Controls (app_settings or global_style_settings)   │
+│       │                                                         │
+│       ├── kawaii_faces_enabled (boolean)                        │
+│       ├── kawaii_animations_enabled (boolean)                   │
+│       ├── kawaii_default_style (line | round | happy)           │
+│       └── kawaii_animation_frequency (slow | normal | fast)     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-**1.2 Update Dialog Component** (`src/components/ui/dialog.tsx`)
+## Technical Implementation
 
-Connect `DialogTitle` to global styles:
+### Phase 1: Database Schema Update
+
+Add kawaii face settings to the existing `global_style_settings` table:
+
+**New columns:**
+- `kawaii_faces_enabled` (boolean, default: true)
+- `kawaii_animations_enabled` (boolean, default: true)  
+- `kawaii_face_style` (text, default: 'line')
+- `kawaii_animation_frequency` (text, default: 'normal')
+- `kawaii_min_animate_size` (integer, default: 30)
+
+### Phase 2: CSS Animations
+
+**File: `src/index.css`**
+
+Add lightweight CSS keyframes using only transforms and opacity:
+
+- **Blink**: `scaleY(1) → scaleY(0.1) → scaleY(1)` (120ms)
+- **Wink Left/Right**: Same as blink but targets one eye
+- **Smile**: Slight scale/translate on mouth (180ms)
+- **Tongue**: Opacity and translateY for tongue reveal (200ms)
+
+Animation classes:
+- `.kawaii-do-blink`
+- `.kawaii-do-wink-left`
+- `.kawaii-do-wink-right`
+- `.kawaii-do-smile`
+- `.kawaii-do-tongue`
+
+### Phase 3: Face Overlay Component
+
+**File: `src/components/ui/kawaii-face-overlay.tsx`**
+
+Props:
+- `size: number` - Pixel size for scaling
+- `faceStyle: 'line' | 'round' | 'happy'`
+- `animationClass?: string` - Currently active animation
+
+Implementation:
+- Pure inline SVG with minimal shapes
+- Black/white only (strokes, no heavy fills)
+- Uses `vector-effect="non-scaling-stroke"` for consistent line weights
+- Positioned absolutely in center of parent
+- `pointer-events: none`
+
+**Face Styles:**
+
+| Style | Eyes | Mouth |
+|-------|------|-------|
+| `line` | Curved lines (^_^) | Small curve |
+| `round` | Small filled circles | Small curve |
+| `happy` | Upside-down arcs (smiling) | Bigger curve |
+
+### Phase 4: Animation Scheduler Utility
+
+**File: `src/lib/kawaii-scheduler.ts`**
+
+Singleton utility managing all avatar animations:
 
 ```text
-Changes:
-- Import useGlobalStyles hook
-- Replace hardcoded "text-lg font-semibold" with dynamic dialogTitle classes
-- Ensure DialogDescription uses smallText styling
+Scheduler API:
+- registerAvatar(el, options) - Add avatar to pool
+- unregisterAvatar(el) - Remove avatar from pool
+- setEnabled(enabled) - Toggle animations globally
+
+Internal Logic:
+1. Single setInterval timer (every 700-1200ms, seeded variability)
+2. Filter avatars: visible (IntersectionObserver) + size >= minSize
+3. Global cap: max 1-3 animations active at any time
+4. Pick random action weighted:
+   - Blink: 60%
+   - Wink: 25%
+   - Smile: 12%
+   - Tongue: 3% (very rare)
+5. Apply animation class, remove after 250ms
+6. Use seed for per-user timing consistency
 ```
 
-**1.3 Update Sheet Component** (`src/components/ui/sheet.tsx`)
+### Phase 5: Kawaii Avatar Wrapper Component
 
-Connect `SheetTitle` to global styles:
+**File: `src/components/ui/kawaii-avatar.tsx`**
+
+A wrapper component that adds kawaii faces to any avatar:
+
+Props:
+- `children: ReactNode` - The base avatar element
+- `size: number | 'xs' | 'sm' | 'md' | 'lg'` - Avatar size
+- `seed?: string | number` - Stable per-user seed for timing
+- `faceStyle?: 'line' | 'round' | 'happy'` - Override default style
+- `animate?: boolean` - Override animation setting (default: true)
+- `enabled?: boolean` - Show face at all (default: from settings)
+
+Behavior:
+- Wraps children in relative container
+- Renders `KawaiiFaceOverlay` as absolute overlay
+- Attaches IntersectionObserver for visibility
+- Registers/unregisters with scheduler based on visibility
+- Skips animation for size < minAnimateSize (30px default)
+
+### Phase 6: Integration with UserAvatar
+
+**File: `src/components/ui/user-avatar.tsx`**
+
+Update to optionally wrap output in `KawaiiAvatarWrapper`:
+
+- Add optional prop: `kawaiiFace?: boolean` (default: from global settings)
+- Add optional prop: `faceStyle?: 'line' | 'round' | 'happy'`
+- When enabled, wrap the avatar output in `KawaiiAvatarWrapper`
+
+Size mapping for animation threshold:
+| Size | Pixels | Animates |
+|------|--------|----------|
+| xs | 20px (h-5) | No |
+| sm | 24px (h-6) | No |
+| md | 32px (h-8) | Yes |
+| lg | 40px (h-10) | Yes |
+
+### Phase 7: Context Provider for Settings
+
+**File: `src/contexts/KawaiiContext.tsx`**
+
+Lightweight context for kawaii settings:
 
 ```text
-Changes:
-- Import useGlobalStyles hook
-- Replace hardcoded "text-lg font-semibold text-foreground" with dynamic dialogTitle classes
-- Ensure SheetDescription uses smallText styling
+KawaiiSettings:
+- enabled: boolean
+- animationsEnabled: boolean
+- defaultStyle: 'line' | 'round' | 'happy'
+- animationFrequency: 'slow' | 'normal' | 'fast'
+- minAnimateSize: number
 ```
 
-**1.4 Update Button Component** (`src/components/ui/button.tsx`)
+Fetched from `global_style_settings` with 5-minute cache (same pattern as GlobalStyleContext).
 
-Connect button text to global styles:
+### Phase 8: Super Admin Controls
 
-```text
-Changes:
-- Import useGlobalStyles hook
-- Replace hardcoded "text-sm font-medium" with dynamic buttonText classes
-```
+**File: `src/pages/super-admin/StyleSettings.tsx`**
 
-### Phase 2: Page Heading Standardization
+Add new "Avatar Faces" tab or card:
 
-Update all pages to use the `PageHeading` typography component:
+Controls:
+1. **Enable Kawaii Faces** - Toggle (on/off)
+2. **Enable Animations** - Toggle (on/off)
+3. **Default Face Style** - Select (line/round/happy)
+4. **Animation Frequency** - Select (slow/normal/fast)
+5. **Min Size for Animation** - Number input (default: 30px)
 
-**Admin Pages (11 files):**
-- `AdminDashboard.tsx`
-- `MemberManagement.tsx`
-- `RewardsManagement.tsx`
-- `RotatingTasks.tsx`
-- `HolidayManagement.tsx`
-- `CelebrationsManagement.tsx`
-- `EventMigration.tsx`
-- `Permissions.tsx`
-- `CalendarSettings.tsx`
-- `RewardApprovals.tsx`
-- `ScreenSaverManagement.tsx`
+Include preview section showing sample avatar with each face style.
 
-**Super Admin Pages (7 files):**
-- `SuperAdminDashboard.tsx`
-- `StyleSettings.tsx`
-- `AppSettings.tsx`
-- `ThemesManagement.tsx`
-- `PlanManagement.tsx`
-- `FamilyManagement.tsx`
-- `IntegrationsManagement.tsx`
+## Files to Create
 
-**Main Pages (3 files):**
-- `Lists.tsx`
-- `GoalsContent.tsx`
-- `RewardsGallery.tsx`
+| File | Purpose |
+|------|---------|
+| `src/components/ui/kawaii-face-overlay.tsx` | Face SVG component |
+| `src/components/ui/kawaii-avatar.tsx` | Wrapper component |
+| `src/lib/kawaii-scheduler.ts` | Animation scheduler singleton |
+| `src/contexts/KawaiiContext.tsx` | Settings context provider |
 
-**Onboarding Pages (4 files):**
-- `Welcome.tsx`
-- `CreateCrew.tsx`
-- `AddCelebrations.tsx`
-- `Complete.tsx`
-
-### Phase 3: Section Heading Standardization
-
-Update components using section-level headings to use `SectionHeading`:
-
-**Files requiring updates:**
-- `FamilyDashboard.tsx` - Widget headers
-- `CalendarView.tsx` - Section headers
-- Various admin card sections
-
-### Phase 4: Spacing Consistency
-
-**4.1 Standardize Page Containers**
-
-All pages should use consistent container patterns:
-
-```text
-Pattern for admin/main pages:
-<div className="page-padding">
-  <div className="max-w-7xl mx-auto">
-    <div className="section-spacing">
-      <!-- Page header -->
-    </div>
-    <div className="component-spacing">
-      <!-- Main content -->
-    </div>
-  </div>
-</div>
-```
-
-**4.2 Standardize Card Padding**
-
-Create consistent card padding patterns:
-
-```text
-Standard Cards (forms, settings):
-- CardHeader: px-4 py-4 (matching current card.tsx)
-- CardContent: px-4 py-4 pt-0
-
-Dashboard/Column Cards:
-- CardHeader: p-3 pb-3 (compact)
-- CardContent: p-0 (content manages spacing)
-
-Grid/Gallery Cards:
-- CardHeader: p-3 md:p-4
-- CardContent: p-3 md:p-4 pt-0
-```
-
-**4.3 Files Requiring Spacing Updates:**
-
-| File | Current Pattern | Target Pattern |
-|------|-----------------|----------------|
-| `AdminDashboard.tsx` | `px-4 py-6` | `page-padding` |
-| `MemberManagement.tsx` | `px-4 py-6` | `page-padding` |
-| `Lists.tsx` | `page-padding` | Already correct |
-| `Rewards.tsx` | `page-padding` | Already correct |
-| `FamilyDashboard.tsx` | Mixed | Standardize widgets |
-| `RewardsGallery.tsx` | `space-y-6` | `component-spacing` |
-
-### Phase 5: Responsiveness Audit
-
-**5.1 Dialog Responsiveness**
-
-All dialogs already have proper mobile handling:
-- `top-4` positioning on mobile
-- `max-h-[calc(100vh-2rem)]` with `overflow-y-auto`
-- `sm:top-[50%] sm:translate-y-[-50%]` for desktop centering
-
-**5.2 Grid Responsiveness Patterns**
-
-Ensure consistent responsive grid patterns:
-
-```text
-Cards/Lists: grid-cols-1 md:grid-cols-2 lg:grid-cols-3
-Stats: grid-cols-1 md:grid-cols-2 lg:grid-cols-4
-Forms: grid-cols-1 sm:grid-cols-2 (two-column layouts)
-```
-
-**5.3 Text Responsiveness**
-
-For page headings in onboarding/marketing pages:
-
-```text
-Pattern: text-3xl md:text-4xl lg:text-5xl
-```
-
-### Phase 6: Super Admin Style Controls Enhancement
-
-**6.1 Add Missing Controls**
-
-Add new controls to `StyleSettings.tsx` for additional consistency:
-
-```text
-New settings to add:
-- Card padding (compact/standard/spacious)
-- Section spacing (tight/normal/relaxed)
-- Page max-width (7xl/6xl/5xl/full)
-```
-
-**6.2 Add Preview Section**
-
-Add a live preview section showing how all typography looks together:
-
-```text
-Preview card showing:
-- Page heading sample
-- Section heading sample
-- Card with title and description
-- Body text paragraph
-- Small helper text
-- Labels and buttons
-```
-
----
-
-## Technical Implementation Details
-
-### Changes by File
-
-**Core UI Components (4 files):**
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `card.tsx` | Add useGlobalStyles, update CardTitle/CardDescription |
-| `dialog.tsx` | Add useGlobalStyles, update DialogTitle/DialogDescription |
-| `sheet.tsx` | Add useGlobalStyles, update SheetTitle/SheetDescription |
-| `button.tsx` | Add useGlobalStyles, update base text classes |
+| `src/index.css` | Add kawaii animation keyframes |
+| `src/components/ui/user-avatar.tsx` | Optional kawaii wrapper |
+| `src/pages/super-admin/StyleSettings.tsx` | Add kawaii controls tab |
+| `src/contexts/GlobalStyleContext.tsx` | Add kawaii settings to query |
+| `src/main.tsx` | Add KawaiiProvider to app tree |
 
-**Admin Pages (11 files):**
-- Replace `<h1 className="text-3xl font-bold">` with `<PageHeading>`
-- Replace section titles with `<SectionHeading>` where appropriate
-- Update container classes to use `page-padding`
-- Ensure consistent `component-spacing`
+## Database Migration
 
-**Super Admin Pages (7 files):**
-- Same pattern as admin pages
-- Update StyleSettings.tsx with new controls
+Add columns to `global_style_settings`:
 
-**Main Pages (4 files):**
-- Update heading components
-- Verify spacing consistency
+```sql
+ALTER TABLE global_style_settings
+ADD COLUMN kawaii_faces_enabled boolean DEFAULT true,
+ADD COLUMN kawaii_animations_enabled boolean DEFAULT true,
+ADD COLUMN kawaii_face_style text DEFAULT 'line',
+ADD COLUMN kawaii_animation_frequency text DEFAULT 'normal',
+ADD COLUMN kawaii_min_animate_size integer DEFAULT 30;
+```
 
-**Onboarding Pages (4 files):**
-- Update to use global typography while preserving gradient effects
-- Maintain responsive text sizing
+## Performance Considerations
 
----
+1. **Single Timer**: One global setInterval, not per-avatar
+2. **IntersectionObserver**: Only visible avatars are in animation pool
+3. **CSS-only Animations**: Transforms and opacity only, GPU-accelerated
+4. **Minimal SVG**: No filters, blurs, or heavy masks
+5. **Animation Cap**: Max 1-3 concurrent animations
+6. **Size Threshold**: No animations for avatars < 30px
+7. **Lazy Registration**: Avatars register only when visible
 
-## Risk Mitigation
+## Rollout Strategy
 
-### Preserving Functionality
+1. Feature flag via `kawaii_faces_enabled` - defaults to true
+2. All existing avatars automatically enhanced
+3. Super admin can disable entirely if performance issues
+4. Animation frequency control for fine-tuning
 
-1. **No logic changes** - Only className/styling updates
-2. **Gradual rollout** - Update core components first, then pages
-3. **Fallback styles** - useGlobalStyles returns defaults if database unavailable
+## Expected Visual Result
 
-### Visual Consistency
+Small avatars (xs, sm used in lists):
+- Show static kawaii face (no animation)
+- Face scaled proportionally
 
-1. **Current defaults match existing styles** - No visual change unless Super Admin modifies settings
-2. **Testing approach** - Preview each page at mobile/tablet/desktop breakpoints
-
-### Performance
-
-1. **Single query** - Global styles cached for 5 minutes
-2. **No additional database calls** per component
-
----
-
-## Files to be Modified
-
-**Core Components (4 files):**
-1. `src/components/ui/card.tsx`
-2. `src/components/ui/dialog.tsx`
-3. `src/components/ui/sheet.tsx`
-4. `src/components/ui/button.tsx`
-
-**Admin Pages (11 files):**
-1. `src/pages/admin/AdminDashboard.tsx`
-2. `src/pages/admin/MemberManagement.tsx`
-3. `src/pages/admin/RewardsManagement.tsx`
-4. `src/pages/admin/RotatingTasks.tsx`
-5. `src/pages/admin/HolidayManagement.tsx`
-6. `src/pages/admin/CelebrationsManagement.tsx`
-7. `src/pages/admin/EventMigration.tsx`
-8. `src/pages/admin/Permissions.tsx`
-9. `src/pages/admin/CalendarSettings.tsx`
-10. `src/pages/admin/RewardApprovals.tsx`
-11. `src/pages/admin/ScreenSaverManagement.tsx`
-
-**Super Admin Pages (7 files):**
-1. `src/pages/super-admin/SuperAdminDashboard.tsx`
-2. `src/pages/super-admin/StyleSettings.tsx`
-3. `src/pages/super-admin/AppSettings.tsx`
-4. `src/pages/super-admin/ThemesManagement.tsx`
-5. `src/pages/super-admin/PlanManagement.tsx`
-6. `src/pages/super-admin/FamilyManagement.tsx`
-7. `src/pages/super-admin/IntegrationsManagement.tsx`
-
-**Main App Pages (4 files):**
-1. `src/pages/Lists.tsx`
-2. `src/components/goals/GoalsContent.tsx`
-3. `src/components/rewards/RewardsGallery.tsx`
-4. `src/components/FamilyDashboard.tsx`
-
-**Onboarding Pages (4 files):**
-1. `src/pages/onboarding/Welcome.tsx`
-2. `src/pages/onboarding/CreateCrew.tsx`
-3. `src/pages/onboarding/AddCelebrations.tsx`
-4. `src/pages/onboarding/Complete.tsx`
-
-**Additional Components (estimated 10-15 files):**
-- Various dialogs and widgets that use card titles or section headers
-
-**Total: ~35-40 files**
-
----
-
-## Expected Outcome
-
-After implementation:
-
-1. **All typography controlled from Super Admin** - Change heading sizes, weights, colors in one place
-2. **Consistent spacing patterns** - Predictable padding, margins, gaps across all pages
-3. **Responsive by default** - All pages work on mobile, tablet, and desktop
-4. **Maintainable** - Future pages automatically use correct styles via typography components
-5. **No visual changes initially** - Default values match current styling
+Medium/Large avatars (md, lg in headers, columns):
+- Show kawaii face with occasional animations
+- Blink most common, tongue very rare
+- Smooth, delightful micro-interactions
