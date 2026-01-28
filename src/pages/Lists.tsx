@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PageHeading, SmallText } from '@/components/ui/typography';
+import { PageHeading } from '@/components/ui/typography';
 import { 
   Plus, 
   Search, 
@@ -405,14 +405,10 @@ const Lists = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background page-padding">
-        <div className="max-w-7xl mx-auto">
+    <div className="w-full">
           {/* Header */}
           <div className="flex items-center justify-between section-spacing">
-            <div>
-              <PageHeading>Lists</PageHeading>
-              <SmallText>Manage your family shopping, camping, and to-do lists</SmallText>
-            </div>
+            <PageHeading>Lists</PageHeading>
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
@@ -420,11 +416,11 @@ const Lists = () => {
                 className="gap-2"
               >
                 <Hash className="h-4 w-4" />
-                Manage Categories
+                <span className="hidden sm:inline">Manage Categories</span>
               </Button>
               <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
                 <Plus className="h-4 w-4" />
-                New List
+                <span className="hidden sm:inline">New List</span>
               </Button>
             </div>
           </div>
@@ -492,7 +488,6 @@ const Lists = () => {
               )}
             </div>
           )}
-        </div>
 
         {/* Dialogs */}
         <CreateListDialog

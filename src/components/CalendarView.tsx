@@ -708,8 +708,8 @@ export const CalendarView = ({
         }}
       </Draggable>;
   };
-  return <Card className="w-full">
-      <CardHeader>
+  return <div className="w-full">
+      <div className="pb-4">
         <div className="flex flex-col gap-4">
           {/* Date Heading */}
           <h2 className="text-3xl sm:text-4xl font-bold">
@@ -883,9 +883,9 @@ export const CalendarView = ({
                 </CardContent>
               </Card>}
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="column-card-content">
+      <div>
         <DragDropContext onDragEnd={handleDragEnd}>
           {viewMode === 'today' ?
         // Today View - Single Row Member Columns Layout
@@ -1407,7 +1407,7 @@ export const CalendarView = ({
 
         {/* Legend & Summary */}
         
-      </CardContent>
+      </div>
 
       {/* Event Dialog */}
       <EventDialog open={isEventDialogOpen} onOpenChange={setIsEventDialogOpen} familyMembers={familyMembers} familyId={familyId} defaultDate={selectedEventDate || undefined} currentProfileId={activeMemberId || profile?.id} defaultMember={defaultMember} editingEvent={editingEvent} onSave={async eventData => {
@@ -1523,5 +1523,5 @@ export const CalendarView = ({
       }
       return false;
     }} isAuthenticating={isAuthenticating} action="complete this task" />}
-    </Card>;
+    </div>;
 };
