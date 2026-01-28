@@ -48,7 +48,7 @@ export function MemberTaskColumn({
 
   return (
     <Card 
-      className="h-fit w-full group"
+      className="h-fit w-full group p-2"
       style={colorStyles.bg10}
     >
       <CardHeader 
