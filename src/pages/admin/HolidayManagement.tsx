@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeading, SmallText } from '@/components/ui/typography';
 import { Plus, Calendar, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { AddHolidayDialog } from '@/components/admin/AddHolidayDialog';
@@ -103,12 +104,12 @@ export default function HolidayManagement() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Holiday Management</h1>
-          <p className="text-muted-foreground">
+      <div className="page-padding component-spacing">
+        <div className="section-spacing">
+          <PageHeading>Holiday Management</PageHeading>
+          <SmallText>
             Manage school holidays and breaks for task scheduling
-          </p>
+          </SmallText>
         </div>
 
         <div className="grid gap-4">
@@ -121,13 +122,13 @@ export default function HolidayManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="page-padding component-spacing">
+      <div className="flex items-center justify-between section-spacing">
         <div>
-          <h1 className="text-3xl font-bold">Holiday Management</h1>
-          <p className="text-muted-foreground">
+          <PageHeading>Holiday Management</PageHeading>
+          <SmallText>
             Manage school holidays and breaks. Tasks with "Pause during holidays" will be paused during these dates.
-          </p>
+          </SmallText>
         </div>
         <Button onClick={() => setAddDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />

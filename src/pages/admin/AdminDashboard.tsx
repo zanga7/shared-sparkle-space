@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import { PageHeading, SmallText } from '@/components/ui/typography';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -164,13 +165,13 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
+    <div className="page-padding component-spacing">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <p className="text-muted-foreground">
+      <div className="section-spacing">
+        <PageHeading>Admin Dashboard</PageHeading>
+        <SmallText>
           Manage your family's chore system and settings
-        </p>
+        </SmallText>
       </div>
 
       {/* Statistics Cards */}

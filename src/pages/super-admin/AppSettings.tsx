@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PageHeading, SmallText } from '@/components/ui/typography';
 import { AppWindow, Image as ImageIcon, Save, ExternalLink, Upload, Trash2, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -207,10 +208,10 @@ export default function AppSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold text-foreground">App Settings</h2>
-        <p className="text-muted-foreground">Manage app name, icon, and branding</p>
+    <div className="page-padding component-spacing">
+      <div className="section-spacing">
+        <PageHeading>App Settings</PageHeading>
+        <SmallText>Manage app name, icon, and branding</SmallText>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

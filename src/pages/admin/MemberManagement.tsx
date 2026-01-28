@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { PageHeading, SmallText } from '@/components/ui/typography';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -311,17 +312,17 @@ const MemberManagement = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 max-w-full overflow-x-hidden">
+    <div className="page-padding component-spacing max-w-full overflow-x-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 section-spacing">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+          <PageHeading className="flex items-center gap-2">
             <UserCog className="h-6 w-6 sm:h-8 sm:w-8" />
             Member Management
-          </h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
+          </PageHeading>
+          <SmallText>
             Manage family members, roles, and permissions
-          </p>
+          </SmallText>
         </div>
         <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2 w-full sm:w-auto">
           <Plus className="h-4 w-4" />

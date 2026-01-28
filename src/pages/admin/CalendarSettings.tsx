@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { PageHeading, SmallText } from '@/components/ui/typography';
 import { Calendar, Settings, ExternalLink, RefreshCw, Trash2, Shield, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -429,13 +430,13 @@ const CalendarSettings = () => {
   }
 
   return (
-    <div className="w-full max-w-full p-4 sm:p-6 space-y-6">
+    <div className="page-padding component-spacing">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Calendar Sync</h1>
-        <p className="text-muted-foreground text-sm sm:text-base">
+      <div className="section-spacing">
+        <PageHeading>Calendar Sync</PageHeading>
+        <SmallText>
           Connect and sync external calendars for your family members
-        </p>
+        </SmallText>
       </div>
 
       {/* Integration Overview */}

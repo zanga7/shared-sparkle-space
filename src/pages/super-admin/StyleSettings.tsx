@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Type, Heading1, Heading2, LetterText, Square, FileText, Tag, MousePointer } from 'lucide-react';
+import { PageHeading, SmallText, SectionHeading, BodyText, LabelText, CardTitleStyled } from '@/components/ui/typography';
+import { Type, Heading1, Heading2, LetterText, Square, FileText, Tag, MousePointer, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -154,10 +155,10 @@ export default function StyleSettings() {
 
   if (isLoading || !formData) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-3xl font-bold text-foreground">Style Settings</h2>
-          <p className="text-muted-foreground">Manage global typography and styling</p>
+      <div className="page-padding component-spacing">
+        <div className="section-spacing">
+          <PageHeading>Style Settings</PageHeading>
+          <SmallText>Manage global typography and styling</SmallText>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           {[1, 2, 3, 4].map(i => (
@@ -245,11 +246,11 @@ export default function StyleSettings() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="page-padding component-spacing">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 section-spacing">
         <div>
-          <h2 className="text-3xl font-bold text-foreground">Style Settings</h2>
-          <p className="text-muted-foreground">Manage global typography and styling throughout the app</p>
+          <PageHeading>Style Settings</PageHeading>
+          <SmallText>Manage global typography and styling throughout the app</SmallText>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleReset}>

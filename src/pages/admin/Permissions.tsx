@@ -1,16 +1,17 @@
 import { MemberPermissions } from '@/components/admin/MemberPermissions';
 import { DashboardModeSettings } from '@/components/admin/DashboardModeSettings';
 import { PWAInstallSettings } from '@/components/admin/PWAInstallSettings';
+import { PageHeading, SmallText } from '@/components/ui/typography';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function Permissions() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Permissions & Dashboard Settings</h1>
-        <p className="text-muted-foreground mt-1">
+    <div className="page-padding component-spacing">
+      <div className="section-spacing">
+        <PageHeading>Permissions & Dashboard Settings</PageHeading>
+        <SmallText>
           Configure dashboard mode, access controls, member permissions, and app installation
-        </p>
+        </SmallText>
       </div>
       
       <Tabs defaultValue="dashboard" className="w-full">

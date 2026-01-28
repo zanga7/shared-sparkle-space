@@ -1,6 +1,7 @@
 import { EventMigrationPanel } from '@/components/admin/EventMigrationPanel';
 import { useAdminContext } from '@/contexts/AdminContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeading, SmallText } from '@/components/ui/typography';
 import { Database, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -8,12 +9,12 @@ export default function EventMigration() {
   const { profile } = useAdminContext();
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Event Migration</h1>
-        <p className="text-muted-foreground mt-1">
+    <div className="page-padding component-spacing">
+      <div className="section-spacing">
+        <PageHeading>Event Migration</PageHeading>
+        <SmallText>
           Migrate recurring events to the new series system for better performance and management
-        </p>
+        </SmallText>
       </div>
 
       <Alert>

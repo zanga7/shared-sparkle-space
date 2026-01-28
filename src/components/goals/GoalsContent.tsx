@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Plus, Target, Filter, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PageHeading, SmallText } from '@/components/ui/typography';
 import {
   Select,
   SelectContent,
@@ -295,8 +296,8 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
         {/* Header */}
         <div className="flex items-center justify-between section-spacing">
           <div>
-            <h1 className="text-3xl font-bold">Goals</h1>
-            <p className="text-muted-foreground">Track progress toward meaningful outcomes</p>
+            <PageHeading>Goals</PageHeading>
+            <SmallText>Track progress toward meaningful outcomes</SmallText>
           </div>
           <Button onClick={() => setShowCreateDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
