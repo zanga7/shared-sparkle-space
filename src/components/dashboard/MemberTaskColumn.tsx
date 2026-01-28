@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { AddButton } from '@/components/ui/add-button';
 import { UserAvatar } from '@/components/ui/user-avatar';
@@ -47,8 +47,8 @@ export function MemberTaskColumn({
     : 0;
 
   return (
-    <Card 
-      className="h-fit w-full group p-2"
+    <div 
+      className="h-fit w-full group rounded-lg"
       style={colorStyles.bg10}
     >
       <CardHeader 
@@ -109,6 +109,6 @@ export function MemberTaskColumn({
         />
       </CardContent>
 
-    </Card>
+    </div>
   );
 }

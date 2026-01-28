@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Plus, Target, Filter, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PageHeading, SmallText } from '@/components/ui/typography';
+import { PageHeading } from '@/components/ui/typography';
 import {
   Select,
   SelectContent,
@@ -291,17 +291,13 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
   };
 
   return (
-    <div className="min-h-screen bg-background page-padding">
-      <div className="max-w-7xl mx-auto">
+    <div className="w-full">
         {/* Header */}
         <div className="flex items-center justify-between section-spacing">
-          <div>
-            <PageHeading>Goals</PageHeading>
-            <SmallText>Track progress toward meaningful outcomes</SmallText>
-          </div>
+          <PageHeading>Goals</PageHeading>
           <Button onClick={() => setShowCreateDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            New Goal
+            <span className="hidden sm:inline">New Goal</span>
           </Button>
         </div>
       
@@ -331,9 +327,8 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
         ) : (
           renderGoalsList(displayGoals)
         )}
-      </div>
       
-      <GoalDetailDialog 
+      <GoalDetailDialog
         goal={selectedGoal}
         open={!!selectedGoal}
         onOpenChange={(open) => !open && setSelectedGoal(null)}
