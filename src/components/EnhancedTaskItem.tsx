@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { 
-  CheckCircle2, 
+  Check, 
   Clock, 
   Calendar, 
   Edit,
@@ -137,7 +137,7 @@ export const EnhancedTaskItem = ({
           onTouchStart={(e) => e.stopPropagation()}
           disabled={isCompleting || (task.completion_rule === 'any_one' && isCompleted && !isCompletedByMe)}
           className={cn(
-            "shrink-0 w-7 h-7 p-0 cursor-pointer transition-all",
+            "shrink-0 w-8 h-8 p-0 cursor-pointer transition-all rounded-md",
             isCompletedByMe 
               ? "bg-green-500 hover:bg-green-600 hover:scale-110 active:scale-95" 
               : "hover:border-green-500 hover:text-green-500",
@@ -155,9 +155,9 @@ export const EnhancedTaskItem = ({
           }
         >
           {isCompleting ? (
-            <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
           ) : (
-            <CheckCircle2 className="h-3 w-3" />
+            <Check className="h-4 w-4" />
           )}
         </Button>
 

@@ -59,16 +59,16 @@ const MemberStatCard = memo(({
         onClick={onViewDashboard}
       >
         <div className="flex">
-          {/* Left column - Avatar and Name (25% width, white background) */}
-          <div className="w-1/4 bg-white flex flex-col items-center justify-center p-3">
+          {/* Left column - Avatar and Name (25% width, colored background) */}
+          <div className="w-1/4 flex flex-col items-center justify-center p-3" style={{ backgroundColor: hex }}>
             <UserAvatar 
               name={member.display_name} 
-              color={member.color}
+              color="white"
               avatarIcon={member.avatar_url || undefined}
               size="lg"
               className="w-14 h-14"
             />
-            <p className="text-xs font-medium text-center mt-2 text-foreground truncate w-full">
+            <p className="text-xs font-medium text-center mt-2 text-white truncate w-full">
               {member.display_name}
             </p>
           </div>
