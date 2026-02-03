@@ -141,7 +141,7 @@ const TodayEventsWidget = memo(({ events, onViewCalendar }: { events: any[]; onV
     .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
 
   return (
-    <Card className="h-full p-2">
+    <Card className="h-full">
       <CardHeader className="pb-4 pt-0">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-semibold">
@@ -217,7 +217,7 @@ const RewardsWidget = memo(({ rewards }: { rewards: any[] }) => {
   const activeRewards = rewards.filter(r => r.is_active);
 
   return (
-    <Card className="p-2">
+    <Card>
       <CardHeader className="pb-3 pt-4">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
           <Gift className="h-5 w-5 text-primary" />
@@ -315,7 +315,7 @@ const GoalsWidget = memo(({ goals, onNavigateToGoals }: { goals: any[]; onNaviga
   const activeGoals = goals.filter(g => g.status === 'active');
 
   return (
-    <Card className="h-full p-2">
+    <Card className="h-full">
       <CardHeader className="pb-4 pt-0">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-semibold">
