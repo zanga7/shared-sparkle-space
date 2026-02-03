@@ -142,7 +142,7 @@ const TodayEventsWidget = memo(({ events, onViewCalendar }: { events: any[]; onV
 
   return (
     <Card className="h-full">
-      <CardHeader className="pb-4 pt-0">
+      <CardHeader className="pb-4 pt-4 px-4">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-semibold">
             <Calendar className="h-5 w-5 text-primary" />
@@ -161,7 +161,7 @@ const TodayEventsWidget = memo(({ events, onViewCalendar }: { events: any[]; onV
           )}
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 px-4 pb-4">
         {todayEvents.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
             <Calendar className="h-10 w-10 mx-auto mb-2 opacity-30" />
@@ -218,13 +218,13 @@ const RewardsWidget = memo(({ rewards }: { rewards: any[] }) => {
 
   return (
     <Card>
-      <CardHeader className="pb-3 pt-4">
+      <CardHeader className="pb-3 pt-4 px-4">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
           <Gift className="h-5 w-5 text-primary" />
           Available Rewards
         </h2>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 px-4 pb-4">
         {activeRewards.length === 0 ? (
           <div className="text-center py-4 text-muted-foreground">
             <Gift className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -316,7 +316,7 @@ const GoalsWidget = memo(({ goals, onNavigateToGoals }: { goals: any[]; onNaviga
 
   return (
     <Card className="h-full">
-      <CardHeader className="pb-4 pt-0">
+      <CardHeader className="pb-4 pt-4 px-4">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-semibold">
             <Target className="h-5 w-5 text-primary" />
@@ -335,7 +335,7 @@ const GoalsWidget = memo(({ goals, onNavigateToGoals }: { goals: any[]; onNaviga
           )}
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 px-4 pb-4">
         {activeGoals.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
             <Target className="h-10 w-10 mx-auto mb-2 opacity-30" />
