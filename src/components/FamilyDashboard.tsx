@@ -356,13 +356,6 @@ const GoalsWidget = memo(({ goals, onNavigateToGoals }: { goals: any[]; onNaviga
                   transition={{ delay: index * 0.1 }}
                   className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                 >
-                  <div className="flex-shrink-0">
-                    {isConsistency ? (
-                      <CompactConsistencyGrid goal={goal} />
-                    ) : (
-                      <GoalProgressRing percent={progressPercent} size="sm" showLabel={false} />
-                    )}
-                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{goal.title}</p>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
