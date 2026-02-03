@@ -59,7 +59,7 @@ const MemberStatCard = memo(({
       >
         <div className="flex">
           {/* Left column - Avatar and Name (25% width, white background) */}
-          <div className="w-1/4 flex flex-col items-center justify-center p-3 bg-background">
+          <div className="w-1/4 flex flex-col items-center justify-center p-3 bg-muted/50 rounded-l-lg">
             <UserAvatar 
               name={member.display_name} 
               color={member.color}
@@ -141,8 +141,8 @@ const TodayEventsWidget = memo(({ events, onViewCalendar }: { events: any[]; onV
     .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-4 pt-4 px-4">
+    <div className="h-full flex flex-col">
+      <div className="pb-4 pt-4 px-4">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-semibold">
             <Calendar className="h-5 w-5 text-primary" />
@@ -160,8 +160,8 @@ const TodayEventsWidget = memo(({ events, onViewCalendar }: { events: any[]; onV
             </Button>
           )}
         </div>
-      </CardHeader>
-      <CardContent className="pt-0 px-4 pb-4">
+      </div>
+      <div className="flex-1 px-4 pb-4 overflow-y-auto">
         {todayEvents.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
             <Calendar className="h-10 w-10 mx-auto mb-2 opacity-30" />
@@ -206,8 +206,8 @@ const TodayEventsWidget = memo(({ events, onViewCalendar }: { events: any[]; onV
             ))}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 });
 TodayEventsWidget.displayName = 'TodayEventsWidget';
@@ -315,8 +315,8 @@ const GoalsWidget = memo(({ goals, onNavigateToGoals }: { goals: any[]; onNaviga
   const activeGoals = goals.filter(g => g.status === 'active');
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-4 pt-4 px-4">
+    <div className="h-full flex flex-col">
+      <div className="pb-4 pt-4 px-4">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-semibold">
             <Target className="h-5 w-5 text-primary" />
@@ -334,8 +334,8 @@ const GoalsWidget = memo(({ goals, onNavigateToGoals }: { goals: any[]; onNaviga
             </Button>
           )}
         </div>
-      </CardHeader>
-      <CardContent className="pt-0 px-4 pb-4">
+      </div>
+      <div className="flex-1 px-4 pb-4 overflow-y-auto">
         {activeGoals.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
             <Target className="h-10 w-10 mx-auto mb-2 opacity-30" />
@@ -391,8 +391,8 @@ const GoalsWidget = memo(({ goals, onNavigateToGoals }: { goals: any[]; onNaviga
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 });
 GoalsWidget.displayName = 'GoalsWidget';
@@ -492,8 +492,8 @@ export const FamilyDashboard = memo(({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Left column - Leaderboard + Rewards */}
         <div className="space-y-6">
-          <Card className="h-full">
-            <CardHeader className="pb-4 pt-0">
+          <div>
+            <div className="pb-4 pt-4 px-4">
               <div className="flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-xl font-semibold">
                   <Trophy className="h-5 w-5 text-primary" />
@@ -509,8 +509,8 @@ export const FamilyDashboard = memo(({
                   Tasks
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-3">
+            </div>
+            <div className="px-4 space-y-3">
               {sortedMemberStats.map((stat) => (
                 <MemberStatCard
                   key={stat.member.id}
@@ -521,20 +521,20 @@ export const FamilyDashboard = memo(({
                   onViewDashboard={() => onMemberSelect(stat.member.id)}
                 />
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
           
           {/* Rewards under leaderboard */}
           <RewardsWidget rewards={rewards} />
         </div>
 
         {/* Center column - Goals */}
-        <div>
+        <div className="h-full">
           <GoalsWidget goals={goals} onNavigateToGoals={onNavigateToGoals} />
         </div>
 
         {/* Right column - Today's Schedule */}
-        <div>
+        <div className="h-full">
           <TodayEventsWidget events={events} onViewCalendar={onNavigateToCalendar} />
         </div>
       </div>
