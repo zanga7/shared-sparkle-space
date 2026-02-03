@@ -5,13 +5,14 @@ type ThemedSvgAvatarProps = {
   svg: string;
   className?: string;
   label?: string;
+  style?: React.CSSProperties;
 };
 
 /**
  * Renders an SVG string inline so it can inherit theme colors via `currentColor`.
  * (Using <img src="..."> isolates SVG styles so Tailwind text colors won't apply.)
  */
-export function ThemedSvgAvatar({ svg, className, label }: ThemedSvgAvatarProps) {
+export function ThemedSvgAvatar({ svg, className, label, style }: ThemedSvgAvatarProps) {
   const sanitized = useMemo(() => {
     const withCurrentColor = svg
       // Replace the hardcoded fill used by our avatar SVGs
@@ -31,6 +32,7 @@ export function ThemedSvgAvatar({ svg, className, label }: ThemedSvgAvatarProps)
         'inline-flex items-center justify-center [&_svg]:block [&_svg]:w-full [&_svg]:h-full',
         className
       )}
+      style={style}
       // eslint-disable-next-line react/no-danger
       dangerouslySetInnerHTML={{ __html: sanitized }}
     />
