@@ -217,14 +217,14 @@ const RewardsWidget = memo(({ rewards }: { rewards: any[] }) => {
   const activeRewards = rewards.filter(r => r.is_active);
 
   return (
-    <Card>
-      <CardHeader className="pb-3 pt-4 px-4">
+    <div>
+      <div className="pb-3 pt-4 px-4">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
           <Gift className="h-5 w-5 text-primary" />
           Available Rewards
         </h2>
-      </CardHeader>
-      <CardContent className="pt-0 px-4 pb-4">
+      </div>
+      <div className="pt-0 px-4 pb-4">
         {activeRewards.length === 0 ? (
           <div className="text-center py-4 text-muted-foreground">
             <Gift className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -269,8 +269,8 @@ const RewardsWidget = memo(({ rewards }: { rewards: any[] }) => {
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 });
 RewardsWidget.displayName = 'RewardsWidget';
