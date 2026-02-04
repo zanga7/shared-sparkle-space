@@ -49,7 +49,7 @@ export function GoalTaskItem({
   const getTaskTypeBadge = () => {
     if (linkedTask.task_type === 'recurring') {
       return (
-        <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
+        <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 bg-foreground/[0.08] border-0">
           <Repeat className="h-2 w-2" />
           Repeat
         </Badge>
@@ -57,7 +57,7 @@ export function GoalTaskItem({
     }
     if (linkedTask.task_type === 'rotating') {
       return (
-        <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
+        <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 bg-foreground/[0.08] border-0">
           <RotateCw className="h-2 w-2" />
           Rotate
         </Badge>
@@ -130,12 +130,12 @@ export function GoalTaskItem({
 
           {/* Badges - matches EnhancedTaskItem badge row */}
           <div className="flex items-center gap-1 flex-wrap">
-            {/* Points Badge - matches EnhancedTaskItem */}
+            {/* Points - no border, no padding */}
             {points !== undefined && (
-              <Badge variant="outline" className="text-[0.72rem] py-0 h-5 flex items-center gap-1">
+              <span className="text-[0.72rem] h-5 flex items-center gap-1 text-muted-foreground">
                 <Target className="h-2.5 w-2.5" />
                 {points} pts
-              </Badge>
+              </span>
             )}
 
             {/* Task Type Badge */}
@@ -143,7 +143,7 @@ export function GoalTaskItem({
 
             {/* Group Badge for multiple assignees */}
             {assignees.length > 1 && (
-              <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
+              <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 bg-foreground/[0.08] border-0">
                 <Users className="h-2 w-2" />
                 Group
               </Badge>

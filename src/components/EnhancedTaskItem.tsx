@@ -212,8 +212,8 @@ export const EnhancedTaskItem = ({
 
           {/* Compact Badges and Indicators */}
           <div className="flex items-center gap-1 flex-wrap">
-            {/* Points with Award Info */}
-            <Badge variant="outline" className="text-[0.72rem] py-0 h-5 flex items-center gap-1">
+            {/* Points with Award Info - no border, no padding */}
+            <span className="text-[0.72rem] h-5 flex items-center gap-1 text-muted-foreground">
               <Target className="h-2.5 w-2.5" />
               {task.points} pts
               {(() => {
@@ -231,11 +231,11 @@ export const EnhancedTaskItem = ({
                 }
                 return null;
               })()}
-            </Badge>
+            </span>
 
             {/* Show "Completed by [Name]" for "anyone" tasks completed by someone else */}
             {isCompletedBySomeoneElse && firstCompleterProfile && (
-              <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
+              <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 bg-foreground/[0.08] border-0">
                 <UserCheck className="h-2 w-2" />
                 Completed by {firstCompleterProfile.display_name}
               </Badge>
@@ -254,7 +254,10 @@ export const EnhancedTaskItem = ({
             {!isCompleted && task.due_date && (
               <Badge 
                 variant={isOverdue ? "destructive" : daysUntilDue === 0 ? "default" : "outline"} 
-                className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5"
+                className={cn(
+                  "text-[0.625rem] py-0 h-4 flex items-center gap-0.5",
+                  !isOverdue && daysUntilDue !== 0 && "bg-foreground/[0.08] border-0"
+                )}
               >
                 {isOverdue ? (
                   <AlertTriangle className="h-2 w-2" />
@@ -271,7 +274,7 @@ export const EnhancedTaskItem = ({
 
             {/* Rotating Task Indicator */}
             {task.rotating_task_id && (
-              <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
+              <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 bg-foreground/[0.08] border-0">
                 <RotateCw className="h-2 w-2" />
                 Rotate
               </Badge>
@@ -286,7 +289,7 @@ export const EnhancedTaskItem = ({
                 Array.isArray((task as any).assigned_profiles) ? (task as any).assigned_profiles.length : 0,
                 task.assigned_to ? 1 : 0
               ) > 1 && (
-                <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
+                <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 bg-foreground/[0.08] border-0">
                   <Users className="h-2 w-2" />
                   Group
                 </Badge>
@@ -294,7 +297,7 @@ export const EnhancedTaskItem = ({
 
             {/* Recurrence Indicator */}
             {(task.recurrence_options?.enabled || (task as any).isVirtual) && (
-              <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5">
+              <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 bg-foreground/[0.08] border-0">
                 <Repeat className="h-2 w-2" />
                 Repeat
               </Badge>
@@ -305,7 +308,7 @@ export const EnhancedTaskItem = ({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge variant="outline" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 border-primary/30 text-primary">
+                    <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 bg-primary/[0.15] border-0 text-primary">
                       <Goal className="h-2 w-2" />
                       {goalConnections.length === 1 ? 'Goal' : `${goalConnections.length} Goals`}
                     </Badge>
