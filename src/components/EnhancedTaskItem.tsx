@@ -179,7 +179,7 @@ export const EnhancedTaskItem = ({
                 </Badge>}
 
             {/* Recurrence Indicator */}
-            {(task.recurrence_options?.enabled || (task as any).isVirtual) && <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 bg-foreground/[0.08] border-0">
+            {(task.recurrence_options?.enabled || (task as any).isVirtual) && <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 border-0 bg-slate-50/25">
                 <Repeat className="h-2 w-2" />
                 Repeat
               </Badge>}
@@ -188,7 +188,7 @@ export const EnhancedTaskItem = ({
             {goalConnections && goalConnections.length > 0 && <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 bg-primary/[0.15] border-0 text-primary">
+                    <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 border-0 text-primary bg-slate-50/25">
                       <Goal className="h-2 w-2" />
                       {goalConnections.length === 1 ? 'Goal' : `${goalConnections.length} Goals`}
                     </Badge>
