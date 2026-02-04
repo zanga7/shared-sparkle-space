@@ -356,3 +356,19 @@
 .kawaii-do-tongue .kawaii-tongue ellipse {
   animation: kawaii-tongue-out 220ms ease-in-out forwards;
 }
+
+/* Hover bounce animation for avatars */
+@keyframes kawaii-bounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  25% {
+    transform: translateY(-4px) scale(1.05);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.02);
+  }
+  75% {
+    transform: translateY(-3px) scale(1.03);
+  }
+}
