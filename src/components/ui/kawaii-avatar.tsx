@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { KawaiiFaceOverlay, KawaiiFaceStyle } from './kawaii-face-overlay';
 import { kawaiiScheduler } from '@/lib/kawaii-scheduler';
 import { useKawaiiSettings } from '@/contexts/KawaiiContext';
@@ -27,6 +27,7 @@ interface KawaiiAvatarProps {
 /**
  * Wrapper component that adds kawaii face overlay to any avatar.
  * Registers with the global animation scheduler for occasional micro-animations.
+ * Shows wink + tongue on hover with a cute bounce.
  */
 export function KawaiiAvatar({
   children,
@@ -38,6 +39,7 @@ export function KawaiiAvatar({
   className,
 }: KawaiiAvatarProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
   const settings = useKawaiiSettings();
   
   // Resolve size to pixels
@@ -82,7 +84,8 @@ export function KawaiiAvatar({
     <div
       ref={wrapperRef}
       className={cn(
-        'relative inline-flex items-center justify-center',
+        'relative inline-flex items-center justify-center transition-transform duration-200 cursor-pointer',
+        isHovered && 'animate-[kawaii-bounce_0.5s_ease-in-out]',
         className
       )}
       style={{ 
@@ -90,11 +93,14 @@ export function KawaiiAvatar({
         height: sizePixels,
         overflow: 'visible',
       }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {children}
       <KawaiiFaceOverlay 
         size={sizePixels} 
         faceStyle={faceStyle}
+        isHovered={isHovered}
       />
     </div>
   );
