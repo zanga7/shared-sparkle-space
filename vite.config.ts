@@ -19,8 +19,9 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json,vue,txt,woff2}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB limit
-        skipWaiting: true,
-        clientsClaim: true,
+        // Changed: Don't auto-reload - let users choose when to update
+        skipWaiting: false,
+        clientsClaim: false,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/timefstlnqojqidllokb\.supabase\.co\/rest\/v1\/.*/i,
