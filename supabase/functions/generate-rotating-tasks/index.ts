@@ -20,6 +20,7 @@ interface RotatingTask {
   is_paused: boolean;
   task_group: string;
   created_by: string;
+  rotate_on_completion: boolean;
   // Note: allow_multiple_completions field exists in DB but is always false
   // Rotating tasks are single-visibility only (one member at a time)
 }
@@ -52,6 +53,8 @@ Deno.serve(async (req) => {
 
     // Whether to assign to the next member (used when triggered on completion)
     let assignNextMember = false;
+    // Whether this was triggered by a completion event
+    let isCompletionTrigger = false;
 
     // Optional filter from request body to process a single rotating task
     const contentType = req.headers.get('content-type') || '';
@@ -64,6 +67,7 @@ Deno.serve(async (req) => {
         if (body?.family_id) filter.family_id = body.family_id;
         if (typeof body?.assign_next_member !== 'undefined') {
           assignNextMember = !!body.assign_next_member;
+          isCompletionTrigger = !!body.assign_next_member;
         }
       } catch (_) {
         // ignore JSON parse errors
@@ -105,6 +109,13 @@ Deno.serve(async (req) => {
 
     for (const rotatingTask of (rotatingTasks as RotatingTask[]) || []) {
       console.log(`\n🔍 Processing: ${rotatingTask.name}`);
+
+      // If this is a completion trigger but the task uses scheduled rotation, skip
+      if (isCompletionTrigger && rotatingTask.rotate_on_completion === false) {
+        console.log(`⏭️  ${rotatingTask.name}: uses scheduled rotation, skipping instant rotate`);
+        continue;
+      }
+
       // Determine which member should receive a task now
       const len = rotatingTask.member_order.length;
       if (len === 0) {
@@ -118,14 +129,15 @@ Deno.serve(async (req) => {
           .from('tasks')
           .select('id, task_completions(id)')
           .eq('family_id', rotatingTask.family_id)
-          .eq('rotating_task_id', rotatingTask.id);
+          .eq('rotating_task_id', rotatingTask.id)
+          .is('hidden_at', null); // Only consider visible (non-hidden) tasks
         if (error) {
           console.error(`Error checking existing tasks for ${rotatingTask.name}:`, error);
           return true; // fail-safe: avoid duplicate creation on error
         }
         // Filter to only incomplete tasks (no completion records)
         const incompleteTasks = existing?.filter(task => !task.task_completions || task.task_completions.length === 0) || [];
-        console.log(`📊 Found ${incompleteTasks.length} incomplete task(s) for ${rotatingTask.name}`);
+        console.log(`📊 Found ${incompleteTasks.length} incomplete visible task(s) for ${rotatingTask.name}`);
         return incompleteTasks.length > 0;
       };
 

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,6 +30,7 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
   const [monthlyDay, setMonthlyDay] = useState(1);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [taskGroup, setTaskGroup] = useState<TaskGroup>('general');
+  const [rotateOnCompletion, setRotateOnCompletion] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -164,6 +165,7 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
           current_member_index: 0,
           task_group: taskGroup,
           allow_multiple_completions: false, // Rotating tasks are always single-visibility
+          rotate_on_completion: rotateOnCompletion,
           family_id: profile.family_id,
           created_by: profile.id,
         });
@@ -184,6 +186,7 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
       setMonthlyDay(1);
       setSelectedMembers([]);
       setTaskGroup('general');
+      setRotateOnCompletion(true);
 
       onSuccess();
     } catch (error) {
@@ -269,6 +272,38 @@ export function AddRotatingTaskDialog({ open, onOpenChange, onSuccess }: AddRota
                 <SelectItem value="general">General</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div>
+            <Label className="mb-2 block">Rotation Mode</Label>
+            <RadioGroup 
+              value={rotateOnCompletion ? "instant" : "scheduled"} 
+              onValueChange={(value) => setRotateOnCompletion(value === "instant")}
+              className="space-y-2"
+            >
+              <div className="flex items-start space-x-3">
+                <RadioGroupItem value="instant" id="instant" className="mt-0.5" />
+                <div>
+                  <Label htmlFor="instant" className="font-medium cursor-pointer">
+                    Instant rotation
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Task immediately moves to the next person when completed
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <RadioGroupItem value="scheduled" id="scheduled" className="mt-0.5" />
+                <div>
+                  <Label htmlFor="scheduled" className="font-medium cursor-pointer">
+                    Scheduled rotation
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Task appears on schedule ({cadence}) and rotates to the next person each time
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
           </div>
 
           {cadence === 'weekly' && (

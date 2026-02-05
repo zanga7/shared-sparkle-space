@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useQuery } from "@tanstack/react-query";
@@ -27,6 +27,7 @@ interface RotatingTask {
   member_order: string[];
   current_member_index: number;
   allow_multiple_completions?: boolean;
+  rotate_on_completion?: boolean;
   is_active: boolean;
   is_paused: boolean;
   created_at: string;
@@ -50,6 +51,7 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [taskGroup, setTaskGroup] = useState<TaskGroup>('general');
   const [currentMemberIndex, setCurrentMemberIndex] = useState(0);
+  const [rotateOnCompletion, setRotateOnCompletion] = useState(true);
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -113,6 +115,7 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
       setSelectedMembers([...task.member_order]);
       setTaskGroup((task as any).task_group || 'general');
       setCurrentMemberIndex(task.current_member_index);
+      setRotateOnCompletion(task.rotate_on_completion !== false); // Default to true
       setIsActive(task.is_active);
     }
   }, [task, open]);
@@ -222,6 +225,7 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
           member_order: selectedMembers,
           task_group: taskGroup,
           allow_multiple_completions: false, // Rotating tasks are always single-visibility
+          rotate_on_completion: rotateOnCompletion,
           current_member_index: Math.min(currentMemberIndex, selectedMembers.length - 1),
           is_active: isActive,
         })
@@ -351,6 +355,38 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
                 <SelectItem value="general">General</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div>
+            <Label className="mb-2 block">Rotation Mode</Label>
+            <RadioGroup 
+              value={rotateOnCompletion ? "instant" : "scheduled"} 
+              onValueChange={(value) => setRotateOnCompletion(value === "instant")}
+              className="space-y-2"
+            >
+              <div className="flex items-start space-x-3">
+                <RadioGroupItem value="instant" id="edit-instant" className="mt-0.5" />
+                <div>
+                  <Label htmlFor="edit-instant" className="font-medium cursor-pointer">
+                    Instant rotation
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Task immediately moves to the next person when completed
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <RadioGroupItem value="scheduled" id="edit-scheduled" className="mt-0.5" />
+                <div>
+                  <Label htmlFor="edit-scheduled" className="font-medium cursor-pointer">
+                    Scheduled rotation
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Task appears on schedule ({cadence}) and rotates to the next person each time
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
           </div>
 
           {cadence === 'weekly' && (
