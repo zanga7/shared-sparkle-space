@@ -59,7 +59,7 @@ export function GoalTaskItem({
       return (
         <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 bg-foreground/[0.08] border-0">
           <RotateCw className="h-2 w-2" />
-          Rotate
+          Rota
         </Badge>
       );
     }
