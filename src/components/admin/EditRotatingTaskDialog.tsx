@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { X, Trash2 } from "lucide-react";
 import { TaskGroup } from '@/types/taskGroup';
+import { useAuth } from "@/hooks/useAuth";
 
 interface RotatingTask {
   id: string;
@@ -53,18 +54,41 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  const { data: profiles } = useQuery({
-    queryKey: ['family-profiles'],
+  // First get the current user's family_id
+  const { data: currentProfile } = useQuery({
+    queryKey: ['current-profile', user?.id],
     queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, family_id')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Then get profiles filtered by family_id
+  const { data: profiles } = useQuery({
+    queryKey: ['family-profiles', currentProfile?.family_id],
+    queryFn: async () => {
+      if (!currentProfile?.family_id) return [];
       const { data, error } = await supabase
         .from('profiles')
         .select('id, display_name, color')
+        .eq('family_id', currentProfile.family_id)
+        .eq('status', 'active')
         .order('display_name');
       
       if (error) throw error;
       return data;
     },
+    enabled: !!currentProfile?.family_id,
   });
 
   const weekDays = [
