@@ -167,9 +167,9 @@ export const EnhancedTaskItem = ({
               </Badge>}
 
             {/* Rotating Task Indicator */}
-            {task.rotating_task_id && <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 bg-foreground/[0.08] border-0">
+            {task.rotating_task_id && <Badge variant="secondary" className="text-[0.625rem] py-0 h-4 flex items-center gap-0.5 border-0 bg-slate-50/25">
                 <RotateCw className="h-2 w-2" />
-                Rotate
+                Rota
               </Badge>}
 
             {/* Group Task Indicator - only when truly multi-assignee */}
