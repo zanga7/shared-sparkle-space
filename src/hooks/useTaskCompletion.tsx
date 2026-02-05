@@ -173,17 +173,29 @@ export const useTaskCompletion = ({
 
       // If this is a rotating task, trigger rotation to next member
       if (task.rotating_task_id && !isVirtualTask) {
-        console.log('🔄 Rotating task completed, triggering rotation to next member');
+        // Check if this rotating task uses instant rotation
         try {
-          await supabase.functions.invoke('generate-rotating-tasks', {
-            body: { 
-              rotating_task_id: task.rotating_task_id,
-              assign_next_member: true
-            }
-          });
+          const { data: rotatingTask } = await supabase
+            .from('rotating_tasks')
+            .select('rotate_on_completion')
+            .eq('id', task.rotating_task_id)
+            .single();
+          
+          // Only trigger instant rotation if rotate_on_completion is true (or not set, defaulting to true)
+          if (rotatingTask?.rotate_on_completion !== false) {
+            console.log('🔄 Rotating task completed, triggering instant rotation to next member');
+            await supabase.functions.invoke('generate-rotating-tasks', {
+              body: { 
+                rotating_task_id: task.rotating_task_id,
+                assign_next_member: true
+              }
+            });
+          } else {
+            console.log('📅 Rotating task completed, using scheduled rotation (no instant rotate)');
+          }
         } catch (rotationError) {
-          console.error('Error triggering rotation:', rotationError);
-          // Don't fail the whole completion if rotation fails
+          console.error('Error handling rotation:', rotationError);
+          // Don't fail the whole completion if rotation check/trigger fails
         }
       }
 

@@ -1896,6 +1896,7 @@ export type Database = {
           monthly_day: number | null
           name: string
           points: number
+          rotate_on_completion: boolean
           task_group: string | null
           updated_at: string
           weekly_days: number[] | null
@@ -1915,6 +1916,7 @@ export type Database = {
           monthly_day?: number | null
           name: string
           points?: number
+          rotate_on_completion?: boolean
           task_group?: string | null
           updated_at?: string
           weekly_days?: number[] | null
@@ -1934,6 +1936,7 @@ export type Database = {
           monthly_day?: number | null
           name?: string
           points?: number
+          rotate_on_completion?: boolean
           task_group?: string | null
           updated_at?: string
           weekly_days?: number[] | null
