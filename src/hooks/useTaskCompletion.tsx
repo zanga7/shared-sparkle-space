@@ -171,32 +171,11 @@ export const useTaskCompletion = ({
         description: `+${completionResult?.points_awarded || task.points} points earned`,
       });
 
-      // If this is a rotating task, trigger rotation to next member
+      // Note: For instant rotation tasks (rotate_on_completion = true), the DB trigger 
+      // `handle_rotating_task_completion` automatically creates the next task instance.
+      // No edge function call needed - this avoids race conditions and duplicate tasks.
       if (task.rotating_task_id && !isVirtualTask) {
-        // Check if this rotating task uses instant rotation
-        try {
-          const { data: rotatingTask } = await supabase
-            .from('rotating_tasks')
-            .select('rotate_on_completion')
-            .eq('id', task.rotating_task_id)
-            .single();
-          
-          // Only trigger instant rotation if rotate_on_completion is true (or not set, defaulting to true)
-          if (rotatingTask?.rotate_on_completion !== false) {
-            console.log('🔄 Rotating task completed, triggering instant rotation to next member');
-            await supabase.functions.invoke('generate-rotating-tasks', {
-              body: { 
-                rotating_task_id: task.rotating_task_id,
-                assign_next_member: true
-              }
-            });
-          } else {
-            console.log('📅 Rotating task completed, using scheduled rotation (no instant rotate)');
-          }
-        } catch (rotationError) {
-          console.error('Error handling rotation:', rotationError);
-          // Don't fail the whole completion if rotation check/trigger fails
-        }
+        console.log('🔄 Rotating task completed - DB trigger handles instant rotation if enabled');
       }
 
       // Success callback if provided
