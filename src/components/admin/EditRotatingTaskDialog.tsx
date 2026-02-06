@@ -328,20 +328,6 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
           </div>
 
           <div>
-            <Label>Schedule</Label>
-            <Select value={cadence} onValueChange={(value: 'daily' | 'weekly' | 'monthly') => setCadence(value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="daily">Daily</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
             <Label>Task Group</Label>
             <Select value={taskGroup} onValueChange={(value: TaskGroup) => setTaskGroup(value)}>
               <SelectTrigger>
@@ -364,71 +350,90 @@ export function EditRotatingTaskDialog({ open, onOpenChange, task, onSuccess }: 
               onValueChange={(value) => setRotateOnCompletion(value === "instant")}
               className="space-y-2"
             >
-              <div className="flex items-start space-x-3">
+              <div className="flex items-start space-x-3 p-3 rounded-lg border bg-background hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setRotateOnCompletion(true)}>
                 <RadioGroupItem value="instant" id="edit-instant" className="mt-0.5" />
                 <div>
                   <Label htmlFor="edit-instant" className="font-medium cursor-pointer">
                     Instant rotation
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Task immediately moves to the next person when completed
+                    Task is always available. When completed, it immediately moves to the next person.
                   </p>
                 </div>
               </div>
-              <div className="flex items-start space-x-3">
+              <div className="flex items-start space-x-3 p-3 rounded-lg border bg-background hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setRotateOnCompletion(false)}>
                 <RadioGroupItem value="scheduled" id="edit-scheduled" className="mt-0.5" />
                 <div>
                   <Label htmlFor="edit-scheduled" className="font-medium cursor-pointer">
                     Scheduled rotation
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Task appears on schedule ({cadence}) and rotates to the next person each time
+                    Task appears on a schedule and rotates to the next person each occurrence.
                   </p>
                 </div>
               </div>
             </RadioGroup>
           </div>
 
-          {cadence === 'weekly' && (
-            <div>
-              <div className="flex items-baseline justify-between">
-                <Label>Days of Week</Label>
-                <button
-                  type="button"
-                  onClick={selectAllDays}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  select all
-                </button>
+          {/* Schedule options - only show for scheduled rotation */}
+          {!rotateOnCompletion && (
+            <div className="space-y-4 p-4 rounded-lg border bg-muted/20">
+              <div>
+                <Label>Schedule Frequency</Label>
+                <Select value={cadence} onValueChange={(value: 'daily' | 'weekly' | 'monthly') => setCadence(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Once per day</SelectItem>
+                    <SelectItem value="weekly">On specific days of the week</SelectItem>
+                    <SelectItem value="monthly">Once per month</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {weekDays.map((day) => (
-                  <div key={day.value} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`day-${day.value}`}
-                      checked={weeklyDays.includes(day.value)}
-                      onCheckedChange={(checked) => handleWeeklyDayToggle(day.value, checked as boolean)}
-                    />
-                    <Label htmlFor={`day-${day.value}`} className="text-sm">
-                      {day.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {cadence === 'monthly' && (
-            <div>
-              <Label htmlFor="monthlyDay">Day of Month</Label>
-              <Input
-                id="monthlyDay"
-                type="number"
-                min="1"
-                max="31"
-                value={monthlyDay}
-                onChange={(e) => setMonthlyDay(parseInt(e.target.value) || 1)}
-              />
+              {cadence === 'weekly' && (
+                <div>
+                  <div className="flex items-baseline justify-between">
+                    <Label>Days of Week</Label>
+                    <button
+                      type="button"
+                      onClick={selectAllDays}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      select all
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {weekDays.map((day) => (
+                      <div key={day.value} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`edit-day-${day.value}`}
+                          checked={weeklyDays.includes(day.value)}
+                          onCheckedChange={(checked) => handleWeeklyDayToggle(day.value, checked as boolean)}
+                        />
+                        <Label htmlFor={`edit-day-${day.value}`} className="text-sm">
+                          {day.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {cadence === 'monthly' && (
+                <div>
+                  <Label htmlFor="edit-monthlyDay">Day of Month</Label>
+                  <Input
+                    id="edit-monthlyDay"
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={monthlyDay}
+                    onChange={(e) => setMonthlyDay(parseInt(e.target.value) || 1)}
+                  />
+                </div>
+              )}
             </div>
           )}
 
