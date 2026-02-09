@@ -116,6 +116,12 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // For scheduled rotation (not completion-triggered), check if today matches the cadence
+      if (!isCompletionTrigger && !rotatingTask.rotate_on_completion && !shouldGenerateToday(rotatingTask, now)) {
+        console.log(`⏭️  ${rotatingTask.name}: not scheduled for today (cadence: ${rotatingTask.cadence})`);
+        continue;
+      }
+
       // Determine which member should receive a task now
       const len = rotatingTask.member_order.length;
       if (len === 0) {

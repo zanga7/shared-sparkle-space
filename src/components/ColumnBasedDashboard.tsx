@@ -592,22 +592,8 @@ const ColumnBasedDashboard = () => {
     };
   }, [profile?.family_id, profile?.id]);
 
-  // Ensure today's rotating tasks exist once per load (idempotent)
-  useEffect(() => {
-    if (!profile?.family_id || ensuredRotationTodayRef.current) return;
-    ensuredRotationTodayRef.current = true;
-    (async () => {
-      try {
-        console.log('🔁 Ensuring rotating tasks exist for today');
-        await supabase.functions.invoke('generate-rotating-tasks', {
-          body: { family_id: profile.family_id }
-        });
-        await fetchUserData();
-      } catch (e) {
-        console.warn('Could not ensure rotating tasks for today:', e);
-      }
-    })();
-  }, [profile?.family_id]);
+  // Note: rotating task generation is handled inside fetchUserData only.
+  // No separate useEffect needed — it was causing duplicate invocations.
 
   const cleanupDuplicateRotatingTasksToday = async (familyId: string) => {
     try {
@@ -634,11 +620,12 @@ const ColumnBasedDashboard = () => {
       const names = Array.from(rotatingMap.keys());
       if (names.length === 0) return;
 
-      // Fetch today's tasks for those names with assignees
+      // Fetch today's VISIBLE tasks for those names with assignees
       const { data: todaysTasks, error: tasksError } = await supabase
         .from('tasks')
         .select('id, title, created_at, due_date, task_assignees!inner(profile_id), task_completions(id)')
         .eq('family_id', familyId)
+        .is('hidden_at', null)
         .in('title', names)
         .gte('created_at', startISO)
         .lte('created_at', endISO);
