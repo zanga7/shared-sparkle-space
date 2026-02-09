@@ -248,7 +248,9 @@ Deno.serve(async (req) => {
 
       // Optimistic concurrency: reserve the rotation slot before creating the task.
       // If another invocation already rotated, this update will affect 0 rows and we skip.
-      const nextIndex = (selectedIndex + 1) % len;
+      // Store selectedIndex (the member we're assigning to) as current_member_index.
+      // The advancement already happened when computing selectedIndex above.
+      const nextIndex = selectedIndex;
       const { data: rotationReserved, error: reserveError } = await supabaseClient
         .from('rotating_tasks')
         .update({
