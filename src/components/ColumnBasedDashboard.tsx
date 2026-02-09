@@ -880,19 +880,20 @@ const ColumnBasedDashboard = () => {
         setFamilyMembers(membersData || []);
       }
 
-      // Generate rotating tasks for today before fetching
-      try {
-        console.log('🔄 Generating rotating tasks for family:', profileData.family_id);
-        await supabase.functions.invoke('generate-rotating-tasks', {
-          body: { family_id: profileData.family_id }
-        });
-      } catch (rotatingError) {
-        console.error('Failed to generate rotating tasks:', rotatingError);
-        // Continue anyway - don't block the dashboard
+      // Generate rotating tasks for today before fetching (only once per session)
+      if (!ensuredRotationTodayRef.current) {
+        ensuredRotationTodayRef.current = true;
+        try {
+          console.log('🔄 Generating rotating tasks for family:', profileData.family_id);
+          await supabase.functions.invoke('generate-rotating-tasks', {
+            body: { family_id: profileData.family_id }
+          });
+        } catch (rotatingError) {
+          console.error('Failed to generate rotating tasks:', rotatingError);
+          // Reset so it can retry on next fetch
+          ensuredRotationTodayRef.current = false;
+        }
       }
-
-      // Cleanup duplicate rotating tasks for today
-      await cleanupDuplicateRotatingTasksToday(profileData.family_id);
 
       // Fetch family tasks with completion status (filter out hidden tasks)
       const { data: tasksData, error: tasksError } = await supabase
