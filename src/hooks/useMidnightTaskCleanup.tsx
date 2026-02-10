@@ -61,7 +61,7 @@ export const useMidnightTaskCleanup = () => {
         .eq('family_id', profile.family_id)
         .is('hidden_at', null)
         .in('id', taskIds)
-        .neq('task_source', 'recurring')
+        .or('task_source.is.null,task_source.neq.recurring')
         .select('id');
 
       if (error) {
