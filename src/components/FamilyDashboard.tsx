@@ -349,9 +349,16 @@ const GoalsWidget = memo(({
                         </>}
                     </div>
                   </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {Math.round(progressPercent)}%
-                  </Badge>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <Badge variant="secondary" className="text-xs">
+                      {Math.round(progressPercent)}%
+                    </Badge>
+                    {daysLabel && (
+                      <span className={cn("text-xs text-muted-foreground whitespace-nowrap", isEnded && "text-destructive")}>
+                        {daysLabel}
+                      </span>
+                    )}
+                  </div>
                 </motion.div>;
         })}
           </div>}
