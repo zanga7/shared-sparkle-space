@@ -72,38 +72,20 @@ export function NavigationHeader({
         {/* Main Navigation - Always visible */}
         <nav className="flex items-center space-x-0.5 sm:space-x-1 flex-shrink-0">
           {navigationItems.map(item => {
-            const IconComponent = item.icon;
-            const isActive = activeTab === item.value;
-            return (
-              <Button 
-                key={item.value} 
-                variant={isActive ? "default" : "ghost"} 
-                size="sm" 
-                onClick={() => onTabChange(item.value)} 
-                className={cn(
-                  "h-8 sm:h-9 font-medium transition-colors",
-                  // On mobile/tablet: icon only for inactive, icon + label for active
-                  isActive ? "px-2 sm:px-3" : "px-2 sm:px-3",
-                  isActive 
-                    ? "bg-primary text-primary-foreground shadow-sm" 
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                )}
-              >
-                <IconComponent className={cn(
-                  "h-3.5 w-3.5 sm:h-4 sm:w-4",
-                  // Add margin only when label is shown
-                  isActive ? "mr-1.5 sm:mr-2" : "sm:mr-2"
-                )} />
+          const IconComponent = item.icon;
+          const isActive = activeTab === item.value;
+          return <Button key={item.value} variant={isActive ? "default" : "ghost"} size="sm" onClick={() => onTabChange(item.value)} className={cn("h-8 sm:h-9 font-medium transition-colors",
+          // On mobile/tablet: icon only for inactive, icon + label for active
+          isActive ? "px-2 sm:px-3" : "px-2 sm:px-3", isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-accent")}>
+                <IconComponent className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4",
+            // Add margin only when label is shown
+            isActive ? "mr-1.5 sm:mr-2" : "sm:mr-2")} />
                 {/* On mobile: show label only for active item. On desktop (sm+): show all labels */}
-                <span className={cn(
-                  "text-xs sm:text-sm",
-                  isActive ? "inline" : "hidden sm:inline"
-                )}>
+                <span className={cn("text-xs sm:text-sm", isActive ? "inline" : "hidden sm:inline")}>
                   {item.label}
                 </span>
-              </Button>
-            );
-          })}
+              </Button>;
+        })}
         </nav>
 
         {/* Member Management & Settings */}
@@ -119,7 +101,7 @@ export function NavigationHeader({
             </> : <>
               {/* Member selection for dashboard views */}
               <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto">
-                {familyMembers.map(member => <Button key={member.id} variant={selectedMember === member.id && viewMode === 'member' ? "default" : "ghost"} size="sm" onClick={() => onMemberSelect(member.id)} className="h-8 sm:h-9 px-1 sm:px-2 font-medium gap-0.5 flex-shrink-0 flex items-center justify-center">
+                {familyMembers.map(member => <Button key={member.id} variant={selectedMember === member.id && viewMode === 'member' ? "default" : "ghost"} size="sm" onClick={() => onMemberSelect(member.id)} className="h-8 sm:h-9 px-1 sm:px-2 font-medium flex-shrink-0 flex items-center justify-center gap-[8px]">
                     <UserAvatar name={member.display_name} color={member.color} avatarIcon={member.avatar_url || undefined} size="sm" />
                     <span className="hidden md:inline text-xs sm:text-sm">{member.display_name}</span>
                     {/* Hide scores on mobile, show on sm+ */}
