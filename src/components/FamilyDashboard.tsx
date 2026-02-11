@@ -4,13 +4,14 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { Badge } from '@/components/ui/badge';
 import { useMemberColor } from '@/hooks/useMemberColor';
+import { cn } from '@/lib/utils';
 import { useEvents } from '@/hooks/useEvents';
 import { useRewards } from '@/hooks/useRewards';
 import { useGoals } from '@/hooks/useGoals';
 import { Profile, Task } from '@/types/task';
 import { GoalProgressRing } from '@/components/goals/GoalProgressRing';
 import { CheckSquare, Calendar, Trophy, Gift, Target } from 'lucide-react';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { format, startOfDay, endOfDay, differenceInDays } from 'date-fns';
 import { motion } from 'framer-motion';
 interface FamilyDashboardProps {
   familyMembers: Profile[];
@@ -264,6 +265,42 @@ const GoalsWidget = memo(({
   onNavigateToGoals?: () => void;
 }) => {
   const activeGoals = goals.filter(g => g.status === 'active');
+
+  // Helper to compute days remaining
+  const getDaysLeft = (goal: any): number | null => {
+    if (goal.goal_type === 'consistency' && goal.success_criteria?.time_window_days) {
+      const startDate = new Date(goal.start_date + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const daysElapsed = differenceInDays(today, startDate);
+      return goal.success_criteria.time_window_days - daysElapsed;
+    }
+    if (!goal.end_date) return null;
+    const endDate = new Date(goal.end_date + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return differenceInDays(endDate, today);
+  };
+
+  const getDaysLabel = (daysLeft: number | null): string | null => {
+    if (daysLeft === null) return null;
+    if (daysLeft < 0) return 'Ended';
+    if (daysLeft === 0) return 'Last day';
+    if (daysLeft === 1) return '1 day left';
+    return `${daysLeft} days left`;
+  };
+
+  // Sort: ended goals to the bottom
+  const sortedGoals = [...activeGoals].sort((a, b) => {
+    const aDays = getDaysLeft(a);
+    const bDays = getDaysLeft(b);
+    const aEnded = aDays !== null && aDays < 0;
+    const bEnded = bDays !== null && bDays < 0;
+    if (aEnded && !bEnded) return 1;
+    if (!aEnded && bEnded) return -1;
+    return 0;
+  });
+
   return <div className="h-full flex flex-col">
       <div className="pb-4 pt-4 px-4">
         <div className="flex items-center justify-between">
@@ -278,14 +315,16 @@ const GoalsWidget = memo(({
         </div>
       </div>
       <div className="flex-1 px-4 pb-4 overflow-y-auto">
-        {activeGoals.length === 0 ? <div className="text-center py-6 text-muted-foreground">
+        {sortedGoals.length === 0 ? <div className="text-center py-6 text-muted-foreground">
             <Target className="h-10 w-10 mx-auto mb-2 opacity-30" />
             <p className="text-sm">No active goals</p>
             <p className="text-xs mt-1">Create a goal to track family progress</p>
-          </div> : <div className="space-y-3 max-h-[400px] overflow-y-auto">
-            {activeGoals.slice(0, 5).map((goal, index) => {
+          </div> : <div className="space-y-3">
+            {sortedGoals.map((goal, index) => {
           const progressPercent = goal.progress?.current_percent ?? 0;
-          const isConsistency = goal.goal_type === 'consistency';
+          const daysLeft = getDaysLeft(goal);
+          const daysLabel = getDaysLabel(daysLeft);
+          const isEnded = daysLeft !== null && daysLeft < 0;
           return <motion.div key={goal.id} initial={{
             opacity: 0,
             x: -10
@@ -294,15 +333,18 @@ const GoalsWidget = memo(({
             x: 0
           }} transition={{
             delay: index * 0.1
-          }} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors py-[15px] px-[15px]">
+          }} className={cn("flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors py-[15px] px-[15px]", isEnded && "opacity-60")}>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{goal.title}</p>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span className="capitalize">{goal.goal_type.replace('_', ' ')}</span>
+                      {daysLabel && <>
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>{daysLabel}</span>
+                      </>}
                       {goal.assignees && goal.assignees.length > 0 && <>
-                          <span>•</span>
+                          {daysLabel && <span>•</span>}
                           <div className="flex gap-1">
-                            {goal.assignees.slice(0, 3).map((assignee: any) => <UserAvatar key={assignee.profile_id} name={assignee.profile?.display_name || 'Unknown'} color={assignee.profile?.color} avatarIcon={assignee.profile?.avatar_url || undefined} size="xs" />)}
+                            {goal.assignees.slice(0, 3).map((assignee: any) => <UserAvatar key={assignee.profile_id} name={assignee.profile?.display_name || 'Unknown'} color={assignee.profile?.color} avatarIcon={assignee.profile?.avatar_url || undefined} size="sm" />)}
                           </div>
                         </>}
                     </div>
@@ -312,9 +354,6 @@ const GoalsWidget = memo(({
                   </Badge>
                 </motion.div>;
         })}
-            {activeGoals.length > 5 && <p className="text-xs text-center text-muted-foreground pt-2">
-                +{activeGoals.length - 5} more goals
-              </p>}
           </div>}
       </div>
     </div>;
