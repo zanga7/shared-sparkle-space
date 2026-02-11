@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
-import { CheckCircle, Clock, Calendar, Edit, Trash2, AlertTriangle, Target, Repeat, UserCheck, Users, RotateCw, Goal } from 'lucide-react';
+import { Check, Clock, Calendar, Edit, Trash2, AlertTriangle, Target, Repeat, UserCheck, Users, RotateCw, Goal } from 'lucide-react';
 import { format, isAfter, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Task, Profile } from '@/types/task';
@@ -99,7 +99,7 @@ export const EnhancedTaskItem = ({
         }
         onToggle(task);
       }} onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()} disabled={isCompleting || task.completion_rule === 'any_one' && isCompleted && !isCompletedByMe} className={cn("shrink-0 w-10 h-10 p-0 cursor-pointer transition-all rounded-md", isCompletedByMe ? "bg-green-500 hover:bg-green-600 hover:scale-110 active:scale-95" : "hover:border-green-500 hover:text-green-500", isCompleting && "opacity-50 cursor-wait", task.completion_rule === 'any_one' && isCompleted && !isCompletedByMe && "opacity-50 cursor-not-allowed")} title={isCompletedByMe ? task.completion_rule === 'any_one' ? "Click to uncomplete and remove points" : "Click to uncomplete your completion and remove your points" : isCompleted && task.completion_rule === 'any_one' ? "Already completed by someone" : "Click to complete and earn points"}>
-          {isCompleting ? <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+          {isCompleting ? <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Check className="h-4 w-4" />}
         </Button>
 
         {/* Task Content */}

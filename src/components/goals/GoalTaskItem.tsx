@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { 
-  CheckCircle, 
+  Check, 
   Target,
   Repeat,
   Users,
@@ -97,7 +97,7 @@ export function GoalTaskItem({
             {isCompleting ? (
               <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
             ) : (
-              <CheckCircle className="h-4 w-4" />
+              <Check className="h-4 w-4" />
             )}
           </Button>
         )}
