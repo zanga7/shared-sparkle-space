@@ -336,7 +336,7 @@ const GoalsWidget = memo(({
           }} className={cn("flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors py-[15px] px-[15px]", isEnded && "opacity-60")}>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{goal.title}</p>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                       {daysLabel && <>
                         <Calendar className="h-3.5 w-3.5" />
                         <span>{daysLabel}</span>
