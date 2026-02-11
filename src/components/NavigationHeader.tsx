@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Users, List, Calendar, Gift, ArrowLeftRight, LayoutDashboard, Target } from 'lucide-react';
+import { Settings, CheckCircle, List, Calendar, Gift, ArrowLeftRight, LayoutDashboard, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ActiveMemberChip } from '@/components/dashboard/ActiveMemberChip';
 import { useDashboardMode } from '@/hooks/useDashboardMode';
@@ -36,7 +36,7 @@ const navigationItems = [{
 }, {
   label: 'Tasks',
   value: 'columns',
-  icon: Users
+  icon: CheckCircle
 }, {
   label: 'Lists',
   value: 'lists',
