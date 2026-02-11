@@ -79,7 +79,7 @@ export function NavigationHeader({
           isActive ? "px-2 sm:px-3" : "px-2 sm:px-3", isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-accent")}>
                 <IconComponent className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4",
             // Add margin only when label is shown
-            isActive ? "mr-1.5 sm:mr-2" : "sm:mr-2")} />
+            isActive ? "mr-1 sm:mr-1.5" : "sm:mr-1.5")} />
                 {/* On mobile: show label only for active item. On desktop (sm+): show all labels */}
                 <span className={cn("text-xs sm:text-sm", isActive ? "inline" : "hidden sm:inline")}>
                   {item.label}
