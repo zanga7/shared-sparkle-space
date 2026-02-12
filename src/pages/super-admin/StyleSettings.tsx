@@ -266,7 +266,9 @@ export default function StyleSettings() {
         </div>
         <div className="pt-2 border-t">
           <Label className="text-xs text-muted-foreground">Preview</Label>
-          <div className={`mt-1 ${formData[sizeField]} ${formData[weightField]} ${formData[colorField]}`}>
+          <div className={`mt-1 ${formData[sizeField]} ${formData[weightField]} ${formData[colorField]} ${
+            (sizeField === 'page_heading_size' || sizeField === 'section_heading_size') ? 'font-display uppercase' : ''
+          }`}>
             Sample Text
           </div>
         </div>
