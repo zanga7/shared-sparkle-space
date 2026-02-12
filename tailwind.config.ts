@@ -97,6 +97,7 @@ export default {
   			'accordion-up': 'accordion-up 0.2s ease-out'
   		},
   		fontFamily: {
+  			display: ['"Erica One"', 'cursive'],
   			sans: [
   				'ui-sans-serif',
   				'system-ui',

@@ -9,7 +9,7 @@ interface TypographyProps extends React.HTMLAttributes<HTMLElement> {
 export function PageHeading({ className, children, ...props }: TypographyProps) {
   const { pageHeading } = useGlobalStyles();
   return (
-    <h1 className={cn(pageHeading, "leading-tight tracking-tight", className)} {...props}>
+    <h1 className={cn(pageHeading, "leading-tight tracking-tight font-display", className)} {...props}>
       {children}
     </h1>
   );
@@ -18,7 +18,7 @@ export function PageHeading({ className, children, ...props }: TypographyProps) 
 export function SectionHeading({ className, children, ...props }: TypographyProps) {
   const { sectionHeading } = useGlobalStyles();
   return (
-    <h2 className={cn(sectionHeading, "leading-tight tracking-tight", className)} {...props}>
+    <h2 className={cn(sectionHeading, "leading-tight tracking-tight font-display", className)} {...props}>
       {children}
     </h2>
   );
