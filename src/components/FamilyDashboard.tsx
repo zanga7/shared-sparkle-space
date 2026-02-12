@@ -1,4 +1,5 @@
 import { useMemo, memo, useCallback } from 'react';
+import { PageHeading } from '@/components/ui/typography';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
@@ -447,9 +448,9 @@ export const FamilyDashboard = memo(({
       opacity: 1,
       y: 0
     }} className="mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-left">
+        <PageHeading>
           {format(new Date(), 'EEEE, MMMM do, yyyy')}
-        </h1>
+        </PageHeading>
       </motion.div>
 
       {/* Main content grid - 3 columns with aligned headers */}

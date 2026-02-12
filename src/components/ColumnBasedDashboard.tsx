@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, CheckCircle, Clock, Edit, Trash2, Calendar, List, Users, Gift, Settings } from 'lucide-react';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { AddButton } from '@/components/ui/add-button';
+import { PageHeading } from '@/components/ui/typography';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
@@ -2166,7 +2167,7 @@ const ColumnBasedDashboard = () => {
                             size="lg" 
                             className="mx-auto mb-4" 
                           />
-                          <h1 className="text-3xl font-bold text-foreground">{member.display_name}'s Dashboard</h1>
+                          <PageHeading>{member.display_name}'s Dashboard</PageHeading>
                           <div className="flex justify-center items-center gap-4 mt-2">
                             <Badge variant="outline" className="text-lg px-4 py-2">
                               {member.total_points} points
@@ -2249,7 +2250,7 @@ const ColumnBasedDashboard = () => {
                             size="lg" 
                             className="mx-auto mb-4" 
                           />
-                          <h1 className="text-3xl font-bold text-foreground">{member.display_name}'s Lists</h1>
+                          <PageHeading>{member.display_name}'s Lists</PageHeading>
                         </>
                       ) : null;
                     })()}
@@ -2278,7 +2279,7 @@ const ColumnBasedDashboard = () => {
                             size="lg" 
                             className="mx-auto mb-4" 
                           />
-                          <h1 className="text-3xl font-bold text-foreground">{member.display_name}'s Goals</h1>
+                          <PageHeading>{member.display_name}'s Goals</PageHeading>
                         </>
                       ) : null;
                     })()}
@@ -2311,7 +2312,7 @@ const ColumnBasedDashboard = () => {
                             size="lg" 
                             className="mx-auto mb-4" 
                           />
-                          <h1 className="text-3xl font-bold text-foreground">{member.display_name}'s Calendar</h1>
+                          <PageHeading>{member.display_name}'s Calendar</PageHeading>
                         </>
                       ) : null;
                     })()}
@@ -2364,7 +2365,7 @@ const ColumnBasedDashboard = () => {
                               size="lg" 
                               className="mx-auto mb-4" 
                             />
-                            <h1 className="text-3xl font-bold text-foreground">{member.display_name}'s Rewards</h1>
+                            <PageHeading>{member.display_name}'s Rewards</PageHeading>
                             <Badge variant="outline" className="text-lg px-4 py-2 mt-2">
                               {member.total_points} points available
                             </Badge>
