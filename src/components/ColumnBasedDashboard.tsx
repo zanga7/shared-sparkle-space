@@ -1962,6 +1962,9 @@ const ColumnBasedDashboard = () => {
             </TabsContent>
 
           <TabsContent value="columns" className="mt-4 sm:mt-6">
+            <div className="section-spacing">
+              <PageHeading>Tasks</PageHeading>
+            </div>
             {viewMode === 'everyone' ? (
               <DragDropContext onDragEnd={handleDragEnd} onDragStart={() => console.log('Drag started')}>
                  {/* Mobile: Single column carousel */}
