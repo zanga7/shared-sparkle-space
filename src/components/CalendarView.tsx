@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { SectionHeading } from '@/components/ui/typography';
+import { PageHeading } from '@/components/ui/typography';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -713,9 +713,9 @@ export const CalendarView = ({
       <div className="pb-4">
         <div className="flex flex-col gap-4">
           {/* Date Heading */}
-          <SectionHeading>
+          <PageHeading>
             {viewMode === 'today' ? `Today - ${format(currentDate, 'EEEE, MMMM d, yyyy')}` : viewMode === 'week' ? `Week of ${format(dateRange.start, 'MMM d')} - ${format(dateRange.end, 'MMM d, yyyy')}` : format(currentDate, 'MMMM yyyy')}
-          </SectionHeading>
+          </PageHeading>
 
           {/* Header Row with View Mode, Navigation, and Filters */}
           <div className="flex items-center justify-between gap-4">
