@@ -12,47 +12,37 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Require authentication
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: 'Missing or invalid authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const token = authHeader?.replace('Bearer ', '') ?? '';
 
-    // Verify the user is authenticated using Supabase auth
-    const supabaseAuth = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
+    // Allow access if called with the service role key (cron) or by a super admin
+    const isCronCall = token === serviceRoleKey;
+
+    if (!isCronCall) {
+      if (!authHeader?.startsWith('Bearer ')) {
+        return new Response(
+          JSON.stringify({ error: 'Missing or invalid authorization header' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
-    );
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-    
-    if (claimsError || !claimsData?.claims) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - invalid token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      const supabaseAuth = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        anonKey,
+        { global: { headers: { Authorization: authHeader } } }
       );
+
+      const { data: isSuperAdmin, error: roleError } = await supabaseAuth.rpc('is_super_admin');
+      if (roleError || !isSuperAdmin) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden - requires super admin privileges' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
-    // Check if user is a super admin
-    const { data: isSuperAdmin, error: roleError } = await supabaseAuth.rpc('is_super_admin');
-    
-    if (roleError || !isSuperAdmin) {
-      return new Response(
-        JSON.stringify({ error: 'Forbidden - requires super admin privileges' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Now use service role key for the actual cleanup operation
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
