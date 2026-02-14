@@ -238,14 +238,6 @@ export const MemberDashboard = ({
           </div>
         </div>
 
-        {/* Mobile Navigation - Current Widget Title */}
-        {isMobile && (
-          <div className="flex justify-center items-center mt-4">
-            <span className="text-lg font-medium text-center">
-              {WIDGET_SECTIONS[activeWidget]?.title}
-            </span>
-          </div>
-        )}
 
         {/* Dialogs */}
         <AddTaskDialog
