@@ -137,28 +137,6 @@ export const MemberDashboard = ({
         </div>
       </div>
 
-      {/* Mobile Widget Navigation Buttons */}
-      {isMobile && (
-        <div className="flex gap-2 mt-4">
-          {WIDGET_SECTIONS.map((section, index) => {
-            const IconComponent = section.icon;
-            const isActive = activeWidget === index;
-            return (
-              <Button
-                key={section.id}
-                variant={isActive ? "default" : "outline"}
-                size="sm"
-                onClick={() => scrollToWidget(index)}
-                className="h-10 px-3"
-                style={isActive ? { backgroundColor: colorHex, color: '#ffffff' } : { color: colorHex, borderColor: colorHex }}
-                aria-label={`Go to ${section.title}`}
-              >
-                <IconComponent className="h-5 w-5" />
-              </Button>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 
@@ -222,7 +200,7 @@ export const MemberDashboard = ({
     const columnPadding = isMobile ? 'px-2' : 'px-3';
     
     return (
-      <div className="w-full mx-auto page-padding">
+      <div className="w-full mx-auto page-padding pb-20">
         {renderMemberHeader()}
         
         {/* Mobile/Tablet Carousel */}
@@ -230,7 +208,7 @@ export const MemberDashboard = ({
           <div className="flex">
             {widgets.map((widget, index) => (
               <div key={index} className={`flex-shrink-0 ${columnPadding}`} style={{ width: columnWidth }}>
-                <div className="h-[calc(100vh-400px)] w-full">
+                <div className="h-[calc(100vh-300px)] w-full">
                   {widget}
                 </div>
               </div>
@@ -238,7 +216,43 @@ export const MemberDashboard = ({
           </div>
         </div>
 
-
+        {/* Fixed Bottom Navigation - Mobile Only */}
+        {isMobile && (
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border">
+            <div className="flex items-stretch">
+              {WIDGET_SECTIONS.map((section, index) => {
+                const IconComponent = section.icon;
+                const isActive = activeWidget === index;
+                return (
+                  <button
+                    key={section.id}
+                    onClick={() => scrollToWidget(index)}
+                    className="flex-1 flex flex-col items-center justify-center py-3 transition-colors relative"
+                    style={isActive ? { backgroundColor: colorHex } : {}}
+                    aria-label={`Go to ${section.title}`}
+                  >
+                    {isActive && (
+                      <div
+                        className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-3 rounded-b-full"
+                        style={{ backgroundColor: colorHex }}
+                      />
+                    )}
+                    <IconComponent
+                      className="h-5 w-5"
+                      style={{ color: isActive ? '#ffffff' : colorHex }}
+                    />
+                    <span
+                      className="text-[10px] mt-1 font-medium"
+                      style={{ color: isActive ? '#ffffff' : colorHex }}
+                    >
+                      {section.title}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         {/* Dialogs */}
         <AddTaskDialog
           familyMembers={familyMembers}
