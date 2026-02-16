@@ -2546,6 +2546,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      cleanup_all_completed_tasks: { Args: never; Returns: undefined }
       cleanup_broken_calendar_integrations: { Args: never; Returns: Json }
       complete_task_for_member:
         | { Args: { p_completed_by: string; p_task_id: string }; Returns: Json }
