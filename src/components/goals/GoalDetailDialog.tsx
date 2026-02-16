@@ -365,7 +365,7 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
                     {allAssignees.map((assignee) => {
                       const memberTask = getMemberTask(assignee.profile_id);
                       return (
-                        <MemberConsistencyGrid
+                         <MemberConsistencyGrid
                           key={assignee.profile_id}
                           member={{
                             id: assignee.profile_id,
@@ -376,10 +376,10 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
                           startDate={goal.start_date}
                           totalDays={(goal.success_criteria as { time_window_days: number }).time_window_days}
                           completedDates={completionsByMember[assignee.profile_id] || []}
-                          memberTask={memberTask}
+                          memberTask={goal.status !== 'completed' ? memberTask : null}
                           allTasks={allTasks}
                           familyMembers={goalFamilyMembers}
-                          onTaskToggle={handleMemberTaskToggle}
+                          onTaskToggle={goal.status !== 'completed' ? handleMemberTaskToggle : undefined}
                         />
                       );
                     })}
@@ -454,7 +454,7 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
               </h3>
               <LinkedTasksList 
                 linkedTasks={goal.linked_tasks || []}
-                onComplete={handleTaskComplete}
+                onComplete={goal.status !== 'completed' ? handleTaskComplete : undefined}
                 canEdit={false}
                 showEmpty={true}
               />
@@ -469,10 +469,10 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
                 <MilestoneList 
                   milestones={goal.milestones || []}
                   linkedTasks={goal.linked_tasks || []}
-                  onComplete={canEdit ? completeMilestone : undefined}
-                  onUncomplete={canEdit ? uncompleteMilestone : undefined}
-                  onCompleteTask={handleTaskComplete}
-                  canComplete={canEdit}
+                  onComplete={goal.status !== 'completed' && canEdit ? completeMilestone : undefined}
+                  onUncomplete={goal.status !== 'completed' && canEdit ? uncompleteMilestone : undefined}
+                  onCompleteTask={goal.status !== 'completed' ? handleTaskComplete : undefined}
+                  canComplete={goal.status !== 'completed' && canEdit}
                   canEdit={false}
                 />
               </div>
