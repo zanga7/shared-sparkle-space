@@ -206,6 +206,35 @@ function useGoalsState() {
         progress: progressMap[goal.id] as GoalProgress | undefined
       } as Goal));
 
+      // Auto-complete goals whose end date has passed
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const goalsToAutoComplete = goalsWithProgress.filter(g => {
+        if (g.status !== 'active' && g.status !== 'paused') return false;
+        
+        let effectiveEndDate: Date | null = null;
+        if (g.goal_type === 'consistency' && 'time_window_days' in g.success_criteria) {
+          const start = new Date(g.start_date + 'T00:00:00');
+          start.setDate(start.getDate() + (g.success_criteria as { time_window_days: number }).time_window_days);
+          effectiveEndDate = start;
+        } else if (g.end_date) {
+          effectiveEndDate = new Date(g.end_date + 'T00:00:00');
+        }
+        
+        return effectiveEndDate && effectiveEndDate < now;
+      });
+
+      if (goalsToAutoComplete.length > 0) {
+        const idsToComplete = goalsToAutoComplete.map(g => g.id);
+        await supabase
+          .from('goals')
+          .update({ status: 'completed', updated_at: new Date().toISOString() })
+          .in('id', idsToComplete);
+        
+        // Update local state
+        goalsToAutoComplete.forEach(g => { g.status = 'completed'; });
+      }
+
       setGoals(goalsWithProgress);
     } catch (err) {
       console.error('Error fetching goals:', err);

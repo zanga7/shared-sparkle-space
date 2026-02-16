@@ -133,7 +133,7 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
       const totalDays = (goal.success_criteria as { time_window_days: number }).time_window_days;
       const remaining = totalDays - daysElapsed;
       
-      if (remaining < 0) return 'Ended';
+      if (remaining < 0) return goal.status === 'completed' ? 'Completed' : 'Ended';
       if (remaining === 0) return 'Last day';
       if (remaining === 1) return '1 day left';
       return `${remaining} days left`;
@@ -144,7 +144,7 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const days = differenceInDays(endDate, today);
-    if (days < 0) return 'Ended';
+    if (days < 0) return goal.status === 'completed' ? 'Completed' : 'Ended';
     if (days === 0) return 'Ends today';
     if (days === 1) return '1 day left';
     return `${days} days left`;
@@ -435,8 +435,8 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
           </div>
         )}
 
-        {/* Non-project goals: Show linked tasks */}
-        {goal.goal_type !== 'project' && unassignedTasks.length > 0 && (
+        {/* Non-project goals: Show linked tasks (hidden when completed) */}
+        {goal.status !== 'completed' && goal.goal_type !== 'project' && unassignedTasks.length > 0 && (
           <div className="mt-3 pt-3 border-t space-y-2" onClick={(e) => e.stopPropagation()}>
             {/* Show "Complete today's challenge" header for consistency goals */}
             {goal.goal_type === 'consistency' && (
@@ -527,6 +527,20 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                 +{unassignedTasks.length - (goal.goal_type === 'consistency' ? 5 : 2)} more tasks
               </span>
             )}
+          </div>
+        )}
+
+        {/* Completed goal: show final result summary */}
+        {goal.status === 'completed' && (
+          <div className="mt-3 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+              <Check className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+              <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                Final result: {Math.round(percent)}%
+                {progress && 'total_completions' in progress && ` (${progress.total_completions} completions)`}
+                {progress && 'current_count' in progress && ` (${(progress as any).current_count}/${(progress as any).target_count})`}
+              </span>
+            </div>
           </div>
         )}
       </CardContent>
