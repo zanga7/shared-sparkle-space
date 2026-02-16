@@ -31,67 +31,24 @@ export const useMidnightTaskCleanup = () => {
 
       if (!profile?.family_id) return;
 
-      // Get the hide hours setting
-      const { data: settings } = await supabase
-        .from('household_settings')
-        .select('completed_tasks_hide_hours')
-        .eq('family_id', profile.family_id)
-        .single();
+      console.log('🧹 Running task cleanup via DB function...');
 
-      const hideHours = settings?.completed_tasks_hide_hours ?? 12;
+      // Call the DB function directly - it handles settings, filtering, and batching
+      const { data: result, error } = await supabase.rpc('hide_completed_tasks', {
+        p_family_id: profile.family_id,
+      });
 
-      // Calculate the cutoff time
-      const cutoffTime = new Date();
-      cutoffTime.setHours(cutoffTime.getHours() - hideHours);
-
-      console.log(`🧹 Task cleanup: hiding tasks completed before ${cutoffTime.toISOString()} (${hideHours} hours ago)`);
-
-      // Get task IDs with completions older than cutoff that aren't already hidden
-      const { data: completedTasks, error: fetchError } = await supabase
-        .from('task_completions')
-        .select('task_id')
-        .lt('completed_at', cutoffTime.toISOString());
-
-      if (fetchError) {
-        console.error('🧹 Error fetching completed tasks:', fetchError);
+      if (error) {
+        console.error('🧹 Cleanup error:', error);
         return;
       }
 
-      if (!completedTasks || completedTasks.length === 0) {
-        console.log('🧹 No tasks to hide');
-        return;
-      }
-
-      // Deduplicate task IDs
-      const taskIds = [...new Set(completedTasks.map(t => t.task_id))];
-
-      // Process in batches of 50 to avoid query limits
-      let totalHidden = 0;
-      for (let i = 0; i < taskIds.length; i += 50) {
-        const batch = taskIds.slice(i, i + 50);
-        
-        const { data: hiddenData, error } = await supabase
-          .from('tasks')
-          .update({ hidden_at: new Date().toISOString() })
-          .eq('family_id', profile.family_id)
-          .is('hidden_at', null)
-          .in('id', batch)
-          .or('task_source.is.null,task_source.neq.recurring')
-          .select('id');
-
-        if (error) {
-          console.error('🧹 Error hiding batch:', error);
-          continue;
-        }
-
-        totalHidden += hiddenData?.length ?? 0;
-      }
-
-      if (totalHidden > 0) {
-        console.log(`🧹 Hidden ${totalHidden} completed tasks`);
+      const hiddenCount = (result as any)?.hidden_count ?? 0;
+      if (hiddenCount > 0) {
+        console.log(`🧹 Hidden ${hiddenCount} completed tasks`);
         window.dispatchEvent(new CustomEvent('tasks-cleaned-up'));
       } else {
-        console.log('🧹 No unhidden tasks found matching criteria');
+        console.log('🧹 No tasks to hide');
       }
     } catch (error) {
       console.error('🧹 Error during task cleanup:', error);
