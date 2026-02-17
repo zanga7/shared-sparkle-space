@@ -230,6 +230,50 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_webhook_channels: {
+        Row: {
+          channel_id: string
+          created_at: string
+          expiration: string
+          id: string
+          integration_id: string
+          provider: string
+          resource_id: string | null
+          updated_at: string
+          webhook_url: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          expiration: string
+          id?: string
+          integration_id: string
+          provider: string
+          resource_id?: string | null
+          updated_at?: string
+          webhook_url: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          expiration?: string
+          id?: string
+          integration_id?: string
+          provider?: string
+          resource_id?: string | null
+          updated_at?: string
+          webhook_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_webhook_channels_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: true
+            referencedRelation: "calendar_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           color: string

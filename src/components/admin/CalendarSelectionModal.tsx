@@ -104,6 +104,25 @@ export const CalendarSelectionModal = ({
 
       console.log('✅ Calendar integration created successfully:', data);
 
+      // Register webhook watch channel for real-time sync
+      const integrationResult = result as any;
+      const newIntegrationId = integrationResult?.integration_id;
+      if (newIntegrationId) {
+        try {
+          console.log('📡 Registering webhook watch for integration:', newIntegrationId);
+          const { error: watchError } = await supabase.functions.invoke('register-calendar-watch', {
+            body: { integrationId: newIntegrationId },
+          });
+          if (watchError) {
+            console.warn('⚠️ Watch registration failed (sync will still work manually):', watchError);
+          } else {
+            console.log('✅ Webhook watch registered - real-time sync enabled');
+          }
+        } catch (watchErr) {
+          console.warn('⚠️ Watch registration failed:', watchErr);
+        }
+      }
+
       toast({
         title: '✓ Calendar Connected',
         description: `Successfully connected to ${integrationType === 'google' ? 'Google' : 'Microsoft'} Calendar`,
