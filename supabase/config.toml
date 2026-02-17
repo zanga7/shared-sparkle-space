@@ -18,5 +18,11 @@ verify_jwt = true
 [functions.calendar-webhooks]
 verify_jwt = false
 
+[functions.register-calendar-watch]
+verify_jwt = false
+
+[functions.sync-all-calendars]
+verify_jwt = false
+
 [functions.admin-delete-users]
 verify_jwt = false

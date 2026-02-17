@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,26 +15,48 @@ Deno.serve(async (req) => {
     const provider = url.searchParams.get('provider');
 
     console.log('Webhook received from provider:', provider);
-    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
+
+    // Use service role to access webhook channels and trigger sync
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
 
     if (provider === 'google') {
-      // Google sends notification headers
       const channelId = req.headers.get('x-goog-channel-id');
       const resourceState = req.headers.get('x-goog-resource-state');
+      const resourceId = req.headers.get('x-goog-resource-id');
       
-      console.log('Google webhook:', { channelId, resourceState });
+      console.log('Google webhook:', { channelId, resourceState, resourceId });
 
-      // Validate webhook (check if channel exists in our system)
       if (!channelId) {
         return new Response('Missing channel ID', { status: 400, headers: corsHeaders });
       }
 
-      // For now, just log and queue a sync job
+      // Initial sync verification - just acknowledge
       if (resourceState === 'sync') {
         console.log('Google webhook sync state - initial verification');
-      } else if (resourceState === 'exists') {
-        console.log('Google calendar changed, queuing sync job for channel:', channelId);
-        // TODO: Queue sync job for this integration
+        return new Response('OK', { status: 200, headers: corsHeaders });
+      }
+
+      // Calendar changed - find the integration and trigger sync
+      if (resourceState === 'exists' || resourceState === 'update') {
+        console.log('Google calendar changed, looking up channel:', channelId);
+        
+        const { data: channel, error: channelError } = await supabaseAdmin
+          .from('calendar_webhook_channels')
+          .select('integration_id')
+          .eq('channel_id', channelId)
+          .eq('provider', 'google')
+          .single();
+
+        if (channelError || !channel) {
+          console.error('Channel not found:', channelId, channelError);
+          return new Response('Channel not found', { status: 404, headers: corsHeaders });
+        }
+
+        // Trigger a pull sync for this integration
+        await triggerSync(supabaseAdmin, channel.integration_id, 'pull');
       }
 
       return new Response('OK', { status: 200, headers: corsHeaders });
@@ -54,17 +76,26 @@ Deno.serve(async (req) => {
 
       // Parse webhook notification
       const body = await req.json();
-      console.log('Microsoft webhook notification:', body);
+      console.log('Microsoft webhook notification:', JSON.stringify(body));
 
-      // Extract notification details
       if (body.value && Array.isArray(body.value)) {
         for (const notification of body.value) {
-          console.log('Calendar changed:', {
-            subscriptionId: notification.subscriptionId,
-            resource: notification.resource,
-            changeType: notification.changeType,
-          });
-          // TODO: Queue sync job for this integration
+          const subscriptionId = notification.subscriptionId;
+          console.log('Microsoft calendar changed, subscription:', subscriptionId);
+
+          const { data: channel, error: channelError } = await supabaseAdmin
+            .from('calendar_webhook_channels')
+            .select('integration_id')
+            .eq('channel_id', subscriptionId)
+            .eq('provider', 'microsoft')
+            .single();
+
+          if (channelError || !channel) {
+            console.error('Subscription not found:', subscriptionId, channelError);
+            continue;
+          }
+
+          await triggerSync(supabaseAdmin, channel.integration_id, 'pull');
         }
       }
 
@@ -83,3 +114,57 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+async function triggerSync(supabaseAdmin: any, integrationId: string, direction: string) {
+  try {
+    console.log(`Triggering ${direction} sync for integration:`, integrationId);
+
+    // Get the integration's profile to find the user for auth
+    const { data: integration, error: intError } = await supabaseAdmin
+      .from('calendar_integrations')
+      .select('profile_id')
+      .eq('id', integrationId)
+      .eq('is_active', true)
+      .single();
+
+    if (intError || !integration) {
+      console.error('Integration not found or inactive:', integrationId);
+      return;
+    }
+
+    // Get the user_id for the profile
+    const { data: profile, error: profError } = await supabaseAdmin
+      .from('profiles')
+      .select('user_id')
+      .eq('id', integration.profile_id)
+      .single();
+
+    if (profError || !profile?.user_id) {
+      console.error('Profile/user not found for integration:', integrationId);
+      return;
+    }
+
+    // Call calendar-sync using service role with the user context
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/calendar-sync`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify({ integrationId, direction }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Sync trigger failed:', response.status, errorText);
+    } else {
+      const result = await response.json();
+      console.log('Sync triggered successfully:', result);
+    }
+  } catch (error) {
+    console.error('Error triggering sync:', error);
+  }
+}
