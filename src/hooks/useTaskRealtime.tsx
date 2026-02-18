@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Task } from '@/types/task';
 
@@ -8,12 +8,14 @@ interface UseTaskRealtimeProps {
   onTaskUpdated: (task: Task) => void;
   onCompletionAdded: (taskId: string, completion: any) => void;
   onCompletionRemoved: (taskId: string, completionId: string) => void;
+  onCompletionUpdated?: (taskId: string, completion: any) => void;
   onSeriesChanged: () => void;
 }
 
 /**
- * Centralized hook for task-related realtime subscriptions
- * Extracts subscription logic from ColumnBasedDashboard for better maintainability
+ * Centralized hook for task-related realtime subscriptions.
+ * Handles: task inserts (with retry for assignee hydration), task completions
+ * (insert/delete/update), task assignee inserts, and series/exception changes.
  */
 export function useTaskRealtime({
   familyId,
@@ -21,10 +23,11 @@ export function useTaskRealtime({
   onTaskUpdated,
   onCompletionAdded,
   onCompletionRemoved,
+  onCompletionUpdated,
   onSeriesChanged
 }: UseTaskRealtimeProps) {
   
-  // Subscribe to task inserts
+  // Subscribe to task inserts (with retry logic for assignee hydration)
   useEffect(() => {
     if (!familyId) return;
 
@@ -39,10 +42,17 @@ export function useTaskRealtime({
           filter: `family_id=eq.${familyId}`
         },
         async (payload) => {
-          // Add delay to ensure task_assignees are committed
+          console.log('🔔 [REALTIME] New task INSERT detected:', {
+            taskId: payload.new.id,
+            title: (payload.new as any).title,
+            rotating_task_id: (payload.new as any).rotating_task_id
+          });
+
+          // Add delay to ensure task_assignees are committed by database triggers
           await new Promise(resolve => setTimeout(resolve, 100));
-          
-          // Fetch full task data with relations
+          console.log('⏱️ [REALTIME] Waited 100ms, now fetching full task data...');
+
+          // Fetch full task data with relations (exclude hidden tasks)
           const { data: newTaskData } = await supabase
             .from('tasks')
             .select(`
@@ -57,11 +67,40 @@ export function useTaskRealtime({
             .is('hidden_at', null)
             .single();
 
-          if (newTaskData) {
+          // Retry once if assignees are not yet available (race-safe hydration)
+          let hydratedTask = newTaskData;
+          if (hydratedTask && (!hydratedTask.assignees || hydratedTask.assignees.length === 0)) {
+            await new Promise((resolve) => setTimeout(resolve, 400));
+            const { data: retryData } = await supabase
+              .from('tasks')
+              .select(`
+                id, title, description, points, due_date, assigned_to, created_by,
+                completion_rule, task_group, task_source, rotating_task_id,
+                assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
+                assignees:task_assignees(id, profile_id, assigned_at, assigned_by, 
+                  profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
+                task_completions(id, completed_at, completed_by)
+              `)
+              .eq('id', payload.new.id)
+              .is('hidden_at', null)
+              .single();
+            if (retryData) hydratedTask = retryData;
+          }
+
+          if (hydratedTask) {
+            console.log('✅ [REALTIME] Task data fetched:', {
+              taskId: hydratedTask.id,
+              title: hydratedTask.title,
+              assigneesCount: hydratedTask.assignees?.length || 0,
+              assignees: hydratedTask.assignees?.map((a: any) => a.profile?.display_name)
+            });
+
             onTaskInserted({
-              ...newTaskData,
-              completion_rule: (newTaskData.completion_rule || 'everyone') as 'any_one' | 'everyone'
+              ...hydratedTask,
+              completion_rule: (hydratedTask.completion_rule || 'everyone') as 'any_one' | 'everyone'
             } as unknown as Task);
+          } else {
+            console.error('❌ [REALTIME] Failed to fetch task data');
           }
         }
       )
@@ -72,7 +111,7 @@ export function useTaskRealtime({
     };
   }, [familyId, onTaskInserted]);
 
-  // Subscribe to task completions
+  // Subscribe to task completions (INSERT, DELETE, UPDATE)
   useEffect(() => {
     if (!familyId) return;
 
@@ -82,6 +121,10 @@ export function useTaskRealtime({
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'task_completions' },
         (payload) => {
+          console.log('🔔 [REALTIME] Task completion INSERT detected:', {
+            taskId: (payload.new as any).task_id,
+            completedBy: (payload.new as any).completed_by
+          });
           onCompletionAdded((payload.new as any).task_id, payload.new);
         }
       )
@@ -89,7 +132,21 @@ export function useTaskRealtime({
         'postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'task_completions' },
         (payload) => {
+          console.log('🔔 [REALTIME] Task completion DELETE detected:', {
+            completionId: (payload.old as any).id,
+            taskId: (payload.old as any).task_id
+          });
           onCompletionRemoved((payload.old as any).task_id, (payload.old as any).id);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'task_completions' },
+        (payload) => {
+          console.log('🔔 Task completion updated via realtime:', payload.new);
+          if (onCompletionUpdated) {
+            onCompletionUpdated((payload.new as any).task_id, payload.new);
+          }
         }
       )
       .subscribe();
@@ -97,7 +154,7 @@ export function useTaskRealtime({
     return () => {
       supabase.removeChannel(completionsChannel);
     };
-  }, [familyId, onCompletionAdded, onCompletionRemoved]);
+  }, [familyId, onCompletionAdded, onCompletionRemoved, onCompletionUpdated]);
 
   // Subscribe to series changes
   useEffect(() => {
@@ -108,12 +165,18 @@ export function useTaskRealtime({
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'task_series', filter: `family_id=eq.${familyId}` },
-        () => onSeriesChanged()
+        () => {
+          console.log('🛰️ [REALTIME] task_series change detected, refreshing');
+          onSeriesChanged();
+        }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'recurrence_exceptions' },
-        () => onSeriesChanged()
+        () => {
+          console.log('🛰️ [REALTIME] recurrence_exceptions change detected, refreshing');
+          onSeriesChanged();
+        }
       )
       .subscribe();
 
@@ -132,25 +195,41 @@ export function useTaskRealtime({
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'task_assignees' },
         async (payload) => {
-          const { data: taskData } = await supabase
-            .from('tasks')
-            .select(`
-              id, title, description, points, due_date, assigned_to, created_by,
-              completion_rule, task_group, task_source, rotating_task_id, family_id,
-              assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
-              assignees:task_assignees(id, profile_id, assigned_at, assigned_by, 
-                profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
-              task_completions(id, completed_at, completed_by)
-            `)
-            .eq('id', (payload.new as any).task_id)
-            .is('hidden_at', null)
-            .single();
+          try {
+            console.log('🔔 [REALTIME] Task assignee INSERT detected:', {
+              taskId: (payload.new as any).task_id,
+              profileId: (payload.new as any).profile_id
+            });
 
-          if (taskData && taskData.family_id === familyId) {
-            onTaskUpdated({
-              ...taskData,
-              completion_rule: (taskData.completion_rule || 'everyone') as 'any_one' | 'everyone'
-            } as unknown as Task);
+            const { data: taskData } = await supabase
+              .from('tasks')
+              .select(`
+                id, title, description, points, due_date, assigned_to, created_by,
+                completion_rule, task_group, task_source, rotating_task_id, family_id,
+                assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
+                assignees:task_assignees(id, profile_id, assigned_at, assigned_by, 
+                  profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
+                task_completions(id, completed_at, completed_by)
+              `)
+              .eq('id', (payload.new as any).task_id)
+              .is('hidden_at', null)
+              .single();
+
+            if (taskData && taskData.family_id === familyId) {
+              console.log('✅ [REALTIME] Task assignee data fetched:', {
+                taskId: taskData.id,
+                assigneesCount: taskData.assignees?.length || 0
+              });
+
+              onTaskUpdated({
+                ...taskData,
+                completion_rule: (taskData.completion_rule || 'everyone') as 'any_one' | 'everyone'
+              } as unknown as Task);
+            } else {
+              console.log('⚠️ [REALTIME] Task not in family or not found');
+            }
+          } catch (e) {
+            console.error('❌ [REALTIME] Failed to update task after assignee insert', e);
           }
         }
       )
