@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import type { ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useFamilyData } from '@/contexts/FamilyDataContext';
 import { toast } from '@/hooks/use-toast';
 import type {
   Goal,
@@ -33,35 +34,10 @@ export function useGoals() {
 
 function useGoalsState() {
   const { user } = useAuth();
+  const { familyId, profileId } = useFamilyData();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const [familyId, setFamilyId] = useState<string | null>(null);
-  const [profileId, setProfileId] = useState<string | null>(null);
-
-  // Fetch the user's profile to get family_id
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) {
-        setFamilyId(null);
-        setProfileId(null);
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id, family_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (profile) {
-        setFamilyId(profile.family_id);
-        setProfileId(profile.id);
-      }
-    };
-
-    fetchProfile();
-  }, [user]);
 
   const fetchGoals = useCallback(async () => {
     if (!familyId) return;

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,6 +56,7 @@ import { useDashboardMode } from '@/hooks/useDashboardMode';
 import { useTaskCompletion } from '@/hooks/useTaskCompletion';
 import { useTaskSeries } from '@/hooks/useTaskSeries';
 import { useMidnightTaskCleanup } from '@/hooks/useMidnightTaskCleanup';
+import { useTaskRealtime } from '@/hooks/useTaskRealtime';
 import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
 import { MemberSwitchDialog } from '@/components/dashboard/MemberSwitchDialog';
 import { MemberSelectorDialog } from '@/components/dashboard/MemberSelectorDialog';
@@ -178,159 +179,106 @@ const ColumnBasedDashboard = () => {
     }
   }, [user]); // Remove profile?.id dependency to prevent loops
 
-  // Set up realtime subscription for task changes
-  useEffect(() => {
-    if (!profile?.family_id) return;
+  // Centralized realtime subscriptions via useTaskRealtime hook
+  const handleRealtimeTaskInserted = useCallback((task: Task) => {
+    setTasks(prevTasks => {
+      if (prevTasks.some(t => t.id === task.id)) {
+        console.log('⚠️ [REALTIME] Task already exists, skipping add');
+        return prevTasks;
+      }
+      console.log('➕ [REALTIME] Adding task to state');
+      return [...prevTasks, task];
+    });
+  }, []);
 
-    const channel = supabase
-      .channel('tasks-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'tasks',
-          filter: `family_id=eq.${profile.family_id}`
-        },
-        async (payload) => {
-          console.log('🔔 [REALTIME] New task INSERT detected:', {
-            taskId: payload.new.id,
-            title: payload.new.title,
-            rotating_task_id: payload.new.rotating_task_id
-          });
-          
-          // Add delay to ensure task_assignees are committed by database triggers
-          // This is crucial for rotating tasks which create task + assignee atomically
-          await new Promise(resolve => setTimeout(resolve, 100));
-          console.log('⏱️ [REALTIME] Waited 100ms, now fetching full task data...');
-          
-          // Fetch full task data with relations (exclude hidden tasks)
-          const { data: newTaskData } = await supabase
-            .from('tasks')
-            .select(`
-              id,
-              title,
-              description,
-              points,
-              due_date,
-              assigned_to,
-              created_by,
-              completion_rule,
-              task_group,
-              task_source,
-              rotating_task_id,
-              assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
-              assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
-              task_completions(id, completed_at, completed_by)
-            `)
-            .eq('id', payload.new.id)
-            .is('hidden_at', null)
-            .single();
+  const handleRealtimeTaskUpdated = useCallback((task: Task) => {
+    setTasks((prev) => {
+      const idx = prev.findIndex((t) => t.id === task.id);
+      if (idx === -1) {
+        console.log('➕ [REALTIME] Task not in state, adding it');
+        return [...prev, task];
+      }
+      console.log('🔄 [REALTIME] Updating existing task with assignees');
+      const copy = prev.slice();
+      copy[idx] = { ...copy[idx], ...task };
+      return copy;
+    });
+  }, []);
 
-          // Retry once if assignees are not yet available (race-safe hydration)
-          let hydratedTask = newTaskData;
-          if (hydratedTask && (!hydratedTask.assignees || hydratedTask.assignees.length === 0)) {
-            await new Promise((resolve) => setTimeout(resolve, 400));
-            const { data: retryData } = await supabase
-              .from('tasks')
-              .select(`
-                id,
-                title,
-                description,
-                points,
-                due_date,
-                assigned_to,
-                created_by,
-                completion_rule,
-                task_group,
-                task_source,
-                rotating_task_id,
-                assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
-                assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
-                task_completions(id, completed_at, completed_by)
-              `)
-              .eq('id', payload.new.id)
-              .is('hidden_at', null)
-              .single();
-            if (retryData) hydratedTask = retryData;
-          }
-
-          if (hydratedTask) {
-            console.log('✅ [REALTIME] Task data fetched:', {
-              taskId: hydratedTask.id,
-              title: hydratedTask.title,
-              assigneesCount: hydratedTask.assignees?.length || 0,
-              assignees: hydratedTask.assignees?.map(a => a.profile?.display_name)
-            });
-            
-            setTasks(prevTasks => {
-              // Check if task already exists
-              if (prevTasks.some(t => t.id === hydratedTask.id)) {
-                console.log('⚠️ [REALTIME] Task already exists, skipping add');
-                return prevTasks;
-              }
-              console.log('➕ [REALTIME] Adding task to state');
-              return [...prevTasks, {
-                ...hydratedTask,
-                completion_rule: (hydratedTask.completion_rule || 'everyone') as 'any_one' | 'everyone'
-              }];
-            });
-          } else {
-            console.error('❌ [REALTIME] Failed to fetch task data');
-          }
+  const handleRealtimeCompletionAdded = useCallback((taskId: string, completion: any) => {
+    setTasks((prev) => {
+      return prev.map((t) => {
+        if (t.id === taskId) {
+          console.log('✅ [REALTIME] Marking task as completed in state');
+          return {
+            ...t,
+            task_completions: [...(t.task_completions || []), completion]
+          };
         }
-      )
-      .subscribe();
+        return t;
+      });
+    });
+  }, []);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [profile?.family_id]);
+  const handleRealtimeCompletionRemoved = useCallback((taskId: string, completionId: string) => {
+    setTasks((prev) => {
+      return prev.map((t) => {
+        if (t.id === taskId) {
+          console.log('✅ [REALTIME] Unmarking task as completed in state');
+          return {
+            ...t,
+            task_completions: (t.task_completions || []).filter(
+              (c) => c.id !== completionId
+            )
+          };
+        }
+        return t;
+      });
+    });
+  }, []);
 
-  // Listen for series updates (from dialogs or other components) and refresh series data
+  const handleRealtimeCompletionUpdated = useCallback((taskId: string, completion: any) => {
+    setTasks((prev) => {
+      return prev.map((t) => {
+        if (t.id === taskId) {
+          return {
+            ...t,
+            task_completions: (t.task_completions || []).map((c) =>
+              c.id === completion.id ? completion : c
+            )
+          };
+        }
+        return t;
+      });
+    });
+  }, []);
+
+  const handleRealtimeSeriesChanged = useCallback(async () => {
+    await fetchTaskSeries();
+    // Force UI refresh to regenerate virtual tasks
+    setTasks(prev => [...prev]);
+  }, [fetchTaskSeries]);
+
+  useTaskRealtime({
+    familyId: profile?.family_id || null,
+    onTaskInserted: handleRealtimeTaskInserted,
+    onTaskUpdated: handleRealtimeTaskUpdated,
+    onCompletionAdded: handleRealtimeCompletionAdded,
+    onCompletionRemoved: handleRealtimeCompletionRemoved,
+    onCompletionUpdated: handleRealtimeCompletionUpdated,
+    onSeriesChanged: handleRealtimeSeriesChanged,
+  });
+
+  // Listen for series updates from dialogs/other components
   useEffect(() => {
     const handler = () => {
       console.log('🔁 [SERIES] series-updated event received, refreshing task series');
       fetchTaskSeries();
-      // Force UI refresh to show new virtual tasks
       setTasks(prev => [...prev]);
     };
     window.addEventListener('series-updated', handler);
     return () => window.removeEventListener('series-updated', handler);
   }, [fetchTaskSeries]);
-
-  // Realtime subscriptions for series and exceptions to auto-refresh virtual tasks
-  useEffect(() => {
-    if (!profile?.family_id) return;
-
-    const channel = supabase
-      .channel('series-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'task_series', filter: `family_id=eq.${profile.family_id}` },
-        async () => {
-          console.log('🛰️ [REALTIME] task_series change detected, refreshing');
-          await fetchTaskSeries();
-          // Force UI refresh to regenerate virtual tasks
-          setTasks(prev => [...prev]);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'recurrence_exceptions' },
-        async () => {
-          console.log('🛰️ [REALTIME] recurrence_exceptions change detected, refreshing');
-          await fetchTaskSeries();
-          // Force UI refresh to regenerate virtual tasks
-          setTasks(prev => [...prev]);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [profile?.family_id, fetchTaskSeries]);
 
   // Listen for midnight cleanup events
   useEffect(() => {
@@ -339,196 +287,10 @@ const ColumnBasedDashboard = () => {
       fetchUserData();
     };
     window.addEventListener('tasks-cleaned-up', handleCleanup);
-    
-    return () => {
-      window.removeEventListener('tasks-cleaned-up', handleCleanup);
-    };
+    return () => window.removeEventListener('tasks-cleaned-up', handleCleanup);
   }, []);
 
-  // Subscribe to task_assignees inserts to hydrate assignees after rotating task generation
-  useEffect(() => {
-    if (!profile?.family_id) return;
 
-    const assigneesChannel = supabase
-      .channel('task-assignees-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'task_assignees',
-        },
-        async (payload) => {
-          try {
-            console.log('🔔 [REALTIME] Task assignee INSERT detected:', {
-              taskId: (payload as any).new.task_id,
-              profileId: (payload as any).new.profile_id
-            });
-            
-            // Fetch the full task with relations once an assignee is added (exclude hidden)
-            const { data: taskData } = await supabase
-              .from('tasks')
-              .select(`
-                id,
-                title,
-                description,
-                points,
-                due_date,
-                assigned_to,
-                created_by,
-                completion_rule,
-                task_group,
-                task_source,
-                rotating_task_id,
-                family_id,
-                assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
-                assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
-                task_completions(id, completed_at, completed_by)
-              `)
-              .eq('id', (payload as any).new.task_id)
-              .is('hidden_at', null)
-              .single();
-
-            if (!taskData || taskData.family_id !== profile.family_id) {
-              console.log('⚠️ [REALTIME] Task not in family or not found');
-              return;
-            }
-
-            console.log('✅ [REALTIME] Task assignee data fetched:', {
-              taskId: taskData.id,
-              assigneesCount: taskData.assignees?.length || 0
-            });
-
-            setTasks((prev) => {
-              const idx = prev.findIndex((t) => t.id === taskData.id);
-              const normalized = {
-                ...taskData,
-                completion_rule: (taskData.completion_rule || 'everyone') as 'any_one' | 'everyone',
-              };
-              if (idx === -1) {
-                console.log('➕ [REALTIME] Task not in state, adding it');
-                return [...prev, normalized];
-              }
-              console.log('🔄 [REALTIME] Updating existing task with assignees');
-              const copy = prev.slice();
-              copy[idx] = { ...copy[idx], ...normalized };
-              return copy;
-            });
-          } catch (e) {
-            console.error('❌ [REALTIME] Failed to update task after assignee insert', e);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(assigneesChannel);
-    };
-  }, [profile?.family_id]);
-
-  // Subscribe to task_completions to detect when rotating tasks complete and trigger rotation
-  useEffect(() => {
-    if (!profile?.family_id) return;
-
-    const completionsChannel = supabase
-      .channel('task-completions-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'task_completions',
-        },
-        async (payload) => {
-          console.log('🔔 [REALTIME] Task completion INSERT detected:', {
-            taskId: (payload as any).new.task_id,
-            completedBy: (payload as any).new.completed_by
-          });
-          
-          // Update the completed task in local state
-          const completedTaskId = (payload as any).new.task_id;
-          setTasks((prev) => {
-            return prev.map((t) => {
-              if (t.id === completedTaskId) {
-                console.log('✅ [REALTIME] Marking task as completed in state');
-                return {
-                  ...t,
-                  task_completions: [...(t.task_completions || []), payload.new as any]
-                };
-              }
-              return t;
-            });
-          });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'task_completions',
-        },
-        async (payload) => {
-          console.log('🔔 [REALTIME] Task completion DELETE detected:', {
-            completionId: (payload as any).old.id,
-            taskId: (payload as any).old.task_id
-          });
-          
-          // Remove the completion from local state
-          const deletedCompletionId = (payload as any).old.id;
-          const taskId = (payload as any).old.task_id;
-          setTasks((prev) => {
-            return prev.map((t) => {
-              if (t.id === taskId) {
-                console.log('✅ [REALTIME] Unmarking task as completed in state');
-                return {
-                  ...t,
-                  task_completions: (t.task_completions || []).filter(
-                    (c) => c.id !== deletedCompletionId
-                  )
-                };
-              }
-              return t;
-            });
-          });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'task_completions',
-        },
-        async (payload) => {
-          console.log('🔔 Task completion updated via realtime:', payload.new);
-          
-          // Update the completion in local state
-          const updatedCompletion = payload.new as any;
-          const taskId = updatedCompletion.task_id;
-          setTasks((prev) => {
-            return prev.map((t) => {
-              if (t.id === taskId) {
-                return {
-                  ...t,
-                  task_completions: (t.task_completions || []).map((c) =>
-                    c.id === updatedCompletion.id ? updatedCompletion : c
-                  )
-                };
-              }
-              return t;
-            });
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(completionsChannel);
-    };
-  }, [profile?.family_id]);
-
-  // Subscribe to profile updates to reflect points changes in real-time
   // Use a debounced approach to prevent duplicate updates
   const profileUpdateTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   
