@@ -271,8 +271,7 @@ export const MemberTasksWidget = ({
       <CardContent className="flex-1 overflow-hidden">
         {memberTasks.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No tasks assigned</p>
+            <p className="text-sm">No tasks assigned</p>
           </div>
         ) : (
           <div className="h-full overflow-y-auto">

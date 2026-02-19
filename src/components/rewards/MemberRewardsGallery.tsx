@@ -213,8 +213,7 @@ export function MemberRewardsGallery({ member }: MemberRewardsGalleryProps) {
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {availableRewards.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground px-3">
-            <Gift className="w-12 h-12 mb-4 opacity-50" />
+          <div className="text-center py-8 text-muted-foreground">
             <p className="text-sm">No rewards available</p>
           </div>
         ) : (
