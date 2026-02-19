@@ -18,15 +18,15 @@ export function RewardCard({ reward, userBalance, canRequest, onRequest, isReque
 
   return (
     <Card className="h-full flex flex-col">
-      {reward.image_url && (
-        <div className="aspect-video w-full overflow-hidden rounded-t-lg">
-          <img 
-            src={reward.image_url} 
-            alt={reward.title}
-            className="w-full h-full object-cover"
-          />
+      {reward.image_url &&
+      <div className="aspect-video w-full overflow-hidden rounded-t-lg">
+          <img
+          src={reward.image_url}
+          alt={reward.title}
+          className="w-full h-full object-cover" />
+
         </div>
-      )}
+      }
       
       <CardHeader className="grid-card-header flex-shrink-0">
         <div className="flex items-start justify-between gap-2">
@@ -36,47 +36,47 @@ export function RewardCard({ reward, userBalance, canRequest, onRequest, isReque
             {reward.cost_points}
           </Badge>
         </div>
-        {reward.description && (
-          <CardDescription className="text-sm">
+        {reward.description &&
+        <CardDescription className="text-sm">
             {reward.description}
           </CardDescription>
-        )}
+        }
       </CardHeader>
 
       <CardContent className="grid-card-content flex-grow">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Gift className="w-4 h-4" />
           <span>
-            {reward.reward_type === 'once_off' 
-              ? 'One-time reward' 
-              : reward.reward_type === 'group_contribution' 
-                ? 'Group contribution required'
-                : 'Always available'
+            {reward.reward_type === 'once_off' ?
+            'One-time reward' :
+            reward.reward_type === 'group_contribution' ?
+            'Group contribution required' :
+            'Always available'
             }
           </span>
         </div>
       </CardContent>
 
-      <CardFooter className="flex-shrink-0">
+      <CardFooter className="flex-shrink-0 pb-[18px]">
         <Button
           onClick={onRequest}
           disabled={!isEligible || isRequesting}
           className="w-full"
-          variant={isEligible ? "default" : "outline"}
-        >
-          {isRequesting ? (
-            'Requesting...'
-          ) : !canRequest ? (
-            'Not Enough Points'
-          ) : !canAfford ? (
-            `Need ${reward.cost_points - userBalance} more points`
-          ) : reward.reward_type === 'group_contribution' ? (
-            'Contribute Points'
-          ) : (
-            'Request Reward'
-          )}
+          variant={isEligible ? "default" : "outline"}>
+
+          {isRequesting ?
+          'Requesting...' :
+          !canRequest ?
+          'Not Enough Points' :
+          !canAfford ?
+          `Need ${reward.cost_points - userBalance} more points` :
+          reward.reward_type === 'group_contribution' ?
+          'Contribute Points' :
+
+          'Request Reward'
+          }
         </Button>
       </CardFooter>
-    </Card>
-  );
+    </Card>);
+
 }
