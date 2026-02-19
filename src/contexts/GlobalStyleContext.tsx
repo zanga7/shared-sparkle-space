@@ -3,78 +3,74 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface GlobalStyles {
-  // Page Headings
   pageHeadingSize: string;
   pageHeadingWeight: string;
   pageHeadingColor: string;
-  // Section Headings
+  pageHeadingTransform: string;
   sectionHeadingSize: string;
   sectionHeadingWeight: string;
   sectionHeadingColor: string;
-  // Card Titles
+  sectionHeadingTransform: string;
   cardTitleSize: string;
   cardTitleWeight: string;
   cardTitleColor: string;
-  // Dialog Titles
+  cardTitleTransform: string;
   dialogTitleSize: string;
   dialogTitleWeight: string;
   dialogTitleColor: string;
-  // Body Text
+  dialogTitleTransform: string;
   bodyTextSize: string;
   bodyTextWeight: string;
   bodyTextColor: string;
-  // Small/Helper Text
   smallTextSize: string;
   smallTextWeight: string;
   smallTextColor: string;
-  // Label Text
   labelTextSize: string;
   labelTextWeight: string;
   labelTextColor: string;
-  // Button Text
   buttonTextSize: string;
   buttonTextWeight: string;
-  // Border Radius
   borderRadius: string;
-  // Fonts
   headingFontFamily: string;
   bodyFontFamily: string;
 }
 
-// Default styles matching current app styling
 const defaultStyles: GlobalStyles = {
-  pageHeadingSize: 'text-[39px]',
+  pageHeadingSize: 'text-[2.4375rem]',
   pageHeadingWeight: 'font-bold',
   pageHeadingColor: 'text-foreground',
-  sectionHeadingSize: 'text-[31px]',
+  pageHeadingTransform: 'uppercase',
+  sectionHeadingSize: 'text-[1.9375rem]',
   sectionHeadingWeight: 'font-semibold',
   sectionHeadingColor: 'text-foreground',
-  cardTitleSize: 'text-[23px]',
+  sectionHeadingTransform: 'uppercase',
+  cardTitleSize: 'text-[1.4375rem]',
   cardTitleWeight: 'font-semibold',
   cardTitleColor: 'text-foreground',
-  dialogTitleSize: 'text-[23px]',
+  cardTitleTransform: 'normal-case',
+  dialogTitleSize: 'text-[1.4375rem]',
   dialogTitleWeight: 'font-semibold',
   dialogTitleColor: 'text-foreground',
-  bodyTextSize: 'text-[21px]',
+  dialogTitleTransform: 'normal-case',
+  bodyTextSize: 'text-[1.3125rem]',
   bodyTextWeight: 'font-normal',
   bodyTextColor: 'text-foreground',
-  smallTextSize: 'text-[18px]',
+  smallTextSize: 'text-[1.125rem]',
   smallTextWeight: 'font-normal',
   smallTextColor: 'text-muted-foreground',
-  labelTextSize: 'text-[18px]',
+  labelTextSize: 'text-[1.125rem]',
   labelTextWeight: 'font-medium',
   labelTextColor: 'text-foreground',
-  buttonTextSize: 'text-[18px]',
+  buttonTextSize: 'text-[1.125rem]',
   buttonTextWeight: 'font-medium',
   borderRadius: '0.75rem',
-  headingFontFamily: 'Inter',
+  headingFontFamily: 'Erica One',
   bodyFontFamily: 'Inter',
 };
 
 interface GlobalStyleContextType {
   styles: GlobalStyles;
   isLoading: boolean;
-  // Compound class helpers
   pageHeading: string;
   sectionHeading: string;
   cardTitle: string;
@@ -107,24 +103,27 @@ export function GlobalStyleProvider({ children }: GlobalStyleProviderProps) {
       }
       return data;
     },
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    staleTime: 1000 * 60 * 5,
     retry: 1,
   });
 
-  // Map database fields to style object
   const styles: GlobalStyles = styleSettings ? {
     pageHeadingSize: styleSettings.page_heading_size || defaultStyles.pageHeadingSize,
     pageHeadingWeight: styleSettings.page_heading_weight || defaultStyles.pageHeadingWeight,
     pageHeadingColor: styleSettings.page_heading_color || defaultStyles.pageHeadingColor,
+    pageHeadingTransform: (styleSettings as any).page_heading_transform || defaultStyles.pageHeadingTransform,
     sectionHeadingSize: styleSettings.section_heading_size || defaultStyles.sectionHeadingSize,
     sectionHeadingWeight: styleSettings.section_heading_weight || defaultStyles.sectionHeadingWeight,
     sectionHeadingColor: styleSettings.section_heading_color || defaultStyles.sectionHeadingColor,
+    sectionHeadingTransform: (styleSettings as any).section_heading_transform || defaultStyles.sectionHeadingTransform,
     cardTitleSize: styleSettings.card_title_size || defaultStyles.cardTitleSize,
     cardTitleWeight: styleSettings.card_title_weight || defaultStyles.cardTitleWeight,
     cardTitleColor: styleSettings.card_title_color || defaultStyles.cardTitleColor,
+    cardTitleTransform: (styleSettings as any).card_title_transform || defaultStyles.cardTitleTransform,
     dialogTitleSize: styleSettings.dialog_title_size || defaultStyles.dialogTitleSize,
     dialogTitleWeight: styleSettings.dialog_title_weight || defaultStyles.dialogTitleWeight,
     dialogTitleColor: styleSettings.dialog_title_color || defaultStyles.dialogTitleColor,
+    dialogTitleTransform: (styleSettings as any).dialog_title_transform || defaultStyles.dialogTitleTransform,
     bodyTextSize: styleSettings.body_text_size || defaultStyles.bodyTextSize,
     bodyTextWeight: styleSettings.body_text_weight || defaultStyles.bodyTextWeight,
     bodyTextColor: styleSettings.body_text_color || defaultStyles.bodyTextColor,
@@ -141,7 +140,6 @@ export function GlobalStyleProvider({ children }: GlobalStyleProviderProps) {
     bodyFontFamily: (styleSettings as any).body_font_family || defaultStyles.bodyFontFamily,
   } : defaultStyles;
 
-  // Dynamically load Google Fonts
   useEffect(() => {
     const loadFont = (fontName: string) => {
       const id = `gf-${fontName.replace(/\s+/g, '-')}`;
@@ -156,14 +154,13 @@ export function GlobalStyleProvider({ children }: GlobalStyleProviderProps) {
     if (styles.bodyFontFamily && styles.bodyFontFamily !== 'Inter') loadFont(styles.bodyFontFamily);
   }, [styles.headingFontFamily, styles.bodyFontFamily]);
 
-  // Compound class helpers
   const value: GlobalStyleContextType = {
     styles,
     isLoading,
-    pageHeading: `${styles.pageHeadingSize} ${styles.pageHeadingWeight} ${styles.pageHeadingColor}`,
-    sectionHeading: `${styles.sectionHeadingSize} ${styles.sectionHeadingWeight} ${styles.sectionHeadingColor}`,
-    cardTitle: `${styles.cardTitleSize} ${styles.cardTitleWeight} ${styles.cardTitleColor}`,
-    dialogTitle: `${styles.dialogTitleSize} ${styles.dialogTitleWeight} ${styles.dialogTitleColor}`,
+    pageHeading: `${styles.pageHeadingSize} ${styles.pageHeadingWeight} ${styles.pageHeadingColor} ${styles.pageHeadingTransform}`,
+    sectionHeading: `${styles.sectionHeadingSize} ${styles.sectionHeadingWeight} ${styles.sectionHeadingColor} ${styles.sectionHeadingTransform}`,
+    cardTitle: `${styles.cardTitleSize} ${styles.cardTitleWeight} ${styles.cardTitleColor} ${styles.cardTitleTransform}`,
+    dialogTitle: `${styles.dialogTitleSize} ${styles.dialogTitleWeight} ${styles.dialogTitleColor} ${styles.dialogTitleTransform}`,
     bodyText: `${styles.bodyTextSize} ${styles.bodyTextWeight} ${styles.bodyTextColor}`,
     smallText: `${styles.smallTextSize} ${styles.smallTextWeight} ${styles.smallTextColor}`,
     labelText: `${styles.labelTextSize} ${styles.labelTextWeight} ${styles.labelTextColor}`,
@@ -180,14 +177,13 @@ export function GlobalStyleProvider({ children }: GlobalStyleProviderProps) {
 export function useGlobalStyles() {
   const context = useContext(GlobalStyleContext);
   if (context === undefined) {
-    // Return defaults if used outside provider
     return {
       styles: defaultStyles,
       isLoading: false,
-      pageHeading: `${defaultStyles.pageHeadingSize} ${defaultStyles.pageHeadingWeight} ${defaultStyles.pageHeadingColor}`,
-      sectionHeading: `${defaultStyles.sectionHeadingSize} ${defaultStyles.sectionHeadingWeight} ${defaultStyles.sectionHeadingColor}`,
-      cardTitle: `${defaultStyles.cardTitleSize} ${defaultStyles.cardTitleWeight} ${defaultStyles.cardTitleColor}`,
-      dialogTitle: `${defaultStyles.dialogTitleSize} ${defaultStyles.dialogTitleWeight} ${defaultStyles.dialogTitleColor}`,
+      pageHeading: `${defaultStyles.pageHeadingSize} ${defaultStyles.pageHeadingWeight} ${defaultStyles.pageHeadingColor} ${defaultStyles.pageHeadingTransform}`,
+      sectionHeading: `${defaultStyles.sectionHeadingSize} ${defaultStyles.sectionHeadingWeight} ${defaultStyles.sectionHeadingColor} ${defaultStyles.sectionHeadingTransform}`,
+      cardTitle: `${defaultStyles.cardTitleSize} ${defaultStyles.cardTitleWeight} ${defaultStyles.cardTitleColor} ${defaultStyles.cardTitleTransform}`,
+      dialogTitle: `${defaultStyles.dialogTitleSize} ${defaultStyles.dialogTitleWeight} ${defaultStyles.dialogTitleColor} ${defaultStyles.dialogTitleTransform}`,
       bodyText: `${defaultStyles.bodyTextSize} ${defaultStyles.bodyTextWeight} ${defaultStyles.bodyTextColor}`,
       smallText: `${defaultStyles.smallTextSize} ${defaultStyles.smallTextWeight} ${defaultStyles.smallTextColor}`,
       labelText: `${defaultStyles.labelTextSize} ${defaultStyles.labelTextWeight} ${defaultStyles.labelTextColor}`,
