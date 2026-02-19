@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { GoalsProvider } from "@/hooks/useGoals";
+
 import { ColorPaletteProvider } from "@/contexts/ColorPaletteContext";
 import { GlobalStyleProvider } from "@/contexts/GlobalStyleContext";
 import { FamilyDataProvider } from "@/contexts/FamilyDataContext";
@@ -90,7 +91,6 @@ const App = () => (
       <FamilyDataProvider>
         <GlobalStyleProvider>
           <KawaiiProvider>
-            <GoalsProvider>
               <ColorPaletteProvider>
                 <TooltipProvider>
                 <Toaster />
@@ -111,7 +111,7 @@ const App = () => (
                           <Route path="/child-auth" element={<ChildAuth />} />
                           <Route path="/rewards" element={<Rewards />} />
                           <Route path="/lists" element={<Lists />} />
-                          <Route path="/goals" element={<Goals />} />
+                          <Route path="/goals" element={<GoalsProvider><Goals /></GoalsProvider>} />
                           <Route path="/screensaver-preview" element={<ScreenSaverPreview />} />
 
                           {/* Onboarding Routes */}
@@ -160,7 +160,6 @@ const App = () => (
                 </BrowserRouter>
               </TooltipProvider>
             </ColorPaletteProvider>
-          </GoalsProvider>
         </KawaiiProvider>
       </GlobalStyleProvider>
     </FamilyDataProvider>

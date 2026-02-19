@@ -29,6 +29,7 @@ import { RewardsGallery } from '@/components/rewards/RewardsGallery';
 import { ChildAuthProvider } from '@/hooks/useChildAuth';
 import Lists from '@/pages/Lists';
 import { GoalsContent } from '@/components/goals/GoalsContent';
+import { GoalsProvider } from '@/hooks/useGoals';
 import { TaskGroupsList } from '@/components/tasks/TaskGroupsList';
 import {
   AlertDialog,
@@ -1709,18 +1710,20 @@ const ColumnBasedDashboard = () => {
             </TabsList>
 
             <TabsContent value="dashboard" className="mt-0">
-              <FamilyDashboard
-                familyMembers={familyMembers}
-                tasks={allTasks}
-                familyId={profile.family_id}
-                onNavigateToTasks={() => setActiveTab('columns')}
-                onNavigateToCalendar={() => setActiveTab('calendar')}
-                onNavigateToGoals={() => setActiveTab('goals')}
-                onMemberSelect={(memberId) => {
-                  setSelectedMemberFilter(memberId);
-                  setViewMode('member');
-                }}
-              />
+              <GoalsProvider>
+                <FamilyDashboard
+                  familyMembers={familyMembers}
+                  tasks={allTasks}
+                  familyId={profile.family_id}
+                  onNavigateToTasks={() => setActiveTab('columns')}
+                  onNavigateToCalendar={() => setActiveTab('calendar')}
+                  onNavigateToGoals={() => setActiveTab('goals')}
+                  onMemberSelect={(memberId) => {
+                    setSelectedMemberFilter(memberId);
+                    setViewMode('member');
+                  }}
+                />
+              </GoalsProvider>
             </TabsContent>
 
           <TabsContent value="columns" className="mt-4 sm:mt-6">
@@ -2029,36 +2032,38 @@ const ColumnBasedDashboard = () => {
           </TabsContent>
 
           <TabsContent value="goals" className="mt-4 sm:mt-6">
-            <div className="w-full">
-              {viewMode === 'member' && selectedMemberFilter ? (
-                <div className="max-w-4xl mx-auto">
-                  <div className="text-center py-6 mb-6">
-                    {(() => {
-                      const member = familyMembers.find(m => m.id === selectedMemberFilter);
-                      return member ? (
-                        <>
-                          <UserAvatar 
-                            name={member.display_name} 
-                            color={member.color}
-                            avatarIcon={member.avatar_url || undefined}
-                            size="lg" 
-                            className="mx-auto mb-4" 
-                          />
-                          <PageHeading>{member.display_name}'s Goals</PageHeading>
-                        </>
-                      ) : null;
-                    })()}
+            <GoalsProvider>
+              <div className="w-full">
+                {viewMode === 'member' && selectedMemberFilter ? (
+                  <div className="max-w-4xl mx-auto">
+                    <div className="text-center py-6 mb-6">
+                      {(() => {
+                        const member = familyMembers.find(m => m.id === selectedMemberFilter);
+                        return member ? (
+                          <>
+                            <UserAvatar 
+                              name={member.display_name} 
+                              color={member.color}
+                              avatarIcon={member.avatar_url || undefined}
+                              size="lg" 
+                              className="mx-auto mb-4" 
+                            />
+                            <PageHeading>{member.display_name}'s Goals</PageHeading>
+                          </>
+                        ) : null;
+                      })()}
+                    </div>
+                    <GoalsContent 
+                      familyMembers={familyMembers} 
+                      selectedMemberId={selectedMemberFilter}
+                      viewMode="member"
+                    />
                   </div>
-                  <GoalsContent 
-                    familyMembers={familyMembers} 
-                    selectedMemberId={selectedMemberFilter}
-                    viewMode="member"
-                  />
-                </div>
-              ) : (
-                <GoalsContent familyMembers={familyMembers} />
-              )}
-            </div>
+                ) : (
+                  <GoalsContent familyMembers={familyMembers} />
+                )}
+              </div>
+            </GoalsProvider>
           </TabsContent>
 
           <TabsContent value="calendar" className="mt-4 sm:mt-6">
