@@ -16,7 +16,6 @@ export default function SuperAdminLayout() {
     { path: '/super-admin/plans', label: 'Plans', icon: Package },
     { path: '/super-admin/integrations', label: 'Integrations', icon: Link2 },
     { path: '/super-admin/app-settings', label: 'App Settings', icon: AppWindow },
-    { path: '/super-admin/themes', label: 'Themes', icon: Settings },
     { path: '/super-admin/styles', label: 'Style Settings', icon: Type },
   ];
 

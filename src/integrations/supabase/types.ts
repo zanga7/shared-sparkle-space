@@ -727,9 +727,11 @@ export type Database = {
           button_text_weight: string
           card_title_color: string
           card_title_size: string
+          card_title_transform: string
           card_title_weight: string
           dialog_title_color: string
           dialog_title_size: string
+          dialog_title_transform: string
           dialog_title_weight: string
           heading_font_family: string
           id: number
@@ -743,9 +745,11 @@ export type Database = {
           label_text_weight: string
           page_heading_color: string
           page_heading_size: string
+          page_heading_transform: string
           page_heading_weight: string
           section_heading_color: string
           section_heading_size: string
+          section_heading_transform: string
           section_heading_weight: string
           small_text_color: string
           small_text_size: string
@@ -763,9 +767,11 @@ export type Database = {
           button_text_weight?: string
           card_title_color?: string
           card_title_size?: string
+          card_title_transform?: string
           card_title_weight?: string
           dialog_title_color?: string
           dialog_title_size?: string
+          dialog_title_transform?: string
           dialog_title_weight?: string
           heading_font_family?: string
           id?: number
@@ -779,9 +785,11 @@ export type Database = {
           label_text_weight?: string
           page_heading_color?: string
           page_heading_size?: string
+          page_heading_transform?: string
           page_heading_weight?: string
           section_heading_color?: string
           section_heading_size?: string
+          section_heading_transform?: string
           section_heading_weight?: string
           small_text_color?: string
           small_text_size?: string
@@ -799,9 +807,11 @@ export type Database = {
           button_text_weight?: string
           card_title_color?: string
           card_title_size?: string
+          card_title_transform?: string
           card_title_weight?: string
           dialog_title_color?: string
           dialog_title_size?: string
+          dialog_title_transform?: string
           dialog_title_weight?: string
           heading_font_family?: string
           id?: number
@@ -815,9 +825,11 @@ export type Database = {
           label_text_weight?: string
           page_heading_color?: string
           page_heading_size?: string
+          page_heading_transform?: string
           page_heading_weight?: string
           section_heading_color?: string
           section_heading_size?: string
+          section_heading_transform?: string
           section_heading_weight?: string
           small_text_color?: string
           small_text_size?: string

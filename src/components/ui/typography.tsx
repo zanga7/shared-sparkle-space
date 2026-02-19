@@ -10,7 +10,7 @@ export function PageHeading({ className, children, style, ...props }: Typography
   const { pageHeading, styles } = useGlobalStyles();
   return (
     <h1
-      className={cn(pageHeading, "leading-tight tracking-tight font-display uppercase", className)}
+      className={cn(pageHeading, "leading-tight tracking-tight font-display", className)}
       style={{ ...style, fontFamily: `"${styles.headingFontFamily}", sans-serif` }}
       {...props}
     >
@@ -23,7 +23,7 @@ export function SectionHeading({ className, children, style, ...props }: Typogra
   const { sectionHeading, styles } = useGlobalStyles();
   return (
     <h2
-      className={cn(sectionHeading, "leading-tight tracking-tight font-display uppercase", className)}
+      className={cn(sectionHeading, "leading-tight tracking-tight font-display", className)}
       style={{ ...style, fontFamily: `"${styles.headingFontFamily}", sans-serif` }}
       {...props}
     >
