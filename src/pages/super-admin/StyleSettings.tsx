@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,20 +9,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageHeading, SmallText, SectionHeading, BodyText, LabelText, CardTitleStyled } from '@/components/ui/typography';
-import { Type, Heading1, Heading2, LetterText, Square, FileText, Tag, MousePointer, Eye, Smile } from 'lucide-react';
+import { Type, Heading1, Heading2, LetterText, Square, FileText, Tag, MousePointer, Eye, Smile, Search, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const TEXT_SIZES = [
-  { value: 'text-xs', label: 'Extra Small (12px)' },
-  { value: 'text-sm', label: 'Small (14px)' },
-  { value: 'text-base', label: 'Base (16px)' },
-  { value: 'text-lg', label: 'Large (18px)' },
-  { value: 'text-xl', label: 'XL (20px)' },
-  { value: 'text-2xl', label: '2XL (24px)' },
-  { value: 'text-3xl', label: '3XL (30px)' },
-  { value: 'text-4xl', label: '4XL (36px)' },
+  { value: 'text-[16px]', label: 'Extra Small (16px)' },
+  { value: 'text-[18px]', label: 'Small (18px)' },
+  { value: 'text-[21px]', label: 'Base (21px)' },
+  { value: 'text-[23px]', label: 'Large (23px)' },
+  { value: 'text-[26px]', label: 'XL (26px)' },
+  { value: 'text-[31px]', label: '2XL (31px)' },
+  { value: 'text-[39px]', label: '3XL (39px)' },
+  { value: 'text-[47px]', label: '4XL (47px)' },
+];
+
+// Popular Google Fonts for selection
+const POPULAR_GOOGLE_FONTS = [
+  'Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Poppins',
+  'Oswald', 'Raleway', 'Nunito', 'Playfair Display', 'Merriweather',
+  'Source Sans 3', 'PT Sans', 'Rubik', 'Work Sans', 'Quicksand',
+  'Outfit', 'Space Grotesk', 'DM Sans', 'Manrope', 'Sora',
+  'Bitter', 'Crimson Text', 'Libre Baskerville', 'EB Garamond',
+  'Josefin Sans', 'Archivo', 'Barlow', 'Cabin', 'Karla',
+  'Fira Sans', 'Mulish', 'Noto Sans', 'IBM Plex Sans', 'Ubuntu',
+  'Bebas Neue', 'Anton', 'Righteous', 'Permanent Marker', 'Pacifico',
+  'Comfortaa', 'Titan One', 'Fredoka', 'Baloo 2', 'Lilita One',
 ];
 
 const FONT_WEIGHTS = [
@@ -85,12 +99,87 @@ interface StyleSettings {
   button_text_size: string;
   button_text_weight: string;
   border_radius: string;
+  // Font families
+  heading_font_family: string;
+  body_font_family: string;
   // Kawaii face settings
   kawaii_faces_enabled: boolean;
   kawaii_animations_enabled: boolean;
   kawaii_face_style: string;
   kawaii_animation_frequency: string;
   kawaii_min_animate_size: number;
+}
+
+// Load a Google Font dynamically
+function loadGoogleFont(fontName: string) {
+  const id = `gf-${fontName.replace(/\s+/g, '-')}`;
+  if (document.getElementById(id)) return;
+  const link = document.createElement('link');
+  link.id = id;
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;500;600;700&display=swap`;
+  document.head.appendChild(link);
+}
+
+function GoogleFontPicker({ label, description, value, onChange }: {
+  label: string;
+  description: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [search, setSearch] = useState('');
+  const filtered = POPULAR_GOOGLE_FONTS.filter(f =>
+    f.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Load current font + preview fonts on search
+  useEffect(() => { loadGoogleFont(value); }, [value]);
+  useEffect(() => { filtered.slice(0, 8).forEach(loadGoogleFont); }, [search]);
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">{label}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search fonts..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8 h-9"
+          />
+        </div>
+        <ScrollArea className="h-48">
+          <div className="space-y-1">
+            {filtered.map(font => (
+              <button
+                key={font}
+                type="button"
+                onClick={() => onChange(font)}
+                className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                  value === font
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-muted'
+                }`}
+                style={{ fontFamily: `"${font}", sans-serif` }}
+              >
+                {font}
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <p className="text-sm text-muted-foreground p-3">No fonts match "{search}"</p>
+            )}
+          </div>
+        </ScrollArea>
+        <p className="text-xs text-muted-foreground">
+          Current: <span style={{ fontFamily: `"${value}", sans-serif` }} className="font-medium">{value}</span>
+        </p>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function StyleSettings() {
@@ -147,30 +236,32 @@ export default function StyleSettings() {
 
   const handleReset = () => {
     updateMutation.mutate({
-      page_heading_size: 'text-3xl',
+      page_heading_size: 'text-[39px]',
       page_heading_weight: 'font-bold',
       page_heading_color: 'text-foreground',
-      section_heading_size: 'text-2xl',
+      section_heading_size: 'text-[31px]',
       section_heading_weight: 'font-semibold',
       section_heading_color: 'text-foreground',
-      card_title_size: 'text-lg',
+      card_title_size: 'text-[23px]',
       card_title_weight: 'font-semibold',
       card_title_color: 'text-foreground',
-      dialog_title_size: 'text-lg',
+      dialog_title_size: 'text-[23px]',
       dialog_title_weight: 'font-semibold',
       dialog_title_color: 'text-foreground',
-      body_text_size: 'text-base',
+      body_text_size: 'text-[21px]',
       body_text_weight: 'font-normal',
       body_text_color: 'text-foreground',
-      small_text_size: 'text-sm',
+      small_text_size: 'text-[18px]',
       small_text_weight: 'font-normal',
       small_text_color: 'text-muted-foreground',
-      label_text_size: 'text-sm',
+      label_text_size: 'text-[18px]',
       label_text_weight: 'font-medium',
       label_text_color: 'text-foreground',
-      button_text_size: 'text-sm',
+      button_text_size: 'text-[18px]',
       button_text_weight: 'font-medium',
       border_radius: '0.75rem',
+      heading_font_family: 'Inter',
+      body_font_family: 'Inter',
       kawaii_faces_enabled: true,
       kawaii_animations_enabled: true,
       kawaii_face_style: 'line',
@@ -294,10 +385,11 @@ export default function StyleSettings() {
       </div>
 
       <Tabs defaultValue="headings" className="w-full">
-        <TabsList className="w-full max-w-2xl grid grid-cols-5">
+        <TabsList className="w-full max-w-2xl grid grid-cols-6">
           <TabsTrigger value="headings">Headings</TabsTrigger>
           <TabsTrigger value="text">Text</TabsTrigger>
           <TabsTrigger value="components">Components</TabsTrigger>
+          <TabsTrigger value="fonts">Fonts</TabsTrigger>
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="avatars">Avatars</TabsTrigger>
         </TabsList>
@@ -423,6 +515,39 @@ export default function StyleSettings() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="fonts" className="space-y-4 mt-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <GoogleFontPicker
+              label="Heading Font"
+              description="Used for page and section headings"
+              value={formData.heading_font_family}
+              onChange={(v) => handleChange('heading_font_family', v)}
+            />
+            <GoogleFontPicker
+              label="Body Font"
+              description="Used for body text, labels, and buttons"
+              value={formData.body_font_family}
+              onChange={(v) => handleChange('body_font_family', v)}
+            />
+          </div>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                Font Preview
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p style={{ fontFamily: `"${formData.heading_font_family}", sans-serif` }} className="text-2xl font-bold">
+                Heading: The quick brown fox jumps over the lazy dog
+              </p>
+              <p style={{ fontFamily: `"${formData.body_font_family}", sans-serif` }} className="text-base">
+                Body: The quick brown fox jumps over the lazy dog. 0123456789
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="general" className="space-y-4 mt-4">

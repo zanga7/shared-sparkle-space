@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -36,34 +36,39 @@ export interface GlobalStyles {
   buttonTextWeight: string;
   // Border Radius
   borderRadius: string;
+  // Fonts
+  headingFontFamily: string;
+  bodyFontFamily: string;
 }
 
 // Default styles matching current app styling
 const defaultStyles: GlobalStyles = {
-  pageHeadingSize: 'text-3xl',
+  pageHeadingSize: 'text-[39px]',
   pageHeadingWeight: 'font-bold',
   pageHeadingColor: 'text-foreground',
-  sectionHeadingSize: 'text-2xl',
+  sectionHeadingSize: 'text-[31px]',
   sectionHeadingWeight: 'font-semibold',
   sectionHeadingColor: 'text-foreground',
-  cardTitleSize: 'text-lg',
+  cardTitleSize: 'text-[23px]',
   cardTitleWeight: 'font-semibold',
   cardTitleColor: 'text-foreground',
-  dialogTitleSize: 'text-lg',
+  dialogTitleSize: 'text-[23px]',
   dialogTitleWeight: 'font-semibold',
   dialogTitleColor: 'text-foreground',
-  bodyTextSize: 'text-base',
+  bodyTextSize: 'text-[21px]',
   bodyTextWeight: 'font-normal',
   bodyTextColor: 'text-foreground',
-  smallTextSize: 'text-sm',
+  smallTextSize: 'text-[18px]',
   smallTextWeight: 'font-normal',
   smallTextColor: 'text-muted-foreground',
-  labelTextSize: 'text-sm',
+  labelTextSize: 'text-[18px]',
   labelTextWeight: 'font-medium',
   labelTextColor: 'text-foreground',
-  buttonTextSize: 'text-sm',
+  buttonTextSize: 'text-[18px]',
   buttonTextWeight: 'font-medium',
   borderRadius: '0.75rem',
+  headingFontFamily: 'Inter',
+  bodyFontFamily: 'Inter',
 };
 
 interface GlobalStyleContextType {
@@ -132,7 +137,24 @@ export function GlobalStyleProvider({ children }: GlobalStyleProviderProps) {
     buttonTextSize: styleSettings.button_text_size || defaultStyles.buttonTextSize,
     buttonTextWeight: styleSettings.button_text_weight || defaultStyles.buttonTextWeight,
     borderRadius: styleSettings.border_radius || defaultStyles.borderRadius,
+    headingFontFamily: (styleSettings as any).heading_font_family || defaultStyles.headingFontFamily,
+    bodyFontFamily: (styleSettings as any).body_font_family || defaultStyles.bodyFontFamily,
   } : defaultStyles;
+
+  // Dynamically load Google Fonts
+  useEffect(() => {
+    const loadFont = (fontName: string) => {
+      const id = `gf-${fontName.replace(/\s+/g, '-')}`;
+      if (document.getElementById(id)) return;
+      const link = document.createElement('link');
+      link.id = id;
+      link.rel = 'stylesheet';
+      link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;500;600;700&display=swap`;
+      document.head.appendChild(link);
+    };
+    if (styles.headingFontFamily && styles.headingFontFamily !== 'Inter') loadFont(styles.headingFontFamily);
+    if (styles.bodyFontFamily && styles.bodyFontFamily !== 'Inter') loadFont(styles.bodyFontFamily);
+  }, [styles.headingFontFamily, styles.bodyFontFamily]);
 
   // Compound class helpers
   const value: GlobalStyleContextType = {

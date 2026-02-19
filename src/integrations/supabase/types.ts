@@ -718,6 +718,7 @@ export type Database = {
       }
       global_style_settings: {
         Row: {
+          body_font_family: string
           body_text_color: string
           body_text_size: string
           body_text_weight: string
@@ -730,6 +731,7 @@ export type Database = {
           dialog_title_color: string
           dialog_title_size: string
           dialog_title_weight: string
+          heading_font_family: string
           id: number
           kawaii_animation_frequency: string | null
           kawaii_animations_enabled: boolean | null
@@ -752,6 +754,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          body_font_family?: string
           body_text_color?: string
           body_text_size?: string
           body_text_weight?: string
@@ -764,6 +767,7 @@ export type Database = {
           dialog_title_color?: string
           dialog_title_size?: string
           dialog_title_weight?: string
+          heading_font_family?: string
           id?: number
           kawaii_animation_frequency?: string | null
           kawaii_animations_enabled?: boolean | null
@@ -786,6 +790,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          body_font_family?: string
           body_text_color?: string
           body_text_size?: string
           body_text_weight?: string
@@ -798,6 +803,7 @@ export type Database = {
           dialog_title_color?: string
           dialog_title_size?: string
           dialog_title_weight?: string
+          heading_font_family?: string
           id?: number
           kawaii_animation_frequency?: string | null
           kawaii_animations_enabled?: boolean | null
