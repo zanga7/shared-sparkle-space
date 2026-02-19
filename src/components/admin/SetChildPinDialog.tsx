@@ -15,8 +15,7 @@ interface Profile {
   id: string;
   display_name: string;
   role: 'parent' | 'child';
-  pin_hash?: string | null;
-  pin_type?: 'numeric' | 'icon';
+  pin_type?: string | null;
 }
 
 interface SetChildPinDialogProps {
@@ -232,10 +231,10 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Key className="h-5 w-5" />
-            {member?.pin_hash ? 'Update' : 'Set'} PIN for {member?.display_name}
+            {member?.pin_type ? 'Update' : 'Set'} PIN for {member?.display_name}
           </DialogTitle>
           <DialogDescription>
-            {member?.pin_hash 
+            {member?.pin_type 
               ? 'Update or remove the current PIN for this member.'
               : 'Set a PIN to secure this member\'s actions in dashboard mode.'
             }
@@ -430,10 +429,10 @@ export function SetChildPinDialog({ member, open, onOpenChange, onPinUpdated }: 
               disabled={loading} 
               className="w-full"
             >
-              {loading ? 'Setting PIN...' : `${member?.pin_hash ? 'Update' : 'Set'} PIN`}
+              {loading ? 'Setting PIN...' : `${member?.pin_type ? 'Update' : 'Set'} PIN`}
             </Button>
             
-            {member?.pin_hash && (
+            {member?.pin_type && (
               <Button 
                 type="button" 
                 variant="destructive" 

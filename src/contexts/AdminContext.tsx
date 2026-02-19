@@ -16,12 +16,14 @@ interface Profile {
   status: string;
   color: string;
   streak_count: number;
-  pin_hash?: string | null;
-  failed_pin_attempts: number;
-  pin_locked_until?: string | null;
+  pin_type?: string | null;
   theme?: any;
   created_at: string;
   updated_at: string;
+  sort_order?: number | null;
+  require_pin_to_complete_tasks?: boolean;
+  require_pin_for_list_deletes?: boolean;
+  calendar_edit_permission?: string;
 }
 
 interface FamilyMember extends Profile {
@@ -65,7 +67,7 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, user_id, family_id, display_name, role, total_points, avatar_url, can_add_for_self, can_add_for_siblings, can_add_for_parents, status, color, streak_count, theme, created_at, updated_at, sort_order, pin_type, require_pin_to_complete_tasks, require_pin_for_list_deletes, calendar_edit_permission')
         .eq('user_id', user.id)
         .single();
       
@@ -87,7 +89,7 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, user_id, family_id, display_name, role, total_points, avatar_url, can_add_for_self, can_add_for_siblings, can_add_for_parents, status, color, streak_count, theme, created_at, updated_at, sort_order, pin_type, require_pin_to_complete_tasks, require_pin_for_list_deletes, calendar_edit_permission')
         .eq('family_id', familyId)
         .order('role', { ascending: false }) // Parents first
         .order('display_name');

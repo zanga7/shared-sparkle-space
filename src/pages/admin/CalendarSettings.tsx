@@ -206,7 +206,7 @@ const CalendarSettings = () => {
       // Fetch current user profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, user_id, family_id, display_name, role, total_points, avatar_url, status, color, created_at, updated_at, calendar_edit_permission')
         .eq('user_id', user?.id)
         .single();
 
@@ -226,7 +226,7 @@ const CalendarSettings = () => {
       // Fetch family members
       const { data: membersData, error: membersError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, user_id, family_id, display_name, role, total_points, avatar_url, status, color, created_at, updated_at, calendar_edit_permission')
         .eq('family_id', profileData.family_id)
         .order('created_at', { ascending: true });
 

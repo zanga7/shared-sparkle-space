@@ -34,7 +34,7 @@ export function AdminPinProtection({ children }: AdminPinProtectionProps) {
 
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('id, role, pin_hash, pin_type')
+        .select('id, role, pin_type')
         .eq('user_id', user.id)
         .single();
 
@@ -46,7 +46,7 @@ export function AdminPinProtection({ children }: AdminPinProtectionProps) {
       setUserProfile(profile);
 
       if (profile.role === 'parent') {
-        if (profile.pin_hash) {
+        if (profile.pin_type) {
           // Set input method based on pin type
           setInputMethod(profile.pin_type === 'icon' ? 'icon' : 'keypad');
           setShowPinDialog(true);
