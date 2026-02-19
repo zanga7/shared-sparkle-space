@@ -1,27 +1,19 @@
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { MemberTaskColumn } from '@/components/dashboard/MemberTaskColumn';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { TASK_SELECT_SHAPE, castTasks, buildFamilyTaskQuery } from '@/utils/taskQueryBuilder';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, CheckCircle, Clock, Edit, Trash2, Calendar, List, Users, Gift, Settings } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { NavigationHeader } from '@/components/NavigationHeader';
-import { AddButton } from '@/components/ui/add-button';
 import { PageHeading } from '@/components/ui/typography';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
 import { EditTaskDialog } from '@/components/EditTaskDialog';
-
 import { CalendarView } from '@/components/CalendarView';
 import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
 import { MemberDashboard } from './MemberDashboard';
@@ -31,7 +23,7 @@ import { ChildAuthProvider } from '@/hooks/useChildAuth';
 import Lists from '@/pages/Lists';
 import { GoalsContent } from '@/components/goals/GoalsContent';
 import { GoalsProvider } from '@/hooks/useGoals';
-import { TaskGroupsList } from '@/components/tasks/TaskGroupsList';
+import { TaskGroup } from '@/types/taskGroup';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,97 +34,85 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Task, Profile } from '@/types/task';
-import { TaskGroup, VALID_TASK_GROUPS } from '@/types/taskGroup';
-import { 
-  getTaskGroupIcon, 
-  getTaskGroupTitle, 
-  shouldGroupBeOpenByDefault,
-  getGroupDueDate,
-  getTaskGroup,
-  groupTasksByTime 
-} from '@/utils/taskGroupUtils';
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { useDashboardAuth } from '@/hooks/useDashboardAuth';
+import { Task } from '@/types/task';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useDashboardMode } from '@/hooks/useDashboardMode';
-import { useTaskCompletion } from '@/hooks/useTaskCompletion';
-import { useTaskSeries } from '@/hooks/useTaskSeries';
-import { useMidnightTaskCleanup } from '@/hooks/useMidnightTaskCleanup';
-import { useTaskRealtime } from '@/hooks/useTaskRealtime';
+import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { MemberPinDialog } from '@/components/dashboard/MemberPinDialog';
 import { MemberSwitchDialog } from '@/components/dashboard/MemberSwitchDialog';
 import { MemberSelectorDialog } from '@/components/dashboard/MemberSelectorDialog';
 
+// Sub-hooks
+import { useDashboardTaskData } from '@/hooks/useDashboardTaskData';
+import { useDashboardNavigation } from '@/hooks/useDashboardNavigation';
+import { useDashboardDragDrop } from '@/hooks/useDashboardDragDrop';
+import { useDashboardTaskActions } from '@/hooks/useDashboardTaskActions';
+
 const ColumnBasedDashboard = () => {
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [familyMembers, setFamilyMembers] = useState<Profile[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [materializedCompletionsMap, setMaterializedCompletionsMap] = useState<Map<string, any[]>>(new Map());
-  const [loading, setLoading] = useState(true);
-  const [profileError, setProfileError] = useState<string | null>(null);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [deletingTask, setDeletingTask] = useState<Task | null>(null);
-  
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [selectedMemberForTask, setSelectedMemberForTask] = useState<string | null>(null);
-  const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [viewMode, setViewMode] = useState<'everyone' | 'member'>('everyone'); // Track if showing everyone or specific member
-  const [selectedTaskGroup, setSelectedTaskGroup] = useState<string | null>(null);
-  
-  // Dashboard mode state using hook
-  const { dashboardModeEnabled, requireParentPin } = useDashboardMode();
+
+  // Dashboard mode
+  const { dashboardModeEnabled } = useDashboardMode();
   const dashboardMode = dashboardModeEnabled;
-  const [pinDialogOpen, setPinDialogOpen] = useState(false);
-  const [switchDialogOpen, setSwitchDialogOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<{
-    type: 'complete_task' | 'delete_list_item';
-    taskId?: string;
-    requiredMemberId?: string;
-    onSuccess: () => void;
-  } | null>(null);
-  
-  const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
-  const [showMemberSelector, setShowMemberSelector] = useState(false);
-  
+
+  // Dashboard auth (member switching)
   const {
     activeMemberId: hookActiveMemberId,
     switchToMember,
-    authenticateMemberPin,
-    canPerformAction,
-    isAuthenticating
   } = useDashboardAuth();
-  
-  // Auto-hide completed tasks at midnight
-  useMidnightTaskCleanup();
 
-  // Task completion hook
-  const { completeTask: completeTaskHandler, uncompleteTask: uncompleteTaskHandler, isCompleting } = useTaskCompletion({
-    currentUserProfile: profile,
-    activeMemberId,
-    isDashboardMode: dashboardMode,
-    setTasks,
-    setProfile,
-    setFamilyMembers,
-  });
+  const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
+  const [showMemberSelector, setShowMemberSelector] = useState(false);
 
-  // Task series hook for generating virtual recurring task instances
-  const {
-    taskSeries,
-    generateVirtualTaskInstances,
-    fetchTaskSeries
-  } = useTaskSeries(profile?.family_id || null);
-
-  // Update local state when hook value changes
   useEffect(() => {
     setActiveMemberId(hookActiveMemberId);
   }, [hookActiveMemberId]);
 
-  // Handle member switching
+  // --- Sub-hooks ---
+  const {
+    profile, setProfile,
+    familyMembers, setFamilyMembers,
+    tasks, setTasks,
+    allTasks,
+    loading, profileError,
+    fetchUserData, refreshTasksOnly, fetchTaskSeries,
+    isTaskCompletedForMember, getTasksByMember,
+  } = useDashboardTaskData({ user });
+
+  const {
+    activeTab, setActiveTab,
+    viewMode, setViewMode,
+    selectedMemberFilter,
+    handleTabChange, handleMemberSelect, handleSettingsClick,
+  } = useDashboardNavigation();
+
+  const { handleDragEnd } = useDashboardDragDrop({
+    tasks, setTasks, allTasks, profile, familyMembers,
+  });
+
+  const {
+    editingTask, setEditingTask,
+    deletingTask, setDeletingTask,
+    pinDialogOpen, setPinDialogOpen,
+    switchDialogOpen, setSwitchDialogOpen,
+    pendingAction, setPendingAction,
+    isCompleting,
+    authenticateMemberPin, isAuthenticating,
+    handleTaskToggle, initiateTaskDeletion, deleteTask,
+    completeTask,
+  } = useDashboardTaskActions({
+    profile, familyMembers, activeMemberId, dashboardMode,
+    setTasks, setProfile, setFamilyMembers,
+    refreshTasksOnly, fetchTaskSeries,
+  });
+
+  // --- Local UI state ---
+  const [selectedDate] = useState<Date | null>(null);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedMemberForTask, setSelectedMemberForTask] = useState<string | null>(null);
+  const [selectedTaskGroup, setSelectedTaskGroup] = useState<string | null>(null);
+
   const handleMemberSwitch = (memberId: string | null) => {
     if (memberId === null) {
       setShowMemberSelector(true);
@@ -145,1336 +125,7 @@ const ColumnBasedDashboard = () => {
     }
   };
 
-  // Handle tab changes - clear member selection when switching to tab view
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    setSelectedMemberFilter(null); // Clear member selection
-    setViewMode('everyone');
-  };
-
-  // Handle member selection for filtering
-  const handleMemberSelect = (memberId: string | null) => {
-    setSelectedMemberFilter(memberId);
-    if (memberId === null) {
-      setViewMode('everyone');
-      setActiveTab('columns'); // Reset to default tab
-    } else {
-      setViewMode('member');
-      setActiveTab(''); // Clear active tab when viewing member dashboard
-    }
-  };
-
-  // Dashboard tab is the default landing - no forced member view
-
-  const hasFetchedRef = useRef(false);
-  const isFetchingRef = useRef(false);
-  const ensuredRotationTodayRef = useRef(false);
-
-  useEffect(() => {
-    if (user && !profile && !hasFetchedRef.current && !isFetchingRef.current) {
-      console.log('🔄 Initial data fetch triggered');
-      hasFetchedRef.current = true;
-      isFetchingRef.current = true;
-      fetchUserData().finally(() => {
-        isFetchingRef.current = false;
-      });
-    }
-  }, [user]); // Remove profile?.id dependency to prevent loops
-
-  // Centralized realtime subscriptions via useTaskRealtime hook
-  const handleRealtimeTaskInserted = useCallback((task: Task) => {
-    setTasks(prevTasks => {
-      if (prevTasks.some(t => t.id === task.id)) {
-        console.log('⚠️ [REALTIME] Task already exists, skipping add');
-        return prevTasks;
-      }
-      console.log('➕ [REALTIME] Adding task to state');
-      return [...prevTasks, task];
-    });
-  }, []);
-
-  const handleRealtimeTaskUpdated = useCallback((task: Task) => {
-    setTasks((prev) => {
-      const idx = prev.findIndex((t) => t.id === task.id);
-      if (idx === -1) {
-        console.log('➕ [REALTIME] Task not in state, adding it');
-        return [...prev, task];
-      }
-      console.log('🔄 [REALTIME] Updating existing task with assignees');
-      const copy = prev.slice();
-      copy[idx] = { ...copy[idx], ...task };
-      return copy;
-    });
-  }, []);
-
-  const handleRealtimeCompletionAdded = useCallback((taskId: string, completion: any) => {
-    setTasks((prev) => {
-      return prev.map((t) => {
-        if (t.id === taskId) {
-          console.log('✅ [REALTIME] Marking task as completed in state');
-          return {
-            ...t,
-            task_completions: [...(t.task_completions || []), completion]
-          };
-        }
-        return t;
-      });
-    });
-  }, []);
-
-  const handleRealtimeCompletionRemoved = useCallback((taskId: string, completionId: string) => {
-    setTasks((prev) => {
-      return prev.map((t) => {
-        if (t.id === taskId) {
-          console.log('✅ [REALTIME] Unmarking task as completed in state');
-          return {
-            ...t,
-            task_completions: (t.task_completions || []).filter(
-              (c) => c.id !== completionId
-            )
-          };
-        }
-        return t;
-      });
-    });
-  }, []);
-
-  const handleRealtimeCompletionUpdated = useCallback((taskId: string, completion: any) => {
-    setTasks((prev) => {
-      return prev.map((t) => {
-        if (t.id === taskId) {
-          return {
-            ...t,
-            task_completions: (t.task_completions || []).map((c) =>
-              c.id === completion.id ? completion : c
-            )
-          };
-        }
-        return t;
-      });
-    });
-  }, []);
-
-  const handleRealtimeSeriesChanged = useCallback(async () => {
-    await fetchTaskSeries();
-    // Force UI refresh to regenerate virtual tasks
-    setTasks(prev => [...prev]);
-  }, [fetchTaskSeries]);
-
-  useTaskRealtime({
-    familyId: profile?.family_id || null,
-    onTaskInserted: handleRealtimeTaskInserted,
-    onTaskUpdated: handleRealtimeTaskUpdated,
-    onCompletionAdded: handleRealtimeCompletionAdded,
-    onCompletionRemoved: handleRealtimeCompletionRemoved,
-    onCompletionUpdated: handleRealtimeCompletionUpdated,
-    onSeriesChanged: handleRealtimeSeriesChanged,
-  });
-
-  // Listen for series updates from dialogs/other components
-  useEffect(() => {
-    const handler = () => {
-      console.log('🔁 [SERIES] series-updated event received, refreshing task series');
-      fetchTaskSeries();
-      setTasks(prev => [...prev]);
-    };
-    window.addEventListener('series-updated', handler);
-    return () => window.removeEventListener('series-updated', handler);
-  }, [fetchTaskSeries]);
-
-  // Listen for midnight cleanup events
-  useEffect(() => {
-    const handleCleanup = () => {
-      console.log('🧹 Tasks cleaned up at midnight, refreshing...');
-      fetchUserData();
-    };
-    window.addEventListener('tasks-cleaned-up', handleCleanup);
-    return () => window.removeEventListener('tasks-cleaned-up', handleCleanup);
-  }, []);
-
-
-  // Use a debounced approach to prevent duplicate updates
-  const profileUpdateTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
-  
-  useEffect(() => {
-    if (!profile?.family_id) return;
-
-    console.log('🔔 Setting up profiles realtime subscription for family:', profile.family_id);
-
-    const profilesChannel = supabase
-      .channel(`profiles-${profile.family_id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `family_id=eq.${profile.family_id}`
-        },
-        (payload) => {
-          console.log('🔔 Profile updated via realtime:', payload.new);
-          
-          const updatedProfile = payload.new as Profile;
-          
-          // Debounce profile updates to prevent duplicate point updates
-          const existingTimeout = profileUpdateTimeoutRef.current.get(updatedProfile.id);
-          if (existingTimeout) {
-            clearTimeout(existingTimeout);
-          }
-          
-          const timeout = setTimeout(() => {
-            // Update the current profile if it's the user's profile
-            if (updatedProfile.id === profile.id) {
-              console.log('📊 Updating current user points:', updatedProfile.total_points);
-              setProfile(prev => prev ? { ...prev, total_points: updatedProfile.total_points } : null);
-            }
-            
-            // Update family members list
-            setFamilyMembers(prev =>
-              prev.map(member =>
-                member.id === updatedProfile.id
-                  ? { ...member, total_points: updatedProfile.total_points }
-                  : member
-              )
-            );
-            
-            profileUpdateTimeoutRef.current.delete(updatedProfile.id);
-          }, 100); // 100ms debounce
-          
-          profileUpdateTimeoutRef.current.set(updatedProfile.id, timeout);
-        }
-      )
-      .subscribe((status) => {
-        console.log('📡 Profiles realtime subscription status:', status);
-      });
-
-    return () => {
-      console.log('🔌 Removing profiles realtime subscription');
-      // Clear all pending timeouts
-      profileUpdateTimeoutRef.current.forEach(timeout => clearTimeout(timeout));
-      profileUpdateTimeoutRef.current.clear();
-      supabase.removeChannel(profilesChannel);
-    };
-  }, [profile?.family_id, profile?.id]);
-
-  // Note: rotating task generation is handled inside fetchUserData only.
-  // No separate useEffect needed — it was causing duplicate invocations.
-
-  const cleanupDuplicateRotatingTasksToday = async (familyId: string) => {
-    try {
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      const end = new Date();
-      end.setHours(23, 59, 59, 999);
-      const startISO = start.toISOString();
-      const endISO = end.toISOString();
-
-      // Get active rotating task names for this family
-      const { data: rotating, error: namesError } = await supabase
-        .from('rotating_tasks')
-        .select('name, allow_multiple_completions')
-        .eq('family_id', familyId)
-        .eq('is_active', true);
-
-      if (namesError) {
-        console.error('Failed to load rotating task names:', namesError);
-        return;
-      }
-
-      const rotatingMap = new Map((rotating || []).map(r => [r.name, r.allow_multiple_completions]));
-      const names = Array.from(rotatingMap.keys());
-      if (names.length === 0) return;
-
-      // Fetch today's VISIBLE tasks for those names with assignees
-      const { data: todaysTasks, error: tasksError } = await supabase
-        .from('tasks')
-        .select('id, title, created_at, due_date, task_assignees!inner(profile_id), task_completions(id)')
-        .eq('family_id', familyId)
-        .is('hidden_at', null)
-        .in('title', names)
-        .gte('created_at', startISO)
-        .lte('created_at', endISO);
-
-      if (tasksError) {
-        console.error('Failed to load today\'s tasks for cleanup:', tasksError);
-        return;
-      }
-
-      type Row = { id: string; title: string; created_at: string; due_date: string | null; task_assignees: { profile_id: string }[]; task_completions?: { id: string }[] };
-      const rows = (todaysTasks as unknown as Row[]) || [];
-      const toDelete: string[] = [];
-
-      // Group by title only for single-instance tasks
-      const byTitle = new Map<string, Row[]>();
-      const byTitleAndAssignee = new Map<string, Row[]>();
-
-      for (const row of rows) {
-        const allowMultiple = rotatingMap.get(row.title);
-        
-        if (allowMultiple === false) {
-          // Single instance per day: group by title only
-          if (!byTitle.has(row.title)) byTitle.set(row.title, []);
-          byTitle.get(row.title)!.push(row);
-        } else {
-          // Multiple completions: group by title + assignee
-          const assigneeId = row.task_assignees?.[0]?.profile_id || 'unassigned';
-          const key = `${row.title}::${assigneeId}`;
-          if (!byTitleAndAssignee.has(key)) byTitleAndAssignee.set(key, []);
-          byTitleAndAssignee.get(key)!.push(row);
-        }
-      }
-
-      // Handle single-instance tasks: keep only ONE per title
-      for (const [title, list] of byTitle) {
-        if (list.length <= 1) continue;
-
-        const isIncomplete = (r: Row) => !r.task_completions || r.task_completions.length === 0;
-        const incomplete = list.filter(isIncomplete);
-
-        let keep: Row;
-        if (incomplete.length > 0) {
-          // Keep the oldest incomplete task
-          keep = incomplete.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
-        } else {
-          // All completed: keep the oldest
-          keep = list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
-        }
-
-        for (const r of list) {
-          if (r.id !== keep.id) toDelete.push(r.id);
-        }
-      }
-
-      // Handle multiple-completion tasks: keep only ONE per (title, assignee)
-      for (const [key, list] of byTitleAndAssignee) {
-        if (list.length <= 1) continue;
-
-        const isIncomplete = (r: Row) => !r.task_completions || r.task_completions.length === 0;
-        const incomplete = list.filter(isIncomplete);
-
-        let keep: Row;
-        if (incomplete.length > 0) {
-          keep = incomplete.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
-        } else {
-          keep = list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
-        }
-
-        for (const r of list) {
-          if (r.id !== keep.id) toDelete.push(r.id);
-        }
-      }
-
-      if (toDelete.length > 0) {
-        // Instead of deleting, mark tasks as hidden to avoid cascade issues
-        const { error: hideError } = await supabase
-          .from('tasks')
-          .update({ hidden_at: new Date().toISOString() })
-          .in('id', toDelete);
-        
-        if (hideError) {
-          console.error('Failed hiding duplicates:', hideError);
-        } else {
-          console.log(`🧹 Hid ${toDelete.length} duplicate rotating tasks`);
-        }
-      }
-    } catch (e) {
-      console.error('Error during duplicate cleanup:', e);
-    }
-  };
-
-  const fetchUserData = async () => {
-    try {
-      console.log('🔄 fetchUserData called for user:', user?.id, 'email:', user?.email);
-      console.log('🔄 Current profile state:', profile?.id, profile?.display_name);
-      
-      // Fetch current user profile with explicit user_id matching
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (profileError) {
-        console.error('Profile error:', profileError);
-        console.log('Looking for existing profile with email:', user?.email);
-        
-        // Check if there's a profile that might be disconnected
-        const { data: existingProfiles, error: searchError } = await supabase
-          .from('profiles')
-          .select('*, families(name)')
-          .limit(10);
-          
-        if (!searchError && existingProfiles) {
-          console.log('Found existing profiles:', existingProfiles);
-        }
-        
-        // If profile not found, try to create it
-        if (profileError.code === 'PGRST116') {
-          console.log('Profile not found, attempting to create...');
-          const { data: createResult, error: createError } = await supabase
-            .rpc('fix_my_missing_profile');
-          
-          if (createError) {
-            console.error('Failed to create profile:', createError);
-            setProfileError('Failed to create profile. Please try signing out and back in.');
-            return;
-          }
-          
-          if (createResult && typeof createResult === 'object' && 'success' in createResult && createResult.success) {
-            console.log('✅ Profile created successfully, retrying fetch...');
-            // Retry fetching the profile instead of reloading
-            const { data: retryProfileData, error: retryError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('user_id', user?.id)
-              .single();
-            
-            if (retryError) {
-              console.error('Retry profile fetch failed:', retryError);
-              setProfileError('Profile creation succeeded but fetch failed. Please refresh the page.');
-              return;
-            }
-            
-            setProfile(retryProfileData);
-            
-            // Fetch family members for this new profile
-            const { data: membersData, error: membersError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('family_id', retryProfileData.family_id)
-              .eq('status', 'active')
-              .order('sort_order', { ascending: true })
-              .order('created_at', { ascending: true });
-
-            if (membersError) {
-              console.error('Members error:', membersError);
-            } else {
-              setFamilyMembers(membersData || []);
-            }
-
-            // Cleanup duplicate rotating tasks for today
-            await cleanupDuplicateRotatingTasksToday(retryProfileData.family_id);
-
-            // Fetch family tasks
-            const { data: tasksData, error: tasksError } = await supabase
-              .from('tasks')
-              .select(TASK_SELECT_SHAPE)
-              .eq('family_id', retryProfileData.family_id) as { data: any[], error: any };
-
-            if (tasksError) {
-              console.error('Tasks error:', tasksError);
-            } else {
-              setTasks(castTasks(tasksData || []));
-            }
-
-            // Fetch materialized task instances for completion data
-            const { data: materializedData, error: materializedError } = await supabase
-              .from('materialized_task_instances')
-              .select(`
-                series_id,
-                occurrence_date,
-                materialized_task_id,
-                materialized_task:tasks!materialized_task_instances_materialized_task_id_fkey(
-                  id,
-                  task_completions(
-                    id,
-                    completed_at,
-                    completed_by
-                  )
-                )
-              `);
-
-            if (!materializedError && materializedData) {
-              const newMaterializedMap = new Map<string, any[]>();
-              materializedData.forEach((instance: any) => {
-                if (instance.materialized_task?.task_completions) {
-                  const key = `${instance.series_id}-${instance.occurrence_date}`;
-                  newMaterializedMap.set(key, instance.materialized_task.task_completions);
-                }
-              });
-              setMaterializedCompletionsMap(newMaterializedMap);
-            }
-            
-            
-            setLoading(false);
-            return;
-          } else {
-            setProfileError('Failed to create missing profile. Please contact support.');
-            return;
-          }
-        } else {
-          setProfileError('Failed to load profile. Please try refreshing the page.');
-          return;
-        }
-      } else {
-        setProfile(profileData);
-      }
-
-      setProfile(profileData);
-
-      // Fetch family members ordered by sort_order for consistent column positioning
-      const { data: membersData, error: membersError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('family_id', profileData.family_id)
-        .eq('status', 'active')
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: true });
-
-      if (membersError) {
-        console.error('Members error:', membersError);
-      } else {
-        setFamilyMembers(membersData || []);
-      }
-
-      // Generate rotating tasks for today before fetching (only once per session)
-      if (!ensuredRotationTodayRef.current) {
-        ensuredRotationTodayRef.current = true;
-        try {
-          console.log('🔄 Generating rotating tasks for family:', profileData.family_id);
-          await supabase.functions.invoke('generate-rotating-tasks', {
-            body: { family_id: profileData.family_id }
-          });
-        } catch (rotatingError) {
-          console.error('Failed to generate rotating tasks:', rotatingError);
-          // Reset so it can retry on next fetch
-          ensuredRotationTodayRef.current = false;
-        }
-      }
-
-      // Fetch family tasks with completion status (filter out hidden tasks)
-      const { data: tasksData, error: tasksError } = await buildFamilyTaskQuery(profileData.family_id) as { data: any[], error: any };
-
-      if (tasksError) {
-        console.error('Tasks error:', tasksError);
-      } else {
-        setTasks(castTasks(tasksData || []));
-      }
-
-      // Fetch materialized task instances to get completion data for recurring tasks
-      const { data: materializedData, error: materializedError } = await supabase
-        .from('materialized_task_instances')
-        .select(`
-          series_id,
-          occurrence_date,
-          materialized_task_id,
-          materialized_task:tasks!materialized_task_instances_materialized_task_id_fkey(
-            id,
-            task_completions(
-              id,
-              completed_at,
-              completed_by
-            )
-          )
-        `);
-
-      if (materializedError) {
-        console.error('Error fetching materialized instances:', materializedError);
-      }
-
-      // Create a map of series_id + occurrence_date -> completions
-      const newMaterializedMap = new Map<string, any[]>();
-      if (materializedData) {
-        materializedData.forEach((instance: any) => {
-          if (instance.materialized_task?.task_completions) {
-            const key = `${instance.series_id}-${instance.occurrence_date}`;
-            newMaterializedMap.set(key, instance.materialized_task.task_completions);
-          }
-        });
-      }
-
-      // Use React state for materialized completions map
-      setMaterializedCompletionsMap(newMaterializedMap);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load dashboard data',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const isTaskCompletedForMember = (task: Task, memberId: string): boolean => {
-    const completions = task.task_completions || [];
-    if (completions.length === 0) return false;
-
-    if (task.completion_rule === 'everyone') {
-      return completions.some((c) => c.completed_by === memberId);
-    }
-
-    // any_one: once anyone completes, it counts as completed for everyone
-    return true;
-  };
-
-  const completeTask = async (task: Task, columnMemberId?: string) => {
-    await completeTaskHandler(task, refreshTasksOnly, columnMemberId);
-  };
-
-  const uncompleteTask = async (task: Task, columnMemberId?: string) => {
-    await uncompleteTaskHandler(task, refreshTasksOnly, columnMemberId);
-  };
-
-  const handleTaskToggle = async (task: Task, columnMemberId?: string) => {
-    // Prevent action if task is currently being processed
-    if (isCompleting(task.id)) {
-      console.log('🚫 Task already being processed:', task.id);
-      return;
-    }
-
-    // Determine who we're checking for
-    // Priority: columnMemberId (from column view) > activeMemberId (from dashboard session) > logged-in user
-    const completerId = columnMemberId || activeMemberId || profile?.id;
-    if (!completerId) {
-      console.warn('⚠️ No completer ID found');
-      return;
-    }
-
-    // For single-assignee tasks, check if the ASSIGNEE has completed it
-    // This allows parents/admins to uncomplete tasks on behalf of children
-    let checkCompleterId = completerId;
-    
-    // If task has a single assignee and current user is viewing (not in active member mode),
-    // check the assignee's completion status
-    if (!activeMemberId && !columnMemberId && task.assignees?.length === 1) {
-      checkCompleterId = task.assignees[0].profile_id;
-    } else if (!activeMemberId && !columnMemberId && task.assigned_to) {
-      checkCompleterId = task.assigned_to;
-    }
-
-    // Check if the relevant user has completed the task
-    const isCompleted = task.task_completions?.some(
-      (c) => c.completed_by === checkCompleterId
-    );
-
-    console.log('🔄 Task toggle:', { 
-      taskId: task.id, 
-      title: task.title,
-      columnMemberId,
-      completerId,
-      checkCompleterId, 
-      isCompleted,
-      completions: task.task_completions,
-      assignees: task.assignees,
-      assigned_to: task.assigned_to
-    });
-
-    // Check if PIN is required before proceeding (only in dashboard mode and for completing, not uncompleting)
-    if (dashboardMode && !isCompleted && completerId) {
-      const { canProceed, needsPin, profile: memberProfile } = await canPerformAction(completerId, 'task_completion');
-      
-      if (needsPin && !canProceed) {
-        // Need PIN - set up pending action and open dialog
-        const member = familyMembers.find(m => m.id === completerId);
-        if (member) {
-          setPendingAction({
-            type: 'complete_task',
-            taskId: task.id,
-            requiredMemberId: completerId,
-            onSuccess: () => {
-              completeTask(task, columnMemberId);
-            }
-          });
-          setPinDialogOpen(true);
-          return;
-        }
-      }
-    }
-
-    if (isCompleted) {
-      uncompleteTask(task, columnMemberId);
-    } else {
-      completeTask(task, columnMemberId);
-    }
-  };
-
-  const initiateTaskDeletion = async (task: Task) => {
-    // Handle virtual/recurring task deletion - use skip mechanism instead of direct delete
-    if (task.isVirtual && task.series_id) {
-      // For virtual tasks, we can't delete the DB row directly
-      // Instead, we'll create a skip exception or prompt the user
-      setDeletingTask({
-        ...task,
-        isVirtual: true,
-        series_id: task.series_id,
-        occurrence_date: task.occurrence_date
-      } as Task);
-      return;
-    }
-
-    // Check if this is a rotating task
-    const { data: rotatingTask } = await supabase
-      .from('rotating_tasks')
-      .select('id, name, allow_multiple_completions')
-      .eq('name', task.title)
-      .eq('family_id', profile?.family_id)
-      .eq('is_active', true)
-      .single();
-
-    // If it's a rotating task and dashboard mode is enabled, require parent PIN
-    if (rotatingTask && dashboardMode) {
-      // Only parents can delete rotating tasks
-      if (profile?.role !== 'parent') {
-        toast({
-          title: 'Permission Denied',
-          description: 'Only parents can delete rotating tasks.',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      // Require PIN confirmation
-      setPendingAction({
-        type: 'complete_task', // Reusing this type for deletion
-        taskId: task.id,
-        requiredMemberId: profile.id,
-        onSuccess: () => {
-          setDeletingTask(task);
-          // Store rotating task info for later
-          (task as any).isRotatingTask = true;
-        }
-      });
-      setPinDialogOpen(true);
-      return;
-    }
-
-    // Regular task deletion (no PIN needed)
-    setDeletingTask(task);
-  };
-
-  const deleteTask = async () => {
-    if (!deletingTask) return;
-
-    // Handle virtual task deletion via skip exception
-    if ((deletingTask as any).isVirtual && (deletingTask as any).series_id) {
-      try {
-        const { error } = await supabase
-          .from('recurrence_exceptions')
-          .insert({
-            series_id: (deletingTask as any).series_id,
-            series_type: 'task',
-            exception_date: (deletingTask as any).occurrence_date,
-            exception_type: 'skip',
-            created_by: profile?.id
-          });
-
-        if (error) throw error;
-
-        toast({
-          title: 'Occurrence Skipped',
-          description: 'This task occurrence has been removed',
-        });
-
-        setDeletingTask(null);
-        // Refresh to show updated series
-        await fetchTaskSeries();
-        await refreshTasksOnly();
-        return;
-      } catch (error) {
-        console.error('Error skipping task occurrence:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to skip task occurrence',
-          variant: 'destructive'
-        });
-        return;
-      }
-    }
-
-    const isRotatingTask = (deletingTask as any).isRotatingTask;
-
-    try {
-      // Check if this is a rotating task before deletion
-      const { data: rotatingTask } = await supabase
-        .from('rotating_tasks')
-        .select('id, name, allow_multiple_completions, current_member_index, member_order')
-        .eq('name', deletingTask.title)
-        .eq('family_id', profile?.family_id)
-        .eq('is_active', true)
-        .single();
-
-      // Delete the task
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', deletingTask.id);
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: 'Task Deleted',
-        description: 'Task has been removed successfully',
-      });
-
-      setDeletingTask(null);
-      // Remove from local state instead of full refresh
-      setTasks(prevTasks => prevTasks.filter(t => t.id !== deletingTask.id));
-
-      // If this was a rotating task, generate the next instance
-      if (rotatingTask) {
-        console.log('🔄 Generating next instance for deleted rotating task');
-        try {
-          await supabase.functions.invoke('generate-rotating-tasks');
-          toast({
-            title: 'Next Task Generated',
-            description: 'The task has been reassigned to the next person in rotation.',
-          });
-        } catch (genError) {
-          console.error('Failed to generate next rotating task:', genError);
-          toast({
-            title: 'Warning',
-            description: 'Task deleted but failed to generate next instance.',
-            variant: 'destructive'
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error deleting task:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete task',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  // Handle drag end for task assignment and group changes
-  const handleDragEnd = async (result: DropResult) => {
-    const { destination, source, draggableId } = result;
-
-    console.log('Drag operation started:', {
-      taskId: draggableId,
-      source: source.droppableId,
-      destination: destination?.droppableId,
-    });
-
-    // If dropped outside a droppable area
-    if (!destination) {
-      console.log('Drag cancelled - dropped outside droppable area');
-      return;
-    }
-
-    // If dropped in the same position
-    if (destination.droppableId === source.droppableId && destination.index === source.index) {
-      console.log('Drag cancelled - same position');
-      return;
-    }
-
-    const taskId = draggableId;
-    // Search in allTasks (includes virtual recurring instances) not just tasks
-    const task = allTasks.find(t => t.id === taskId);
-    
-    if (!task) {
-      console.error('Task not found for drag operation:', taskId);
-      toast({
-        title: 'Error',
-        description: 'Task not found. Please refresh and try again.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Check if this is a virtual/recurring task instance
-    const isVirtualTask = (task as any).isVirtual === true;
-    
-    // Virtual/recurring instances have composite IDs like "UUID-YYYY-MM-DD" and cannot be updated via tasks/task_assignees tables.
-    const isUuid = typeof task.id === 'string' &&
-      task.id.length === 36 &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(task.id);
-
-    // For virtual tasks, we need to check if they're trying to change members (not allowed)
-    // but changing task groups within the same member IS allowed (handled via series update)
-    if (isVirtualTask || !isUuid) {
-      // Parse source and destination to check if member is changing
-      const parseForMemberCheck = (id: string): string | null => {
-        if (id === 'unassigned') return null;
-        if (id.length === 36 && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-          return id;
-        }
-        const parts = id.split('-');
-        if (parts.length >= 6) {
-          const memberId = parts.slice(0, 5).join('-');
-          if (memberId.length === 36 && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(memberId)) {
-            return memberId;
-          }
-        }
-        return null;
-      };
-      
-      const sourceMember = parseForMemberCheck(source.droppableId);
-      const destMember = parseForMemberCheck(destination.droppableId);
-      
-      // If trying to change member assignment for a virtual task, block it
-      if (sourceMember !== destMember) {
-        toast({
-          title: 'Not supported',
-          description: 'Recurring task instances cannot be reassigned to different members. Edit the recurring task series instead.',
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      // For task group changes within the same member, show info message
-      // (Virtual tasks don't persist group changes - they'd need series editing)
-      toast({
-        title: 'Recurring task',
-        description: 'To change the time slot for recurring tasks, edit the series in task settings.',
-      });
-      return;
-    }
-
-    // Store original state for rollback
-    const previousTasks = [...tasks];
-    
-    // Parse droppable IDs to handle both member columns and group containers
-    const parseDroppableId = (id: string): { memberId: string | null; group: string | null } => {
-      if (id === 'unassigned') return { memberId: null, group: null };
-      
-      // Check if it's a member ID only (36 characters UUID)
-      if (id.length === 36 && id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        return { memberId: id, group: null };
-      }
-      
-      // Check if it's a member + group combination (UUID-<group>)
-      const parts = id.split('-');
-      
-      // New format: UUID-group (6 parts total: 5 from UUID + 1 group)
-      // Old format: UUID-pending-group or UUID-completed-group (7+ parts)
-      if (parts.length >= 6) {
-        const memberId = parts.slice(0, 5).join('-'); // Reconstruct UUID
-        const remainder = parts.slice(5).join('-'); // e.g. "morning" or "pending-morning"
-        
-        if (memberId.length === 36 && memberId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-          // Remove pending-/completed- prefix if present (for backwards compatibility)
-          const group = remainder.replace(/^pending-/, '').replace(/^completed-/, '');
-          
-          if (VALID_TASK_GROUPS.includes(group as TaskGroup)) {
-            return { memberId, group };
-          }
-        }
-      }
-      
-      // Check if it's just a group name (for member view)
-      if (VALID_TASK_GROUPS.includes(id as TaskGroup)) {
-        return { memberId: null, group: id };
-      }
-      
-      console.error('Invalid droppable ID format:', id);
-      return { memberId: null, group: null };
-    };
-    
-    const sourceInfo = parseDroppableId(source.droppableId);
-    const destInfo = parseDroppableId(destination.droppableId);
-
-    // Validate parsed IDs before proceeding
-    if (sourceInfo.memberId === null && sourceInfo.group === null && source.droppableId !== 'unassigned') {
-      console.error('Failed to parse source droppable ID:', source.droppableId);
-      toast({
-        title: 'Error',
-        description: 'Invalid drag operation. Please try again.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (destInfo.memberId === null && destInfo.group === null && destination.droppableId !== 'unassigned') {
-      console.error('Failed to parse destination droppable ID:', destination.droppableId);
-      toast({
-        title: 'Error',
-        description: 'Invalid drop location. Please try again.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    try {
-      const updateData: any = {};
-      let needsUpdate = false;
-      
-      // Check if this is a group task (multiple assignees or everyone completion rule)
-      // Use allTasks to also find virtual recurring tasks
-      const currentTask = allTasks.find(t => t.id === taskId);
-      const isGroupTask = currentTask && (
-        (currentTask.assignees && currentTask.assignees.length > 1) ||
-        currentTask.completion_rule === 'everyone'
-      );
-      
-      // Block cross-member drag for group tasks early with clear message
-      if (sourceInfo.memberId !== destInfo.memberId && isGroupTask) {
-        toast({
-          title: 'Cannot reassign',
-          description: 'Tasks assigned to everyone cannot be moved to a specific member. Edit the task to change assignments.',
-        });
-        return;
-      }
-      
-      // Handle member assignment change
-      if (sourceInfo.memberId !== destInfo.memberId && destInfo.memberId !== null) {
-        try {
-          // First, remove existing task assignees
-          const { error: deleteError } = await supabase
-            .from('task_assignees')
-            .delete()
-            .eq('task_id', taskId);
-
-          if (deleteError) {
-            console.error('Error deleting task assignees:', deleteError);
-            throw deleteError;
-          }
-
-          // Update the main task assignment for backward compatibility
-          updateData.assigned_to = destInfo.memberId;
-          needsUpdate = true;
-
-          // If assigning to a specific member, create new task_assignee record
-          if (destInfo.memberId) {
-            const { error: insertError } = await supabase
-              .from('task_assignees')
-              .insert({
-                task_id: taskId,
-                profile_id: destInfo.memberId,
-                assigned_by: profile?.id
-              });
-
-            if (insertError) {
-              console.error('Error inserting task assignee:', insertError);
-              throw insertError;
-            }
-          }
-        } catch (assignError) {
-          console.error('Failed to update task assignment:', assignError);
-          throw new Error('Failed to update task assignment');
-        }
-      }
-      
-      // Handle task group change - only update due_date if task already had one
-      if (destInfo.group && destInfo.group !== sourceInfo.group) {
-        updateData.task_group = destInfo.group;
-        // Only set due_date if the task already had a due_date, otherwise preserve null
-        if (currentTask?.due_date) {
-          updateData.due_date = getGroupDueDate(destInfo.group as TaskGroup);
-        }
-        needsUpdate = true;
-      }
-      
-      if (needsUpdate) {
-        // Optimistically update local state
-        setTasks(prevTasks => prevTasks.map(t => {
-          if (t.id === taskId) {
-            return {
-              ...t,
-              ...updateData,
-              // Update assignees if member changed
-              ...(destInfo.memberId !== sourceInfo.memberId && destInfo.memberId && {
-                assigned_to: destInfo.memberId,
-                assignees: [{
-                  id: crypto.randomUUID(),
-                  profile_id: destInfo.memberId,
-                  assigned_at: new Date().toISOString(),
-                  assigned_by: profile?.id || '',
-                  profile: familyMembers.find(m => m.id === destInfo.memberId) || {
-                    id: destInfo.memberId,
-                    display_name: 'Unknown',
-                    role: 'child' as const,
-                    color: 'gray'
-                  }
-                }]
-              })
-            };
-          }
-          return t;
-        }));
-
-        // Update the task in database
-        const { error: updateError } = await supabase
-          .from('tasks')
-          .update(updateData)
-          .eq('id', taskId);
-
-        if (updateError) {
-          console.error('Database update error:', updateError);
-          throw updateError;
-        }
-
-        console.log('Task update successful');
-
-        const assignedMember = familyMembers.find(m => m.id === destInfo.memberId);
-        let toastMessage = '';
-        
-        if (sourceInfo.memberId !== destInfo.memberId && destInfo.memberId) {
-          toastMessage = `Task assigned to ${assignedMember?.display_name || 'member'}`;
-        } else if (destInfo.memberId === null && sourceInfo.memberId !== null) {
-          toastMessage = 'Task moved to unassigned';
-        }
-        
-        if (destInfo.group && destInfo.group !== sourceInfo.group) {
-          const groupMessage = `moved to ${getTaskGroupTitle(destInfo.group as TaskGroup)}`;
-          toastMessage = toastMessage ? `${toastMessage} and ${groupMessage}` : `Task ${groupMessage}`;
-        }
-
-        toast({
-          title: 'Task updated',
-          description: toastMessage,
-        });
-      }
-    } catch (error) {
-      console.error('Error in drag and drop operation:', error);
-      // Immediately rollback to previous state
-      setTasks(previousTasks);
-      
-      toast({
-        title: 'Failed to move task',
-        description: error instanceof Error ? error.message : 'Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Efficient task refresh without full page reload
-  const refreshTasksOnly = async () => {
-    if (!profile?.family_id) return;
-    
-    try {
-      // Refresh tasks (filter out hidden tasks)
-      const { data: tasksData, error: tasksError } = await buildFamilyTaskQuery(profile.family_id) as { data: any[], error: any };
-
-      if (!tasksError && tasksData) {
-        setTasks(castTasks(tasksData));
-        console.log('Tasks refreshed successfully');
-      } else if (tasksError) {
-        console.error('Error refreshing tasks:', tasksError);
-      }
-
-      // CRITICAL: Also refresh materialized task instances for virtual task completions
-      // NOTE: materialized_task_instances doesn't have family_id, so we filter by this family's series ids.
-      const seriesIds = (taskSeries || []).map(s => s.id).filter(Boolean);
-
-      let materializedQuery = supabase
-        .from('materialized_task_instances')
-        .select(`
-          id,
-          series_id,
-          occurrence_date,
-          materialized_task:tasks!materialized_task_instances_materialized_task_id_fkey(
-            id,
-            task_completions(id, completed_at, completed_by)
-          )
-        `);
-
-      if (seriesIds.length > 0) {
-        materializedQuery = materializedQuery.in('series_id', seriesIds);
-      }
-
-      const { data: materializedData, error: materializedError } = await materializedQuery;
-
-      if (!materializedError && materializedData) {
-        const newMaterializedMap = new Map<string, any[]>();
-        materializedData.forEach((instance: any) => {
-          if (instance.materialized_task?.task_completions) {
-            const key = `${instance.series_id}-${instance.occurrence_date}`;
-            newMaterializedMap.set(key, instance.materialized_task.task_completions);
-          }
-        });
-        // Use React state instead of window to trigger re-render
-        setMaterializedCompletionsMap(newMaterializedMap);
-        console.log('Materialized completions map refreshed:', newMaterializedMap.size, 'entries');
-      }
-
-      // Also refresh profile and family members to get updated points
-      const { data: updatedProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (updatedProfile) {
-        setProfile(updatedProfile);
-      }
-
-      const { data: updatedMembers } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('family_id', profile.family_id)
-        .eq('status', 'active')
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: true });
-
-      if (updatedMembers) {
-        setFamilyMembers(updatedMembers);
-      }
-      
-      // Force a re-render by triggering task series refresh
-      await fetchTaskSeries();
-    } catch (error) {
-      console.error('Error in refreshTasksOnly:', error);
-    }
-  };
-
-
-  // Memoized combined tasks (regular + virtual recurring instances)
-  // This is computed once and reused for MemberDashboard and column views
-  const allTasks = useMemo(() => {
-    // Generate virtual task instances from task series
-    // Show instances for the current week so weekly/monthly tasks appear
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    // Get the end of this week (Sunday)
-    const endOfWeek = new Date(today);
-    endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
-    endOfWeek.setHours(23, 59, 59, 999);
-    
-    const allVirtualInstances = generateVirtualTaskInstances(today, endOfWeek);
-    
-    // Filter to show only the most relevant instance per series per assignee:
-    // - For "everyone" tasks: each assignee gets their own instance
-    // - For "any_one" tasks: all assignees share one instance
-    // - Daily tasks: show today's instance only
-    // - Weekly tasks: show this week's first instance
-    const seriesInstanceMap = new Map<string, typeof allVirtualInstances[0]>();
-    
-    allVirtualInstances.forEach(instance => {
-      // Use composite key: series_id + first assigned profile (for everyone tasks each person gets unique instance)
-      // This ensures "everyone" tasks don't overwrite each other
-      const instanceKey = `${instance.series_id}-${instance.assigned_profiles.join('-')}`;
-      
-      const existingInstance = seriesInstanceMap.get(instanceKey);
-      if (!existingInstance) {
-        seriesInstanceMap.set(instanceKey, instance);
-      } else {
-        // Keep the earliest instance (closest to today)
-        const instanceDate = new Date(instance.occurrence_date);
-        const existingDate = new Date(existingInstance.occurrence_date);
-        if (instanceDate < existingDate) {
-          seriesInstanceMap.set(instanceKey, instance);
-        }
-      }
-    });
-    
-    const virtualInstances = Array.from(seriesInstanceMap.values());
-    
-    // Use React state for materialized completions to trigger re-renders on updates
-    
-    // Map virtual instances to Task format with completion checking
-    const virtualTasks: Task[] = virtualInstances.map(vTask => {
-      // Check if this virtual instance has been materialized and completed
-      // Use series_id + occurrence_date to look up completions
-      const completionKey = `${vTask.series_id}-${vTask.occurrence_date}`;
-      const completions = materializedCompletionsMap.get(completionKey) || [];
-      
-      return {
-        id: vTask.id,
-        title: vTask.title,
-        description: vTask.description || null,
-        points: vTask.points,
-        due_date: vTask.due_date,
-        assigned_to: vTask.assigned_profiles[0] || null,
-        created_by: vTask.created_by,
-        completion_rule: (vTask.completion_rule || 'everyone') as 'any_one' | 'everyone',
-        task_group: vTask.task_group,
-        recurrence_options: vTask.recurrence_options,
-        series_assignee_count: (vTask as any).series_assignee_count,
-        assignees: vTask.assigned_profiles.map(profileId => {
-          const memberProfile = familyMembers.find(m => m.id === profileId);
-          return {
-            id: `${vTask.id}-${profileId}`,
-            profile_id: profileId,
-            assigned_at: new Date().toISOString(),
-            assigned_by: vTask.created_by,
-            profile: memberProfile ? {
-              id: memberProfile.id,
-              display_name: memberProfile.display_name,
-              role: memberProfile.role,
-              color: memberProfile.color,
-              avatar_url: memberProfile.avatar_url || null
-            } : {
-              id: profileId,
-              display_name: 'Unknown',
-              role: 'child' as const,
-              color: 'gray',
-              avatar_url: null
-            }
-          };
-        }),
-        task_completions: completions,
-        // CRITICAL: All virtual task flags must be explicitly set
-        isVirtual: true,
-        series_id: vTask.series_id,
-        occurrence_date: vTask.occurrence_date,
-        isException: vTask.isException,
-        exceptionType: vTask.exceptionType,
-        task_source: 'series'
-      };
-    });
-    
-    // Combine regular tasks with virtual task instances
-    // Exclude materialized recurring tasks since they'll be shown as virtual instances
-    const regularTasks = tasks.filter(t => t.task_source !== 'recurring');
-    return [...regularTasks, ...virtualTasks];
-  }, [tasks, familyMembers, generateVirtualTaskInstances, materializedCompletionsMap]);
-
-  // Get tasks organized by family member with filtering
-  const getTasksByMember = () => {
-    const tasksByMember = new Map<string, Task[]>();
-    
-    // Initialize with all family members in the same order as familyMembers array
-    familyMembers.forEach(member => {
-      tasksByMember.set(member.id, []);
-    });
-    
-    // Add unassigned tasks category
-    tasksByMember.set('unassigned', []);
-    
-    // Add all tasks (regular + virtual) - use memoized allTasks
-    allTasks.forEach(task => {
-      if (task.assignees && task.assignees.length > 0) {
-        // Task has multiple assignees - add to each member's column
-        // For group tasks (everyone completion_rule), each member sees the same task
-        task.assignees.forEach(assignee => {
-          const memberTasks = tasksByMember.get(assignee.profile_id) || [];
-          // Check if this exact task is already in this member's list
-          if (!memberTasks.some(t => t.id === task.id)) {
-            memberTasks.push(task);
-            tasksByMember.set(assignee.profile_id, memberTasks);
-          }
-        });
-      } else if (task.assigned_to) {
-        // Single assignee (old format)
-        const memberTasks = tasksByMember.get(task.assigned_to) || [];
-        if (!memberTasks.some(t => t.id === task.id)) {
-          memberTasks.push(task);
-          tasksByMember.set(task.assigned_to, memberTasks);
-        }
-      } else {
-        // Unassigned task
-        const unassignedTasks = tasksByMember.get('unassigned') || [];
-        if (!unassignedTasks.some(t => t.id === task.id)) {
-          unassignedTasks.push(task);
-          tasksByMember.set('unassigned', unassignedTasks);
-        }
-      }
-    });
-    
-    // Filter tasks by selected member if one is chosen
-    if (selectedMemberFilter) {
-      const filteredMap = new Map<string, Task[]>();
-      filteredMap.set(selectedMemberFilter, tasksByMember.get(selectedMemberFilter) || []);
-      return filteredMap;
-    }
-    
-    return tasksByMember;
-  };
-
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
   const handleAddTaskForMember = (memberId: string, group?: TaskGroup) => {
-    console.log('🎯 handleAddTaskForMember called with:', { memberId, group });
     setSelectedMemberForTask(memberId);
     setSelectedTaskGroup(group || null);
     setIsAddDialogOpen(true);
@@ -1486,11 +137,7 @@ const ColumnBasedDashboard = () => {
     setSelectedTaskGroup(null);
   };
 
-  const handleSettingsClick = () => {
-    // Navigate to admin dashboard
-    navigate('/admin');
-  };
-
+  // --- Loading / Error states ---
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -1505,58 +152,29 @@ const ColumnBasedDashboard = () => {
     const handleFixProfile = async () => {
       try {
         const { data, error } = await supabase.rpc('fix_my_missing_profile');
-        
         if (error) {
-          console.error('Error fixing profile:', error);
-          toast({
-            title: "Error",
-            description: "Failed to create profile. Please try signing out and back in.",
-            variant: "destructive",
-          });
+          toast({ title: "Error", description: "Failed to create profile. Please try signing out and back in.", variant: "destructive" });
           return;
         }
-
         if (data && typeof data === 'object' && 'success' in data && data.success) {
-          toast({
-            title: "Success",
-            description: "Profile created successfully! Refreshing...",
-          });
-          // Refresh the page to reload with new profile
+          toast({ title: "Success", description: "Profile created successfully! Refreshing..." });
           window.location.reload();
         } else {
-          const errorMessage = data && typeof data === 'object' && 'error' in data 
-            ? String(data.error) 
-            : "Failed to create profile";
-          toast({
-            title: "Error",
-            description: errorMessage,
-            variant: "destructive",
-          });
+          const errorMessage = data && typeof data === 'object' && 'error' in data ? String(data.error) : "Failed to create profile";
+          toast({ title: "Error", description: errorMessage, variant: "destructive" });
         }
-      } catch (error) {
-        console.error('Profile fix error:', error);
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred. Please try again.",
-          variant: "destructive",
-        });
+      } catch {
+        toast({ title: "Error", description: "An unexpected error occurred. Please try again.", variant: "destructive" });
       }
     };
 
     const handleForceSignOut = async () => {
       try {
-        // Clear local storage first
         localStorage.clear();
         sessionStorage.clear();
-        
-        // Try to sign out from Supabase
         await supabase.auth.signOut({ scope: 'local' });
-        
-        // Force reload to clear any cached state
         window.location.href = '/auth';
-      } catch (error) {
-        console.error('Sign out error:', error);
-        // Even if signOut fails, clear local state and redirect
+      } catch {
         window.location.href = '/auth';
       }
     };
@@ -1570,17 +188,10 @@ const ColumnBasedDashboard = () => {
               <p className="text-muted-foreground">
                 Your account exists but your profile is missing. This can happen if there was an issue during account creation.
               </p>
-              
               <div className="space-y-3">
-                <Button onClick={handleFixProfile} className="w-full">
-                  Create Missing Profile
-                </Button>
-                
-                <Button onClick={handleForceSignOut} variant="outline" className="w-full">
-                  Sign Out & Try Again
-                </Button>
+                <Button onClick={handleFixProfile} className="w-full">Create Missing Profile</Button>
+                <Button onClick={handleForceSignOut} variant="outline" className="w-full">Sign Out & Try Again</Button>
               </div>
-              
               <p className="text-xs text-muted-foreground">
                 If the problem persists, try signing out and creating a new account.
               </p>
@@ -1591,11 +202,10 @@ const ColumnBasedDashboard = () => {
     );
   }
 
-  const tasksByMember = getTasksByMember();
+  const tasksByMember = getTasksByMember(selectedMemberFilter);
 
   return (
     <div className="min-h-screen bg-background w-full">
-      {/* Navigation Header */}
       <NavigationHeader
         familyMembers={familyMembers}
         selectedMember={selectedMemberFilter}
@@ -1609,14 +219,11 @@ const ColumnBasedDashboard = () => {
         viewMode={viewMode}
       />
 
-      {/* Main Content */}
       <div className="w-full page-padding">
         {viewMode === 'member' && selectedMemberFilter ? (
-          /* Member-specific single dashboard page */
           (() => {
             const member = familyMembers.find(m => m.id === selectedMemberFilter);
             if (!member) return null;
-            
             return (
               <MemberDashboard
                 member={member}
@@ -1634,9 +241,7 @@ const ColumnBasedDashboard = () => {
             );
           })()
         ) : (
-          /* Everyone view - show tabs */
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            {/* Hidden tab list since navigation is in header */}
             <TabsList className="hidden">
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="columns">Tasks</TabsTrigger>
@@ -1655,30 +260,27 @@ const ColumnBasedDashboard = () => {
                   onNavigateToCalendar={() => setActiveTab('calendar')}
                   onNavigateToGoals={() => setActiveTab('goals')}
                   onMemberSelect={(memberId) => {
-                    setSelectedMemberFilter(memberId);
-                    setViewMode('member');
+                    handleMemberSelect(memberId);
                   }}
                 />
               </GoalsProvider>
             </TabsContent>
 
-          <TabsContent value="columns" className="mt-4 sm:mt-6">
-            <div className="section-spacing">
-              <PageHeading>Tasks</PageHeading>
-            </div>
-            {viewMode === 'everyone' ? (
-              <DragDropContext onDragEnd={handleDragEnd} onDragStart={() => console.log('Drag started')}>
-                 {/* Mobile: Single column carousel */}
-                 <div className="block md:hidden w-full">
-                   <div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide">
-                     <div className="flex gap-4 pb-4">
+            <TabsContent value="columns" className="mt-4 sm:mt-6">
+              <div className="section-spacing">
+                <PageHeading>Tasks</PageHeading>
+              </div>
+              {viewMode === 'everyone' ? (
+                <DragDropContext onDragEnd={handleDragEnd} onDragStart={() => {}}>
+                  {/* Mobile: Single column carousel */}
+                  <div className="block md:hidden w-full">
+                    <div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide">
+                      <div className="flex gap-4 pb-4">
                         {familyMembers.map(member => {
                           const memberTasks = tasksByMember.get(member.id) || [];
-                          const completedTasks = memberTasks.filter(task => 
-                            isTaskCompletedForMember(task, member.id)
-                          );
-                         return (
-                           <div key={member.id} className="snap-center shrink-0 w-[calc(100vw-2rem)]">
+                          const completedTasks = memberTasks.filter(task => isTaskCompletedForMember(task, member.id));
+                          return (
+                            <div key={member.id} className="snap-center shrink-0 w-[calc(100vw-2rem)]">
                               <MemberTaskColumn
                                 member={member}
                                 memberTasks={memberTasks}
@@ -1694,42 +296,32 @@ const ColumnBasedDashboard = () => {
                                 showActions={profile.role === 'parent'}
                                 isCompleting={isCompleting}
                               />
-                           </div>
-                         );
-                       })}
-                       {!selectedMemberFilter && (tasksByMember.get('unassigned')?.length > 0 || profile.role === 'parent') && (
-                         <div className="snap-center shrink-0 w-[calc(100vw-2rem)]">
-                           <Card className="h-fit">
-                             <CardHeader className="pb-3">
-                               <CardTitle className="text-base text-muted-foreground">Unassigned</CardTitle>
-                               <CardDescription className="text-xs">Drag to assign to members</CardDescription>
-                             </CardHeader>
-                             <Droppable droppableId="unassigned">
-                               {(provided, snapshot) => (
-                                <CardContent 
-                                  className={cn(
-                                    "component-spacing transition-colors",
-                                    snapshot.isDraggingOver && "bg-accent/50"
-                                  )}
-                                  ref={provided.innerRef}
-                                  {...provided.droppableProps}
-                                >
-                                   <div className="space-y-2 mb-4 min-h-[100px]">
-                                     {tasksByMember.get('unassigned')?.map((task, index) => (
-                                       <Draggable key={task.id} draggableId={task.id} index={index}>
-                                         {(provided, snapshot) => (
-                                           <div
-                                             ref={provided.innerRef}
-                                             {...provided.draggableProps}
-                                             {...provided.dragHandleProps}
-                                             className={cn(
-                                               snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50"
-                                             )}
-                                           >
+                            </div>
+                          );
+                        })}
+                        {!selectedMemberFilter && ((tasksByMember.get('unassigned')?.length ?? 0) > 0 || profile.role === 'parent') && (
+                          <div className="snap-center shrink-0 w-[calc(100vw-2rem)]">
+                            <Card className="h-fit">
+                              <CardHeader className="pb-3">
+                                <CardTitle className="text-base text-muted-foreground">Unassigned</CardTitle>
+                                <CardDescription className="text-xs">Drag to assign to members</CardDescription>
+                              </CardHeader>
+                              <Droppable droppableId="unassigned">
+                                {(provided, snapshot) => (
+                                  <CardContent
+                                    className={cn("component-spacing transition-colors", snapshot.isDraggingOver && "bg-accent/50")}
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                  >
+                                    <div className="space-y-2 mb-4 min-h-[100px]">
+                                      {tasksByMember.get('unassigned')?.map((task, index) => (
+                                        <Draggable key={task.id} draggableId={task.id} index={index}>
+                                          {(provided, snapshot) => (
+                                            <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}
+                                              className={cn(snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50")}
+                                            >
                                               <EnhancedTaskItem
-                                                task={task}
-                                                allTasks={tasks}
-                                                familyMembers={familyMembers}
+                                                task={task} allTasks={tasks} familyMembers={familyMembers}
                                                 onToggle={handleTaskToggle}
                                                 onEdit={profile.role === 'parent' ? setEditingTask : undefined}
                                                 onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
@@ -1738,237 +330,163 @@ const ColumnBasedDashboard = () => {
                                                 currentMemberId={activeMemberId || profile?.id}
                                                 isUnassigned={true}
                                               />
-                                           </div>
-                                         )}
-                                       </Draggable>
-                                     )) || []}
-                                     {provided.placeholder}
-                                   </div>
-                                 </CardContent>
-                               )}
-                             </Droppable>
-                           </Card>
-                         </div>
-                       )}
-                     </div>
-                   </div>
-                 </div>
-
-                 {/* Desktop/Tablet: Responsive grid on large screens, scrolling on medium */}
-                 <div className="hidden md:block w-full">
-                   <div className="md:overflow-x-auto xl:overflow-x-visible">
-                     <div className="flex xl:grid xl:grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-4 pb-4 md:min-w-fit xl:min-w-0">
-                       {/* Family member columns - show all members in everyone mode */}
-                       {familyMembers.map(member => {
-                        const memberTasks = tasksByMember.get(member.id) || [];
-                        const completedTasks = memberTasks.filter(task => 
-                          isTaskCompletedForMember(task, member.id)
-                        );
-
-                       return (
-                         <div key={member.id} className="md:shrink-0 md:w-64 md:min-w-[16rem] md:max-w-[20rem] xl:shrink xl:w-auto xl:min-w-0 xl:max-w-none">
-                            <MemberTaskColumn
-                              member={member}
-                              memberTasks={memberTasks}
-                              completedTasks={completedTasks}
-                              allTasks={tasks}
-                              familyMembers={familyMembers}
-                              onTaskToggle={handleTaskToggle}
-                              onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
-                              onDeleteTask={profile.role === 'parent' ? initiateTaskDeletion : undefined}
-                              onAddTask={handleAddTaskForMember}
-                              onAddTaskForMember={handleAddTaskForMember}
-                              onDragEnd={handleDragEnd}
-                              showActions={profile.role === 'parent'}
-                              isCompleting={isCompleting}
-                            />
-                         </div>
-                       );
-                     })}
-
-                     {/* Unassigned tasks column - only show if no member filter or if unassigned has tasks */}
-                     {!selectedMemberFilter && (tasksByMember.get('unassigned')?.length > 0 || profile.role === 'parent') && (
-                       <div className="md:shrink-0 md:w-64 md:min-w-[16rem] md:max-w-[20rem] xl:shrink xl:w-auto xl:min-w-0 xl:max-w-none">
-                         <Card className="h-fit">
-                           <CardHeader className="pb-3">
-                             <CardTitle className="text-base text-muted-foreground">Unassigned</CardTitle>
-                             <CardDescription className="text-xs">Drag to assign to members</CardDescription>
-                           </CardHeader>
-                           <Droppable droppableId="unassigned">
-                             {(provided, snapshot) => (
-                              <CardContent 
-                                className={cn(
-                                  "component-spacing transition-colors",
-                                  snapshot.isDraggingOver && "bg-accent/50"
+                                            </div>
+                                          )}
+                                        </Draggable>
+                                      )) || []}
+                                      {provided.placeholder}
+                                    </div>
+                                  </CardContent>
                                 )}
-                                ref={provided.innerRef}
-                                {...provided.droppableProps}
-                              >
-                                 <div className="space-y-2 mb-4 min-h-[100px]">
-                                   {tasksByMember.get('unassigned')?.map((task, index) => (
-                                     <Draggable key={task.id} draggableId={task.id} index={index}>
-                                       {(provided, snapshot) => (
-                                         <div
-                                           ref={provided.innerRef}
-                                           {...provided.draggableProps}
-                                           {...provided.dragHandleProps}
-                                           className={cn(
-                                             snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50"
-                                           )}
-                                         >
-                                            <EnhancedTaskItem
-                                              task={task}
-                                              allTasks={tasks}
-                                              familyMembers={familyMembers}
-                                              onToggle={handleTaskToggle}
-                                              onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                              onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
-                                              showActions={profile.role === 'parent' && !snapshot.isDragging}
-                                              isCompleting={isCompleting(task.id)}
-                                              currentMemberId={activeMemberId || profile?.id}
-                                              isUnassigned={true}
-                                            />
-                                         </div>
-                                       )}
-                                     </Draggable>
-                                   )) || []}
-                                   {provided.placeholder}
-                                 </div>
-                               </CardContent>
-                             )}
-                           </Droppable>
-                         </Card>
-                       </div>
-                     )}
-                     </div>
-                   </div>
-                 </div>
-               </DragDropContext>
-            ) : (
-              /* Member-specific dashboard view */
-              <div className="w-full">
-                <div className="max-w-4xl mx-auto space-y-6">
-                  {selectedMemberFilter && (() => {
-                    const member = familyMembers.find(m => m.id === selectedMemberFilter);
-                    if (!member) return null;
-                    
-                    const memberTasks = tasksByMember.get(member.id) || [];
-                    const completedTasks = memberTasks.filter(task => 
-                      isTaskCompletedForMember(task, member.id)
-                    );
-                    const pendingTasks = memberTasks.filter(task => 
-                      !isTaskCompletedForMember(task, member.id)
-                    );
-                    
-                    return (
-                      <>
-                        {/* Member Header */}
-                        <div className="text-center py-6">
-                          <UserAvatar 
-                            name={member.display_name} 
-                            color={member.color}
-                            avatarIcon={member.avatar_url || undefined}
-                            size="lg" 
-                            className="mx-auto mb-4" 
-                          />
-                          <PageHeading>{member.display_name}'s Dashboard</PageHeading>
-                          <div className="flex justify-center items-center gap-4 mt-2">
-                            <Badge variant="outline" className="text-lg px-4 py-2">
-                              {member.total_points} points
-                            </Badge>
-                            <Badge variant={member.role === 'parent' ? 'default' : 'secondary'} className="text-lg px-4 py-2">
-                              {member.role}
-                            </Badge>
+                              </Droppable>
+                            </Card>
                           </div>
-                        </div>
-                        
-                        {/* Member Tasks */}
-                        <Card className="p-6">
-                          <CardHeader className="pb-4">
-                            <CardTitle className="flex items-center gap-2">
-                              <Users className="h-5 w-5" />
-                              Tasks ({pendingTasks.length} pending, {completedTasks.length} completed)
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="component-spacing">
-                            {pendingTasks.length === 0 && completedTasks.length === 0 ? (
-                              <div className="text-center py-8 text-muted-foreground">
-                                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                <p>No tasks assigned</p>
-                              </div>
-                            ) : (
-                              <>
-                                {pendingTasks.map((task) => (
-                                   <EnhancedTaskItem
-                                     key={task.id}
-                                     task={task}
-                                     allTasks={tasks}
-                                     familyMembers={familyMembers}
-                                     onToggle={handleTaskToggle}
-                                     onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                     onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
-                                     showActions={profile.role === 'parent'}
-                                     isCompleting={isCompleting(task.id)}
-                                     currentMemberId={activeMemberId || profile?.id}
-                                   />
-                                ))}
-                                 {completedTasks.map((task) => (
-                                   <EnhancedTaskItem
-                                     key={task.id}
-                                     task={task}
-                                     allTasks={tasks}
-                                     familyMembers={familyMembers}
-                                     onToggle={handleTaskToggle}
-                                     onEdit={profile.role === 'parent' ? setEditingTask : undefined}
-                                     onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
-                                     showActions={profile.role === 'parent'}
-                                     isCompleting={isCompleting(task.id)}
-                                     currentMemberId={activeMemberId || profile?.id}
-                                   />
-                                ))}
-                              </>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
-            )}
-          </TabsContent>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-          <TabsContent value="lists" className="mt-4 sm:mt-6">
-            <div className="w-full">
-              {viewMode === 'member' && selectedMemberFilter ? (
-                <div className="max-w-4xl mx-auto">
-                  <div className="text-center py-6 mb-6">
-                    {(() => {
+                  {/* Desktop/Tablet */}
+                  <div className="hidden md:block w-full">
+                    <div className="md:overflow-x-auto xl:overflow-x-visible">
+                      <div className="flex xl:grid xl:grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-4 pb-4 md:min-w-fit xl:min-w-0">
+                        {familyMembers.map(member => {
+                          const memberTasks = tasksByMember.get(member.id) || [];
+                          const completedTasks = memberTasks.filter(task => isTaskCompletedForMember(task, member.id));
+                          return (
+                            <div key={member.id} className="md:shrink-0 md:w-64 md:min-w-[16rem] md:max-w-[20rem] xl:shrink xl:w-auto xl:min-w-0 xl:max-w-none">
+                              <MemberTaskColumn
+                                member={member}
+                                memberTasks={memberTasks}
+                                completedTasks={completedTasks}
+                                allTasks={tasks}
+                                familyMembers={familyMembers}
+                                onTaskToggle={handleTaskToggle}
+                                onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
+                                onDeleteTask={profile.role === 'parent' ? initiateTaskDeletion : undefined}
+                                onAddTask={handleAddTaskForMember}
+                                onAddTaskForMember={handleAddTaskForMember}
+                                onDragEnd={handleDragEnd}
+                                showActions={profile.role === 'parent'}
+                                isCompleting={isCompleting}
+                              />
+                            </div>
+                          );
+                        })}
+                        {!selectedMemberFilter && ((tasksByMember.get('unassigned')?.length ?? 0) > 0 || profile.role === 'parent') && (
+                          <div className="md:shrink-0 md:w-64 md:min-w-[16rem] md:max-w-[20rem] xl:shrink xl:w-auto xl:min-w-0 xl:max-w-none">
+                            <Card className="h-fit">
+                              <CardHeader className="pb-3">
+                                <CardTitle className="text-base text-muted-foreground">Unassigned</CardTitle>
+                                <CardDescription className="text-xs">Drag to assign to members</CardDescription>
+                              </CardHeader>
+                              <Droppable droppableId="unassigned">
+                                {(provided, snapshot) => (
+                                  <CardContent
+                                    className={cn("component-spacing transition-colors", snapshot.isDraggingOver && "bg-accent/50")}
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                  >
+                                    <div className="space-y-2 mb-4 min-h-[100px]">
+                                      {tasksByMember.get('unassigned')?.map((task, index) => (
+                                        <Draggable key={task.id} draggableId={task.id} index={index}>
+                                          {(provided, snapshot) => (
+                                            <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}
+                                              className={cn(snapshot.isDragging && "shadow-lg rotate-1 scale-105 z-50")}
+                                            >
+                                              <EnhancedTaskItem
+                                                task={task} allTasks={tasks} familyMembers={familyMembers}
+                                                onToggle={handleTaskToggle}
+                                                onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                                                onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
+                                                showActions={profile.role === 'parent' && !snapshot.isDragging}
+                                                isCompleting={isCompleting(task.id)}
+                                                currentMemberId={activeMemberId || profile?.id}
+                                                isUnassigned={true}
+                                              />
+                                            </div>
+                                          )}
+                                        </Draggable>
+                                      )) || []}
+                                      {provided.placeholder}
+                                    </div>
+                                  </CardContent>
+                                )}
+                              </Droppable>
+                            </Card>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </DragDropContext>
+              ) : (
+                <div className="w-full">
+                  <div className="max-w-4xl mx-auto space-y-6">
+                    {selectedMemberFilter && (() => {
                       const member = familyMembers.find(m => m.id === selectedMemberFilter);
-                      return member ? (
+                      if (!member) return null;
+                      const memberTasks = tasksByMember.get(member.id) || [];
+                      const completedTasks = memberTasks.filter(task => isTaskCompletedForMember(task, member.id));
+                      const pendingTasks = memberTasks.filter(task => !isTaskCompletedForMember(task, member.id));
+                      return (
                         <>
-                          <UserAvatar 
-                            name={member.display_name} 
-                            color={member.color}
-                            avatarIcon={member.avatar_url || undefined}
-                            size="lg" 
-                            className="mx-auto mb-4" 
-                          />
-                          <PageHeading>{member.display_name}'s Lists</PageHeading>
+                          <div className="text-center py-6">
+                            <UserAvatar name={member.display_name} color={member.color} avatarIcon={member.avatar_url || undefined} size="lg" className="mx-auto mb-4" />
+                            <PageHeading>{member.display_name}'s Dashboard</PageHeading>
+                            <div className="flex justify-center items-center gap-4 mt-2">
+                              <Badge variant="outline" className="text-lg px-4 py-2">{member.total_points} points</Badge>
+                              <Badge variant={member.role === 'parent' ? 'default' : 'secondary'} className="text-lg px-4 py-2">{member.role}</Badge>
+                            </div>
+                          </div>
+                          <Card className="p-6">
+                            <CardHeader className="pb-4">
+                              <CardTitle className="flex items-center gap-2">
+                                <Users className="h-5 w-5" />
+                                Tasks ({pendingTasks.length} pending, {completedTasks.length} completed)
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="component-spacing">
+                              {pendingTasks.length === 0 && completedTasks.length === 0 ? (
+                                <div className="text-center py-8 text-muted-foreground">
+                                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                  <p>No tasks assigned</p>
+                                </div>
+                              ) : (
+                                <>
+                                  {pendingTasks.map((task) => (
+                                    <EnhancedTaskItem key={task.id} task={task} allTasks={tasks} familyMembers={familyMembers}
+                                      onToggle={handleTaskToggle}
+                                      onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                                      onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
+                                      showActions={profile.role === 'parent'}
+                                      isCompleting={isCompleting(task.id)}
+                                      currentMemberId={activeMemberId || profile?.id}
+                                    />
+                                  ))}
+                                  {completedTasks.map((task) => (
+                                    <EnhancedTaskItem key={task.id} task={task} allTasks={tasks} familyMembers={familyMembers}
+                                      onToggle={handleTaskToggle}
+                                      onEdit={profile.role === 'parent' ? setEditingTask : undefined}
+                                      onDelete={profile.role === 'parent' ? initiateTaskDeletion : undefined}
+                                      showActions={profile.role === 'parent'}
+                                      isCompleting={isCompleting(task.id)}
+                                      currentMemberId={activeMemberId || profile?.id}
+                                    />
+                                  ))}
+                                </>
+                              )}
+                            </CardContent>
+                          </Card>
                         </>
-                      ) : null;
+                      );
                     })()}
                   </div>
-                  <Lists />
                 </div>
-              ) : (
-                <Lists />
               )}
-            </div>
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="goals" className="mt-4 sm:mt-6">
-            <GoalsProvider>
+            <TabsContent value="lists" className="mt-4 sm:mt-6">
               <div className="w-full">
                 {viewMode === 'member' && selectedMemberFilter ? (
                   <div className="max-w-4xl mx-auto">
@@ -1977,58 +495,79 @@ const ColumnBasedDashboard = () => {
                         const member = familyMembers.find(m => m.id === selectedMemberFilter);
                         return member ? (
                           <>
-                            <UserAvatar 
-                              name={member.display_name} 
-                              color={member.color}
-                              avatarIcon={member.avatar_url || undefined}
-                              size="lg" 
-                              className="mx-auto mb-4" 
-                            />
-                            <PageHeading>{member.display_name}'s Goals</PageHeading>
+                            <UserAvatar name={member.display_name} color={member.color} avatarIcon={member.avatar_url || undefined} size="lg" className="mx-auto mb-4" />
+                            <PageHeading>{member.display_name}'s Lists</PageHeading>
                           </>
                         ) : null;
                       })()}
                     </div>
-                    <GoalsContent 
-                      familyMembers={familyMembers} 
-                      selectedMemberId={selectedMemberFilter}
-                      viewMode="member"
+                    <Lists />
+                  </div>
+                ) : (
+                  <Lists />
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="goals" className="mt-4 sm:mt-6">
+              <GoalsProvider>
+                <div className="w-full">
+                  {viewMode === 'member' && selectedMemberFilter ? (
+                    <div className="max-w-4xl mx-auto">
+                      <div className="text-center py-6 mb-6">
+                        {(() => {
+                          const member = familyMembers.find(m => m.id === selectedMemberFilter);
+                          return member ? (
+                            <>
+                              <UserAvatar name={member.display_name} color={member.color} avatarIcon={member.avatar_url || undefined} size="lg" className="mx-auto mb-4" />
+                              <PageHeading>{member.display_name}'s Goals</PageHeading>
+                            </>
+                          ) : null;
+                        })()}
+                      </div>
+                      <GoalsContent familyMembers={familyMembers} selectedMemberId={selectedMemberFilter} viewMode="member" />
+                    </div>
+                  ) : (
+                    <GoalsContent familyMembers={familyMembers} />
+                  )}
+                </div>
+              </GoalsProvider>
+            </TabsContent>
+
+            <TabsContent value="calendar" className="mt-4 sm:mt-6">
+              <div className="w-full">
+                {viewMode === 'member' && selectedMemberFilter ? (
+                  <div className="max-w-6xl mx-auto">
+                    <div className="text-center py-6 mb-6">
+                      {(() => {
+                        const member = familyMembers.find(m => m.id === selectedMemberFilter);
+                        return member ? (
+                          <>
+                            <UserAvatar name={member.display_name} color={member.color} avatarIcon={member.avatar_url || undefined} size="lg" className="mx-auto mb-4" />
+                            <PageHeading>{member.display_name}'s Calendar</PageHeading>
+                          </>
+                        ) : null;
+                      })()}
+                    </div>
+                    <CalendarView
+                      tasks={tasks.filter(task =>
+                        task.assigned_to === selectedMemberFilter ||
+                        task.assignees?.some(a => a.profile_id === selectedMemberFilter)
+                      )}
+                      familyMembers={familyMembers.filter(m => m.id === selectedMemberFilter)}
+                      profile={profile}
+                      onTaskUpdated={fetchUserData}
+                      onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
+                      familyId={profile.family_id}
+                      dashboardMode={dashboardMode}
+                      activeMemberId={activeMemberId}
+                      onTaskComplete={completeTask}
                     />
                   </div>
                 ) : (
-                  <GoalsContent familyMembers={familyMembers} />
-                )}
-              </div>
-            </GoalsProvider>
-          </TabsContent>
-
-          <TabsContent value="calendar" className="mt-4 sm:mt-6">
-            <div className="w-full">
-              {viewMode === 'member' && selectedMemberFilter ? (
-                <div className="max-w-6xl mx-auto">
-                  <div className="text-center py-6 mb-6">
-                    {(() => {
-                      const member = familyMembers.find(m => m.id === selectedMemberFilter);
-                      return member ? (
-                        <>
-                          <UserAvatar 
-                            name={member.display_name} 
-                            color={member.color}
-                            avatarIcon={member.avatar_url || undefined}
-                            size="lg" 
-                            className="mx-auto mb-4" 
-                          />
-                          <PageHeading>{member.display_name}'s Calendar</PageHeading>
-                        </>
-                      ) : null;
-                    })()}
-                  </div>
                   <CalendarView
-                    tasks={tasks.filter(task => 
-                      task.assigned_to === selectedMemberFilter || 
-                      task.assignees?.some(a => a.profile_id === selectedMemberFilter)
-                    )}
-                    familyMembers={familyMembers.filter(m => m.id === selectedMemberFilter)}
+                    tasks={tasks}
+                    familyMembers={familyMembers}
                     profile={profile}
                     onTaskUpdated={fetchUserData}
                     onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
@@ -2037,57 +576,36 @@ const ColumnBasedDashboard = () => {
                     activeMemberId={activeMemberId}
                     onTaskComplete={completeTask}
                   />
-                </div>
-              ) : (
-                <CalendarView
-                  tasks={tasks}
-                  familyMembers={familyMembers}
-                  profile={profile}
-                  onTaskUpdated={fetchUserData}
-                  onEditTask={profile.role === 'parent' ? setEditingTask : undefined}
-                  familyId={profile.family_id}
-                  dashboardMode={dashboardMode}
-                  activeMemberId={activeMemberId}
-                  onTaskComplete={completeTask}
-                />
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="rewards" className="mt-4 sm:mt-6">
-            <div className="w-full">
-              <ChildAuthProvider>
-                {viewMode === 'member' && selectedMemberFilter ? (
-                  <div className="max-w-6xl mx-auto">
-                    <div className="text-center py-6 mb-6">
-                      {(() => {
-                        const member = familyMembers.find(m => m.id === selectedMemberFilter);
-                        return member ? (
-                          <>
-                            <UserAvatar 
-                              name={member.display_name} 
-                              color={member.color}
-                              avatarIcon={member.avatar_url || undefined}
-                              size="lg" 
-                              className="mx-auto mb-4" 
-                            />
-                            <PageHeading>{member.display_name}'s Rewards</PageHeading>
-                            <Badge variant="outline" className="text-lg px-4 py-2 mt-2">
-                              {member.total_points} points available
-                            </Badge>
-                          </>
-                        ) : null;
-                      })()}
-                    </div>
-                    <RewardsGallery selectedMemberId={selectedMemberFilter} />
-                  </div>
-                ) : (
-                  <RewardsGallery selectedMemberId={selectedMemberFilter} />
                 )}
-              </ChildAuthProvider>
-            </div>
-          </TabsContent>
-        </Tabs>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="rewards" className="mt-4 sm:mt-6">
+              <div className="w-full">
+                <ChildAuthProvider>
+                  {viewMode === 'member' && selectedMemberFilter ? (
+                    <div className="max-w-6xl mx-auto">
+                      <div className="text-center py-6 mb-6">
+                        {(() => {
+                          const member = familyMembers.find(m => m.id === selectedMemberFilter);
+                          return member ? (
+                            <>
+                              <UserAvatar name={member.display_name} color={member.color} avatarIcon={member.avatar_url || undefined} size="lg" className="mx-auto mb-4" />
+                              <PageHeading>{member.display_name}'s Rewards</PageHeading>
+                              <Badge variant="outline" className="text-lg px-4 py-2 mt-2">{member.total_points} points available</Badge>
+                            </>
+                          ) : null;
+                        })()}
+                      </div>
+                      <RewardsGallery selectedMemberId={selectedMemberFilter} />
+                    </div>
+                  ) : (
+                    <RewardsGallery selectedMemberId={selectedMemberFilter} />
+                  )}
+                </ChildAuthProvider>
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </div>
 
@@ -2117,7 +635,6 @@ const ColumnBasedDashboard = () => {
         />
       )}
 
-
       <AlertDialog open={!!deletingTask} onOpenChange={(open) => !open && setDeletingTask(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -2135,7 +652,6 @@ const ColumnBasedDashboard = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dashboard PIN Authentication Dialog */}
       {pinDialogOpen && pendingAction && (
         <MemberPinDialog
           open={pinDialogOpen}
@@ -2154,7 +670,6 @@ const ColumnBasedDashboard = () => {
         />
       )}
 
-      {/* Dashboard Member Switch Dialog */}
       {switchDialogOpen && pendingAction && (
         <MemberSwitchDialog
           open={switchDialogOpen}
@@ -2162,7 +677,7 @@ const ColumnBasedDashboard = () => {
           members={familyMembers}
           currentMemberId={activeMemberId}
           requiredMemberId={pendingAction.requiredMemberId || ''}
-          onSwitch={(memberId, member) => {
+          onSwitch={(memberId) => {
             switchToMember(memberId);
             if (pendingAction) {
               pendingAction.onSuccess();
@@ -2174,14 +689,13 @@ const ColumnBasedDashboard = () => {
         />
       )}
 
-      {/* Dashboard Member Selector Dialog */}
       {showMemberSelector && (
         <MemberSelectorDialog
           open={showMemberSelector}
           onOpenChange={setShowMemberSelector}
           members={familyMembers}
           currentMemberId={activeMemberId}
-          onSelect={(memberId, member) => {
+          onSelect={(memberId) => {
             switchToMember(memberId);
             setActiveMemberId(memberId);
             setShowMemberSelector(false);
