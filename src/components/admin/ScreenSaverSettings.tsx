@@ -26,6 +26,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminContext } from '@/contexts/AdminContext';
 import { cn } from '@/lib/utils';
+import { resizeForScreensaver } from '@/utils/imageResize';
 import { ScreenSaverPreviewModal } from './ScreenSaverPreviewModal';
 
 interface ScreenSaverImage {
@@ -290,13 +291,16 @@ export const ScreenSaverSettings = () => {
           continue;
         }
 
-        const fileExt = file.name.split('.').pop();
+        // Resize and optimise before upload
+        const optimised = await resizeForScreensaver(file);
+
+        const fileExt = optimised.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
         const filePath = `${profile.family_id}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('screensaver-images')
-          .upload(filePath, file);
+          .upload(filePath, optimised);
 
         if (uploadError) throw uploadError;
 
@@ -307,8 +311,8 @@ export const ScreenSaverSettings = () => {
             family_id: profile.family_id,
             name: file.name,
             file_path: filePath,
-            file_size: file.size,
-            mime_type: file.type,
+            file_size: optimised.size,
+            mime_type: optimised.type,
             uploaded_by: profile.id,
             sort_order: images.length,
           }]);
