@@ -105,10 +105,7 @@ export const MemberEventsWidget = ({
       
       <CardContent className="flex-1 overflow-y-auto">
         {upcomingEvents.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No upcoming events</p>
-          </div>
+          <div className="py-4" />
         ) : (
           <div className="space-y-4">
             {dateKeys.map((dateKey) => (
@@ -124,9 +121,10 @@ export const MemberEventsWidget = ({
                     <div 
                       key={event.id} 
                       className={cn(
-                        "p-3 border rounded-lg space-y-2 transition-colors group",
-                        event.source_type ? "cursor-default" : "cursor-pointer hover:bg-muted/50"
+                        "p-3 rounded-lg space-y-2 transition-colors group",
+                        event.source_type ? "cursor-default" : "cursor-pointer hover:opacity-80"
                       )}
+                      style={colorStyles.bg20}
                       onClick={() => !event.source_type && onEditEvent(event)}
                     >
                       <div className="flex items-center justify-between">

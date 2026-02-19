@@ -123,21 +123,15 @@ export const MemberDashboard = ({
           size="lg"
           className="h-[52px] w-[52px] sm:h-[56px] sm:w-[56px] flex-shrink-0"
         />
-        <div className="flex-1">
+        <div className="flex items-center gap-3">
           <PageHeading style={{ color: colorHex }}>
             {member.display_name}
           </PageHeading>
-          <div className="flex items-center gap-3 mt-2">
-            <Badge variant="outline" className="text-sm px-3 py-1" style={{ color: colorHex, borderColor: colorHex }}>
-              {member.total_points} points
-            </Badge>
-            <Badge variant="outline" className="text-sm px-3 py-1 capitalize" style={{ color: colorHex, borderColor: colorHex }}>
-              {member.role}
-            </Badge>
-          </div>
+          <Badge variant="outline" className="text-sm px-3 py-1" style={{ color: colorHex, borderColor: colorHex }}>
+            {member.total_points} points
+          </Badge>
         </div>
       </div>
-
     </div>
   );
 
