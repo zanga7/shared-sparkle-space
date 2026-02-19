@@ -6,64 +6,92 @@ interface TypographyProps extends React.HTMLAttributes<HTMLElement> {
   children: React.ReactNode;
 }
 
-export function PageHeading({ className, children, ...props }: TypographyProps) {
-  const { pageHeading } = useGlobalStyles();
+export function PageHeading({ className, children, style, ...props }: TypographyProps) {
+  const { pageHeading, styles } = useGlobalStyles();
   return (
-    <h1 className={cn(pageHeading, "leading-tight tracking-tight font-display uppercase", className)} {...props}>
+    <h1
+      className={cn(pageHeading, "leading-tight tracking-tight font-display uppercase", className)}
+      style={{ ...style, fontFamily: `"${styles.headingFontFamily}", sans-serif` }}
+      {...props}
+    >
       {children}
     </h1>
   );
 }
 
-export function SectionHeading({ className, children, ...props }: TypographyProps) {
-  const { sectionHeading } = useGlobalStyles();
+export function SectionHeading({ className, children, style, ...props }: TypographyProps) {
+  const { sectionHeading, styles } = useGlobalStyles();
   return (
-    <h2 className={cn(sectionHeading, "leading-tight tracking-tight font-display uppercase", className)} {...props}>
+    <h2
+      className={cn(sectionHeading, "leading-tight tracking-tight font-display uppercase", className)}
+      style={{ ...style, fontFamily: `"${styles.headingFontFamily}", sans-serif` }}
+      {...props}
+    >
       {children}
     </h2>
   );
 }
 
-export function CardTitleStyled({ className, children, ...props }: TypographyProps) {
-  const { cardTitle } = useGlobalStyles();
+export function CardTitleStyled({ className, children, style, ...props }: TypographyProps) {
+  const { cardTitle, styles } = useGlobalStyles();
   return (
-    <h3 className={cn(cardTitle, "leading-none tracking-tight", className)} {...props}>
+    <h3
+      className={cn(cardTitle, "leading-none tracking-tight", className)}
+      style={{ ...style, fontFamily: `"${styles.headingFontFamily}", sans-serif` }}
+      {...props}
+    >
       {children}
     </h3>
   );
 }
 
-export function DialogTitleStyled({ className, children, ...props }: TypographyProps) {
-  const { dialogTitle } = useGlobalStyles();
+export function DialogTitleStyled({ className, children, style, ...props }: TypographyProps) {
+  const { dialogTitle, styles } = useGlobalStyles();
   return (
-    <span className={cn(dialogTitle, "leading-none tracking-tight", className)} {...props}>
+    <span
+      className={cn(dialogTitle, "leading-none tracking-tight", className)}
+      style={{ ...style, fontFamily: `"${styles.headingFontFamily}", sans-serif` }}
+      {...props}
+    >
       {children}
     </span>
   );
 }
 
-export function BodyText({ className, children, ...props }: TypographyProps) {
-  const { bodyText } = useGlobalStyles();
+export function BodyText({ className, children, style, ...props }: TypographyProps) {
+  const { bodyText, styles } = useGlobalStyles();
   return (
-    <p className={cn(bodyText, className)} {...props}>
+    <p
+      className={cn(bodyText, className)}
+      style={{ ...style, fontFamily: `"${styles.bodyFontFamily}", sans-serif` }}
+      {...props}
+    >
       {children}
     </p>
   );
 }
 
-export function SmallText({ className, children, ...props }: TypographyProps) {
-  const { smallText } = useGlobalStyles();
+export function SmallText({ className, children, style, ...props }: TypographyProps) {
+  const { smallText, styles } = useGlobalStyles();
   return (
-    <p className={cn(smallText, className)} {...props}>
+    <p
+      className={cn(smallText, className)}
+      style={{ ...style, fontFamily: `"${styles.bodyFontFamily}", sans-serif` }}
+      {...props}
+    >
       {children}
     </p>
   );
 }
 
-export function LabelText({ className, children, ...props }: TypographyProps) {
-  const { labelText } = useGlobalStyles();
+export function LabelText({ className, children, style, ...props }: TypographyProps) {
+  const { labelText, styles } = useGlobalStyles();
   return (
-    <span className={cn(labelText, className)} {...props}>
+    <span
+      className={cn(labelText, className)}
+      style={{ ...style, fontFamily: `"${styles.bodyFontFamily}", sans-serif` }}
+      {...props}
+    >
       {children}
     </span>
   );

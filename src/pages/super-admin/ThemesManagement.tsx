@@ -298,15 +298,13 @@ export default function ThemesManagement() {
                     className="hidden"
                     onChange={(e) => handleFileUpload(e, icon.id)}
                   />
-                  {!icon.is_system && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setDeleteIconId(icon.id)}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setDeleteIconId(icon.id)}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -388,15 +386,13 @@ export default function ThemesManagement() {
                         >
                           <Edit className="w-3 h-3" />
                         </Button>
-                        {!color.is_system && (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => setDeleteColorId(color.id)}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        )}
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setDeleteColorId(color.id)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
