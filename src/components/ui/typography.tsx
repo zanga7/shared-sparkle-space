@@ -10,7 +10,7 @@ export function PageHeading({ className, children, style, ...props }: Typography
   const { pageHeading, styles } = useGlobalStyles();
   return (
     <h1
-      className={cn(pageHeading, "leading-tight tracking-tight font-display", className)}
+      className={cn(pageHeading, "leading-tight tracking-tight font-display max-sm:text-[clamp(1.5rem,5vw,3.75rem)]", className)}
       style={{ ...style, fontFamily: `"${styles.headingFontFamily}", sans-serif` }}
       {...props}
     >
