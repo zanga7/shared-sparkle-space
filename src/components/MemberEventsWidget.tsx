@@ -92,7 +92,7 @@ export const MemberEventsWidget = ({
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2 text-xl" style={colorStyles.text}>
           <Calendar className="h-6 w-6" />
-          Coming Events
+          Events
         </CardTitle>
         
         <AddButton 
@@ -105,12 +105,14 @@ export const MemberEventsWidget = ({
       
       <CardContent className="flex-1 overflow-y-auto">
         {upcomingEvents.length === 0 ? (
-          <div className="py-4" />
+          <div className="text-center py-8 text-muted-foreground">
+            <p className="text-sm">No coming events</p>
+          </div>
         ) : (
           <div className="space-y-4">
             {dateKeys.map((dateKey) => (
               <div key={dateKey}>
-                <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <h3 className="text-sm font-medium mb-2 flex items-center gap-2 text-muted-foreground">
                   {formatDateHeader(dateKey)}
                   <Badge variant="secondary" className="text-xs">
                     {eventsByDate[dateKey].length}

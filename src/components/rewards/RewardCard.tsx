@@ -64,9 +64,9 @@ export function RewardCard({ reward, userBalance, canRequest, onRequest, isReque
         <Button
           onClick={onRequest}
           disabled={!isEligible || isRequesting}
-          className="w-full text-white"
+          className="w-full"
           variant={isEligible ? "default" : "outline"}
-          style={isEligible && memberColor ? colorStyles.bg50 : undefined}>
+          style={isEligible && memberColor ? { ...colorStyles.bg50, color: '#000000' } : undefined}>
 
           {isRequesting ?
           'Requesting...' :
