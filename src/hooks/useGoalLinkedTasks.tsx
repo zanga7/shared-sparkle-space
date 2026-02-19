@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { TASK_SELECT_SHAPE } from '@/utils/taskQueryBuilder';
 import type { GoalLinkedTask } from '@/types/goal';
 import type { Task, Profile } from '@/types/task';
 
@@ -49,18 +50,8 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
       
       const { data, error } = await supabase
         .from('tasks')
-        .select(`
-          *,
-          assignees:task_assignees(
-            id,
-            profile_id,
-            assigned_at,
-            assigned_by,
-            profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color, avatar_url)
-          ),
-          task_completions(id, completed_at, completed_by)
-        `)
-        .in('id', taskIds);
+        .select(TASK_SELECT_SHAPE)
+        .in('id', taskIds) as { data: any[], error: any };
       
       if (error) throw error;
       return data || [];
@@ -125,18 +116,8 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
       if (taskIdsToFetch.length > 0) {
         const { data: todayTasks } = await supabase
           .from('tasks')
-          .select(`
-            *,
-            assignees:task_assignees(
-              id,
-              profile_id,
-              assigned_at,
-              assigned_by,
-              profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color, avatar_url)
-            ),
-            task_completions(id, completed_at, completed_by)
-          `)
-          .in('id', taskIdsToFetch);
+          .select(TASK_SELECT_SHAPE)
+          .in('id', taskIdsToFetch) as { data: any[], error: any };
         
         todayTasks?.forEach(task => {
           todayTasksMap[task.id] = task;
@@ -261,20 +242,10 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
       
       const { data, error } = await supabase
         .from('tasks')
-        .select(`
-          *,
-          assignees:task_assignees(
-            id,
-            profile_id,
-            assigned_at,
-            assigned_by,
-            profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color, avatar_url)
-          ),
-          task_completions(id, completed_at, completed_by)
-        `)
+        .select(TASK_SELECT_SHAPE)
         .in('rotating_task_id', rotatingIds)
         .gte('due_date', today)
-        .order('due_date', { ascending: true });
+        .order('due_date', { ascending: true }) as { data: any[], error: any };
       
       if (error) throw error;
       
