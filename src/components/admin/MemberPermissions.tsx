@@ -68,7 +68,7 @@ export function MemberPermissions() {
                       <Badge variant={member.role === 'parent' ? 'default' : 'secondary'}>
                         {member.role}
                       </Badge>
-                      {member.pin_hash && (
+                      {member.pin_type && (
                         <Badge variant="outline" className="text-xs">
                           PIN Set
                         </Badge>
@@ -85,7 +85,7 @@ export function MemberPermissions() {
                     className="flex items-center gap-2"
                   >
                     <Key className="h-4 w-4" />
-                    {member.pin_hash ? 'Reset PIN' : 'Set PIN'}
+                    {member.pin_type ? 'Reset PIN' : 'Set PIN'}
                   </Button>
                 </div>
 
@@ -101,7 +101,7 @@ export function MemberPermissions() {
                     <Switch
                       checked={member.require_pin_to_complete_tasks || false}
                       onCheckedChange={(checked) => {
-                        if (checked && !member.pin_hash) {
+                         if (checked && !member.pin_type) {
                           toast.error('Please set a PIN for this member first');
                           return;
                         }
@@ -122,7 +122,7 @@ export function MemberPermissions() {
                     <Switch
                       checked={member.require_pin_for_list_deletes || false}
                       onCheckedChange={(checked) => {
-                        if (checked && !member.pin_hash) {
+                        if (checked && !member.pin_type) {
                           toast.error('Please set a PIN for this member first');
                           return;
                         }

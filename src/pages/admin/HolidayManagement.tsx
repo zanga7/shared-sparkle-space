@@ -38,7 +38,7 @@ export default function HolidayManagement() {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, user_id, family_id, display_name, role, status, color')
         .eq('user_id', user.id)
         .single();
 

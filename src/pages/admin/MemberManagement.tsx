@@ -96,7 +96,7 @@ const MemberManagement = () => {
       // Fetch current user profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, user_id, family_id, display_name, role, total_points, avatar_url, can_add_for_self, can_add_for_siblings, can_add_for_parents, status, color, streak_count, theme, created_at, updated_at, sort_order, pin_type, require_pin_to_complete_tasks, require_pin_for_list_deletes, calendar_edit_permission')
         .eq('user_id', user?.id)
         .single();
 
@@ -108,7 +108,7 @@ const MemberManagement = () => {
       // Fetch family members ordered by sort_order
       const { data: membersData, error: membersError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, user_id, family_id, display_name, role, total_points, avatar_url, can_add_for_self, can_add_for_siblings, can_add_for_parents, status, color, streak_count, theme, created_at, updated_at, sort_order, pin_type, require_pin_to_complete_tasks, require_pin_for_list_deletes, calendar_edit_permission')
         .eq('family_id', profileData.family_id)
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true });
@@ -457,7 +457,7 @@ const MemberManagement = () => {
                                 className="gap-1 flex-1 sm:flex-none text-xs sm:text-sm"
                               >
                                 <Key className="h-3 w-3" />
-                                <span className="hidden xs:inline">{member.pin_hash ? 'Update' : 'Set'}</span> PIN
+                                <span className="hidden xs:inline">{member.pin_type ? 'Update' : 'Set'}</span> PIN
                               </Button>
                               
                               <Button

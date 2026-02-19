@@ -47,15 +47,17 @@ export interface ExtendedProfile {
   can_add_for_self: boolean;
   can_add_for_siblings: boolean;
   can_add_for_parents: boolean;
-  status: string;  // More flexible to allow database values
-  color: string;   // More flexible to allow database values
+  status: string;
+  color: string;
   streak_count: number;
-  pin_hash?: string | null;
-  failed_pin_attempts: number;
-  pin_locked_until?: string | null;
+  pin_type?: string | null;
   theme?: any;
   created_at: string;
   updated_at: string;
+  sort_order?: number | null;
+  require_pin_to_complete_tasks?: boolean;
+  require_pin_for_list_deletes?: boolean;
+  calendar_edit_permission?: string;
 }
 
 export type ColorSwatch = 'sky' | 'rose' | 'emerald' | 'amber' | 'violet';

@@ -10,7 +10,7 @@ interface Profile {
   require_pin_to_complete_tasks: boolean;
   require_pin_for_list_deletes: boolean;
   calendar_edit_permission: 'open' | 'require_pin';
-  pin_hash?: string | null;
+  pin_type?: string | null;
 }
 
 interface DashboardSession {
@@ -154,7 +154,7 @@ export const useDashboardAuth = () => {
       if (!memberProfile) {
         const { data: profileData, error } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, display_name, color, role, require_pin_to_complete_tasks, require_pin_for_list_deletes, calendar_edit_permission, pin_type')
           .eq('id', memberId)
           .single();
 
@@ -170,7 +170,7 @@ export const useDashboardAuth = () => {
           require_pin_to_complete_tasks: profileData.require_pin_to_complete_tasks || false,
           require_pin_for_list_deletes: profileData.require_pin_for_list_deletes || false,
           calendar_edit_permission: (profileData.calendar_edit_permission as 'open' | 'require_pin') || 'open',
-          pin_hash: profileData.pin_hash
+          pin_type: profileData.pin_type
         };
       }
 
@@ -184,7 +184,7 @@ export const useDashboardAuth = () => {
       }
       
       // If PIN is required but not set, still require PIN authentication
-      if (!memberProfile.pin_hash) {
+      if (!memberProfile.pin_type) {
         return { canProceed: false, needsPin: true, profile: memberProfile };
       }
 
