@@ -5,10 +5,7 @@ import { useMemberColor } from '@/hooks/useMemberColor';
 import { Calendar, Edit } from 'lucide-react';
 import { Profile } from '@/types/task';
 import { cn } from '@/lib/utils';
-import { useEvents } from '@/hooks/useEvents';
-import { format, isToday, isSameDay, startOfDay, parseISO } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { format, startOfDay } from 'date-fns';
 
 interface MemberEventsWidgetProps {
   member: Profile;
@@ -45,25 +42,14 @@ export const MemberEventsWidget = ({
     .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
     .slice(0, 10);
 
-  // Group events by date
-  const eventsByDate = upcomingEvents.reduce((acc, event) => {
-    const dateKey = format(new Date(event.start_date), 'yyyy-MM-dd');
-    if (!acc[dateKey]) {
-      acc[dateKey] = [];
-    }
-    acc[dateKey].push(event);
-    return acc;
-  }, {} as Record<string, typeof upcomingEvents>);
-
-  const dateKeys = Object.keys(eventsByDate).sort();
-
-  // Helper to format date header
-  const formatDateHeader = (dateStr: string) => {
-    const date = parseISO(dateStr);
-    if (isToday(date)) return 'Today';
-    if (isSameDay(date, new Date(Date.now() + 86400000))) return 'Tomorrow';
-    return format(date, 'EEE, MMM d');
-  };
+  // Split into today's events and upcoming events
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const todaysEvents = upcomingEvents.filter(event => 
+    format(new Date(event.start_date), 'yyyy-MM-dd') === todayStr
+  );
+  const comingUpEvents = upcomingEvents.filter(event => 
+    format(new Date(event.start_date), 'yyyy-MM-dd') !== todayStr
+  );
 
   // Helper to get source icon
   const getSourceIcon = (sourceType: string | null | undefined) => {
@@ -86,6 +72,74 @@ export const MemberEventsWidget = ({
     }
     return null;
   };
+
+  const renderEventCard = (event: any, showDate = false) => (
+    <div 
+      key={event.id} 
+      className={cn(
+        "p-3 rounded-lg space-y-2 transition-colors group",
+        event.source_type ? "cursor-default" : "cursor-pointer hover:opacity-80"
+      )}
+      style={colorStyles.bg20}
+      onClick={() => !event.source_type && onEditEvent(event)}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <h4 className="font-medium truncate">{event.title}</h4>
+          {event.source_type && (
+            <div className="flex-shrink-0" title={`Synced from ${event.source_type === 'google' ? 'Google Calendar' : 'Outlook'}`}>
+              {getSourceIcon(event.source_type)}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {showDate && (
+            <span className="text-xs text-muted-foreground">
+              {format(new Date(event.start_date), 'EEE, MMM d')}
+            </span>
+          )}
+          {!event.is_all_day && (
+            <span className="text-sm text-muted-foreground">
+              {format(new Date(event.start_date), 'HH:mm')}
+            </span>
+          )}
+          {!event.source_type && (
+            <Edit className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+          )}
+        </div>
+      </div>
+      
+      {event.location && (
+        <p className="text-sm text-muted-foreground">📍 {event.location}</p>
+      )}
+      
+      {event.description && (
+        <p className="text-sm text-muted-foreground line-clamp-2">{event.description}</p>
+      )}
+      
+      {event.attendees && event.attendees.length > 0 && (
+        <div className="flex gap-2 items-center">
+          <span className="text-xs text-muted-foreground">Attendees:</span>
+          <div className="flex gap-1">
+            {event.attendees.slice(0, 5).map((attendee: any) => (
+              <UserAvatar
+                key={attendee.profile_id}
+                name={attendee.profile?.display_name || 'Unknown'}
+                color={attendee.profile?.color}
+                avatarIcon={attendee.profile?.avatar_url || undefined}
+                size="sm"
+              />
+            ))}
+            {event.attendees.length > 5 && (
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs">
+                +{event.attendees.length - 5}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <Card className="h-full flex flex-col" style={colorStyles.bg10}>
@@ -110,80 +164,27 @@ export const MemberEventsWidget = ({
           </div>
         ) : (
           <div className="space-y-4">
-            {dateKeys.map((dateKey) => (
-              <div key={dateKey}>
-                <h3 className="text-sm font-medium mb-2 flex items-center gap-2 text-muted-foreground">
-                  {formatDateHeader(dateKey)}
-                  <Badge variant="secondary" className="text-xs">
-                    {eventsByDate[dateKey].length}
-                  </Badge>
-                </h3>
+            {/* Today's Events */}
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">Today</h4>
+              {todaysEvents.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">No events today</p>
+              ) : (
                 <div className="space-y-2">
-                  {eventsByDate[dateKey].map((event) => (
-                    <div 
-                      key={event.id} 
-                      className={cn(
-                        "p-3 rounded-lg space-y-2 transition-colors group",
-                        event.source_type ? "cursor-default" : "cursor-pointer hover:opacity-80"
-                      )}
-                      style={colorStyles.bg20}
-                      onClick={() => !event.source_type && onEditEvent(event)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <h4 className="font-medium truncate">{event.title}</h4>
-                          {event.source_type && (
-                            <div className="flex-shrink-0" title={`Synced from ${event.source_type === 'google' ? 'Google Calendar' : 'Outlook'}`}>
-                              {getSourceIcon(event.source_type)}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {!event.is_all_day && (
-                            <span className="text-sm text-muted-foreground">
-                              {format(new Date(event.start_date), 'HH:mm')}
-                            </span>
-                          )}
-                          {!event.source_type && (
-                            <Edit className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          )}
-                        </div>
-                      </div>
-                      
-                      {event.location && (
-                        <p className="text-sm text-muted-foreground">📍 {event.location}</p>
-                      )}
-                      
-                      {event.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">{event.description}</p>
-                      )}
-                      
-                      {event.attendees && event.attendees.length > 0 && (
-                        <div className="flex gap-2 items-center">
-                          <span className="text-xs text-muted-foreground">Attendees:</span>
-                          <div className="flex gap-1">
-                            {event.attendees.slice(0, 5).map((attendee) => (
-                              <UserAvatar
-                                key={attendee.profile_id}
-                                name={attendee.profile?.display_name || 'Unknown'}
-                                color={attendee.profile?.color}
-                                avatarIcon={attendee.profile?.avatar_url || undefined}
-                                size="sm"
-                              />
-                            ))}
-                            {event.attendees.length > 5 && (
-                              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs">
-                                +{event.attendees.length - 5}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                  {todaysEvents.map((event) => renderEventCard(event))}
+                </div>
+              )}
+            </div>
+
+            {/* Coming Up */}
+            {comingUpEvents.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">Coming Up</h4>
+                <div className="space-y-2">
+                  {comingUpEvents.map((event) => renderEventCard(event, true))}
                 </div>
               </div>
-            ))}
+            )}
           </div>
         )}
       </CardContent>
