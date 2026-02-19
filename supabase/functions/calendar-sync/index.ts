@@ -42,21 +42,6 @@ Deno.serve(async (req) => {
       throw new Error('Missing authorization header');
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      throw new Error('Invalid JWT token format');
-    }
-
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-    const userId = payload.sub;
-
-    if (!userId) {
-      throw new Error('No user ID in token');
-    }
-
-    console.log('Sync request from user:', userId);
-
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -66,6 +51,16 @@ Deno.serve(async (req) => {
         },
       }
     );
+
+    // Verify JWT signature using Supabase SDK instead of manual decoding
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      throw new Error('Invalid authentication');
+    }
+
+    const userId = claimsData.claims.sub;
+    console.log('Sync request from user:', userId);
 
     const { integrationId, direction = 'both' } = await req.json() as SyncRequest;
 
