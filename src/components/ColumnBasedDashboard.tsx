@@ -11,6 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { TASK_SELECT_SHAPE, castTasks, buildFamilyTaskQuery } from '@/utils/taskQueryBuilder';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, CheckCircle, Clock, Edit, Trash2, Calendar, List, Users, Gift, Settings } from 'lucide-react';
 import { NavigationHeader } from '@/components/NavigationHeader';
@@ -557,31 +558,13 @@ const ColumnBasedDashboard = () => {
             // Fetch family tasks
             const { data: tasksData, error: tasksError } = await supabase
               .from('tasks')
-              .select(`
-                id,
-                title,
-                description,
-                points,
-                due_date,
-                assigned_to,
-                created_by,
-                completion_rule,
-                task_group,
-                assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
-                assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
-                task_completions(id, completed_at, completed_by)
-              `)
-              .eq('family_id', retryProfileData.family_id);
+              .select(TASK_SELECT_SHAPE)
+              .eq('family_id', retryProfileData.family_id) as { data: any[], error: any };
 
             if (tasksError) {
               console.error('Tasks error:', tasksError);
             } else {
-              // Type assertion to handle completion_rule from database
-              const typedTasks = (tasksData || []).map(task => ({
-                ...task,
-                completion_rule: (task.completion_rule || 'everyone') as 'any_one' | 'everyone'
-              }));
-              setTasks(typedTasks);
+              setTasks(castTasks(tasksData || []));
             }
 
             // Fetch materialized task instances for completion data
@@ -660,36 +643,12 @@ const ColumnBasedDashboard = () => {
       }
 
       // Fetch family tasks with completion status (filter out hidden tasks)
-      const { data: tasksData, error: tasksError } = await supabase
-        .from('tasks')
-        .select(`
-          id,
-          title,
-          description,
-          points,
-          due_date,
-          assigned_to,
-          created_by,
-          completion_rule,
-          task_group,
-          task_source,
-          rotating_task_id,
-          assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color, avatar_url),
-          assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color, avatar_url)),
-          task_completions(id, completed_at, completed_by)
-        `)
-        .eq('family_id', profileData.family_id)
-        .is('hidden_at', null);
+      const { data: tasksData, error: tasksError } = await buildFamilyTaskQuery(profileData.family_id) as { data: any[], error: any };
 
       if (tasksError) {
         console.error('Tasks error:', tasksError);
       } else {
-        // Type assertion to handle completion_rule from database
-        const typedTasks = (tasksData || []).map(task => ({
-          ...task,
-          completion_rule: (task.completion_rule || 'everyone') as 'any_one' | 'everyone'
-        }));
-        setTasks(typedTasks);
+        setTasks(castTasks(tasksData || []));
       }
 
       // Fetch materialized task instances to get completion data for recurring tasks
@@ -1281,33 +1240,10 @@ const ColumnBasedDashboard = () => {
     
     try {
       // Refresh tasks (filter out hidden tasks)
-      const { data: tasksData, error: tasksError } = await supabase
-        .from('tasks')
-        .select(`
-          id,
-          title,
-          description,
-          points,
-          due_date,
-          assigned_to,
-          created_by,
-          completion_rule,
-          task_group,
-          task_source,
-          rotating_task_id,
-          assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color, avatar_url),
-          assignees:task_assignees(id, profile_id, assigned_at, assigned_by, profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color, avatar_url)),
-          task_completions(id, completed_at, completed_by)
-        `)
-        .eq('family_id', profile.family_id)
-        .is('hidden_at', null);
+      const { data: tasksData, error: tasksError } = await buildFamilyTaskQuery(profile.family_id) as { data: any[], error: any };
 
       if (!tasksError && tasksData) {
-        const typedTasks = tasksData.map(task => ({
-          ...task,
-          completion_rule: (task.completion_rule || 'everyone') as 'any_one' | 'everyone'
-        }));
-        setTasks(typedTasks);
+        setTasks(castTasks(tasksData));
         console.log('Tasks refreshed successfully');
       } else if (tasksError) {
         console.error('Error refreshing tasks:', tasksError);

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Task } from '@/types/task';
+import { TASK_SELECT_SHAPE, castTask } from '@/utils/taskQueryBuilder';
 
 interface UseTaskRealtimeProps {
   familyId: string | null;
@@ -55,17 +56,10 @@ export function useTaskRealtime({
           // Fetch full task data with relations (exclude hidden tasks)
           const { data: newTaskData } = await supabase
             .from('tasks')
-            .select(`
-              id, title, description, points, due_date, assigned_to, created_by,
-              completion_rule, task_group, task_source, rotating_task_id,
-              assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
-              assignees:task_assignees(id, profile_id, assigned_at, assigned_by, 
-                profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
-              task_completions(id, completed_at, completed_by)
-            `)
+            .select(TASK_SELECT_SHAPE)
             .eq('id', payload.new.id)
             .is('hidden_at', null)
-            .single();
+            .single() as { data: any };
 
           // Retry once if assignees are not yet available (race-safe hydration)
           let hydratedTask = newTaskData;
@@ -73,17 +67,10 @@ export function useTaskRealtime({
             await new Promise((resolve) => setTimeout(resolve, 400));
             const { data: retryData } = await supabase
               .from('tasks')
-              .select(`
-                id, title, description, points, due_date, assigned_to, created_by,
-                completion_rule, task_group, task_source, rotating_task_id,
-                assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
-                assignees:task_assignees(id, profile_id, assigned_at, assigned_by, 
-                  profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
-                task_completions(id, completed_at, completed_by)
-              `)
+              .select(TASK_SELECT_SHAPE)
               .eq('id', payload.new.id)
               .is('hidden_at', null)
-              .single();
+              .single() as { data: any };
             if (retryData) hydratedTask = retryData;
           }
 
@@ -95,10 +82,7 @@ export function useTaskRealtime({
               assignees: hydratedTask.assignees?.map((a: any) => a.profile?.display_name)
             });
 
-            onTaskInserted({
-              ...hydratedTask,
-              completion_rule: (hydratedTask.completion_rule || 'everyone') as 'any_one' | 'everyone'
-            } as unknown as Task);
+            onTaskInserted(castTask(hydratedTask));
           } else {
             console.error('❌ [REALTIME] Failed to fetch task data');
           }
@@ -203,17 +187,10 @@ export function useTaskRealtime({
 
             const { data: taskData } = await supabase
               .from('tasks')
-              .select(`
-                id, title, description, points, due_date, assigned_to, created_by,
-                completion_rule, task_group, task_source, rotating_task_id, family_id,
-                assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color),
-                assignees:task_assignees(id, profile_id, assigned_at, assigned_by, 
-                  profile:profiles!task_assignees_profile_id_fkey(id, display_name, role, color)),
-                task_completions(id, completed_at, completed_by)
-              `)
+              .select(TASK_SELECT_SHAPE)
               .eq('id', (payload.new as any).task_id)
               .is('hidden_at', null)
-              .single();
+              .single() as { data: any };
 
             if (taskData && taskData.family_id === familyId) {
               console.log('✅ [REALTIME] Task assignee data fetched:', {
@@ -221,10 +198,7 @@ export function useTaskRealtime({
                 assigneesCount: taskData.assignees?.length || 0
               });
 
-              onTaskUpdated({
-                ...taskData,
-                completion_rule: (taskData.completion_rule || 'everyone') as 'any_one' | 'everyone'
-              } as unknown as Task);
+              onTaskUpdated(castTask(taskData));
             } else {
               console.log('⚠️ [REALTIME] Task not in family or not found');
             }
