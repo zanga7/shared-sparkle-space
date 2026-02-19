@@ -244,6 +244,7 @@ export function MemberRewardsGallery({ member }: MemberRewardsGalleryProps) {
                     canRequest={userBalance >= reward.cost_points}
                     onRequest={() => handleRequestReward(reward.id)}
                     isRequesting={requestingIds.has(reward.id)}
+                    memberColor={member.color}
                   />
                 );
               })}

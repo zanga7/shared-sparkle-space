@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Coins, Gift } from 'lucide-react';
 import type { Reward } from '@/types/rewards';
+import { useMemberColor } from '@/hooks/useMemberColor';
 
 interface RewardCardProps {
   reward: Reward;
@@ -10,11 +11,13 @@ interface RewardCardProps {
   canRequest: boolean;
   onRequest: () => void;
   isRequesting?: boolean;
+  memberColor?: string;
 }
 
-export function RewardCard({ reward, userBalance, canRequest, onRequest, isRequesting }: RewardCardProps) {
+export function RewardCard({ reward, userBalance, canRequest, onRequest, isRequesting, memberColor }: RewardCardProps) {
   const canAfford = userBalance >= reward.cost_points;
   const isEligible = canRequest && canAfford;
+  const { styles: colorStyles } = useMemberColor(memberColor);
 
   return (
     <Card className="h-full flex flex-col">
@@ -61,8 +64,9 @@ export function RewardCard({ reward, userBalance, canRequest, onRequest, isReque
         <Button
           onClick={onRequest}
           disabled={!isEligible || isRequesting}
-          className="w-full"
-          variant={isEligible ? "default" : "outline"}>
+          className="w-full text-white"
+          variant={isEligible ? "default" : "outline"}
+          style={isEligible && memberColor ? colorStyles.bg50 : undefined}>
 
           {isRequesting ?
           'Requesting...' :

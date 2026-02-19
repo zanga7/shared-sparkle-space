@@ -255,7 +255,7 @@ export const MemberPersonalListsEnhanced = ({
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm text-muted-foreground">To Do</h4>
                   {incompletePersonalItems.map((item) => (
-                    <div key={item.id} className="flex items-center space-x-3 p-2 rounded-lg border group">
+                    <div key={item.id} className="flex items-center space-x-3 p-2 rounded-lg group" style={colorStyles.bg20}>
                       <Checkbox
                         checked={item.is_completed}
                         onCheckedChange={() => toggleComplete(item.id, item.is_completed)}
@@ -323,7 +323,7 @@ export const MemberPersonalListsEnhanced = ({
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm text-muted-foreground">Completed</h4>
                   {completedPersonalItems.slice(0, 2).map((item) => (
-                    <div key={item.id} className="flex items-center space-x-3 p-2 rounded-lg border opacity-60 group">
+                    <div key={item.id} className="flex items-center space-x-3 p-2 rounded-lg opacity-60 group" style={colorStyles.bg20}>
                       <Checkbox
                         checked={item.is_completed}
                         onCheckedChange={() => toggleComplete(item.id, item.is_completed)}
@@ -374,7 +374,7 @@ export const MemberPersonalListsEnhanced = ({
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm text-muted-foreground">To Do</h4>
                   {incompleteAssignedItems.map((item) => (
-                    <div key={item.id} className="flex items-center space-x-3 p-2 rounded-lg border group">
+                    <div key={item.id} className="flex items-center space-x-3 p-2 rounded-lg group" style={colorStyles.bg20}>
                       <Checkbox
                         checked={item.is_completed}
                         onCheckedChange={() => toggleComplete(item.id, item.is_completed)}
@@ -400,7 +400,7 @@ export const MemberPersonalListsEnhanced = ({
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm text-muted-foreground">Completed</h4>
                   {completedAssignedItems.slice(0, 2).map((item) => (
-                    <div key={item.id} className="flex items-center space-x-3 p-2 rounded-lg border opacity-60 group">
+                    <div key={item.id} className="flex items-center space-x-3 p-2 rounded-lg opacity-60 group" style={colorStyles.bg20}>
                       <Checkbox
                         checked={item.is_completed}
                         onCheckedChange={() => toggleComplete(item.id, item.is_completed)}
