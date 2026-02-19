@@ -17,6 +17,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 import { ChevronLeft, ChevronRight, Users, Calendar, List, Gift, Plus } from 'lucide-react';
 import { Task, Profile } from '@/types/task';
 import { cn } from '@/lib/utils';
+import { PageHeading } from '@/components/ui/typography';
 
 interface MemberDashboardProps {
   member: Profile;
@@ -114,18 +115,18 @@ export const MemberDashboard = ({
 
   const renderMemberHeader = () => (
     <div className="section-spacing">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-6">
         <UserAvatar
           name={member.display_name}
           color={member.color}
           avatarIcon={member.avatar_url || undefined}
           size="lg"
-          className="h-16 w-16"
+          className="h-[52px] w-[52px] sm:h-[56px] sm:w-[56px] flex-shrink-0"
         />
         <div className="flex-1">
-          <h1 className="text-3xl sm:text-4xl font-bold" style={{ color: colorHex }}>
-            {member.display_name}'s Dashboard
-          </h1>
+          <PageHeading style={{ color: colorHex }}>
+            {member.display_name}
+          </PageHeading>
           <div className="flex items-center gap-3 mt-2">
             <Badge variant="outline" className="text-sm px-3 py-1" style={{ color: colorHex, borderColor: colorHex }}>
               {member.total_points} points
