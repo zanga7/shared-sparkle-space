@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { Upload, X, Image } from 'lucide-react';
 import { toast } from 'sonner';
+import { resizeForCard } from '@/utils/imageResize';
 
 interface ImageUploadProps {
   value?: string;
@@ -40,13 +41,16 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
 
     setUploading(true);
     try {
+      // Resize and optimise before upload
+      const optimised = await resizeForCard(file);
+
       // Create a unique filename
-      const fileExt = file.name.split('.').pop();
+      const fileExt = optimised.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
 
       const { data, error } = await supabase.storage
         .from('reward-images')
-        .upload(fileName, file);
+        .upload(fileName, optimised);
 
       if (error) throw error;
 
