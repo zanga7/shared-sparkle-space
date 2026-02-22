@@ -2730,7 +2730,7 @@ export type Database = {
       }
       fix_my_missing_profile: { Args: never; Returns: Json }
       generate_rotating_task_instance: {
-        Args: { rotating_task_id: string }
+        Args: { rotating_task_id_param: string }
         Returns: string
       }
       get_calendar_integration_safe: {
