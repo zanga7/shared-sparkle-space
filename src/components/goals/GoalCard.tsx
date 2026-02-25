@@ -251,7 +251,7 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
               <div className="flex items-center gap-2">
                 <Flame className="h-4 w-4 text-orange-500" />
                 <span className="font-medium text-sm">
-                  {progress && 'total_completions' in progress ? progress.total_completions : 0} / {(goal.success_criteria as { time_window_days: number }).time_window_days} days
+                  {progress && 'total_completions' in progress ? progress.total_completions : 0} / {progress && 'expected_completions' in progress ? progress.expected_completions : (goal.success_criteria as { time_window_days: number }).time_window_days} days
                 </span>
               </div>
               <div className="flex items-center gap-1 text-muted-foreground">
@@ -279,6 +279,8 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                         totalDays={(goal.success_criteria as { time_window_days: number }).time_window_days}
                         completedDates={memberCompletions}
                         memberColor={profile!.color}
+                        frequency={(goal.success_criteria as any).frequency}
+                        weekdays={(goal.success_criteria as any).weekdays}
                         className="text-xs flex-1"
                       />
                     </div>
@@ -290,6 +292,8 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                   startDate={goal.start_date}
                   totalDays={(goal.success_criteria as { time_window_days: number }).time_window_days}
                   completedDates={allCompletedDates}
+                  frequency={(goal.success_criteria as any).frequency}
+                  weekdays={(goal.success_criteria as any).weekdays}
                   className="text-xs"
                 />
               )}

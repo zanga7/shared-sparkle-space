@@ -7,6 +7,8 @@ export type GoalStatus = 'active' | 'paused' | 'completed' | 'archived';
 export interface ConsistencyCriteria {
   time_window_days: number;
   frequency: 'daily' | 'weekly';
+  interval?: number; // Every n frequency units (default 1)
+  weekdays?: string[]; // e.g. ['monday','wednesday','friday'] for weekly
   times_per_week?: number; // Only for weekly frequency
   threshold_percent: number;
 }

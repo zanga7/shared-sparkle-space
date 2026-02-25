@@ -1,8 +1,9 @@
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { X } from 'lucide-react';
-import { format, eachDayOfInterval, isSameDay, startOfDay, addDays, parseISO, isAfter } from 'date-fns';
+import { format, eachDayOfInterval, isSameDay, startOfDay, addDays, parseISO, isAfter, getDay } from 'date-fns';
 import { useMemberColor } from '@/hooks/useMemberColor';
+import { useMemo } from 'react';
 
 interface ConsistencyProgressGridProps {
   startDate: string;
@@ -10,6 +11,46 @@ interface ConsistencyProgressGridProps {
   completedDates: string[]; // Array of ISO date strings when task was completed
   memberColor?: string; // Optional member color key for dynamic coloring
   className?: string;
+  // Recurrence info from success_criteria
+  frequency?: 'daily' | 'weekly';
+  weekdays?: string[]; // e.g. ['monday','wednesday','friday']
+}
+
+// Map JS getDay() (0=Sun) to weekday keys
+const JS_DAY_TO_KEY: Record<number, string> = {
+  0: 'sunday',
+  1: 'monday',
+  2: 'tuesday',
+  3: 'wednesday',
+  4: 'thursday',
+  5: 'friday',
+  6: 'saturday',
+};
+
+/**
+ * Returns only the dates within [start, end] that match the recurrence pattern.
+ */
+function getScheduledDays(
+  start: Date,
+  end: Date,
+  frequency: 'daily' | 'weekly' | undefined,
+  weekdays: string[] | undefined
+): Date[] {
+  const allDays = eachDayOfInterval({ start, end });
+
+  // Daily frequency (or no frequency specified) = every calendar day
+  if (!frequency || frequency === 'daily') {
+    return allDays;
+  }
+
+  // Weekly with specific weekdays
+  if (frequency === 'weekly' && weekdays && weekdays.length > 0) {
+    const weekdaySet = new Set(weekdays);
+    return allDays.filter(day => weekdaySet.has(JS_DAY_TO_KEY[getDay(day)]));
+  }
+
+  // Fallback: all days
+  return allDays;
 }
 
 export function ConsistencyProgressGrid({
@@ -17,7 +58,9 @@ export function ConsistencyProgressGrid({
   totalDays,
   completedDates,
   memberColor,
-  className
+  className,
+  frequency,
+  weekdays
 }: ConsistencyProgressGridProps) {
   const start = startOfDay(parseISO(startDate));
   const end = addDays(start, totalDays - 1);
@@ -26,8 +69,11 @@ export function ConsistencyProgressGrid({
   // Get the member's color for completed days
   const { hex: memberColorHex } = useMemberColor(memberColor);
   
-  // Generate all days in the range
-  const allDays = eachDayOfInterval({ start, end });
+  // Generate only scheduled days (not every calendar day)
+  const scheduledDays = useMemo(
+    () => getScheduledDays(start, end, frequency, weekdays),
+    [start.getTime(), end.getTime(), frequency, weekdays?.join(',')]
+  );
   
   // Create a set for faster lookup
   const completedSet = new Set(
@@ -38,7 +84,7 @@ export function ConsistencyProgressGrid({
     <TooltipProvider>
       <div className={cn('space-y-1', className)}>
         <div className="flex flex-wrap gap-1">
-          {allDays.map((day) => {
+          {scheduledDays.map((day) => {
             const dateKey = format(day, 'yyyy-MM-dd');
             const isCompleted = completedSet.has(dateKey);
             const isToday = isSameDay(day, today);
@@ -81,3 +127,6 @@ export function ConsistencyProgressGrid({
     </TooltipProvider>
   );
 }
+
+// Export the helper for reuse (e.g., in RPC replacement or other components)
+export { getScheduledDays };
