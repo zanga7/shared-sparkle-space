@@ -42,37 +42,15 @@ function useGoalsState() {
 
   useEffect(() => {
     goalsLengthRef.current = goals.length;
-    console.log('[GoalsDebug][useGoals] goals length changed', {
-      goalsLength: goals.length,
-      loading,
-    });
-  }, [goals.length, loading]);
+  }, [goals.length]);
 
   const fetchGoals = useCallback(async (source: string = 'unknown') => {
-    console.log('[GoalsDebug][useGoals] fetchGoals start', {
-      source,
-      familyId,
-      closureGoalsLength: goals.length,
-      refGoalsLength: goalsLengthRef.current,
-      loadingBefore: loading,
-    });
-
-    if (!familyId) {
-      console.log('[GoalsDebug][useGoals] fetchGoals aborted: no familyId', { source });
-      return;
-    }
+    if (!familyId) return;
     
     // Only show loading skeletons on initial fetch, not background refreshes
-    const shouldShowLoading = goals.length === 0;
-    console.log('[GoalsDebug][useGoals] loading decision', {
-      source,
-      shouldShowLoading,
-      closureGoalsLength: goals.length,
-      refGoalsLength: goalsLengthRef.current,
-    });
+    const shouldShowLoading = goalsLengthRef.current === 0;
 
     if (shouldShowLoading) {
-      console.log('[GoalsDebug][useGoals] setLoading(true)', { source });
       setLoading(true);
     }
 
@@ -245,16 +223,10 @@ function useGoalsState() {
       }
 
       setGoals(goalsWithProgress);
-      console.log('[GoalsDebug][useGoals] fetchGoals success', {
-        source,
-        goalsCount: goalsWithProgress.length,
-      });
     } catch (err) {
-      console.error('[GoalsDebug][useGoals] fetchGoals error', { source, err });
       console.error('Error fetching goals:', err);
       setError(err as Error);
     } finally {
-      console.log('[GoalsDebug][useGoals] setLoading(false)', { source });
       setLoading(false);
     }
   }, [familyId]);
@@ -687,21 +659,17 @@ function useGoalsState() {
 
   useEffect(() => {
     if (familyId) {
-      console.log('[GoalsDebug][useGoals] initial family fetch trigger', { familyId });
       fetchGoals('family-init');
     }
   }, [familyId, fetchGoals]);
 
   // Listen for task-updated events to keep goals in sync with task completions
-  // Debounced to prevent cascading duplicate fetches
   useEffect(() => {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const handleTaskUpdated = () => {
       if (!familyId) return;
-      console.log('[GoalsDebug][useGoals] task-updated received', { familyId });
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
-        console.log('[GoalsDebug][useGoals] task-updated debounce fired -> fetchGoals');
         fetchGoals('task-updated');
       }, 300);
     };
