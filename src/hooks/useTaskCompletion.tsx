@@ -309,6 +309,18 @@ export const useTaskCompletion = ({
         p_completion_id: completion.id,
       });
 
+      if (!error) {
+        // Clear hidden_at so the task reappears in active task lists
+        // (tasks are auto-hidden after completion by the cleanup process)
+        const realTaskId = task.series_id ? null : task.id;
+        if (realTaskId && realTaskId.length === 36) {
+          await supabase
+            .from('tasks')
+            .update({ hidden_at: null })
+            .eq('id', realTaskId);
+        }
+      }
+
       if (error) {
         console.error('Error uncompleting task:', error);
         
