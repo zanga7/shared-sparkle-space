@@ -252,15 +252,24 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
   };
 
   const handleDelete = async (goalId: string) => {
-    if (confirm('Are you sure you want to delete this goal? This cannot be undone.')) {
-      const success = await deleteGoal(goalId);
-      if (success) {
-        // Close detail dialog if open
-        if (selectedGoal?.id === goalId) {
-          setSelectedGoal(null);
-        }
-        toast.success('Goal deleted');
+    const goal = goals.find(g => g.id === goalId);
+    const hasLinkedTasks = goal?.linked_tasks && goal.linked_tasks.length > 0;
+    
+    if (!confirm('Are you sure you want to delete this goal? This cannot be undone.')) return;
+    
+    let deleteLinkedTasks = false;
+    if (hasLinkedTasks) {
+      deleteLinkedTasks = confirm(
+        'This goal has linked tasks. Do you also want to delete the linked tasks?\n\nOK = Delete tasks too\nCancel = Keep tasks, delete goal only'
+      );
+    }
+    
+    const success = await deleteGoal(goalId, deleteLinkedTasks);
+    if (success) {
+      if (selectedGoal?.id === goalId) {
+        setSelectedGoal(null);
       }
+      toast.success('Goal deleted');
     }
   };
 

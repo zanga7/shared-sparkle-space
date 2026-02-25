@@ -239,6 +239,7 @@ export const EditTaskDialog = ({
       });
 
       onTaskUpdated();
+      try { window.dispatchEvent(new CustomEvent('task-updated')); } catch {}
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating task:', error);
@@ -396,6 +397,7 @@ export const EditTaskDialog = ({
       onTaskUpdated();
       // Notify listeners (e.g., dashboards) that series data changed
       try { window.dispatchEvent(new CustomEvent('series-updated')); } catch {}
+      try { window.dispatchEvent(new CustomEvent('task-updated')); } catch {}
       onOpenChange(false);
     } catch (error) {
       console.error('Error handling edit scope:', error);
@@ -461,6 +463,7 @@ export const EditTaskDialog = ({
       });
 
       onTaskUpdated();
+      try { window.dispatchEvent(new CustomEvent('task-updated')); } catch {}
       onOpenChange(false);
     } catch (error) {
       console.error('Error deleting task:', error);
