@@ -96,7 +96,7 @@ export function ConsistencyGoalSetup({
   
   // Task info
   const [taskTitle, setTaskTitle] = useState('');
-  const [taskPoints, setTaskPoints] = useState(5);
+  const [taskPoints, setTaskPoints] = useState(0);
   const [taskGroup, setTaskGroup] = useState('morning');
   
   // Simple recurrence rule - just frequency and weekdays
@@ -197,10 +197,10 @@ export function ConsistencyGoalSetup({
                 <Label>Points per completion</Label>
                 <Input 
                   type="number"
-                  min={1}
+                  min={0}
                   max={100}
                   value={taskPoints}
-                  onChange={(e) => setTaskPoints(parseInt(e.target.value) || 5)}
+                  onChange={(e) => setTaskPoints(parseInt(e.target.value) || 0)}
                 />
               </div>
               <div className="space-y-2">

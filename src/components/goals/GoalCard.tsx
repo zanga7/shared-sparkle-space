@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Target, Users, Calendar, Trophy, Pause, Play, Archive, MoreVertical, Edit, Check, Flame, CheckSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +32,7 @@ interface GoalCardProps {
 }
 
 export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive, onCompleteTask }: GoalCardProps) {
+  const [expandedTasks, setExpandedTasks] = useState(false);
   const progress = goal.progress;
   const percent = progress?.current_percent ?? 0;
   
@@ -461,7 +463,7 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                   {/* Tasks under this milestone */}
                   {milestoneTasks.length > 0 && (
                     <div className="ml-7 space-y-1">
-                      {milestoneTasks.slice(0, 2).map((linkedTask) => {
+                      {milestoneTasks.slice(0, expandedTasks ? undefined : 2).map((linkedTask) => {
                         const task = tasksMap[linkedTask.id];
                         if (!task) {
                           return (
@@ -470,6 +472,7 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                             </div>
                           );
                         }
+                        const taskAssignee = task.assignees?.[0]?.profile;
                         return (
                           <EnhancedTaskItem
                             key={linkedTask.id}
@@ -478,13 +481,18 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                             familyMembers={familyMembers}
                             onToggle={() => onCompleteTask?.(linkedTask, task)}
                             showActions={false}
+                            currentMemberId={taskAssignee?.id}
+                            memberColor={taskAssignee?.color}
                           />
                         );
                       })}
-                      {milestoneTasks.length > 2 && (
-                        <span className="text-xs text-muted-foreground">
+                      {!expandedTasks && milestoneTasks.length > 2 && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setExpandedTasks(true); }}
+                          className="text-xs text-primary hover:underline cursor-pointer"
+                        >
                           +{milestoneTasks.length - 2} more tasks
-                        </span>
+                        </button>
                       )}
                     </div>
                   )}
@@ -620,7 +628,7 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
               </>
             ) : (
               /* Regular task display for other goal types */
-              unassignedTasks.slice(0, 2).map((linkedTask) => {
+              unassignedTasks.slice(0, expandedTasks ? undefined : 2).map((linkedTask) => {
                 const task = tasksMap[linkedTask.id];
                 if (!task) {
                   return (
@@ -630,6 +638,7 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                     </div>
                   );
                 }
+                const taskAssignee = task.assignees?.[0]?.profile;
                 return (
                   <EnhancedTaskItem
                     key={linkedTask.id}
@@ -638,14 +647,27 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                     familyMembers={familyMembers}
                     onToggle={() => onCompleteTask?.(linkedTask, task)}
                     showActions={false}
+                    currentMemberId={taskAssignee?.id}
+                    memberColor={taskAssignee?.color}
                   />
                 );
               })
             )}
-            {unassignedTasks.length > ((goal.goal_type === 'consistency' || goal.goal_type === 'target_count') ? 5 : 2) && (
-              <span className="text-xs text-muted-foreground">
+            {!expandedTasks && unassignedTasks.length > ((goal.goal_type === 'consistency' || goal.goal_type === 'target_count') ? 5 : 2) && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); setExpandedTasks(true); }}
+                className="text-xs text-primary hover:underline cursor-pointer"
+              >
                 +{unassignedTasks.length - ((goal.goal_type === 'consistency' || goal.goal_type === 'target_count') ? 5 : 2)} more tasks
-              </span>
+              </button>
+            )}
+            {expandedTasks && unassignedTasks.length > 2 && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); setExpandedTasks(false); }}
+                className="text-xs text-primary hover:underline cursor-pointer"
+              >
+                Show less
+              </button>
             )}
           </div>
         )}
