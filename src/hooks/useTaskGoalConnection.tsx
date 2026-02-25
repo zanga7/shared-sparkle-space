@@ -22,16 +22,25 @@ export function useTaskGoalConnections(taskId: string | null, seriesId?: string 
       let effectiveSeriesId = seriesId;
       
       // If no series_id provided but we have a valid task_id, look up via materialized_task_instances
-      if (!effectiveSeriesId && taskId && !taskId.startsWith('series-') && !taskId.startsWith('rotating-') && !taskId.startsWith('virtual-') && taskId.length === 36) {
-        const { data: instance } = await supabase
-          .from('materialized_task_instances')
-          .select('series_id')
-          .eq('materialized_task_id', taskId)
-          .limit(1)
-          .maybeSingle();
-        
-        if (instance?.series_id) {
-          effectiveSeriesId = instance.series_id;
+      if (!effectiveSeriesId && taskId && !taskId.startsWith('series-') && !taskId.startsWith('rotating-') && !taskId.startsWith('virtual-')) {
+        // For virtual dashboard tasks with composite IDs (UUID-date or UUID-date-UUID), extract the series UUID
+        if (taskId.length > 36) {
+          const uuidPart = taskId.substring(0, 36);
+          // Check if the first 36 chars look like a UUID
+          if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuidPart)) {
+            effectiveSeriesId = uuidPart;
+          }
+        } else if (taskId.length === 36) {
+          const { data: instance } = await supabase
+            .from('materialized_task_instances')
+            .select('series_id')
+            .eq('materialized_task_id', taskId)
+            .limit(1)
+            .maybeSingle();
+          
+          if (instance?.series_id) {
+            effectiveSeriesId = instance.series_id;
+          }
         }
       }
       
