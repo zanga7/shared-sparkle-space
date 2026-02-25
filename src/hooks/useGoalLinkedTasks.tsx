@@ -45,11 +45,18 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
     queryClient.invalidateQueries({ queryKey: ['target-completions'] });
   }, [queryClient]);
 
-  // Listen for task-updated events to refetch stale data
+  // Listen for task-updated events to refetch stale data (debounced to avoid cascades)
   useEffect(() => {
-    const handler = () => refetch();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const handler = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => refetch(), 300);
+    };
     window.addEventListener('task-updated', handler);
-    return () => window.removeEventListener('task-updated', handler);
+    return () => {
+      window.removeEventListener('task-updated', handler);
+      if (timer) clearTimeout(timer);
+    };
   }, [refetch]);
 
   // Fetch regular tasks

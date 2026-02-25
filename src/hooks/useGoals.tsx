@@ -42,7 +42,8 @@ function useGoalsState() {
   const fetchGoals = useCallback(async () => {
     if (!familyId) return;
     
-    setLoading(true);
+    // Only show loading skeletons on initial fetch, not background refreshes
+    if (goals.length === 0) setLoading(true);
     setError(null);
     
     try {
@@ -653,14 +654,19 @@ function useGoalsState() {
   }, [familyId, fetchGoals]);
 
   // Listen for task-updated events to keep goals in sync with task completions
+  // Debounced to prevent cascading duplicate fetches
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const handleTaskUpdated = () => {
-      if (familyId) {
-        fetchGoals();
-      }
+      if (!familyId) return;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => fetchGoals(), 300);
     };
     window.addEventListener('task-updated', handleTaskUpdated);
-    return () => window.removeEventListener('task-updated', handleTaskUpdated);
+    return () => {
+      window.removeEventListener('task-updated', handleTaskUpdated);
+      if (debounceTimer) clearTimeout(debounceTimer);
+    };
   }, [familyId, fetchGoals]);
 
   // Fetch consistency goal completion dates per member

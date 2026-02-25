@@ -119,11 +119,9 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
       occurrence_date: task.occurrence_date
     });
     
-    // Callback to refresh both goals and linked tasks cache, and notify dashboard
+    // Callback: dispatch task-updated which triggers debounced fetchGoals + cache invalidation
+    // No need to call fetchGoals or refetchLinkedTasks explicitly — the event listeners handle it
     const onComplete = () => {
-      refetchLinkedTasks(); // Invalidate linked tasks cache first
-      fetchGoals(); // Then refresh goals
-      // Notify dashboard to refresh its task state
       window.dispatchEvent(new CustomEvent('task-updated'));
     };
     
@@ -278,6 +276,8 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
                           onResume={() => handleResume(goal.id)}
                           onArchive={() => handleArchive(goal.id)}
                           onCompleteTask={handleTaskToggle}
+                          preloadedTasksMap={tasksMap}
+                          preloadedFamilyMembers={familyMembers as any[]}
                         />
                       </div>
                     </div>

@@ -30,25 +30,30 @@ interface GoalCardProps {
   onResume?: (goalId: string) => void;
   onArchive?: (goalId: string) => void;
   onCompleteTask?: (linkedTask: GoalLinkedTask, task?: any) => void;
+  // Pre-fetched data from parent to avoid N+1 hooks
+  preloadedTasksMap?: Record<string, any>;
+  preloadedFamilyMembers?: any[];
 }
 
-export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive, onCompleteTask }: GoalCardProps) {
+export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive, onCompleteTask, preloadedTasksMap, preloadedFamilyMembers }: GoalCardProps) {
   const [expandedTasks, setExpandedTasks] = useState(false);
   const progress = goal.progress;
   const percent = progress?.current_percent ?? 0;
   
-  // Fetch completion dates for consistency goals - now by member
+  // Fetch completion dates for consistency goals - cached by React Query
   const { completionsByMember, allCompletedDates } = useConsistencyCompletions(
     goal.goal_type === 'consistency' ? goal : null
   );
   
-  // Fetch completion counts for target goals - by member
+  // Fetch completion counts for target goals - cached by React Query
   const { completionsByMember: targetCompletionsByMember, totalCompletions: targetTotalCompletions } = useTargetCompletions(
     goal.goal_type === 'target_count' ? goal : null
   );
   
-  // Fetch full task data for linked tasks
-  const { tasksMap, familyMembers } = useGoalLinkedTasks(goal.linked_tasks || []);
+  // Use pre-fetched task data from parent if available, otherwise fetch own
+  const ownData = useGoalLinkedTasks(preloadedTasksMap ? [] : (goal.linked_tasks || []));
+  const tasksMap = preloadedTasksMap || ownData.tasksMap;
+  const familyMembers = preloadedFamilyMembers || ownData.familyMembers;
   
   // Get goal assignees with their profile data
   const goalAssignees = goal.assignees || [];
