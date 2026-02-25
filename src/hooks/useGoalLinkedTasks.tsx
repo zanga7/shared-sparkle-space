@@ -37,20 +37,29 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
   
   // Refetch function to invalidate all related queries
   const refetch = useCallback(() => {
+    console.log('[GoalsDebug][useGoalLinkedTasks] invalidateQueries start', {
+      taskIdsCount: taskIds.length,
+      seriesIdsCount: seriesIds.length,
+      rotatingIdsCount: rotatingIds.length,
+    });
     queryClient.invalidateQueries({ queryKey: ['goal-linked-tasks'] });
     queryClient.invalidateQueries({ queryKey: ['goal-linked-series'] });
     queryClient.invalidateQueries({ queryKey: ['goal-linked-rotating'] });
     // Also invalidate consistency and target completion caches
     queryClient.invalidateQueries({ queryKey: ['consistency-completions'] });
     queryClient.invalidateQueries({ queryKey: ['target-completions'] });
-  }, [queryClient]);
+  }, [queryClient, rotatingIds.length, seriesIds.length, taskIds.length]);
 
   // Listen for task-updated events to refetch stale data (debounced to avoid cascades)
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
     const handler = () => {
+      console.log('[GoalsDebug][useGoalLinkedTasks] task-updated received');
       if (timer) clearTimeout(timer);
-      timer = setTimeout(() => refetch(), 300);
+      timer = setTimeout(() => {
+        console.log('[GoalsDebug][useGoalLinkedTasks] task-updated debounce fired -> refetch');
+        refetch();
+      }, 300);
     };
     window.addEventListener('task-updated', handler);
     return () => {

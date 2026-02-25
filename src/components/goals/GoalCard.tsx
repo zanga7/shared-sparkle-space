@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { Task } from '@/types/task';
 import { Target, Users, Calendar, Trophy, Pause, Play, Archive, MoreVertical, Edit, Check, Flame, CheckSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -37,6 +37,9 @@ interface GoalCardProps {
 
 export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive, onCompleteTask, preloadedTasksMap, preloadedFamilyMembers }: GoalCardProps) {
   const [expandedTasks, setExpandedTasks] = useState(false);
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
+
   const progress = goal.progress;
   const percent = progress?.current_percent ?? 0;
   
@@ -54,6 +57,23 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
   const ownData = useGoalLinkedTasks(preloadedTasksMap ? [] : (goal.linked_tasks || []));
   const tasksMap = preloadedTasksMap || ownData.tasksMap;
   const familyMembers = preloadedFamilyMembers || ownData.familyMembers;
+
+  useEffect(() => {
+    const linkedIds = (goal.linked_tasks || []).map((lt) => lt.id);
+    const availableLinkedIds = linkedIds.filter((id) => tasksMap[id] || Object.keys(tasksMap).some((k) => k.startsWith(`${id}-`)));
+
+    console.log('[GoalsDebug][GoalCard] render', {
+      goalId: goal.id,
+      goalTitle: goal.title,
+      renderCount: renderCountRef.current,
+      tasksSource: preloadedTasksMap ? 'preloaded' : 'own-hook',
+      linkedTasksCount: linkedIds.length,
+      availableLinkedTasksCount: availableLinkedIds.length,
+      tasksMapSize: Object.keys(tasksMap).length,
+      status: goal.status,
+      percent,
+    });
+  });
   
   // Get goal assignees with their profile data
   const goalAssignees = goal.assignees || [];
