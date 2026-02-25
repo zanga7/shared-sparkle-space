@@ -26,6 +26,7 @@ import { ConsistencyGoalSetup, ConsistencyGoalData } from './ConsistencyGoalSetu
 import { TargetGoalSetup, TargetGoalData } from './TargetGoalSetup';
 import { useGoals } from '@/hooks/useGoals';
 import { useTaskSeries } from '@/hooks/useTaskSeries';
+import { supabase } from '@/integrations/supabase/client';
 import type { 
   GoalType, 
   CreateGoalData,
@@ -128,6 +129,40 @@ export function CreateGoalDialog({
     setLoading(true);
     
     try {
+      // If creating a new reward inline, do that first
+      let finalRewardId = data.rewardId;
+      if (data.newReward) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, family_id')
+          .eq('id', profileId)
+          .single();
+        
+        if (profile) {
+          const { data: newReward, error: rewardError } = await supabase
+            .from('rewards')
+            .insert({
+              title: data.newReward.title,
+              description: data.newReward.description || null,
+              cost_points: 0,
+              reward_type: data.newReward.reward_type,
+              is_active: true,
+              auto_approve: true,
+              assigned_to: data.newReward.assigned_to || null,
+              family_id: profile.family_id,
+              created_by: profile.id,
+            })
+            .select('id')
+            .single();
+          
+          if (rewardError) {
+            console.error('Error creating reward:', rewardError);
+          } else if (newReward) {
+            finalRewardId = newReward.id;
+          }
+        }
+      }
+
       // Create a recurring task series with endType: after_count
       const seriesData = {
         family_id: familyId,
@@ -162,7 +197,7 @@ export function CreateGoalDialog({
         goal_scope: data.assignees.length === 1 ? 'individual' : 'family',
         assigned_to: data.assignees.length === 1 ? data.assignees[0] : undefined,
         assignees: data.assignees,
-        reward_id: data.rewardId,
+        reward_id: finalRewardId,
         success_criteria: { target_count: data.targetCount },
         start_date: format(new Date(), 'yyyy-MM-dd'),
         linked_series_ids: [series.id],
