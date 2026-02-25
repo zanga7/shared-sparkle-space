@@ -39,6 +39,7 @@ function useGoalsState() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const goalsLengthRef = useRef(0);
+  const currentFetchIdRef = useRef(0);
 
   useEffect(() => {
     goalsLengthRef.current = goals.length;
@@ -46,6 +47,7 @@ function useGoalsState() {
 
   const fetchGoals = useCallback(async (source: string = 'unknown') => {
     const fetchStartTime = Date.now();
+    const thisFetchId = ++currentFetchIdRef.current;
     console.log(`[useGoals] fetchGoals START | source="${source}" | time=${new Date(fetchStartTime).toISOString()} | current goals titles:`, goals.map(g => g.title));
     if (!familyId) return;
     
@@ -226,11 +228,11 @@ function useGoalsState() {
       }
 
       console.log(`[useGoals] fetchGoals COMPLETE | source="${source}" | elapsed=${Date.now() - fetchStartTime}ms | linked task titles:`, goalsWithProgress.flatMap(g => (g.linked_tasks || []).map((lt: any) => lt.task_title)));
+      if (thisFetchId !== currentFetchIdRef.current) return;
       setGoals(goalsWithProgress);
     } catch (err) {
       console.error('Error fetching goals:', err);
       setError(err as Error);
-    } finally {
       setLoading(false);
     }
   }, [familyId]);
