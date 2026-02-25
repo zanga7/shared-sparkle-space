@@ -23,6 +23,7 @@ import { MultiSelectAssignees } from '@/components/ui/multi-select-assignees';
 import { TaskLinkingSection } from './TaskLinkingSection';
 import { GoalTypeSelector } from './GoalTypeSelector';
 import { ConsistencyGoalSetup, ConsistencyGoalData } from './ConsistencyGoalSetup';
+import { TargetGoalSetup, TargetGoalData } from './TargetGoalSetup';
 import { useGoals } from '@/hooks/useGoals';
 import { useTaskSeries } from '@/hooks/useTaskSeries';
 import type { 
@@ -111,12 +112,71 @@ export function CreateGoalDialog({
   // Handle goal type selection
   const handleGoalTypeSelect = (type: GoalType) => {
     setGoalType(type);
-    // For consistency goals, we'll show the dedicated wizard
-    // For other types, proceed to step 1 (existing flow)
     if (type === 'consistency') {
-      setStep(-1); // Special step for consistency wizard
+      setStep(-1); // Consistency wizard
+    } else if (type === 'target_count') {
+      setStep(-2); // Target wizard
     } else {
       setStep(1);
+    }
+  };
+
+  // Handle target goal creation (new wizard flow)
+  const handleTargetGoalSubmit = async (data: TargetGoalData) => {
+    if (!familyId || !profileId) return;
+    
+    setLoading(true);
+    
+    try {
+      // Create a recurring task series with endType: after_count
+      const seriesData = {
+        family_id: familyId,
+        created_by: profileId,
+        title: data.taskTitle,
+        description: undefined,
+        points: data.taskPoints,
+        task_group: data.taskGroup,
+        completion_rule: 'everyone',
+        recurrence_rule: {
+          frequency: 'daily' as const,
+          interval: 1,
+          endType: 'after_count' as const,
+          endCount: data.targetCount,
+        },
+        series_start: format(new Date(), 'yyyy-MM-dd'),
+        series_end: undefined,
+        assigned_profiles: data.assignees,
+        is_active: true,
+      };
+      
+      const series = await createTaskSeries(seriesData);
+      
+      if (!series) {
+        throw new Error('Failed to create recurring task');
+      }
+      
+      const goalData: CreateGoalData = {
+        title: data.title,
+        description: data.description,
+        goal_type: 'target_count',
+        goal_scope: data.assignees.length === 1 ? 'individual' : 'family',
+        assigned_to: data.assignees.length === 1 ? data.assignees[0] : undefined,
+        assignees: data.assignees,
+        reward_id: data.rewardId,
+        success_criteria: { target_count: data.targetCount },
+        start_date: format(new Date(), 'yyyy-MM-dd'),
+        linked_series_ids: [series.id],
+      };
+      
+      const goal = await createGoal(goalData);
+      
+      if (goal) {
+        handleClose();
+      }
+    } catch (error) {
+      console.error('Error creating target goal:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -286,13 +346,27 @@ export function CreateGoalDialog({
           />
         )}
         
-        {/* Step 1: Basic Info (for target_count and project goals) */}
-        {step === 1 && goalType && goalType !== 'consistency' && (
+        {/* Target Goal Wizard (dedicated flow) */}
+        {step === -2 && goalType === 'target_count' && (
+          <TargetGoalSetup
+            familyMembers={familyMembers}
+            rewards={rewards}
+            onSubmit={handleTargetGoalSubmit}
+            onBack={() => {
+              setGoalType(null);
+              setStep(0);
+            }}
+            loading={loading}
+          />
+        )}
+        
+        {/* Step 1: Basic Info (for project goals only) */}
+        {step === 1 && goalType && goalType === 'project' && (
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Goal Title</Label>
               <Input 
-                placeholder={goalType === 'target_count' ? 'e.g., 50 Walks Challenge' : 'e.g., Build a Treehouse'} 
+                placeholder="e.g., Build a Treehouse" 
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
@@ -343,20 +417,7 @@ export function CreateGoalDialog({
         {/* Step 2: Goal-specific criteria */}
         {step === 2 && goalType && (
           <div className="space-y-4">
-            {goalType === 'target_count' && (
-              <div className="space-y-2">
-                <Label>Target Count</Label>
-                <div className="flex items-center gap-2">
-                  <Input 
-                    type="number" 
-                    value={targetCount}
-                    onChange={(e) => setTargetCount(parseInt(e.target.value) || 30)}
-                    className="w-24"
-                  />
-                  <span className="text-muted-foreground">completions</span>
-                </div>
-              </div>
-            )}
+            
             
             {goalType === 'project' && (
               <div className="space-y-2">
@@ -448,7 +509,7 @@ export function CreateGoalDialog({
                 streak_count: 0
               }))}
               profileId={profileId || undefined}
-              basicTasksOnly={goalType === 'target_count' || goalType === 'project'}
+              basicTasksOnly={goalType === 'project'}
             />
             
             <div className="flex justify-between">
