@@ -652,6 +652,17 @@ function useGoalsState() {
     }
   }, [familyId, fetchGoals]);
 
+  // Listen for task-updated events to keep goals in sync with task completions
+  useEffect(() => {
+    const handleTaskUpdated = () => {
+      if (familyId) {
+        fetchGoals();
+      }
+    };
+    window.addEventListener('task-updated', handleTaskUpdated);
+    return () => window.removeEventListener('task-updated', handleTaskUpdated);
+  }, [familyId, fetchGoals]);
+
   // Fetch consistency goal completion dates per member
   const fetchConsistencyCompletions = async (
     seriesId: string,

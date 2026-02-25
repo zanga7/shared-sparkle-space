@@ -137,6 +137,13 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
     return null;
   };
   
+  // Shared callback for goal task completions - refreshes goals, linked tasks, AND notifies dashboard
+  const onGoalTaskComplete = () => {
+    fetchGoals();
+    refetchTasks();
+    window.dispatchEvent(new CustomEvent('task-updated'));
+  };
+
   // Handle task completion/uncomplete
   const handleTaskComplete = async (linkedTask: GoalLinkedTask) => {
     const task = tasksMap[linkedTask.id];
@@ -145,9 +152,9 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
     const hasCompletion = task.task_completions && task.task_completions.length > 0;
     
     if (hasCompletion) {
-      await uncompleteTask(task, () => { fetchGoals(); refetchTasks(); });
+      await uncompleteTask(task, onGoalTaskComplete);
     } else {
-      await completeTask(task, () => { fetchGoals(); refetchTasks(); });
+      await completeTask(task, onGoalTaskComplete);
     }
   };
   
@@ -156,9 +163,9 @@ export function GoalDetailDialog({ goal, open, onOpenChange, onEdit }: GoalDetai
     const hasCompletion = task.task_completions && task.task_completions.length > 0;
     
     if (hasCompletion) {
-      await uncompleteTask(task, () => { fetchGoals(); refetchTasks(); });
+      await uncompleteTask(task, onGoalTaskComplete);
     } else {
-      await completeTask(task, () => { fetchGoals(); refetchTasks(); });
+      await completeTask(task, onGoalTaskComplete);
     }
   };
 

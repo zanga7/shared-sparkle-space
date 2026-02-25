@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTaskCompletion } from '@/hooks/useTaskCompletion';
 import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { Task, Profile } from '@/types/task';
@@ -29,6 +30,7 @@ export function useDashboardTaskActions({
   fetchTaskSeries,
 }: UseDashboardTaskActionsOptions) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
@@ -55,13 +57,27 @@ export function useDashboardTaskActions({
     setFamilyMembers,
   });
 
+  const invalidateGoalCaches = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['goal-linked-tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['goal-linked-series'] });
+    queryClient.invalidateQueries({ queryKey: ['goal-linked-rotating'] });
+    queryClient.invalidateQueries({ queryKey: ['consistency-completions'] });
+    queryClient.invalidateQueries({ queryKey: ['target-completions'] });
+  }, [queryClient]);
+
   const completeTask = useCallback(async (task: Task, columnMemberId?: string) => {
-    await completeTaskHandler(task, refreshTasksOnly, columnMemberId);
-  }, [completeTaskHandler, refreshTasksOnly]);
+    await completeTaskHandler(task, () => {
+      refreshTasksOnly();
+      invalidateGoalCaches();
+    }, columnMemberId);
+  }, [completeTaskHandler, refreshTasksOnly, invalidateGoalCaches]);
 
   const uncompleteTask = useCallback(async (task: Task, columnMemberId?: string) => {
-    await uncompleteTaskHandler(task, refreshTasksOnly, columnMemberId);
-  }, [uncompleteTaskHandler, refreshTasksOnly]);
+    await uncompleteTaskHandler(task, () => {
+      refreshTasksOnly();
+      invalidateGoalCaches();
+    }, columnMemberId);
+  }, [uncompleteTaskHandler, refreshTasksOnly, invalidateGoalCaches]);
 
   const handleTaskToggle = useCallback(async (task: Task, columnMemberId?: string) => {
     if (isCompleting(task.id)) return;

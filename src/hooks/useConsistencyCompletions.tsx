@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Goal } from '@/types/goal';
 
@@ -12,6 +12,14 @@ export function useConsistencyCompletions(goal: Goal | null): UseConsistencyComp
   const [completionsByMember, setCompletionsByMember] = useState<Record<string, string[]>>({});
   const [allCompletedDates, setAllCompletedDates] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+
+  // Listen for task-updated events to re-fetch completions
+  useEffect(() => {
+    const handler = () => setRefreshCounter(c => c + 1);
+    window.addEventListener('task-updated', handler);
+    return () => window.removeEventListener('task-updated', handler);
+  }, []);
 
   useEffect(() => {
     if (!goal || goal.goal_type !== 'consistency') {
@@ -38,7 +46,6 @@ export function useConsistencyCompletions(goal: Goal | null): UseConsistencyComp
         for (const link of linkedSeries) {
           if (!link.task_series_id) continue;
           
-          // Get materialized task instances for this series
           const { data: instances } = await supabase
             .from('materialized_task_instances')
             .select('occurrence_date, materialized_task_id')
@@ -48,27 +55,23 @@ export function useConsistencyCompletions(goal: Goal | null): UseConsistencyComp
           
           if (!instances || instances.length === 0) continue;
           
-          // Get task IDs that have materialized instances
           const taskIds = instances
             .map(i => i.materialized_task_id)
             .filter(Boolean) as string[];
           
           if (taskIds.length === 0) continue;
           
-          // Get completions for those tasks
           const { data: completions } = await supabase
             .from('task_completions')
             .select('task_id, completed_by, completed_at')
             .in('task_id', taskIds);
           
-          // Build completion lookup by task_id
           const completionsByTask: Record<string, { completed_by: string; completed_at: string }[]> = {};
           (completions || []).forEach(c => {
             if (!completionsByTask[c.task_id]) completionsByTask[c.task_id] = [];
             completionsByTask[c.task_id].push({ completed_by: c.completed_by, completed_at: c.completed_at });
           });
           
-          // Map back to member -> dates
           instances.forEach(instance => {
             if (!instance.materialized_task_id) return;
             const taskCompletions = completionsByTask[instance.materialized_task_id] || [];
@@ -91,7 +94,6 @@ export function useConsistencyCompletions(goal: Goal | null): UseConsistencyComp
             .select('task_id, completed_by, completed_at')
             .in('task_id', linkedTaskIds);
           
-          // Get task due dates to map completions to dates
           const { data: tasks } = await supabase
             .from('tasks')
             .select('id, due_date')
@@ -126,7 +128,7 @@ export function useConsistencyCompletions(goal: Goal | null): UseConsistencyComp
     };
 
     fetchCompletions();
-  }, [goal?.id, goal?.goal_type, goal?.start_date, goal?.end_date, goal?.linked_tasks]);
+  }, [goal?.id, goal?.goal_type, goal?.start_date, goal?.end_date, goal?.linked_tasks, refreshCounter]);
 
   return { completionsByMember, allCompletedDates, loading };
 }
