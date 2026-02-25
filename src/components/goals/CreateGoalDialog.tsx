@@ -251,7 +251,9 @@ export function CreateGoalDialog({
       // 2. Create the goal
       const successCriteria: ConsistencyCriteria = {
         time_window_days: data.durationDays,
-        frequency: 'daily',
+        frequency: data.recurrenceRule.frequency === 'daily' ? 'daily' : 'weekly',
+        interval: data.recurrenceRule.interval || 1,
+        weekdays: data.recurrenceRule.weekdays || undefined,
         threshold_percent: data.thresholdPercent
       };
       
