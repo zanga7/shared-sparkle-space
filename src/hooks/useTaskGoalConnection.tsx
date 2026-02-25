@@ -15,11 +15,28 @@ export function useTaskGoalConnections(taskId: string | null, seriesId?: string 
       // Build the query conditions
       const conditions: string[] = [];
       
-      if (taskId && !taskId.startsWith('series-') && !taskId.startsWith('rotating-')) {
+      if (taskId && !taskId.startsWith('series-') && !taskId.startsWith('rotating-') && !taskId.startsWith('virtual-')) {
         conditions.push(`task_id.eq.${taskId}`);
       }
-      if (seriesId) {
-        conditions.push(`task_series_id.eq.${seriesId}`);
+      
+      let effectiveSeriesId = seriesId;
+      
+      // If no series_id provided but we have a valid task_id, look up via materialized_task_instances
+      if (!effectiveSeriesId && taskId && !taskId.startsWith('series-') && !taskId.startsWith('rotating-') && !taskId.startsWith('virtual-') && taskId.length === 36) {
+        const { data: instance } = await supabase
+          .from('materialized_task_instances')
+          .select('series_id')
+          .eq('materialized_task_id', taskId)
+          .limit(1)
+          .maybeSingle();
+        
+        if (instance?.series_id) {
+          effectiveSeriesId = instance.series_id;
+        }
+      }
+      
+      if (effectiveSeriesId) {
+        conditions.push(`task_series_id.eq.${effectiveSeriesId}`);
       }
       if (rotatingTaskId) {
         conditions.push(`rotating_task_id.eq.${rotatingTaskId}`);

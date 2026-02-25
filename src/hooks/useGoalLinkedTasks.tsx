@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { TASK_SELECT_SHAPE } from '@/utils/taskQueryBuilder';
@@ -44,6 +44,13 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
     queryClient.invalidateQueries({ queryKey: ['consistency-completions'] });
     queryClient.invalidateQueries({ queryKey: ['target-completions'] });
   }, [queryClient]);
+
+  // Listen for task-updated events to refetch stale data
+  useEffect(() => {
+    const handler = () => refetch();
+    window.addEventListener('task-updated', handler);
+    return () => window.removeEventListener('task-updated', handler);
+  }, [refetch]);
 
   // Fetch regular tasks
   const { data: regularTasks, isLoading: loadingTasks } = useQuery({
