@@ -275,6 +275,33 @@ export const EditTaskDialog = ({
 
     if (error) throw error;
 
+    // If this task was materialized from a series, also update the parent series
+    // so that goal displays and future instances reflect the changes
+    const { data: instanceLink } = await supabase
+      .from('materialized_task_instances')
+      .select('series_id')
+      .eq('materialized_task_id', task.id)
+      .maybeSingle();
+
+    if (instanceLink?.series_id) {
+      const seriesUpdate: Record<string, any> = {
+        title: updateData.title,
+        description: updateData.description,
+        points: updateData.points,
+        task_group: updateData.task_group,
+      };
+      if (updateData.assignees.length > 0) {
+        seriesUpdate.assigned_profiles = updateData.assignees;
+      }
+      if (updateData.completion_rule) {
+        seriesUpdate.completion_rule = updateData.completion_rule;
+      }
+      await supabase
+        .from('task_series')
+        .update(seriesUpdate)
+        .eq('id', instanceLink.series_id);
+    }
+
     // Update task assignees
     const { error: deleteError } = await supabase
       .from('task_assignees')
