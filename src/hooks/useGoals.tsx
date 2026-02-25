@@ -697,8 +697,10 @@ function useGoalsState() {
       }, 300);
     };
     window.addEventListener('task-updated', handleTaskUpdated);
+    window.addEventListener('series-updated', handleTaskUpdated);
     return () => {
       window.removeEventListener('task-updated', handleTaskUpdated);
+      window.removeEventListener('series-updated', handleTaskUpdated);
       if (debounceTimer) clearTimeout(debounceTimer);
     };
   }, [familyId, fetchGoals]);
