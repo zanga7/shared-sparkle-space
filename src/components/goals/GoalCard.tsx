@@ -518,7 +518,19 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                     .filter(([key]) => key.startsWith(`${linkedTask.id}-`) || key === linkedTask.id)
                     .map(([key, task]) => ({ key, task }));
                   
-                  if (seriesTasks.length === 0) {
+                  // Build a set of member IDs that already have tasks
+                  const membersWithTasks = new Set<string>();
+                  seriesTasks.forEach(({ task }) => {
+                    const mid = (task as any)._member_id || task.assignees?.[0]?.profile_id;
+                    if (mid) membersWithTasks.add(mid);
+                  });
+                  
+                  // Find goal assignees who don't have a task yet
+                  const missingMembers = assigneeProfiles.filter(
+                    p => p && !membersWithTasks.has(p.id)
+                  );
+                  
+                  if (seriesTasks.length === 0 && missingMembers.length === 0) {
                     // Fallback: try direct lookup
                     const task = tasksMap[linkedTask.id];
                     if (!task) {
@@ -543,8 +555,8 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                     );
                   }
                   
-                  // Render each member's task
-                  return seriesTasks.map(({ key, task }) => {
+                  // Render each member's task from the series
+                  const renderedTasks = seriesTasks.map(({ key, task }) => {
                     const memberId = (task as any)._member_id || task.assignees?.[0]?.profile_id;
                     const memberProfile = task.assignees?.[0]?.profile;
                     return (
@@ -560,6 +572,50 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                       />
                     );
                   });
+                  
+                  // Also render virtual tasks for missing members
+                  const virtualTasks = missingMembers.map((profile) => {
+                    // Find base task to clone from (use first series task or direct lookup)
+                    const baseTask = seriesTasks[0]?.task || tasksMap[linkedTask.id];
+                    const today = new Date().toISOString().split('T')[0];
+                    const virtualTask = {
+                      id: `virtual-${linkedTask.id}-${profile!.id}`,
+                      title: baseTask?.title || linkedTask.task_title || goal.title,
+                      description: baseTask?.description || null,
+                      points: baseTask?.points || 0,
+                      due_date: today,
+                      assigned_to: profile!.id,
+                      created_by: goal.created_by,
+                      completion_rule: 'everyone' as const,
+                      assignees: [{
+                        id: `va-${profile!.id}`,
+                        profile_id: profile!.id,
+                        assigned_at: new Date().toISOString(),
+                        assigned_by: goal.created_by,
+                        profile: profile!,
+                      }],
+                      task_completions: [],
+                      isVirtual: true,
+                      series_id: linkedTask.task_series_id,
+                      occurrence_date: today,
+                      _member_id: profile!.id,
+                    } as any;
+                    
+                    return (
+                      <EnhancedTaskItem
+                        key={`virtual-${profile!.id}`}
+                        task={virtualTask}
+                        allTasks={Object.values(tasksMap)}
+                        familyMembers={familyMembers}
+                        onToggle={() => onCompleteTask?.(linkedTask, virtualTask)}
+                        showActions={false}
+                        currentMemberId={profile!.id}
+                        memberColor={profile!.color}
+                      />
+                    );
+                  });
+                  
+                  return [...renderedTasks, ...virtualTasks];
                 })}
               </>
             ) : (
