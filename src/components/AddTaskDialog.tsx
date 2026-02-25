@@ -53,7 +53,7 @@ export const AddTaskDialog = ({
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    points: 10,
+    points: 0,
     assigned_to: 'unassigned',
     assignees: [] as string[],
     due_date: null as Date | null,
@@ -265,7 +265,7 @@ export const AddTaskDialog = ({
       setFormData({
         title: '',
         description: '',
-        points: 10,
+        points: 0,
         assigned_to: 'unassigned',
         assignees: [],
         due_date: null,
@@ -382,10 +382,10 @@ export const AddTaskDialog = ({
               <Input
                 id="points"
                 type="number"
-                min="1"
+                min="0"
                 max="100"
                 value={formData.points}
-                onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) || 10 })}
+                onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) || 0 })}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();

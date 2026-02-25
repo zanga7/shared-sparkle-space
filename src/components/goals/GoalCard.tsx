@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { Task } from '@/types/task';
 import { Target, Users, Calendar, Trophy, Pause, Play, Archive, MoreVertical, Edit, Check, Flame, CheckSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -627,8 +628,8 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                 })}
               </>
             ) : (
-              /* Regular task display for other goal types */
-              unassignedTasks.slice(0, expandedTasks ? undefined : 2).map((linkedTask) => {
+              /* Regular task display for other goal types - split group tasks per member */
+              unassignedTasks.slice(0, expandedTasks ? undefined : 3).map((linkedTask) => {
                 const task = tasksMap[linkedTask.id];
                 if (!task) {
                   return (
@@ -638,7 +639,38 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                     </div>
                   );
                 }
-                const taskAssignee = task.assignees?.[0]?.profile;
+                
+                // For group tasks (multiple assignees with 'everyone' rule), render per-member
+                const assigneesList = task.assignees || [];
+                const isGroupEveryone = task.completion_rule === 'everyone' && assigneesList.length > 1;
+                
+                if (isGroupEveryone) {
+                  return assigneesList.map((assignee) => {
+                    const memberCompletions = (task.task_completions || []).filter(
+                      (c) => c.completed_by === assignee.profile_id
+                    );
+                    const perMemberTask = {
+                      ...task,
+                      id: `${task.id}-${assignee.profile_id}`,
+                      assignees: [assignee],
+                      task_completions: memberCompletions,
+                    } as unknown as Task;
+                    return (
+                      <EnhancedTaskItem
+                        key={`${linkedTask.id}-${assignee.profile_id}`}
+                        task={perMemberTask}
+                        allTasks={Object.values(tasksMap)}
+                        familyMembers={familyMembers}
+                        onToggle={() => onCompleteTask?.(linkedTask, { ...task, _member_id: assignee.profile_id } as any)}
+                        showActions={false}
+                        currentMemberId={assignee.profile_id}
+                        memberColor={assignee.profile?.color}
+                      />
+                    );
+                  });
+                }
+                
+                const taskAssignee = assigneesList[0]?.profile;
                 return (
                   <EnhancedTaskItem
                     key={linkedTask.id}
