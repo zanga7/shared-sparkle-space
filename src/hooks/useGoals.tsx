@@ -425,12 +425,34 @@ function useGoalsState() {
           // Delete regular tasks
           const taskIds = linkedTasks.filter(lt => lt.task_id).map(lt => lt.task_id!);
           if (taskIds.length > 0) {
+            // Delete completions first, then tasks
+            await supabase.from('task_completions').delete().in('task_id', taskIds);
             await supabase.from('tasks').delete().in('id', taskIds);
           }
           
-          // Delete task series
+          // Delete task series (and their materialized instances + generated tasks)
           const seriesIds = linkedTasks.filter(lt => lt.task_series_id).map(lt => lt.task_series_id!);
           if (seriesIds.length > 0) {
+            // Get all materialized task IDs for these series
+            const { data: instances } = await supabase
+              .from('materialized_task_instances')
+              .select('materialized_task_id')
+              .in('series_id', seriesIds);
+            
+            const materializedTaskIds = (instances || [])
+              .map(i => i.materialized_task_id)
+              .filter(Boolean) as string[];
+            
+            // Delete completions for materialized tasks
+            if (materializedTaskIds.length > 0) {
+              await supabase.from('task_completions').delete().in('task_id', materializedTaskIds);
+              await supabase.from('tasks').delete().in('id', materializedTaskIds);
+            }
+            
+            // Delete materialized instances
+            await supabase.from('materialized_task_instances').delete().in('series_id', seriesIds);
+            
+            // Delete the series themselves
             await supabase.from('task_series').delete().in('id', seriesIds);
           }
           
