@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { GoalProgressRing } from './GoalProgressRing';
 import { ConsistencyProgressGrid } from './ConsistencyProgressGrid';
+import { TargetProgressGrid } from './TargetProgressGrid';
 import { useConsistencyCompletions } from '@/hooks/useConsistencyCompletions';
+import { useTargetCompletions } from '@/hooks/useTargetCompletions';
 import { useGoalLinkedTasks } from '@/hooks/useGoalLinkedTasks';
 import { EnhancedTaskItem } from '@/components/EnhancedTaskItem';
 import { 
@@ -35,6 +37,11 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
   // Fetch completion dates for consistency goals - now by member
   const { completionsByMember, allCompletedDates } = useConsistencyCompletions(
     goal.goal_type === 'consistency' ? goal : null
+  );
+  
+  // Fetch completion counts for target goals - by member
+  const { completionsByMember: targetCompletionsByMember, totalCompletions: targetTotalCompletions } = useTargetCompletions(
+    goal.goal_type === 'target_count' ? goal : null
   );
   
   // Fetch full task data for linked tasks
@@ -286,6 +293,63 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
               </div>
             )}
           </div>
+        ) : goal.goal_type === 'target_count' && 'target_count' in goal.success_criteria ? (
+          <div className="space-y-3">
+            {/* Target info header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Target className="h-4 w-4 text-primary" />
+                <span className="font-medium text-sm">
+                  {targetTotalCompletions} / {(goal.success_criteria as { target_count: number }).target_count} completed
+                </span>
+              </div>
+              {goal.end_date && (
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span className="text-xs">{getDaysRemaining()}</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Per-member sequential progress grids */}
+            <div className="space-y-2">
+              {assigneeProfiles.length > 0 ? (
+                assigneeProfiles.map((profile) => {
+                  const memberCount = targetCompletionsByMember[profile!.id] || 0;
+                  return (
+                    <div key={profile!.id} className="flex items-start gap-2">
+                      <UserAvatar 
+                        name={profile!.display_name} 
+                        color={profile!.color}
+                        avatarIcon={profile!.avatar_url || undefined}
+                        size="xs"
+                        className="mt-0.5 shrink-0"
+                      />
+                      <TargetProgressGrid
+                        targetCount={(goal.success_criteria as { target_count: number }).target_count}
+                        completedCount={memberCount}
+                        memberColor={profile!.color}
+                        className="text-xs flex-1"
+                      />
+                    </div>
+                  );
+                })
+              ) : (
+                <TargetProgressGrid
+                  targetCount={(goal.success_criteria as { target_count: number }).target_count}
+                  completedCount={targetTotalCompletions}
+                  className="text-xs"
+                />
+              )}
+            </div>
+            
+            {goal.reward && (
+              <div className="flex items-center gap-1 text-amber-500 text-sm">
+                <Trophy className="h-3.5 w-3.5" />
+                <span className="truncate">{goal.reward.title}</span>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="space-y-3">
             <div className="flex items-center gap-4">
@@ -314,8 +378,8 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
           </div>
         )}
         
-        {/* Show assignees - single or multiple (skip for consistency goals - avatars are in grids) */}
-        {goal.goal_type !== 'consistency' && goal.assignees && goal.assignees.length > 0 && (
+        {/* Show assignees - single or multiple (skip for consistency/target goals - avatars are in grids) */}
+        {goal.goal_type !== 'consistency' && goal.goal_type !== 'target_count' && goal.assignees && goal.assignees.length > 0 && (
           <div className="flex items-center gap-1 mt-3 pt-3 border-t">
             {goal.assignees.slice(0, 5).map((a) => (
               <UserAvatar 
@@ -337,8 +401,8 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
           </div>
         )}
         
-        {/* Fallback to single assignee if no assignees array (skip for consistency) */}
-        {goal.goal_type !== 'consistency' && (!goal.assignees || goal.assignees.length === 0) && goal.assignee && (
+        {/* Fallback to single assignee if no assignees array (skip for consistency/target) */}
+        {goal.goal_type !== 'consistency' && goal.goal_type !== 'target_count' && (!goal.assignees || goal.assignees.length === 0) && goal.assignee && (
           <div className="flex items-center gap-2 mt-3 pt-3 border-t">
             <UserAvatar 
               name={goal.assignee.display_name} 
@@ -350,8 +414,8 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
           </div>
         )}
         
-        {/* Family goals with participant progress (skip for consistency) */}
-        {goal.goal_type !== 'consistency' && goal.goal_scope === 'family' && !goal.assignees?.length && progress?.participant_progress && (
+        {/* Family goals with participant progress (skip for consistency/target) */}
+        {goal.goal_type !== 'consistency' && goal.goal_type !== 'target_count' && goal.goal_scope === 'family' && !goal.assignees?.length && progress?.participant_progress && (
           <div className="flex items-center gap-1 mt-3 pt-3 border-t">
             {progress.participant_progress.slice(0, 5).map((p) => (
               <UserAvatar 
