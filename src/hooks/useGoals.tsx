@@ -45,6 +45,8 @@ function useGoalsState() {
   }, [goals.length]);
 
   const fetchGoals = useCallback(async (source: string = 'unknown') => {
+    const fetchStartTime = Date.now();
+    console.log(`[useGoals] fetchGoals START | source="${source}" | time=${new Date(fetchStartTime).toISOString()} | current goals titles:`, goals.map(g => g.title));
     if (!familyId) return;
     
     // Only show loading skeletons on initial fetch, not background refreshes
@@ -223,6 +225,7 @@ function useGoalsState() {
         goalsToAutoComplete.forEach(g => { g.status = 'completed'; });
       }
 
+      console.log(`[useGoals] fetchGoals COMPLETE | source="${source}" | elapsed=${Date.now() - fetchStartTime}ms | linked task titles:`, goalsWithProgress.flatMap(g => (g.linked_tasks || []).map((lt: any) => lt.task_title)));
       setGoals(goalsWithProgress);
     } catch (err) {
       console.error('Error fetching goals:', err);
@@ -689,10 +692,15 @@ function useGoalsState() {
   // Listen for task-updated events to keep goals in sync with task completions
   useEffect(() => {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    const handleTaskUpdated = () => {
+    let pendingCount = 0;
+    const handleTaskUpdated = (e: Event) => {
       if (!familyId) return;
+      pendingCount++;
+      console.log(`[useGoals] event="${e.type}" received | pendingCount=${pendingCount} | debounce will fire in 300ms`);
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
+        console.log(`[useGoals] debounce fired | pendingCount was ${pendingCount}`);
+        pendingCount = 0;
         fetchGoals('task-updated');
       }, 300);
     };
