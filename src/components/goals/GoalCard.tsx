@@ -596,7 +596,8 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                   const virtualTasks = missingMembers.map((profile) => {
                     // Find base task to clone from (use first series task or direct lookup)
                     const baseTask = seriesTasks[0]?.task || tasksMap[linkedTask.id];
-                    const today = new Date().toISOString().split('T')[0];
+                    const _now = new Date();
+                    const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
                     const virtualTask = {
                       id: `virtual-${linkedTask.id}-${profile!.id}`,
                       title: baseTask?.title || linkedTask.task_title || goal.title,

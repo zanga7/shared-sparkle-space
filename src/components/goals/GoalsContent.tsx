@@ -176,7 +176,8 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
       // For consistency goals: add today's date to the member's completions
       queryClient.setQueriesData({ queryKey: ['consistency-completions'] }, (old: any) => {
         if (!old) return old;
-        const today = new Date().toISOString().split('T')[0];
+        const _now = new Date();
+        const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
         const updated = { ...old };
         if (updated.completionsByMember) {
           const memberDates = [...(updated.completionsByMember[completerId] || [])];
