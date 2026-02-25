@@ -117,14 +117,20 @@ export function useDashboardTaskData({ user }: UseDashboardTaskDataOptions) {
   }, []);
 
   // Listen for task-updated events (dispatched from Goals page, MemberTasksWidget, etc.)
+  // Debounced to prevent cascading duplicate refreshes
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const handleTaskUpdated = () => {
       if (profile?.family_id) {
-        refreshTasksOnly();
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => refreshTasksOnly(), 300);
       }
     };
     window.addEventListener('task-updated', handleTaskUpdated);
-    return () => window.removeEventListener('task-updated', handleTaskUpdated);
+    return () => {
+      window.removeEventListener('task-updated', handleTaskUpdated);
+      if (debounceTimer) clearTimeout(debounceTimer);
+    };
   }, [profile?.family_id]);
 
   // Profiles realtime subscription
@@ -375,6 +381,7 @@ export function useDashboardTaskData({ user }: UseDashboardTaskDataOptions) {
     if (!profile?.family_id) return;
 
     try {
+      // Only refresh tasks and materialized completions — profiles are kept fresh via Realtime
       const { data: tasksData, error: tasksError } = await buildFamilyTaskQuery(profile.family_id) as { data: any[]; error: any };
       if (!tasksError && tasksData) setTasks(castTasks(tasksData));
 
@@ -400,24 +407,6 @@ export function useDashboardTaskData({ user }: UseDashboardTaskDataOptions) {
         });
         setMaterializedCompletionsMap(newMap);
       }
-
-      const { data: updatedProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-      if (updatedProfile) setProfile(updatedProfile);
-
-      const { data: updatedMembers } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('family_id', profile.family_id)
-        .eq('status', 'active')
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: true });
-      if (updatedMembers) setFamilyMembers(updatedMembers);
-
-      await fetchTaskSeries();
     } catch (error) {
       console.error('Error in refreshTasksOnly:', error);
     }
