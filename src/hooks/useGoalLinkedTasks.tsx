@@ -115,18 +115,30 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
         });
       }
       
-      // Try to find today's materialized instances for these series
-      const today = new Date().toISOString().split('T')[0];
+      // Determine effective occurrence date per series: max(today, series_start)
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      
+      // Build a map of series_id -> effective date (respecting series_start)
+      const effectiveDates: Record<string, string> = {};
+      (seriesData || []).forEach(series => {
+        const seriesStart = series.series_start ? series.series_start.split('T')[0] : today;
+        effectiveDates[series.id] = seriesStart > today ? seriesStart : today;
+      });
+      
+      // Try to find materialized instances for effective dates
+      // Query for all possible dates we might need
+      const uniqueDates = [...new Set(Object.values(effectiveDates))];
       const { data: todayInstances } = await supabase
         .from('materialized_task_instances')
-        .select('series_id, materialized_task_id')
+        .select('series_id, materialized_task_id, occurrence_date')
         .in('series_id', seriesIds)
-        .eq('occurrence_date', today);
+        .in('occurrence_date', uniqueDates);
       
-      // Create map of series_id -> today's task_id
+      // Create map of series_id -> task_id for effective date
       const todayTaskIds: Record<string, string> = {};
       todayInstances?.forEach(inst => {
-        if (inst.materialized_task_id) {
+        if (inst.materialized_task_id && inst.occurrence_date === effectiveDates[inst.series_id]) {
           todayTaskIds[inst.series_id] = inst.materialized_task_id;
         }
       });
@@ -150,6 +162,7 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
       const result: Task[] = [];
       
       for (const series of (seriesData || [])) {
+        const effectiveDate = effectiveDates[series.id];
         const todayTaskId = todayTaskIds[series.id];
         const todayTask = todayTaskId ? todayTasksMap[todayTaskId] : null;
         const assignedProfiles = series.assigned_profiles || [];
@@ -189,7 +202,7 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
                 ...todayTask,
                 id: `${todayTask.id}-${profileId}`, // Unique ID per member
                 series_id: series.id,
-                occurrence_date: today,
+                occurrence_date: effectiveDate,
                 assignees: singleAssignee,
                 task_completions: memberCompletions,
                 _member_id: profileId, // Track which member this is for
@@ -201,7 +214,7 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
                 title: series.title,
                 description: series.description,
                 points: series.points,
-                due_date: today,
+                due_date: effectiveDate,
                 assigned_to: profileId,
                 created_by: series.created_by,
                 completion_rule: 'everyone',
@@ -211,7 +224,7 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
                 task_completions: [],
                 isVirtual: true,
                 series_id: series.id,
-                occurrence_date: today,
+                occurrence_date: effectiveDate,
                 _member_id: profileId,
               } as unknown as Task);
             }
@@ -222,7 +235,7 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
             result.push({
               ...todayTask,
               series_id: series.id,
-              occurrence_date: today,
+              occurrence_date: effectiveDate,
               assignees: todayTask.assignees?.length > 0 ? todayTask.assignees : fullAssignees,
             } as unknown as Task);
           } else {
@@ -231,7 +244,7 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
               title: series.title,
               description: series.description,
               points: series.points,
-              due_date: today,
+              due_date: effectiveDate,
               assigned_to: null,
               created_by: series.created_by,
               completion_rule: series.completion_rule || 'any_one',
@@ -241,7 +254,7 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
               task_completions: [],
               isVirtual: true,
               series_id: series.id,
-              occurrence_date: today,
+              occurrence_date: effectiveDate,
               series_assignee_count: assignedProfiles.length,
             } as unknown as Task);
           }
