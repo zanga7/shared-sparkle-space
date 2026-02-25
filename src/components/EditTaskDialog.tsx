@@ -560,7 +560,7 @@ export const EditTaskDialog = ({
               <Input
                 id="points"
                 type="number"
-                min="1"
+                min="0"
                 max="100"
                 value={formData.points}
                 onChange={(e) => setFormData(prev => ({ ...prev, points: parseInt(e.target.value) || 10 }))}
