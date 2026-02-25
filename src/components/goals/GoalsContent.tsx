@@ -19,6 +19,7 @@ import { useRewards } from '@/hooks/useRewards';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
 import { useTaskCompletion } from '@/hooks/useTaskCompletion';
 import { useGoalLinkedTasks } from '@/hooks/useGoalLinkedTasks';
+import { useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import type { Goal, GoalStatus, GoalLinkedTask } from '@/types/goal';
@@ -39,6 +40,7 @@ interface GoalsContentProps {
 }
 
 export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'everyone' }: GoalsContentProps) {
+  const queryClient = useQueryClient();
   const { 
     goals, 
     loading, 
@@ -84,7 +86,7 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
     setEditingGoal((prev) => (prev ? goals.find((g) => g.id === prev.id) ?? null : null));
   }, [goals]);
   
-  // Handle task completion/uncomplete from goals
+  // Handle task completion/uncomplete from goals — with optimistic UI update
   const handleTaskToggle = async (linkedTask: GoalLinkedTask, passedTask?: any) => {
     // If task was passed directly, use it (more reliable for series tasks)
     let task = passedTask;
@@ -108,31 +110,128 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
     }
     
     // Check if the task has any completions in the current data
-    const hasCompletion = task.task_completions && task.task_completions.length > 0;
+    const memberId = (task as any)._member_id || task.assignees?.[0]?.profile_id;
+    const completerId = memberId || selectedMemberId || profileId;
+    const hasCompletion = task.task_completions?.some(
+      (c: any) => c.completed_by === completerId
+    ) || (task.task_completions && task.task_completions.length > 0 && !completerId);
     
-    console.log('Task toggle:', { 
-      linkedTaskId: linkedTask.id, 
-      taskId: task.id, 
-      hasCompletion, 
-      completions: task.task_completions,
-      series_id: task.series_id,
-      occurrence_date: task.occurrence_date
-    });
-    
-    // Callback: dispatch task-updated which triggers debounced fetchGoals + cache invalidation
-    // No need to call fetchGoals or refetchLinkedTasks explicitly — the event listeners handle it
+    // --- Optimistic update: snapshot current React Query caches and patch them ---
+    // We snapshot all three query caches that feed into tasksMap so we can roll back on error.
+    const taskIdsKey = allLinkedTasks.filter(lt => lt.task_id).map(lt => lt.task_id!);
+    const seriesIdsKey = allLinkedTasks.filter(lt => lt.task_series_id).map(lt => lt.task_series_id!);
+    const rotatingIdsKey = allLinkedTasks.filter(lt => lt.rotating_task_id).map(lt => lt.rotating_task_id!);
+
+    const regularKey = ['goal-linked-tasks', taskIdsKey];
+    const seriesKey = ['goal-linked-series', seriesIdsKey];
+    const rotatingKey = ['goal-linked-rotating', rotatingIdsKey];
+
+    // Snapshot previous data for rollback
+    const prevRegular = queryClient.getQueryData(regularKey);
+    const prevSeries = queryClient.getQueryData(seriesKey);
+    const prevRotating = queryClient.getQueryData(rotatingKey);
+
+    // Helper: patch task_completions in a list of tasks
+    const patchTasks = (tasks: any[] | undefined) => {
+      if (!tasks) return tasks;
+      return tasks.map((t: any) => {
+        // Match by id (handles composite IDs like "taskId-memberId")
+        const isMatch = t.id === task.id || 
+          (task.series_id && t.series_id === task.series_id && (t as any)._member_id === memberId);
+        if (!isMatch) return t;
+        
+        if (hasCompletion) {
+          // Removing completion
+          return {
+            ...t,
+            task_completions: (t.task_completions || []).filter(
+              (c: any) => c.completed_by !== completerId
+            ),
+          };
+        } else {
+          // Adding completion
+          return {
+            ...t,
+            task_completions: [
+              ...(t.task_completions || []),
+              {
+                id: `optimistic-${Date.now()}`,
+                task_id: t.id,
+                completed_by: completerId,
+                completed_at: new Date().toISOString(),
+              },
+            ],
+          };
+        }
+      });
+    };
+
+    // Apply optimistic patches to all three caches
+    queryClient.setQueryData(regularKey, (old: any) => patchTasks(old));
+    queryClient.setQueryData(seriesKey, (old: any) => patchTasks(old));
+    queryClient.setQueryData(rotatingKey, (old: any) => patchTasks(old));
+
+    // Also optimistically patch consistency/target completion caches
+    if (!hasCompletion && completerId) {
+      // For consistency goals: add today's date to the member's completions
+      queryClient.setQueriesData({ queryKey: ['consistency-completions'] }, (old: any) => {
+        if (!old) return old;
+        const today = new Date().toISOString().split('T')[0];
+        const updated = { ...old };
+        if (updated.completionsByMember) {
+          const memberDates = [...(updated.completionsByMember[completerId] || [])];
+          if (!memberDates.includes(today)) memberDates.push(today);
+          updated.completionsByMember = { ...updated.completionsByMember, [completerId]: memberDates };
+        }
+        if (updated.allCompletedDates) {
+          const allDates = [...updated.allCompletedDates];
+          if (!allDates.includes(today)) allDates.push(today);
+          updated.allCompletedDates = allDates;
+        }
+        return updated;
+      });
+      
+      // For target goals: increment the member's count
+      queryClient.setQueriesData({ queryKey: ['target-completions'] }, (old: any) => {
+        if (!old) return old;
+        const updated = { ...old };
+        if (updated.completionsByMember) {
+          updated.completionsByMember = { 
+            ...updated.completionsByMember, 
+            [completerId]: (updated.completionsByMember[completerId] || 0) + 1 
+          };
+        }
+        if (typeof updated.totalCompletions === 'number') {
+          updated.totalCompletions = updated.totalCompletions + 1;
+        }
+        return updated;
+      });
+    }
+
+    // Callback: dispatch task-updated for background reconciliation
     const onComplete = () => {
       window.dispatchEvent(new CustomEvent('task-updated'));
     };
     
-    // Get the member ID for completion (for multi-member tasks)
-    const memberId = (task as any)._member_id || task.assignees?.[0]?.profile_id;
+    // Rollback function if the DB call fails
+    const rollback = () => {
+      queryClient.setQueryData(regularKey, prevRegular);
+      queryClient.setQueryData(seriesKey, prevSeries);
+      queryClient.setQueryData(rotatingKey, prevRotating);
+      // Invalidate consistency/target to refetch correct state
+      queryClient.invalidateQueries({ queryKey: ['consistency-completions'] });
+      queryClient.invalidateQueries({ queryKey: ['target-completions'] });
+    };
     
+    let success: boolean;
     if (hasCompletion) {
-      // For uncompleting, we need to pass the task with its completions
-      await uncompleteTask(task, onComplete, memberId);
+      success = await uncompleteTask(task, onComplete, memberId);
     } else {
-      await completeTask(task, onComplete, memberId);
+      success = await completeTask(task, onComplete, memberId);
+    }
+    
+    if (!success) {
+      rollback();
     }
   };
 
