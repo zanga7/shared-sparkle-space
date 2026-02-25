@@ -19,19 +19,19 @@ interface GoalLinkedTasksResult {
 export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTasksResult {
   const queryClient = useQueryClient();
   
-  // Extract all task IDs, series IDs, and rotating task IDs
+  // Extract all task IDs, series IDs, and rotating task IDs (stable + deduped for query keys)
   const taskIds = useMemo(() => 
-    linkedTasks.filter(lt => lt.task_id).map(lt => lt.task_id!),
+    Array.from(new Set(linkedTasks.filter(lt => lt.task_id).map(lt => lt.task_id!))).sort(),
     [linkedTasks]
   );
   
   const seriesIds = useMemo(() => 
-    linkedTasks.filter(lt => lt.task_series_id).map(lt => lt.task_series_id!),
+    Array.from(new Set(linkedTasks.filter(lt => lt.task_series_id).map(lt => lt.task_series_id!))).sort(),
     [linkedTasks]
   );
   
   const rotatingIds = useMemo(() => 
-    linkedTasks.filter(lt => lt.rotating_task_id).map(lt => lt.rotating_task_id!),
+    Array.from(new Set(linkedTasks.filter(lt => lt.rotating_task_id).map(lt => lt.rotating_task_id!))).sort(),
     [linkedTasks]
   );
   
