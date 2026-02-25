@@ -22,49 +22,97 @@ async function fetchConsistencyData(goal: Goal): Promise<ConsistencyCompletionsD
   const result: Record<string, string[]> = {};
   const allDates: string[] = [];
   
-  // Fetch completions from task series
+  // For series-linked tasks: query task_completions directly via materialized instances
+  // AND also check for completions on tasks that share the series_id
   for (const link of linkedSeries) {
     if (!link.task_series_id) continue;
     
-    const { data: instances } = await supabase
+    // Approach: Find all task_completions for tasks that belong to this series,
+    // using materialized_task_instances to map task_id -> occurrence_date.
+    // This works for already-materialized instances.
+    const { data: materializedCompletions } = await supabase
       .from('materialized_task_instances')
-      .select('occurrence_date, materialized_task_id')
+      .select(`
+        occurrence_date,
+        materialized_task_id,
+        tasks:materialized_task_id (
+          task_completions (
+            completed_by,
+            completed_at
+          )
+        )
+      `)
       .eq('series_id', link.task_series_id)
       .gte('occurrence_date', startDate)
       .lte('occurrence_date', endDate);
     
-    if (!instances || instances.length === 0) continue;
-    
-    const taskIds = instances
-      .map(i => i.materialized_task_id)
-      .filter(Boolean) as string[];
-    
-    if (taskIds.length === 0) continue;
-    
-    const { data: completions } = await supabase
-      .from('task_completions')
-      .select('task_id, completed_by, completed_at')
-      .in('task_id', taskIds);
-    
-    const completionsByTask: Record<string, { completed_by: string; completed_at: string }[]> = {};
-    (completions || []).forEach(c => {
-      if (!completionsByTask[c.task_id]) completionsByTask[c.task_id] = [];
-      completionsByTask[c.task_id].push({ completed_by: c.completed_by, completed_at: c.completed_at });
-    });
-    
-    instances.forEach(instance => {
-      if (!instance.materialized_task_id) return;
-      const taskCompletions = completionsByTask[instance.materialized_task_id] || [];
-      taskCompletions.forEach(c => {
-        if (!result[c.completed_by]) result[c.completed_by] = [];
-        if (!result[c.completed_by].includes(instance.occurrence_date)) {
-          result[c.completed_by].push(instance.occurrence_date);
+    if (materializedCompletions) {
+      for (const inst of materializedCompletions) {
+        const tasks = inst.tasks as any;
+        const completions = tasks?.task_completions || [];
+        for (const c of completions) {
+          if (!result[c.completed_by]) result[c.completed_by] = [];
+          if (!result[c.completed_by].includes(inst.occurrence_date)) {
+            result[c.completed_by].push(inst.occurrence_date);
+          }
+          if (!allDates.includes(inst.occurrence_date)) {
+            allDates.push(inst.occurrence_date);
+          }
         }
-        if (!allDates.includes(instance.occurrence_date)) {
-          allDates.push(instance.occurrence_date);
+      }
+    }
+    
+    // Also check for completions on tasks with due_date matching occurrence dates
+    // that were materialized but might not have a materialized_task_instances row yet.
+    // This handles the case where complete_task_unified created the task+completion
+    // but the hook didn't find it above (e.g., race condition or missing row).
+    const { data: directTasks } = await supabase
+      .from('tasks')
+      .select(`
+        id,
+        due_date,
+        task_completions (
+          completed_by,
+          completed_at
+        )
+      `)
+      .eq('task_source', 'recurring')
+      .gte('due_date', startDate)
+      .lte('due_date', endDate + 'T23:59:59');
+    
+    if (directTasks) {
+      // Filter to only tasks that belong to this series via materialized_task_instances
+      const taskIds = directTasks.map(t => t.id);
+      if (taskIds.length > 0) {
+        const { data: seriesLinks } = await supabase
+          .from('materialized_task_instances')
+          .select('materialized_task_id, occurrence_date')
+          .eq('series_id', link.task_series_id)
+          .in('materialized_task_id', taskIds);
+        
+        const taskToDate: Record<string, string> = {};
+        (seriesLinks || []).forEach(sl => {
+          if (sl.materialized_task_id) {
+            taskToDate[sl.materialized_task_id] = sl.occurrence_date;
+          }
+        });
+        
+        for (const task of directTasks) {
+          const occDate = taskToDate[task.id];
+          if (!occDate) continue;
+          
+          for (const c of (task.task_completions || [])) {
+            if (!result[c.completed_by]) result[c.completed_by] = [];
+            if (!result[c.completed_by].includes(occDate)) {
+              result[c.completed_by].push(occDate);
+            }
+            if (!allDates.includes(occDate)) {
+              allDates.push(occDate);
+            }
+          }
         }
-      });
-    });
+      }
+    }
   }
   
   // Also fetch completions from directly linked tasks (non-series)

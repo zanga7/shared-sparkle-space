@@ -170,6 +170,7 @@ function useGoalsState() {
           batchProgressData.forEach((p: any) => {
             progressMap[p.goal_id] = {
               goal_id: p.goal_id,
+              goal_type: p.goal_type,
               current_percent: Number(p.percentage) || 0,
               is_complete: Number(p.percentage) >= 100,
               total_completions: p.total_completions,
