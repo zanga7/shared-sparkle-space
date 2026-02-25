@@ -12,6 +12,14 @@ export function useTargetCompletions(goal: Goal | null): UseTargetCompletionsRes
   const [completionsByMember, setCompletionsByMember] = useState<Record<string, number>>({});
   const [totalCompletions, setTotalCompletions] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+
+  // Listen for task-updated events to re-fetch completions
+  useEffect(() => {
+    const handler = () => setRefreshCounter(c => c + 1);
+    window.addEventListener('task-updated', handler);
+    return () => window.removeEventListener('task-updated', handler);
+  }, []);
 
   useEffect(() => {
     if (!goal || goal.goal_type !== 'target_count') {
@@ -81,7 +89,7 @@ export function useTargetCompletions(goal: Goal | null): UseTargetCompletionsRes
     };
 
     fetchCompletions();
-  }, [goal?.id, goal?.goal_type, goal?.linked_tasks]);
+  }, [goal?.id, goal?.goal_type, goal?.linked_tasks, refreshCounter]);
 
   return { completionsByMember, totalCompletions, loading };
 }

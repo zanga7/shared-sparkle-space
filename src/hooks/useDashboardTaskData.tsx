@@ -116,6 +116,17 @@ export function useDashboardTaskData({ user }: UseDashboardTaskDataOptions) {
     return () => window.removeEventListener('tasks-cleaned-up', handleCleanup);
   }, []);
 
+  // Listen for task-updated events (dispatched from Goals page, MemberTasksWidget, etc.)
+  useEffect(() => {
+    const handleTaskUpdated = () => {
+      if (profile?.family_id) {
+        refreshTasksOnly();
+      }
+    };
+    window.addEventListener('task-updated', handleTaskUpdated);
+    return () => window.removeEventListener('task-updated', handleTaskUpdated);
+  }, [profile?.family_id]);
+
   // Profiles realtime subscription
   const profileUpdateTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 

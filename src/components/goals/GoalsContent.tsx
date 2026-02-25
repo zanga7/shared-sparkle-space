@@ -119,10 +119,12 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
       occurrence_date: task.occurrence_date
     });
     
-    // Callback to refresh both goals and linked tasks cache
+    // Callback to refresh both goals and linked tasks cache, and notify dashboard
     const onComplete = () => {
       refetchLinkedTasks(); // Invalidate linked tasks cache first
       fetchGoals(); // Then refresh goals
+      // Notify dashboard to refresh its task state
+      window.dispatchEvent(new CustomEvent('task-updated'));
     };
     
     // Get the member ID for completion (for multi-member tasks)

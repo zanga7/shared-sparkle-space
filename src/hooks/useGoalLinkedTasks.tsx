@@ -40,6 +40,9 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
     queryClient.invalidateQueries({ queryKey: ['goal-linked-tasks'] });
     queryClient.invalidateQueries({ queryKey: ['goal-linked-series'] });
     queryClient.invalidateQueries({ queryKey: ['goal-linked-rotating'] });
+    // Also invalidate consistency and target completion caches
+    queryClient.invalidateQueries({ queryKey: ['consistency-completions'] });
+    queryClient.invalidateQueries({ queryKey: ['target-completions'] });
   }, [queryClient]);
 
   // Fetch regular tasks
