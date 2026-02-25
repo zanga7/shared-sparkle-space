@@ -228,12 +228,20 @@ function useGoalsState() {
       }
 
       console.log(`[useGoals] fetchGoals COMPLETE | source="${source}" | elapsed=${Date.now() - fetchStartTime}ms | linked task titles:`, goalsWithProgress.flatMap(g => (g.linked_tasks || []).map((lt: any) => lt.task_title)));
-      if (thisFetchId !== currentFetchIdRef.current) return;
+      if (thisFetchId !== currentFetchIdRef.current) {
+        console.log(`[useGoals] fetchGoals DISCARDED | fetchId=${thisFetchId} | currentFetchId=${currentFetchIdRef.current}`);
+        return;
+      }
       setGoals(goalsWithProgress);
     } catch (err) {
       console.error('Error fetching goals:', err);
-      setError(err as Error);
-      setLoading(false);
+      if (thisFetchId === currentFetchIdRef.current) {
+        setError(err as Error);
+      }
+    } finally {
+      if (thisFetchId === currentFetchIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [familyId]);
 
