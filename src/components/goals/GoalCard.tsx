@@ -502,15 +502,15 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
         {/* Non-project goals: Show linked tasks (hidden when completed) */}
         {goal.status !== 'completed' && goal.goal_type !== 'project' && unassignedTasks.length > 0 && (
           <div className="mt-3 pt-3 border-t space-y-2" onClick={(e) => e.stopPropagation()}>
-            {/* Show "Complete today's challenge" header for consistency goals */}
-            {goal.goal_type === 'consistency' && (
+            {/* Show header for consistency/target goals */}
+            {(goal.goal_type === 'consistency' || goal.goal_type === 'target_count') && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
                 <CheckSquare className="h-3.5 w-3.5" />
-                <span>Complete today's challenge</span>
+                <span>{goal.goal_type === 'consistency' ? "Complete today's challenge" : "Today's tasks"}</span>
               </div>
             )}
-            {/* For consistency goals, render per-member tasks */}
-            {goal.goal_type === 'consistency' ? (
+            {/* For consistency and target goals, render per-member tasks */}
+            {(goal.goal_type === 'consistency' || goal.goal_type === 'target_count') ? (
               <>
                 {unassignedTasks.slice(0, 1).map((linkedTask) => {
                   // Get all tasks for this series (one per member)
@@ -563,7 +563,7 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                 })}
               </>
             ) : (
-              /* Regular task display for non-consistency goals */
+              /* Regular task display for other goal types */
               unassignedTasks.slice(0, 2).map((linkedTask) => {
                 const task = tasksMap[linkedTask.id];
                 if (!task) {
@@ -586,9 +586,9 @@ export function GoalCard({ goal, onSelect, onEdit, onPause, onResume, onArchive,
                 );
               })
             )}
-            {unassignedTasks.length > (goal.goal_type === 'consistency' ? 5 : 2) && (
+            {unassignedTasks.length > ((goal.goal_type === 'consistency' || goal.goal_type === 'target_count') ? 5 : 2) && (
               <span className="text-xs text-muted-foreground">
-                +{unassignedTasks.length - (goal.goal_type === 'consistency' ? 5 : 2)} more tasks
+                +{unassignedTasks.length - ((goal.goal_type === 'consistency' || goal.goal_type === 'target_count') ? 5 : 2)} more tasks
               </span>
             )}
           </div>
