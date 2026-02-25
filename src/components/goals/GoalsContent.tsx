@@ -88,13 +88,6 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
   
   // Handle task completion/uncomplete from goals — with optimistic UI update
   const handleTaskToggle = async (linkedTask: GoalLinkedTask, passedTask?: any) => {
-    console.log('[GoalsDebug][GoalsContent] toggle start', {
-      linkedTaskId: linkedTask.id,
-      taskId: linkedTask.task_id,
-      taskSeriesId: linkedTask.task_series_id,
-      rotatingTaskId: linkedTask.rotating_task_id,
-      passedTaskId: passedTask?.id,
-    });
 
     // If task was passed directly, use it (more reliable for series tasks)
     let task = passedTask;
@@ -110,10 +103,6 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
         : tasksMap[linkedTask.id] ? [[linkedTask.id, tasksMap[linkedTask.id]] as const] : [];
       
       if (taskEntries.length === 0) {
-        console.log('[GoalsDebug][GoalsContent] task not found in tasksMap', {
-          linkedTaskId: linkedTask.id,
-          tasksMapKeysSample: Object.keys(tasksMap).slice(0, 20),
-        });
         return;
       }
       
@@ -126,14 +115,6 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
     const hasCompletion = task.task_completions?.some(
       (c: any) => c.completed_by === completerId
     ) || (task.task_completions && task.task_completions.length > 0 && !completerId);
-
-    console.log('[GoalsDebug][GoalsContent] completion decision', {
-      resolvedTaskId: task.id,
-      memberId,
-      completerId,
-      hasCompletion,
-      completionsCount: task.task_completions?.length ?? 0,
-    });
     
     // --- Optimistic update: snapshot current React Query caches and patch them ---
     // We snapshot all three query caches that feed into tasksMap so we can roll back on error.
@@ -144,17 +125,6 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
     const regularKey = ['goal-linked-tasks', taskIdsKey];
     const seriesKey = ['goal-linked-series', seriesIdsKey];
     const rotatingKey = ['goal-linked-rotating', rotatingIdsKey];
-
-    const allQueryKeys = queryClient.getQueryCache().getAll().map((q) => q.queryKey);
-    console.log('[GoalsDebug][GoalsContent] optimistic patch keys', {
-      regularKey,
-      seriesKey,
-      rotatingKey,
-      cacheHasRegular: !!queryClient.getQueryData(regularKey),
-      cacheHasSeries: !!queryClient.getQueryData(seriesKey),
-      cacheHasRotating: !!queryClient.getQueryData(rotatingKey),
-      existingGoalLinkedKeys: allQueryKeys.filter((k) => Array.isArray(k) && typeof k[0] === 'string' && k[0].startsWith('goal-linked-')),
-    });
 
     // Snapshot previous data for rollback
     const prevRegular = queryClient.getQueryData(regularKey);
@@ -201,15 +171,6 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
     queryClient.setQueryData(seriesKey, (old: any) => patchTasks(old));
     queryClient.setQueryData(rotatingKey, (old: any) => patchTasks(old));
 
-    console.log('[GoalsDebug][GoalsContent] optimistic patch applied', {
-      regularCountBefore: Array.isArray(prevRegular) ? prevRegular.length : null,
-      regularCountAfter: Array.isArray(queryClient.getQueryData(regularKey)) ? (queryClient.getQueryData(regularKey) as any[]).length : null,
-      seriesCountBefore: Array.isArray(prevSeries) ? prevSeries.length : null,
-      seriesCountAfter: Array.isArray(queryClient.getQueryData(seriesKey)) ? (queryClient.getQueryData(seriesKey) as any[]).length : null,
-      rotatingCountBefore: Array.isArray(prevRotating) ? prevRotating.length : null,
-      rotatingCountAfter: Array.isArray(queryClient.getQueryData(rotatingKey)) ? (queryClient.getQueryData(rotatingKey) as any[]).length : null,
-    });
-
     // Also optimistically patch consistency/target completion caches
     if (!hasCompletion && completerId) {
       // For consistency goals: add today's date to the member's completions
@@ -249,40 +210,25 @@ export function GoalsContent({ familyMembers, selectedMemberId, viewMode = 'ever
 
     // Callback: dispatch task-updated for background reconciliation
     const onComplete = () => {
-      console.log('[GoalsDebug][GoalsContent] dispatching task-updated');
       window.dispatchEvent(new CustomEvent('task-updated'));
     };
     
     // Rollback function if the DB call fails
     const rollback = () => {
-      console.log('[GoalsDebug][GoalsContent] rollback start');
       queryClient.setQueryData(regularKey, prevRegular);
       queryClient.setQueryData(seriesKey, prevSeries);
       queryClient.setQueryData(rotatingKey, prevRotating);
-      // Invalidate consistency/target to refetch correct state
       queryClient.invalidateQueries({ queryKey: ['consistency-completions'] });
       queryClient.invalidateQueries({ queryKey: ['target-completions'] });
-      console.log('[GoalsDebug][GoalsContent] rollback done');
     };
     
     let success: boolean;
-    console.log('[GoalsDebug][GoalsContent] DB mutation start', {
-      action: hasCompletion ? 'uncomplete' : 'complete',
-      resolvedTaskId: task.id,
-      memberId,
-    });
 
     if (hasCompletion) {
       success = await uncompleteTask(task, onComplete, memberId);
     } else {
       success = await completeTask(task, onComplete, memberId);
     }
-
-    console.log('[GoalsDebug][GoalsContent] DB mutation done', {
-      action: hasCompletion ? 'uncomplete' : 'complete',
-      success,
-      resolvedTaskId: task.id,
-    });
     
     if (!success) {
       rollback();

@@ -37,27 +37,23 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
   
   // Refetch function to invalidate all related queries
   const refetch = useCallback(() => {
-    console.log('[GoalsDebug][useGoalLinkedTasks] invalidateQueries start', {
-      taskIdsCount: taskIds.length,
-      seriesIdsCount: seriesIds.length,
-      rotatingIdsCount: rotatingIds.length,
-    });
     queryClient.invalidateQueries({ queryKey: ['goal-linked-tasks'] });
     queryClient.invalidateQueries({ queryKey: ['goal-linked-series'] });
     queryClient.invalidateQueries({ queryKey: ['goal-linked-rotating'] });
-    // Also invalidate consistency and target completion caches
     queryClient.invalidateQueries({ queryKey: ['consistency-completions'] });
     queryClient.invalidateQueries({ queryKey: ['target-completions'] });
-  }, [queryClient, rotatingIds.length, seriesIds.length, taskIds.length]);
+  }, [queryClient]);
 
-  // Listen for task-updated events to refetch stale data (debounced to avoid cascades)
+  // Listen for task-updated events to refetch stale data (debounced)
+  // Only register if this hook instance has actual linked tasks to avoid duplicate listeners
+  const hasLinkedTasks = linkedTasks.length > 0;
   useEffect(() => {
+    if (!hasLinkedTasks) return;
+    
     let timer: ReturnType<typeof setTimeout> | null = null;
     const handler = () => {
-      console.log('[GoalsDebug][useGoalLinkedTasks] task-updated received');
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
-        console.log('[GoalsDebug][useGoalLinkedTasks] task-updated debounce fired -> refetch');
         refetch();
       }, 300);
     };
@@ -66,7 +62,7 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
       window.removeEventListener('task-updated', handler);
       if (timer) clearTimeout(timer);
     };
-  }, [refetch]);
+  }, [refetch, hasLinkedTasks]);
 
   // Fetch regular tasks
   const { data: regularTasks, isLoading: loadingTasks } = useQuery({
