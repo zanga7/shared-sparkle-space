@@ -104,7 +104,7 @@ export const useTaskCompletion = ({
       // Extract series_id and occurrence_date
       let seriesId: string | null = task.series_id || null;
       let occurrenceDate: string | null = task.occurrence_date 
-        ? new Date(task.occurrence_date).toISOString().split('T')[0] 
+        ? String(task.occurrence_date).split('T')[0] 
         : null;
       
       // If we detected a virtual task but don't have explicit series_id/occurrence_date,

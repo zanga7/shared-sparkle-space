@@ -17,7 +17,8 @@ async function fetchConsistencyData(goal: Goal): Promise<ConsistencyCompletionsD
   const linkedTaskIds = goal.linked_tasks?.filter(lt => lt.task_id).map(lt => lt.task_id!) || [];
   
   const startDate = goal.start_date;
-  const endDate = goal.end_date || new Date().toISOString().split('T')[0];
+  const _now = new Date();
+  const endDate = goal.end_date || `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
   
   const result: Record<string, string[]> = {};
   const allDates: string[] = [];
