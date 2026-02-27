@@ -276,14 +276,17 @@ export const EditTaskDialog = ({
     if (error) throw error;
 
     // If this task was materialized from a series, also update the parent series
-    // so that goal displays and future instances reflect the changes
-    const { data: instanceLink } = await supabase
+    // and sync future materialized rows so Goals doesn't revert to stale instance data
+    const { data: instanceLink, error: instanceLinkError } = await supabase
       .from('materialized_task_instances')
       .select('series_id')
       .eq('materialized_task_id', task.id)
       .maybeSingle();
 
+    if (instanceLinkError) throw instanceLinkError;
+
     if (instanceLink?.series_id) {
+      const seriesId = instanceLink.series_id;
       const seriesUpdate: Record<string, any> = {
         title: updateData.title,
         description: updateData.description,
@@ -296,12 +299,42 @@ export const EditTaskDialog = ({
       if (updateData.completion_rule) {
         seriesUpdate.completion_rule = updateData.completion_rule;
       }
+
       const { error: seriesError } = await supabase
         .from('task_series')
         .update(seriesUpdate)
-        .eq('id', instanceLink.series_id);
+        .eq('id', seriesId);
 
       if (seriesError) throw seriesError;
+
+      // Sync all future materialized tasks for this series (Goals reads these rows)
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const { data: seriesInstances, error: instancesError } = await supabase
+        .from('materialized_task_instances')
+        .select('materialized_task_id')
+        .eq('series_id', seriesId)
+        .gte('occurrence_date', today);
+
+      if (instancesError) throw instancesError;
+
+      const materializedTaskIds = (seriesInstances || [])
+        .map((i: any) => i.materialized_task_id)
+        .filter(Boolean);
+
+      if (materializedTaskIds.length > 0) {
+        const { error: tasksSyncError } = await supabase
+          .from('tasks')
+          .update({
+            title: updateData.title,
+            description: updateData.description,
+            points: updateData.points,
+            task_group: updateData.task_group,
+            completion_rule: updateData.completion_rule,
+          })
+          .in('id', materializedTaskIds);
+
+        if (tasksSyncError) throw tasksSyncError;
+      }
     }
 
     // Update task assignees

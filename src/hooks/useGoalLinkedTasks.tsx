@@ -166,6 +166,30 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
         const todayTaskId = todayTaskIds[series.id];
         const todayTask = todayTaskId ? todayTasksMap[todayTaskId] : null;
         const assignedProfiles = series.assigned_profiles || [];
+
+        // If series metadata is newer than today's materialized task row,
+        // prefer series display fields to avoid stale title/points flicker.
+        const shouldPreferSeriesDisplay = Boolean(
+          todayTask &&
+          series.updated_at &&
+          todayTask.updated_at &&
+          new Date(series.updated_at) > new Date(todayTask.updated_at)
+        );
+
+        const effectiveTodayTask = todayTask
+          ? {
+              ...todayTask,
+              ...(shouldPreferSeriesDisplay
+                ? {
+                    title: series.title,
+                    description: series.description,
+                    points: series.points,
+                    task_group: series.task_group,
+                    completion_rule: series.completion_rule || todayTask.completion_rule,
+                  }
+                : {}),
+            }
+          : null;
         
         // Build full assignees array for the series
         const fullAssignees = assignedProfiles.map((pid: string) => ({
@@ -192,15 +216,15 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
               profile: profile || { id: profileId, display_name: 'Unknown', color: '#888' },
             }];
             
-            if (todayTask) {
+            if (effectiveTodayTask) {
               // Filter completions for this specific member
-              const memberCompletions = (todayTask.task_completions || []).filter(
+              const memberCompletions = (effectiveTodayTask.task_completions || []).filter(
                 (c: any) => c.completed_by === profileId
               );
               
               result.push({
-                ...todayTask,
-                id: `${todayTask.id}-${profileId}`, // Unique ID per member
+                ...effectiveTodayTask,
+                id: `${effectiveTodayTask.id}-${profileId}`, // Unique ID per member
                 series_id: series.id,
                 occurrence_date: effectiveDate,
                 assignees: singleAssignee,
@@ -231,12 +255,12 @@ export function useGoalLinkedTasks(linkedTasks: GoalLinkedTask[]): GoalLinkedTas
           }
         } else {
           // Single task for single assignee or "anyone" rule
-          if (todayTask) {
+          if (effectiveTodayTask) {
             result.push({
-              ...todayTask,
+              ...effectiveTodayTask,
               series_id: series.id,
               occurrence_date: effectiveDate,
-              assignees: todayTask.assignees?.length > 0 ? todayTask.assignees : fullAssignees,
+              assignees: effectiveTodayTask.assignees?.length > 0 ? effectiveTodayTask.assignees : fullAssignees,
             } as unknown as Task);
           } else {
             result.push({
