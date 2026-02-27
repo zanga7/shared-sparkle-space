@@ -6,7 +6,7 @@ import type { Task } from '@/types/task';
  * Single source of truth — update here when task columns change.
  */
 export const TASK_SELECT_SHAPE = `
-  id, title, description, points, due_date, assigned_to, created_by,
+  id, title, description, points, due_date, assigned_to, created_by, updated_at,
   completion_rule, task_group, task_source, rotating_task_id, hidden_at, family_id,
   assigned_profile:profiles!tasks_assigned_to_fkey(id, display_name, role, color, avatar_url),
   assignees:task_assignees(id, profile_id, assigned_at, assigned_by,
