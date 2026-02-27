@@ -296,10 +296,12 @@ export const EditTaskDialog = ({
       if (updateData.completion_rule) {
         seriesUpdate.completion_rule = updateData.completion_rule;
       }
-      await supabase
+      const { error: seriesError } = await supabase
         .from('task_series')
         .update(seriesUpdate)
         .eq('id', instanceLink.series_id);
+
+      if (seriesError) throw seriesError;
     }
 
     // Update task assignees
