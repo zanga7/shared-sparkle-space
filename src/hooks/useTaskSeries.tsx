@@ -381,6 +381,40 @@ export const useTaskSeries = (familyId?: string) => {
 
       if (error) throw error;
 
+      // Keep materialized task rows in sync so Goals/Tasks views don't show stale title/points
+      const taskFieldUpdates: Record<string, any> = {};
+      if (updates.title !== undefined) taskFieldUpdates.title = updates.title;
+      if (updates.description !== undefined) taskFieldUpdates.description = updates.description;
+      if (updates.points !== undefined) taskFieldUpdates.points = updates.points;
+      if (updates.task_group !== undefined) taskFieldUpdates.task_group = updates.task_group;
+      if (updates.completion_rule !== undefined) taskFieldUpdates.completion_rule = updates.completion_rule;
+
+      if (Object.keys(taskFieldUpdates).length > 0) {
+        const now = new Date();
+        const today = format(now, 'yyyy-MM-dd');
+
+        const { data: instances, error: instancesError } = await supabase
+          .from('materialized_task_instances')
+          .select('materialized_task_id')
+          .eq('series_id', seriesId)
+          .gte('occurrence_date', today);
+
+        if (instancesError) throw instancesError;
+
+        const materializedTaskIds = (instances || [])
+          .map((i: any) => i.materialized_task_id)
+          .filter(Boolean);
+
+        if (materializedTaskIds.length > 0) {
+          const { error: tasksUpdateError } = await supabase
+            .from('tasks')
+            .update(taskFieldUpdates)
+            .in('id', materializedTaskIds);
+
+          if (tasksUpdateError) throw tasksUpdateError;
+        }
+      }
+
       await fetchTaskSeries();
     } catch (error) {
       console.error('Error updating task series:', error);
