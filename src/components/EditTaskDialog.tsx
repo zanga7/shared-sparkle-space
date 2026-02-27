@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { useTaskSeries } from '@/hooks/useTaskSeries';
 import { EditScopeDialog, EditScope } from '@/components/recurrence/EditScopeDialog';
 import { useTaskGoalConnections } from '@/hooks/useTaskGoalConnection';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface EditTaskDialogProps {
   task: Task;
@@ -38,6 +39,15 @@ export const EditTaskDialog = ({
   familyId 
 }: EditTaskDialogProps) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const invalidateGoalTaskCaches = () => {
+    queryClient.invalidateQueries({ queryKey: ['goal-linked-tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['goal-linked-series'] });
+    queryClient.invalidateQueries({ queryKey: ['goal-linked-rotating'] });
+    queryClient.invalidateQueries({ queryKey: ['consistency-completions'] });
+    queryClient.invalidateQueries({ queryKey: ['target-completions'] });
+  };
   
   const [formData, setFormData] = useState({
     title: '',
@@ -239,6 +249,7 @@ export const EditTaskDialog = ({
       });
 
       onTaskUpdated();
+      invalidateGoalTaskCaches();
       try { window.dispatchEvent(new CustomEvent('task-updated')); } catch {}
       onOpenChange(false);
     } catch (error) {
@@ -457,6 +468,7 @@ export const EditTaskDialog = ({
       }
 
       onTaskUpdated();
+      invalidateGoalTaskCaches();
       // Notify listeners (e.g., dashboards) that series data changed
       try { window.dispatchEvent(new CustomEvent('series-updated')); } catch {}
       try { window.dispatchEvent(new CustomEvent('task-updated')); } catch {}
